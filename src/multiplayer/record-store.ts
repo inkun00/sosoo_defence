@@ -9,6 +9,7 @@ export function queueResult(record:MatchRecord){const list=pending();if(!list.so
 export function pendingCount(uid:string){return pending().filter(r=>(r.side===0?r.hostUid:r.guestUid)===uid).length;}
 export async function loadProgress(uid:string):Promise<Progress>{if(!firestore)return emptyProgress();return (await getDoc(doc(firestore,'decimalUsers',uid))).data()?.progress||emptyProgress();}
 export async function loadHistory(uid:string){if(!firestore)return [];const rows=await getDocs(query(collection(firestore,'decimalUsers',uid,'matches'),orderBy('endedAt','desc'),limit(20)));return rows.docs.map(d=>d.data() as MatchRecord&{experienceGain:number});}
+export async function loadLearningHistory(uid:string){if(!firestore)return [];const rows=await getDocs(collection(firestore,'decimalUsers',uid,'matches'));return rows.docs.map(d=>d.data() as MatchRecord);}
 export function flushResults(uid:string){const existing=flushing.get(uid);if(existing)return existing;const work=(async()=>{
  let progress:Progress|null=null,message='저장된 경기 기록이 없어요.';
  for(const r of pending().filter(r=>(r.side===0?r.hostUid:r.guestUid)===uid)){

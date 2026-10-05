@@ -10,8 +10,9 @@ import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {GAME_WIDTH,GAME_HEIGHT} from './layout';
 import type {Cell} from './path';
 import {isDifficulty,DIFFICULTIES} from './difficulty';
-import {towerType,TOWERS} from './towers';
+import {towerType,TOWERS,parseMoney} from './towers';
 import {playCinematic} from './cinematic';
+import {recordLearning} from './learning';
 import './game.css';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
@@ -29,7 +30,8 @@ let towerTypeId='basic',shopPage=0,purchaseInput='',purchaseMessage='',purchaseH
 let slots:(number|null)[]=[null,null,null],panel:Panel=null,equation='',hint='',message='',lastHit:BattleEvent|undefined,resultShown=false;
 let fusionOperation:FusionOperation='+';
 let resumeAfterPanel=false,resumeAfterHTML=false,controlsSignature='';
-const field=new Field(model);
+const field=new Field(model);const learningSession=crypto.randomUUID();let learningQuestion=0;
+function purchaseLearning(outcome:'wrong'|'help'|'correct',q=model.pendingPurchase){if(q)recordLearning({a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'},outcome,learningSession+':purchase:'+learningQuestion);}
 const state=():UIState=>({model,save,unit,effect,selected,selectedWall,brickPage,speed,mode:field.mode,panel,slots,fusionOperation,equation,hint,message,towerTypeId,shopPage,purchaseInput,purchaseMessage,purchaseHelp});
 const ui=new GameUI(state);
 function persistInventory(){
@@ -81,6 +83,7 @@ function event(ev:BattleEvent){
 }
 function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 타워 사이를 가로·세로·대각선 모두 한 칸 이상 띄우세요. 단계마다 가격이 달라지며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 문제를 푸는 동안 전투가 멈추며 오답·취소에는 돈을 쓰지 않아요.</li><li><b>발사 켜기·끄기</b> 설치한 타워를 누르면 하단에 큰 발사 ON/OFF 버튼이 나타나요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 큰 타워를 끄고 0.1 포탄으로 마무리해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 덧셈 또는 뺄셈을 고르고 벽돌 세 개를 □ + □ = □ 또는 □ − □ = □에 넣어요. 식이 맞으면 합성해 성벽을 설치하세요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 모든 길을 막을 수는 없어요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 0.001은 4단계부터 돈과 가격에만 써요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 보관 재고는 사라지지 않아요.</li><li><b>진급과 저장</b> 2분 동안 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 레벨·해금·별점은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 돈·타워 배치는 단계마다 새로 시작하고 설치한 성벽은 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
 function calculation(){
+ const learned=lastHit?.data as {before:number;damage:number}|undefined;if(learned)recordLearning({a:learned.before,b:learned.damage,operation:'-',digits:model.level.digits,context:'battle'},'help',learningSession+':hit:'+lastHit!.message);
  const d=lastHit?.data as {before:number;damage:number;after:number;hint:string}|undefined;
  openHTML(`<p class="eyebrow">전투 속 계산 기록</p><h2>같은 자리끼리 계산해요</h2><p>${model.level.hint}</p>${d?`<div class="help-equation">${lastHit!.message}</div><pre class="vertical-math">  ${decimal(d.before,model.level.digits).padStart(6)}\n− ${decimal(d.damage,model.level.digits).padStart(6)}\n─────────\n  ${decimal(d.after,model.level.digits).padStart(6)}</pre><p>${d.hint}</p>`:'<p>타워가 실제로 공격한 뒤 최근 공격의 계산을 이곳에서 확인할 수 있어요.</p>'}${equation?`<p class="math-record">최근 기록: ${equation}</p>`:''}<p>0.1은 0.01 열 개, 1은 0.1 열 개와 같아요.<br>0.7 = 0.70처럼 끝에 0을 붙여 생각할 수 있어요.<br>0.001은 돈과 타워 가격에만 사용해요.</p>`);
 }
@@ -113,11 +116,11 @@ function action(key:string){
   case 'toggle':model.toggleTower(selected);break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
   case 'cancel':field.mode.kind='inspect';break;
-  case 'purchase-help':purchaseHelp=!purchaseHelp;break;
+  case 'purchase-help':purchaseHelp=!purchaseHelp;if(purchaseHelp)purchaseLearning('help');break;
   case 'purchase-cancel':closePanel();break;
-  case 'purchase-confirm':if(panel==='purchase'&&model.answerPurchase(purchaseInput)){const t=model.towers.at(-1)!;closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}break;
+  case 'purchase-confirm':if(panel==='purchase'){const q=model.pendingPurchase;if(q&&parseMoney(purchaseInput)!==q.before-q.cost)purchaseLearning('wrong',q);if(model.answerPurchase(purchaseInput)){purchaseLearning('correct',q);const t=model.towers.at(-1)!;closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}}break;
   case 'forge':slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);setPanel('forge');break;
-  case 'fuse':if(model.fuse(slots.filter((s):s is number=>s!==null),fusionOperation))slots=[null,null,null];break;
+  case 'fuse':{const ids=slots.filter((s):s is number=>s!==null),values=ids.map(id=>model.bricks.find(b=>b.id===id)?.value);if(values.length===3&&new Set(ids).size===3&&values.every(v=>v!==undefined)){const [a,b,c]=values as number[];recordLearning({a,b,operation:fusionOperation,digits:model.level.digits,context:'wall'},(fusionOperation==='+'?a+b:a-b)===c?'correct':'wrong');}if(model.fuse(ids,fusionOperation))slots=[null,null,null];break;}
   case 'wall':if(model.wallStock){closePanel();selected=0;field.selected=undefined;field.mode={kind:'wall',unit,effect};notify('길 위에 성벽을 놓아 보세요. 모든 길을 막을 수는 없어요.');}break;
   case 'wall-recover':if(selectedWall&&model.recoverWall(selectedWall)){selectedWall=null;field.selectedWall=undefined;field.mode={kind:'wall',unit,effect};field.drawTerrain();notify('회수한 성벽을 다시 놓을 칸을 골라요. Esc로 취소하면 재고에 보관해요.');}break;
   case 'goals':setPanel('goals');break;
@@ -143,7 +146,7 @@ ui.onControls=(controls:Map<string,Control>)=>{
  $('accessible-controls').replaceChildren();for(const [id,c]of active){const b=document.createElement('button');b.type='button';b.textContent=c.label||id;b.dataset.action=id;b.disabled=!c.enabled;b.onclick=c.run;$('accessible-controls').append(b);if(id===focus)b.focus();}
 };
 field.onChange=update;field.onEvent=event;field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
-field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
+field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
 const originalUpdate=field.update.bind(field);field.update=(time:number,delta:number)=>originalUpdate(time,delta*speed);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,height:GAME_HEIGHT,backgroundColor:'#111216',scene:[field,ui],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');});

@@ -52,7 +52,7 @@ export class DuelScene extends Phaser.Scene{
  }
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}
  redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
-  const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.operation,v.selectedTower,v.message,v.busy,v.connected,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.flame,p.money,p.egg,p.ready,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
+  const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.operation,v.selectedTower,v.message,v.busy,v.connected,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.flame,p.money,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
   if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,44,1264,76);this.text(this.ui,136,40,'소수의 성 · 1:1',24);this.text(this.ui,359,25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,359,56,`대전 Lv.${s?duelLevel(s):1}`,18,'#ffca7e');
   const seconds=Math.max(0,Math.ceil(300-(s?.elapsed??0)));this.text(this.ui,615,41,p?numberText(p.money)+' 코인':'돌 알을 깨워 상대 불꽃을 공격해요',p?28:19,'#ffcb7b');this.text(this.ui,879,41,`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`,26);this.button('settings',963,42,76,55,'설정',true,false,18);
@@ -68,7 +68,7 @@ export class DuelScene extends Phaser.Scene{
    this.text(c,-49,-20,type.name+' · '+GRADE_NAMES[type.grade],15,'#f6ecdf',false).setOrigin(0,.5);this.text(c,-49,1,'공격 '+numberText(type.unit),14,'#c9bbaa',false).setOrigin(0,.5);this.text(c,-49,21,type.unlock<=duelLevel(s??({elapsed:0} as DuelState))?numberText(cost)+' 코인':`대전 Lv.${type.unlock} 해금`,16,'#ffca7e',false).setOrigin(0,.5);
    this.controls.get('type:'+type.id)!.label=type.name+' 공격 '+numberText(type.unit)+' 가격 '+numberText(cost);
   });
-  this.button('page:prev',1045,628,64,54,'◀',v.shopPage>0);this.text(this.ui,1130,628,`${v.shopPage+1}/2`,19);this.button('page:next',1215,628,64,54,'▶',v.shopPage<1);
+  this.button('page:prev',1045,622,64,54,'◀',v.shopPage>0);this.text(this.ui,1130,622,`${v.shopPage+1}/2`,19);this.button('page:next',1215,622,64,54,'▶',v.shopPage<1);
   this.panel(this.ui,240,607,467,324);this.text(this.ui,240,457,'동일한 순서의 소수 블럭 16개',20);
   this.text(this.ui,240,479,`학습 Lv.${s?.learningLevel??1} · ${learningDescription(s?.learningLevel??1)}`,12,'#ffca7e');
   (p?.board??Array(16).fill(0)).forEach((n,i)=>this.button('block:'+i,76+i%4*110,518+Math.floor(i/4)*61,99,56,p?numberText(n):'?',!!p&&s?.status==='playing'&&!v.busy&&!v.slots.includes(i),v.slots.includes(i),23));
@@ -81,7 +81,11 @@ export class DuelScene extends Phaser.Scene{
   const selected=p?.towers.find(t=>t.id===v.selectedTower);
   if(selected){this.button('toggle',1085,696,137,57,selected.enabled?'발사 끄기':'발사 켜기',!v.busy);this.button('sell',1220,696,105,57,'회수',!v.busy);}
   else this.text(this.ui,1130,697,v.selectedType?'한 칸 띄워 내 쪽에 설치':'타워를 누르면 발사 조절',16,'#c1b7aa');
-  this.button('heroes',1130,756,232,57,'영웅 도감 · 30종',true,false,21);
+  const reserve=p?.rewardHero?heroSpec(p.rewardHero):null;
+  this.text(this.ui,1130,657,reserve?`학습지 · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
+  this.button('heroes',1069,756,113,57,'영웅 도감',true,false,16);
+  this.button('reserve',1192,756,113,57,s?.status==='waiting'?'영웅 선택':p?.rewardUsed?'사용 완료':reserve?`Lv.${reserve.level} 소환`:'영웅 없음',!!p&&!v.busy&&(s?.status==='waiting'&&!p.ready||s?.status==='playing'&&!!reserve&&!p.rewardUsed),!!reserve&&!p?.rewardUsed,16);
+  this.controls.get('reserve')!.label=s?.status==='waiting'?'학습지 몬스터 선택':p?.rewardUsed?'학습지 몬스터 사용 완료':reserve?`학습지 ${reserve.name} 레벨 ${reserve.level} 한 번 소환`:'학습지 몬스터 없음';
   if(s?.status==='waiting')this.button('ready',485,424,240,57,p?.ready?'상대 준비 기다리는 중':'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
   else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'성벽 없이 곧은 길 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,424,message,18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
   this.syncShots();this.syncEnemies();this.onControls();
