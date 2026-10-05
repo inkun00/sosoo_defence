@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  // Lobby metadata, password hashes and signaling are callable-server only.
+  match /decimalLobby/{id} { allow read, write: if false; }
+  match /decimalLobbyPrivate/{id} { allow read, write: if false; }
+  match /decimalLobbyOwners/{uid} { allow read, write: if false; }
+  match /decimalLobbyLimits/{uid} { allow read, write: if false; }
+  match /decimalUsers/{uid} {
+   allow get: if request.auth != null && request.auth.uid == uid;
+   allow list, create, update, delete: if false;
+   match /matches/{matchId} {
+    allow read: if request.auth != null && request.auth.uid == uid;
+    allow write: if false;
+   }
+  }
+ }
+}

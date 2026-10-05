@@ -1,0 +1,12 @@
+.git/
+node_modules/
+dist/
+test-results/
+asset-sources/
+functions/node_modules/
+functions/lib/
+.firebase/
+.env
+.env.*
+.firebase-web-config.local.json
+*.log

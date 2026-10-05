@@ -1,0 +1,22 @@
+node_modules/
+dist/
+test-results/
+.env.local
+.env.*.local
+functions/lib/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+.firebase-web-config.local.json
+
+# Local settings, deployment credentials and downloaded references.
+.env
+.env.*
+!.env.example
+.vercel/
+.firebase/
+asset-sources/
+*.log
+*.pem
+*.key
