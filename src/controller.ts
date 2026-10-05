@@ -43,7 +43,7 @@ function update(){
   panel='result';field.input.enabled=false;
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
- $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${decimal(model.money,model.level.id>=4?3:1)}, 성 체력 ${model.castle}, 방어 ${model.kills}/12, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}`;
+ $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/12, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}`;
 }
 function notify(text:string){message=text;$('accessible-notice').textContent=text;ui.notify(text);}
 function setPanel(next:Panel){

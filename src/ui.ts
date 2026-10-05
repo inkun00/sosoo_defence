@@ -61,7 +61,7 @@ export class GameUI extends Phaser.Scene{
  refresh(force=false){
   if(!this.ready)return;const s=this.getState(),m=s.model;
   if(force||this.currentStage!==m.level.id){this.currentStage=m.level.id;this.header.removeAll(true);this.controls.clear();this.drawHeader();this.signatures=['','',''];}
-  this.moneyText.setText(decimal(m.money,m.level.id>=4?3:1)).setScale(1);if(this.moneyText.width>196)this.moneyText.setScale(196/this.moneyText.width);const time=Math.max(0,Math.ceil(m.duration-m.elapsed));this.timerText.setText(`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`);
+  this.moneyText.setText(numberText(m.money,m.level.id>=4?3:m.level.digits)).setScale(1);if(this.moneyText.width>196)this.moneyText.setScale(196/this.moneyText.width);const time=Math.max(0,Math.ceil(m.duration-m.elapsed));this.timerText.setText(`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`);
   this.healthIcons.forEach((heart,i)=>heart.setAlpha(i<m.castle?1:.2));
   this.waveText.setText(`방어 ${m.kills} / 12 · ${DIFFICULTIES[m.difficulty].name} · ${m.phase==='ready'?'준비':m.phase==='paused'?'정지':m.phase==='won'?'성공':m.phase==='lost'?'재도전':'진행'}`);
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
