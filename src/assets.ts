@@ -1,13 +1,18 @@
+import {artURL} from './art';
 import Phaser from 'phaser';
-import {MONSTER_KINDS,MONSTERS} from './monsters';
+import {MonsterKind,MONSTER_KINDS,MONSTERS} from './monsters';
 import {TOWERS} from './towers';
 import {AMBIENT_TEXTURES,registerAmbientFrames} from './ambient-props';
 
 // Every illustrated texture in this skin is an original built-in imagegen output.
-// Atlas cells are registered at runtime; the original PNG pixels and alpha are preserved.
-export function loadDungeon(scene:Phaser.Scene){
- for(const name of ['terrain','ui','props','icons','slime','turret-parts-v1','fx-impact-v1','fx-utility-v1','tower-heads-a-v1','tower-heads-b-v1',...AMBIENT_TEXTURES])scene.load.image('dungeon-'+name,`/assets/dungeon/${name}.png`);
- for(const kind of MONSTER_KINDS.filter(k=>k!=='slime')){const atlas=MONSTERS[kind].atlas;scene.load.image('dungeon-'+atlas,`/assets/dungeon/${atlas}.png`);}
+// Atlas cells are registered at runtime; the atlas dimensions and alpha are preserved in compressed WebP.
+export function loadDungeon(scene:Phaser.Scene,kinds:MonsterKind[]=MONSTER_KINDS){
+ for(const name of ['terrain','ui','props','icons','slime','turret-parts-v1','fx-impact-v1','fx-utility-v1','tower-heads-a-v1','tower-heads-b-v1',...AMBIENT_TEXTURES])scene.load.image('dungeon-'+name,artURL(name));
+ for(const kind of kinds.filter(k=>k!=='slime')){const atlas=MONSTERS[kind].atlas;scene.load.image('dungeon-'+atlas,artURL(atlas));}
+}
+export function registerMonster(scene:Phaser.Scene,kind:MonsterKind){
+ const atlas=MONSTERS[kind].atlas;
+ if(scene.textures.exists('dungeon-'+atlas)&&!scene.textures.get('dungeon-'+atlas).has(kind+'-0'))cells(scene,atlas,4,4,Array.from({length:16},(_,i)=>kind+'-'+i));
 }
 function cells(scene:Phaser.Scene,atlas:string,cols:number,rows:number,names:string[],trim=0){
  const texture=scene.textures.get('dungeon-'+atlas),source=texture.getSourceImage();
@@ -27,7 +32,7 @@ export function registerDungeon(scene:Phaser.Scene){
  for(const sheet of ['a','b'])cells(scene,'tower-heads-'+sheet+'-v1',3,2,TOWERS.filter(t=>t.sheet===sheet).sort((a,b)=>a.frame-b.frame).map(t=>t.id));
  cells(scene,'fx-impact-v1',6,4,['basic','slow','stun','range'].flatMap(effect=>Array.from({length:6},(_,i)=>effect+'-'+i)));
  cells(scene,'fx-utility-v1',6,4,[...['muzzle','defeat','shockwave'].flatMap(effect=>Array.from({length:6},(_,i)=>effect+'-'+i)),'projectile-basic','projectile-slow','projectile-stun','projectile-range','particle-stone','particle-spark']);
- for(const kind of MONSTER_KINDS)cells(scene,MONSTERS[kind].atlas,4,4,Array.from({length:16},(_,i)=>kind+'-'+i));
+ for(const kind of MONSTER_KINDS)registerMonster(scene,kind);
  // Align every skin to its visible opaque frame, rather than the atlas cell's
  // uneven transparent margins. Original source images remain untouched.
  const aliases:Record<string,string>={panel_brown:'panel',panel_brown_dark:'panel',panel_brown_corners_a:'panel',button_brown:'button',button_red:'active',button_grey:'disabled'};

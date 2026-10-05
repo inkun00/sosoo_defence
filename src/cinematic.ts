@@ -1,3 +1,4 @@
+import {artURL} from './art';
 import {STORY,storyDuration,storyFrame,StoryKind} from './story';
 import {Sound} from './audio';
 import {Save} from './save';
@@ -5,7 +6,7 @@ import './cinematic.css';
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const ease=(n:number)=>1-Math.pow(1-clamp(n),3);
 const images=new Map<string,Promise<HTMLImageElement>>();
-function image(name:string){let pending=images.get(name);if(!pending){pending=new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(Error('장면 그림을 불러오지 못했어요.'));i.src='/assets/dungeon/'+name+'.png';});images.set(name,pending);}return pending;}
+function image(name:string){let pending=images.get(name);if(!pending){pending=new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(Error('장면 그림을 불러오지 못했어요.'));i.src=artURL(name);});images.set(name,pending);}return pending;}
 
 export async function playCinematic(kind:StoryKind,preferences:Save,onComplete:()=>void){
  const previous=document.activeElement as HTMLElement|null,root=document.createElement('section');
@@ -24,7 +25,10 @@ export async function playCinematic(kind:StoryKind,preferences:Save,onComplete:(
  function visibility(){if(document.hidden)setPaused(true);}
  function keyboard(e:KeyboardEvent){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish();}else if(e.code==='Space'&&!(e.target as HTMLElement).closest('button')){e.preventDefault();e.stopPropagation();setPaused(!paused);}else if(e.key==='Tab'){const buttons=[voiceButton,pauseButton,skip],index=buttons.indexOf(document.activeElement as HTMLButtonElement);if(e.shiftKey&&index<=0){e.preventDefault();skip.focus();}else if(!e.shiftKey&&index===2){e.preventDefault();voiceButton.focus();}}}
  root.addEventListener('keydown',keyboard);document.addEventListener('visibilitychange',visibility);skip.onclick=finish;pauseButton.onclick=()=>setPaused(!paused);voiceButton.onclick=()=>{voiceOn=!voiceOn;voiceButton.textContent='나레이션 '+(voiceOn?'ON':'OFF');voiceButton.setAttribute('aria-pressed',String(voiceOn));if(voiceOn)narrate();else {narrationId++;sound.setDucking(false);if('speechSynthesis'in window)speechSynthesis.cancel();}};skip.focus();
- try{await Promise.all([...new Set([...STORY[kind].map(b=>b.art),'props','slime','turret-parts-v1'])].map(async name=>art.set(name,await image(name))));}catch{loading.textContent='그림을 불러오지 못했어요. 건너뛰기로 모험을 시작할 수 있어요.';pauseButton.disabled=true;voiceButton.disabled=true;return;}
+ const needed=new Set<string>(STORY[kind].map(b=>b.art));
+ if(STORY[kind].some(b=>b.formula==='0.3 + 0.4 = 0.7'))needed.add('props');
+ if(STORY[kind].some(b=>b.formula==='0.6 − 0.2 = 0.4')){needed.add('slime');needed.add('turret-parts-v1');}
+ try{await Promise.all([...needed].map(async name=>art.set(name,await image(name))));}catch{loading.textContent='그림을 불러오지 못했어요. 건너뛰기로 모험을 시작할 수 있어요.';pauseButton.disabled=true;voiceButton.disabled=true;return;}
  if(disposed)return;loading.hidden=true;sound.setPaused(paused);window.addEventListener('pagehide',leave);
  function background(name:string,progress:number,opacity=1){
   const i=art.get(name)!;const zoom=reduced?1:1.03+progress*.065,scale=Math.max(1600/i.width,900/i.height)*zoom,w=i.width*scale,h=i.height*scale;

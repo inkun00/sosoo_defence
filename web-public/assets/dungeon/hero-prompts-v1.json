@@ -1,0 +1,122 @@
+{
+  "mode": "built-in imagegen",
+  "transparent_background": true,
+  "layout": {
+    "columns": 4,
+    "rows": 3,
+    "framesPerHero": 4
+  },
+  "heroCount": 30,
+  "entries": [
+    {
+      "level": 1,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-f8dc37c7-5bd8-4fa2-aa45-515c808680f9.png",
+      "path": "public/assets/dungeon/heroes-level-1-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 1 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: tiny moss-covered pebble courier with leafy ears and an orange crystal drum.\nRow 2: round pebble nesting insect with rocky egg sacs.\nRow 3: small sprout-topped stone guardian with broad leaf shoulder plates.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 1 has small adorable creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "이끼 전령",
+        "조약돌 산란충",
+        "새싹 수호자"
+      ]
+    },
+    {
+      "level": 2,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-67af12a5-c98b-4783-8663-439ccc6e051d.png",
+      "path": "public/assets/dungeon/heroes-level-2-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 2 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: bronze-rock drummer imp with a glowing horn.\nRow 2: granite nesting bird with a stone egg basket.\nRow 3: slate shield soldier with huge layered shield arms.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 2 has small adorable creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "청동 북지기",
+        "바위 둥지새",
+        "점판암 방패병"
+      ]
+    },
+    {
+      "level": 3,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-8101ada9-a6ed-4fec-bc43-9abacfcf2294.png",
+      "path": "public/assets/dungeon/heroes-level-3-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 3 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: cobalt crystal-antlered stone stag.\nRow 2: black basalt spider queen carrying orange stone eggs.\nRow 3: iron-armored stone tortoise with cyan hexagonal plates.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 3 has small adorable creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "수정 사슴",
+        "현무암 거미왕",
+        "철갑 돌거북"
+      ]
+    },
+    {
+      "level": 4,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-fd42bc40-dd89-4f2c-aba2-c9c43eedca68.png",
+      "path": "public/assets/dungeon/heroes-level-4-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 4 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: ember-maned stone lion.\nRow 2: lava stone egg keeper with six arms and a red stone egg.\nRow 3: chunky granite rhinoceros with massive red crystal horn.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 4 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "불씨 사자",
+        "용암 알지기",
+        "화강암 코뿔소"
+      ]
+    },
+    {
+      "level": 5,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-675921df-8f61-4238-a5a4-123dd6730980.png",
+      "path": "public/assets/dungeon/heroes-level-5-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 5 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: thunder-crystal rock griffin.\nRow 2: amber hive king with honeycomb stone abdomen.\nRow 3: ice-crystal knight carved from granite.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 5 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "천둥 그리핀",
+        "호박 벌집왕",
+        "빙정 기사"
+      ]
+    },
+    {
+      "level": 6,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-c2a5ee67-1073-4efa-8f0a-7ca3c05b4286.png",
+      "path": "public/assets/dungeon/heroes-level-6-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 6 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: jade stone spear warrior with a jade crown.\nRow 2: meteor nesting dragon with egg-bearing stone wings.\nRow 3: agate fortress soldier with stacked wall shoulders.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 6 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "청옥 용사",
+        "운석 번식룡",
+        "마노 성채병"
+      ]
+    },
+    {
+      "level": 7,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-63ed1d6d-8321-4200-91ff-7763c3aa027c.png",
+      "path": "public/assets/dungeon/heroes-level-7-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 7 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: obsidian commander with purple runic drum chest.\nRow 2: amethyst nesting monarch with tall crystal egg staff.\nRow 3: sunstone watcher with radiating golden shoulder spikes.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 7 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel clear, readable and heroic. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "흑요석 지휘관",
+        "자수정 둥지왕",
+        "태양석 파수꾼"
+      ]
+    },
+    {
+      "level": 8,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-91b8d2aa-b7b4-46d1-b7af-0680b5f37d52.png",
+      "path": "public/assets/dungeon/heroes-level-8-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 8 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: ancient stone wind dragon with blue wing runes.\nRow 2: abyss stone brood lord with orange nesting crown.\nRow 3: giant rune fortress golem with cyan tower shoulder pads.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 8 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel majestic boss-like, ornate rune patterns and huge silhouettes. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "고대 바람룡",
+        "심연 돌군주",
+        "룬 요새 거인"
+      ]
+    },
+    {
+      "level": 9,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-bac34009-098c-4c61-a9ff-865b6ace4784.png",
+      "path": "public/assets/dungeon/heroes-level-9-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 9 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: starlit stone chimera with three distinct rock heads.\nRow 2: nebula crystal queen with orbital stone eggs.\nRow 3: golden tectonic king with plate-stone armor.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 9 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel majestic boss-like, ornate rune patterns and huge silhouettes. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "별빛 키메라",
+        "성운 수정여왕",
+        "황금 지각왕"
+      ]
+    },
+    {
+      "level": 10,
+      "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-294b5db6-167d-4e52-90b3-ad45d3fdfbd1.png",
+      "path": "public/assets/dungeon/heroes-level-10-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent sprite atlas for a Korean educational dark-fantasy top-down tower defense game, LEVEL 10 heroes, THREE DISTINCT MONSTERS.\nCreate ONE sprite sheet, landscape 1536x1024 composition, EXACTLY FOUR EQUALLY SPACED COLUMNS and THREE EQUALLY SPACED ROWS (12 cells). Each row contains the same creature in FOUR consecutive walking animation poses: left foot forward, centered, right foot forward, centered with slight torso bounce. All cell backgrounds are genuinely TRANSPARENT, no opaque or colored backdrop. Consistent identical size and anchor for each row, all sprites centered with at least 12% clear cell padding, no cell overlap, no frames/borders/grid drawn.\nRow 1: celestial colossal stone deity with a luminous turquoise crown.\nRow 2: primordial volcanic brood titan carrying molten stone eggs.\nRow 3: eternal stone fortress king with gold towers and huge runic fists.\nStyle: original hand-painted chunky game sprite, top-down three-quarter view, fronts facing lower right, thick outlined silhouettes, iron-gray fractured STONE bodies, luminous crystal accents, cute readable expressive eyes, fantasy dungeon, warm rim lighting. This level 10 has powerful, progressively grander creatures, completely distinct from basic stone slimes and ordinary rock golems. Level progression should feel majestic boss-like, ornate rune patterns and huge silhouettes. Animation changes feet, wings or appendages without changing anatomy or species between columns. NO words, letters, numbers, labels, logos or watermark. Each row is a completely different species and silhouette.",
+      "names": [
+        "천공 거석신",
+        "원시 분화왕",
+        "영원의 성채왕"
+      ]
+    }
+  ]
+}

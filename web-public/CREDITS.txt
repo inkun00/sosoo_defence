@@ -1,0 +1,126 @@
+소수의 성 — Dungeon Canvas Edition
+
+ENGINE
+Phaser 3.90.0 — MIT
+https://github.com/phaserjs/phaser
+Copyright and MIT notice: licenses/Phaser-MIT.txt
+
+CURRENT IMAGE ASSETS — ALL NEW BUILT-IN IMAGEGEN OUTPUTS
+Current twelve tower types use the two new rotating-head sheets below.
+The earlier four standalone tower PNGs remain preserved but are not loaded.
+All currently loaded image textures are under assets/dungeon/.
+Tool: built-in OpenAI image_gen; no API/CLI fallback.
+Full final prompt set and generation source paths: assets/dungeon/prompts.json
+Generated original PNGs are preserved. Atlas cells are registered in the
+engine; panel cells are downsampled into nine-slice textures for crisp borders.
+No artwork from the reference game or video is copied into these textures.
+
+terrain.png — 2x2 original dark/warm stone-floor tile atlas, opaque.
+ui.png — 2x2 original slate-panel/button/amber-action/disabled UI atlas, alpha.
+tower-basic.png — iron cannon on stone and timber pedestal, alpha.
+tower-slow.png — blue frost crystal tower, alpha.
+tower-stun.png — purple lightning orb tower, alpha.
+tower-range.png — long-range ballista with green aiming crystal, alpha.
+tower-heads-a-v1.png — 3x2 original alpha atlas of basic, twin cannon,
+needle launcher, pebble launcher, frost crystal, and ice lance rotating heads.
+tower-heads-b-v1.png — 3x2 original alpha atlas of catapult, lightning coil,
+crystal cannon, ballista, siege cannon, and rune crossbow rotating heads.
+Generated with built-in image_gen; source PNGs and alpha preserved unchanged.
+Exact final prompts and source paths: assets/dungeon/tower-catalog-prompts.json.
+props.png — 3x3 wall/barricade/flame keep/portal/brick/torch/crate/mushroom/rubble atlas, alpha.
+icons.png — 4x4 HUD symbols and four effect-colored projectiles, alpha.
+turret-parts-v1.png — 3x2 original alpha layer atlas: fixed foundation,
+cannon/frost/lightning/ballista rotating heads, muzzle flash.
+Generated with built-in imagegen; no existing tower artwork was cut apart.
+Final prompt and generation path: assets/dungeon/turret-prompts.json.
+slime.png — 4x4 original stone-slime animation sheet, alpha:
+walking, hit reaction, frost/slow, gentle crumble; four frames per state.
+monster-beetle.png — 4x4 original stone beetle animation sheet, alpha.
+monster-golem.png — 4x4 original iron-armored stone golem animation sheet, alpha.
+monster-crystal.png — 4x4 original violet crystal giant animation sheet, alpha.
+monster-king.png — 4x4 original crowned ancient stone king animation sheet, alpha.
+Each of the four new sheets has walk/hurt/frozen/defeat, four frames per state.
+Additional final prompts: assets/dungeon/monster-prompts.json.
+fx-impact-v1.png — 6x4 original transparent combat effect atlas:
+six frames each for amber stone impact, cyan frost shards, violet electricity,
+and gold/green precision impact.
+fx-utility-v1.png — 6x4 original transparent combat utility atlas:
+six frames each for muzzle flash, stone defeat burst, and expanding shockwave;
+four projectile images, one stone fragment, and one spark image.
+Both sheets were generated with built-in imagegen and preserved unchanged.
+Exact prompts and generation source paths: assets/dungeon/fx-prompts.json.
+Korean labels, mathematical values, health bars, range indicators and light
+halos are engine text or dynamic geometry. They are kept separate from image
+pixels so arithmetic and gameplay state remain exact and readable.
+Music and effects are original procedural Web Audio tones.
+
+VISUAL REFERENCE
+User-supplied YouTube gameplay reference was viewed at multiple timestamps:
+https://www.youtube.com/watch?v=oyjYK74O4H0
+UnderDark: Defense — LiberalDust official product description and screenshots:
+https://play.google.com/store/apps/details?id=com.FreeDust.UnderDark
+Reference elements: charcoal/brown dungeon floor, chunky stone wall blocks,
+warm protective flame, dark framed cards, strongly outlined compact towers.
+The landscape layout, numerical combat, wall fusion and images are original
+implementations for this educational game.
+
+EARLIER EDITIONS
+Kenney Tower Defense Top-Down and UI Pack – Adventure (CC0) were used in the
+previous skin. Those image assets are archived outside the current public/
+folder and are no longer loaded by the game or bundled into this release.
+Historical source archives remain under asset-sources/ in the working project.
+
+GAMEPLAY RESEARCH
+Open TD — MIT, architecture reference only; no game source copied.
+https://github.com/m-ko-de/open-td
+Requested similarity page:
+https://itch.io/games-like/2971294/the-tower-builder
+This page was inaccessible during the initial gameplay research.
+
+EDUCATIONAL SOURCE
+User-provided 한대희(4-2)지도서_3단원.pdf, 3. 소수의 덧셈과 뺄셈.
+Its learning sequence and decimal principles were analyzed as source material.
+The guide's prose and page images are not distributed in this game.
+
+ONLINE DUEL HERO ART
+30 original stone heroes: 3 species per level, levels 1-10, 4 walk frames each.
+10 original stone egg growth stages in a separate atlas.
+Generated with the built-in OpenAI image_gen tool, transparent-background mode.
+Original PNG pixels and alpha are preserved, with atlas frames registered at runtime.
+Prompts and original/destination paths: assets/dungeon/hero-prompts-v1.json
+and assets/dungeon/egg-prompts-v1.json. No new third-party image assets.
+
+ANIMATED ENTRANCE AND FLAMES
+Original portal, guardian keep flame and decorative torch animation sheets.
+Each sheet contains nine transparent frames, generated using the built-in
+OpenAI image_gen tool with the user's three object screenshots as references.
+Original PNG pixels and alpha are preserved. Runtime frame rectangles and trim
+offsets align the stonework while only the vortex/fire changes between frames.
+Portal: assets/dungeon/portal-loop-v1.png
+Guardian flame: assets/dungeon/flame-loop-v1.png
+Torch: assets/dungeon/torch-loop-v1.png
+Prompts and original source paths: assets/dungeon/ambient-prompts-v1.json
+
+THE LAST FLAME STORY AND TITLE
+Original story: Sosoo Castle, The Last Flame. Restore the guardian flame by
+adding decimal pieces into walls and reducing corrupted stone strength to zero.
+Title environment, rift chapter, dawn chapter, stone-and-brass menu button and
+16-frame final warden boss atlas generated with the built-in OpenAI image_gen.
+Original PNG pixels and alpha are preserved.
+assets/dungeon/title-castle-v1.png
+assets/dungeon/story-rift-v1.png
+assets/dungeon/story-dawn-v1.png
+assets/dungeon/menu-button-v1.png
+assets/dungeon/monster-warden-v1.png
+Prompts, references and source paths: assets/dungeon/story-prompts-v1.json
+Motion design reference (typography, camera movement, transitions):
+https://jasonzhu.ai/en/prompts/claude-opus-5-5/2103424524297420829
+No artwork, video or code copied from that reference.
+Narration uses device-provided Korean Web Speech voices; Korean captions are
+always displayed. Cinematic tones are synthesized locally with Web Audio.
+
+ORIGINAL PROCEDURAL SOUNDTRACK AND EFFECTS
+Seven original score arrangements and fifteen synthesized effects are defined
+in src/music.ts and src/audio.ts. Web Audio oscillators, deterministic noise,
+filters, envelopes, an echo bus and a compressor generate all audio at runtime.
+No third-party music, samples, audio files or audio service are used.

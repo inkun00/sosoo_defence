@@ -1,3 +1,4 @@
+import {artURL} from '../art';
 import Phaser from 'phaser';
 import {createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,updateProfile,sendPasswordResetEmail,onAuthStateChanged,User} from 'firebase/auth';
 import {auth,firebaseConfigured,firebaseEmulator} from './firebase';
@@ -26,7 +27,7 @@ app.innerHTML='<main id="game-shell"><div id="field"></div></main><div id="duel-
 const dialog=document.getElementById('duel-dialog')!,content=document.getElementById('duel-content')!,notice=document.getElementById('duel-notice')!;
 let user:User|null=null,state:DuelState|null=null,side:Side=0,room='',selectedType='',shopPage=0,slots:number[]=[],operation:'+'|'-'='+',selectedTower=0,message='',busy=false,connected=true,dialogKind='',quoteNonce='',lastRound=-1;
 let peer:HostPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyProgress(),recorded='',saveMessage='',internetMode=false,progressLoading=false;
-let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRetryAt=0,roomPoll:ReturnType<typeof setInterval>|undefined;
+let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRetryAt=0,roomPoll:ReturnType<typeof setTimeout>|undefined;
 let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,roomListLoaded=false,loadingRoomList=false;
 let audioStatus='',audioFlame=9000;
 const sound=new Sound();sound.sfx=localStorage.getItem('decimal-duel-sfx')!=='off';sound.setMusic(loadSave().music);
@@ -67,7 +68,7 @@ function authScreen(mode:'login'|'register'='login'){
  }catch(e){status(errorText(e));button.disabled=false;}};
  bind('reset-password',async()=>{const email=content.querySelector<HTMLInputElement>('[name=email]')!.value;if(!email||!auth){status('이메일을 먼저 적어 주세요.');return;}try{await sendPasswordResetEmail(auth,email);status('비밀번호 재설정 안내를 요청했어요. 이메일을 확인해 주세요.');}catch(e){status(errorText(e));}});
 }
-function disposeRoom(){clearInterval(roomPoll);roomPoll=undefined;const id=listingId,claim=listingClaim,hosting=peer?.side===0;if(id)void roomRequest({action:hosting?'close':'release',id,claim}).catch(()=>{});listingId='';listingClaim='';listingExpires=0;listingClosing=false;listingRetryAt=0;peer?.dispose();peer=null;state=null;room='';offerCode='';answerCode='';quoteNonce='';recorded='';lastRound=-1;}
+function disposeRoom(){clearTimeout(roomPoll);roomPoll=undefined;const id=listingId,claim=listingClaim,hosting=peer?.side===0;if(id)void roomRequest({action:hosting?'close':'release',id,claim}).catch(()=>{});listingId='';listingClaim='';listingExpires=0;listingClosing=false;listingRetryAt=0;peer?.dispose();peer=null;state=null;room='';offerCode='';answerCode='';quoteNonce='';recorded='';lastRound=-1;}
 function profileText(){return `${user?.displayName||'수호자'} · 계정 Lv.${progress.level} · ${progress.wins}승 ${progress.losses}패 · 경험치 ${progress.experience}${firebaseEmulator?' · 테스트 계정':''}`;}
 function lobby(){
  if(!user){authScreen();return;}
@@ -120,7 +121,7 @@ function connectionScreen(){
  const hosting=peer?.side===0;show('connection',`<p class="eyebrow">${hosting?'내 컴퓨터가 호스트':'친구의 컴퓨터에 직접 접속'}</p><h2>${hosting?'친구의 입장을 기다리고 있어요':'호스트에 연결하고 있어요'}</h2><p>${hosting?'방이 중앙 목록에 등록되었어요. 친구가 공개방 또는 비밀번호로 입장하면 자동으로 연결돼요.':'비밀번호 확인과 접속 정보 교환을 마쳤어요. 연결되면 대전 화면으로 이동해요.'}</p><p data-feedback role="status"></p><div class="duel-row"><button id="connection-back">대기실 · 방 목록</button><button id="connection-cancel">연결 취소 · 방 닫기</button></div>`);bind('connection-back',lobby);bind('connection-cancel',()=>cancelRoom());
 }
 async function cancelRoom(){
- if(busy)return;busy=true;clearInterval(roomPoll);roomPoll=undefined;
+ if(busy)return;busy=true;clearTimeout(roomPoll);roomPoll=undefined;
  try{if(listingId){await roomRequest({action:peer?.side===0?'close':'release',id:listingId,claim:listingClaim});listingId='';}disposeRoom();lobby();}
  catch(e){disposeRoom();lobby();status(errorText(e));}finally{busy=false;refresh();}
 }
@@ -128,16 +129,16 @@ async function closeListing(){
  if(!listingId||peer?.side!==0||listingClosing||Date.now()<listingRetryAt)return;const id=listingId;listingClosing=true;listingRetryAt=Date.now()+5000;try{await roomRequest({action:'close',id});if(listingId===id)listingId='';}catch{}finally{listingClosing=false;}
 }
 function watchRoom(local:HostPeer){
- clearInterval(roomPoll);let polling=false,accepted=false,acceptedAt=0,connectedAck=false;const enteredAt=Date.now();
- const poll=async()=>{if(polling||peer!==local)return;polling=true;try{
+ clearTimeout(roomPoll);let polling=false,accepted=false,acceptedAt=0,connectedAck=false;const enteredAt=Date.now();
+ let watching=true;const poll=async()=>{if(!watching||polling||peer!==local)return;polling=true;try{
   const connected=local.connected&&!!local.state?.players[1];
-  if(local.state?.status==='playing'||local.state?.status==='finished'){if(local.side===0)await closeListing();if(!listingId||local.side===1){clearInterval(roomPoll);roomPoll=undefined;}return;}
-  if(connected){if(local.side===0&&!connectedAck&&listingId){await roomRequest({action:'connected',id:listingId});connectedAck=true;}return;}
+  if(local.state?.status==='playing'||local.state?.status==='finished'){if(local.side===0)await closeListing();if(!listingId||local.side===1){watching=false;clearTimeout(roomPoll);roomPoll=undefined;}return;}
+  if(connected){if(local.side===0&&!connectedAck&&listingId){await roomRequest({action:'connected',id:listingId});connectedAck=true;}watching=false;clearTimeout(roomPoll);roomPoll=undefined;return;}
   if(Date.now()+serverOffset>=listingExpires)throw Error('방을 만든 뒤 5분이 지나 목록에서 사라졌어요. 새 방을 만들어 주세요.');
   if(local.side===0&&!accepted){const result=await roomRequest<{answer:string;guestUid:string}>({action:'poll',id:listingId});if(result.answer){local.allowedGuestUid=result.guestUid;accepted=true;acceptedAt=Date.now();await local.accept(result.answer);}}
   if(local.side===1&&Date.now()-enteredAt>25000||accepted&&Date.now()-acceptedAt>20000)throw Error('호스트에 직접 연결하지 못했어요. 같은 Wi-Fi인지 확인하고 새 방을 만들어 주세요.');
- }catch(e){if(peer===local){if(local.connected&&local.state?.players[1]){clearInterval(roomPoll);roomPoll=undefined;return;}disposeRoom();lobby();status(errorText(e));}}finally{polling=false;}};
- roomPoll=setInterval(()=>void poll(),1500);void poll();
+ }catch(e){if(peer===local){if(local.connected&&local.state?.players[1]){watching=false;clearTimeout(roomPoll);roomPoll=undefined;return;}watching=false;disposeRoom();lobby();status(errorText(e));}}finally{polling=false;if(watching&&peer===local)roomPoll=setTimeout(()=>void poll(),Date.now()-enteredAt<60000?5000:10000);}};
+ void poll();
 }
 function startPeer(){
  disposeRoom();peer=new HostPeer({uid:user!.uid,name:(user!.displayName||'수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},internetMode);slots=[];selectedType='';selectedTower=0;
@@ -167,7 +168,7 @@ function purchase(){const q=state?.players[side]?.quote;if(!q)return;show('purch
  const input=content.querySelector<HTMLInputElement>('[name=answer]')!;input.focus();content.querySelectorAll<HTMLButtonElement>('[data-key]').forEach(b=>b.onclick=()=>{const k=b.dataset.key!;if(k==='⌫')input.value=input.value.slice(0,-1);else if(k==='.'&&!input.value.includes('.'))input.value=(input.value||'0')+'.';else if(/^\d$/.test(k)&&input.value.length<12)input.value+=k;});
  bind('cancel-purchase',()=>send({type:'cancel'}));content.querySelector<HTMLFormElement>('form')!.onsubmit=async e=>{e.preventDefault();await send({type:'answer',nonce:q.nonce,answer:input.value});};
 }
-function heroBook(fromLobby=false){const egg=state?.players[side]?.egg??0;show('heroes',`<p class="eyebrow">돌의 영웅 · 레벨마다 3종</p><h2>${fromLobby?'영웅 몬스터 30종':'부화할 영웅 선택 · 돌 알 Lv.'+egg}</h2><p>가속형은 주변 아군을 빠르게, 군집형은 돌 병사와 함께, 수호형은 감속에 강해요. 정답을 더 맞히면 더 높은 레벨의 영웅 한 마리가 나와요.</p><div class="hero-grid">${(fromLobby?HEROES:heroesAtLevel(egg)).map(h=>`<button class="hero-card" data-hero="${h.id}" ${fromLobby?'disabled':''}><span class="hero-crop" style="background-image:url('/assets/dungeon/${h.sheet}.png');background-position:0% ${h.row*50}%"></span><strong>Lv.${h.level} · ${h.name}</strong><span>체력 ${numberText(h.hp)}</span><small>${h.description}</small>${fromLobby?'':'<span class="duel-gold">이 영웅 부화 ▶</span>'}</button>`).join('')}</div><p data-feedback role="status"></p><button id="hero-back">${fromLobby?'대기실로':'더 성장시키기 · 닫기'}</button>`);
+function heroBook(fromLobby=false){const egg=state?.players[side]?.egg??0;show('heroes',`<p class="eyebrow">돌의 영웅 · 레벨마다 3종</p><h2>${fromLobby?'영웅 몬스터 30종':'부화할 영웅 선택 · 돌 알 Lv.'+egg}</h2><p>가속형은 주변 아군을 빠르게, 군집형은 돌 병사와 함께, 수호형은 감속에 강해요. 정답을 더 맞히면 더 높은 레벨의 영웅 한 마리가 나와요.</p><div class="hero-grid">${(fromLobby?HEROES:heroesAtLevel(egg)).map(h=>`<button class="hero-card" data-hero="${h.id}" ${fromLobby?'disabled':''}><span class="hero-crop" style="background-image:url('${artURL(h.sheet)}');background-position:0% ${h.row*50}%"></span><strong>Lv.${h.level} · ${h.name}</strong><span>체력 ${numberText(h.hp)}</span><small>${h.description}</small>${fromLobby?'':'<span class="duel-gold">이 영웅 부화 ▶</span>'}</button>`).join('')}</div><p data-feedback role="status"></p><button id="hero-back">${fromLobby?'대기실로':'더 성장시키기 · 닫기'}</button>`);
  bind('hero-back',()=>fromLobby?lobby():close());content.querySelectorAll<HTMLButtonElement>('[data-hero]').forEach(b=>b.onclick=async()=>{const r=await send({type:'hatch',heroId:b.dataset.hero!});if(r?.ok){sound.play('kill');close();}});
 }
 function rewardCollection(fromLobby=true){

@@ -1,3 +1,4 @@
+import {artURL} from './art';
 import {loadSave} from './save';
 import {Worksheet} from './worksheet';
 import {getOrCreateWorksheet,loadWorkbook,redeemWorksheet,selectWorksheetHero} from './worksheet-store';
@@ -16,7 +17,7 @@ function render(){if(!sheet)return;const book=loadWorkbook();$('ws-pages').inner
  if(sheet.claimedHero)feedback('이 훈련서는 '+heroSpec(sheet.claimedHero)!.name+'의 보상을 받았어요. 새 학습지를 출력해 다시 도전할 수 있어요.');
  const url=new URL(location.href);url.searchParams.set('id',sheet.id);url.searchParams.delete('print');history.replaceState(null,'',url.href);
 }
-async function print(){if(!sheet)return;feedback('인쇄 창에서 A4 세 쪽을 출력하거나 PDF로 저장하세요. 화면의 도구와 암호 입력란은 인쇄되지 않아요.');await document.fonts.ready;const egg=new Image();egg.src='/assets/dungeon/hero-eggs-v1.png';await egg.decode().catch(()=>{});window.print();}
+async function print(){if(!sheet)return;feedback('인쇄 창에서 A4 세 쪽을 출력하거나 PDF로 저장하세요. 화면의 도구와 암호 입력란은 인쇄되지 않아요.');await document.fonts.ready;const egg=new Image();egg.src=artURL('hero-eggs-v1');await egg.decode().catch(()=>{});window.print();}
 function open(html:string){previous=document.activeElement as HTMLElement;$('ws-dialog-body').innerHTML=html;$('ws-dialog').classList.remove('hidden');for(const node of Array.from(document.querySelectorAll<HTMLElement>('.workbook > :not(.workbook-dialog)')))node.inert=true;$('ws-close').focus();}
 function close(){$('ws-dialog').classList.add('hidden');for(const node of Array.from(document.querySelectorAll<HTMLElement>('.workbook > :not(.workbook-dialog)')))node.inert=false;(previous?.isConnected?previous:$('ws-collection')).focus();}
 function collection(){open('<p class="ws-eyebrow">훈련으로 깨어난 돌의 영웅</p><h2>내 수집 몬스터</h2>'+collectionHTML());bindSelection();}

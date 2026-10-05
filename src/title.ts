@@ -1,3 +1,4 @@
+import {artURL} from './art';
 import {loadSave,writeSave,hasAdventure,newAdventure} from './save';
 import {LEVELS} from './levels';
 import {DIFFICULTIES,isDifficulty} from './difficulty';

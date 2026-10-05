@@ -4,8 +4,9 @@ import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,route,naturalBlocks,key,START,END
 import {Effect,EFFECTS} from './levels';
 import {decimal} from './math';
 import {FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT} from './layout';
-import {loadDungeon,registerDungeon} from './assets';
-import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize} from './monsters';
+import {loadDungeon,registerDungeon,registerMonster} from './assets';
+import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize,stageMonsterKinds} from './monsters';
+import {artURL} from './art';
 import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
 import {HitEquationPopups} from './hit-equations';
 import {hitEquationsEnabled} from './combat-preferences';
@@ -24,13 +25,14 @@ export class Field extends Phaser.Scene{
  private battleEffects=new Set<Phaser.GameObjects.GameObject>();private lastShakeTime=0;
  private hitEquations?:HitEquationPopups;private shotSequence=0;
  private ambient?:AmbientProps;
+ private loadingMonsters=new Set<MonsterKind>();private monsterRetry=new Map<MonsterKind,number>();
  constructor(model:Defense){super('field');this.model=model;}
- preload(){loadDungeon(this);}
+ preload(){loadDungeon(this,stageMonsterKinds(this.model.level));}
  create(){
   this.readyFlag=true;this.cameras.main.setViewport(FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT);registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
   this.ambient=new AmbientProps(this,this.reducedMotion);
   this.hitEquations=new HitEquationPopups(this,{left:16,right:FIELD_WIDTH-16,top:12,bottom:FIELD_HEIGHT-16},()=>this.model.phase==='paused');
-  for(const kind of MONSTER_KINDS)for(const [name,start]of [['walk',0],['hurt',4],['frozen',8],['fall',12]] as const){this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:name==='walk'?5:8,repeat:name==='fall'?0:-1});}
+  for(const kind of MONSTER_KINDS)this.monsterAnimations(kind);
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat','shockwave'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
   this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>{if(!this.inField(pointer)){this.overlay.clear();return;}const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.hover(cellAt(p.x,p.y));});
@@ -60,6 +62,7 @@ export class Field extends Phaser.Scene{
   return this.add.text(x,y,text,{fontFamily:'Malgun Gothic, system-ui, sans-serif',fontSize:size,fontStyle:'bold',color,align:'center',padding:{x:5,y:3}}).setOrigin(.5);
  }
  drawTerrain(){
+  if(this.readyFlag)for(const kind of stageMonsterKinds(this.model.level))this.ensureMonster(kind);
   if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();const road=route(this.model.blocks)??[],roadSet=new Set(road.map(key));
   const backdrop=this.add.graphics();backdrop.fillStyle(0x17191d).fillRoundedRect(9,24,970,558,12);backdrop.lineStyle(2,0x4c4840).strokeRoundedRect(12,27,964,552,10);this.floor.add(backdrop);
   const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(.38).setTint(0xc4c0b8);this.floor.add(stoneFloor);
@@ -102,16 +105,29 @@ export class Field extends Phaser.Scene{
   }
   if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c,this.mode.kind==='wall');this.overlay.lineStyle(3,valid?0xfaf2d6:0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
  }
+ private monsterAnimations(kind:MonsterKind){
+  if(!this.textures.exists('dungeon-'+MONSTERS[kind].atlas))return;registerMonster(this,kind);
+  for(const [name,start]of [['walk',0],['hurt',4],['frozen',8],['fall',12]] as const)if(!this.anims.exists(kind+'-'+name))this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:name==='walk'?5:8,repeat:name==='fall'?0:-1});
+ }
+ private ensureMonster(kind:MonsterKind){
+  const key='dungeon-'+MONSTERS[kind].atlas;if(this.textures.exists(key)||this.loadingMonsters.has(kind)||performance.now()<(this.monsterRetry.get(kind)??0))return;
+  this.loadingMonsters.add(kind);const event='filecomplete-image-'+key;
+  const complete=()=>{this.load.off('loaderror',failed);this.loadingMonsters.delete(kind);this.monsterAnimations(kind);};
+  const failed=(file:Phaser.Loader.File)=>{if(file.key!==key)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingMonsters.delete(kind);this.monsterRetry.set(kind,performance.now()+30000);};
+  this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(key,artURL(MONSTERS[kind].atlas));if(!this.load.isLoading())this.load.start();
+ }
  private enemyVisual(e:Enemy){
+  this.ensureMonster(e.kind);const renderedKind=this.textures.exists('dungeon-'+MONSTERS[e.kind].atlas)?e.kind:'slime';
   const art=MONSTERS[e.kind],size=monsterSize(e.kind,this.model.level.id),sy=e.y+32-size*.4;
   const tx=Phaser.Math.Clamp(e.x,art.boss?69:48,FIELD_WIDTH-69),ty=Math.max(hitEquationsEnabled()?106:62,sy-size*.46);
   let v=this.visuals.get(e.id);if(!v){
-   const sprite=this.add.sprite(e.x,sy,'dungeon-'+art.atlas,e.kind+'-0').setDisplaySize(size,size).setDepth(4).setData('kind',e.kind);sprite.play(e.kind+'-walk');
+   const sprite=this.add.sprite(e.x,sy,'dungeon-'+MONSTERS[renderedKind].atlas,renderedKind+'-0').setDisplaySize(size,size).setDepth(4).setData('kind',e.kind);sprite.play(renderedKind+'-walk');
    const text=this.label(tx,ty,'',art.boss?32:25,'#fff0cb').setBackgroundColor('#11141de8').setDepth(7);
    const name=this.label(tx,ty-27,(art.boss?'보스 · ':'')+art.name,art.boss?15:12,art.boss?'#ffd478':'#ddd4c5').setBackgroundColor('#11141de8').setDepth(7);
    const bar=this.add.graphics().setDepth(6);v={kind:e.kind,sprite,text,name,bar};this.visuals.set(e.id,v);
   }
-  v.sprite.setPosition(e.x,sy);const anim=e.kind+'-'+(e.stun||e.slow?'frozen':e.hitFlash?'hurt':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);
+  const texture='dungeon-'+MONSTERS[renderedKind].atlas;if(v.sprite.texture.key!==texture)v.sprite.stop().setTexture(texture,renderedKind+'-0').setDisplaySize(size,size);
+  v.sprite.setPosition(e.x,sy);const anim=renderedKind+'-'+(e.stun||e.slow?'frozen':e.hitFlash?'hurt':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);
   v.text.setPosition(tx,ty).setText(decimal(e.hp,this.model.level.digits));v.name.setPosition(tx,ty-27);
   const width=art.boss?100:Math.max(44,size*.38),by=ty+22;v.bar.clear();v.bar.fillStyle(0x090a10,.9).fillRoundedRect(tx-width/2,by,width,6,2);v.bar.fillStyle(e.stun?0xb9a4dc:art.color).fillRoundedRect(tx-width/2,by,width*e.hp/e.max,6,2);
  }
@@ -214,7 +230,7 @@ export class Field extends Phaser.Scene{
   for(const object of this.battleEffects)if(object instanceof Phaser.GameObjects.Sprite){if(paused)object.anims.pause();else if(object.anims.isPaused)object.anims.resume();}
   this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
   for(const v of this.visuals.values()){if(paused)v.sprite.anims.pause();else if(v.sprite.anims.isPaused)v.sprite.anims.resume();}
-  const live=new Set(this.model.enemies.map(e=>e.id));for(const [id,v]of this.visuals){if(live.has(id))continue;v.text.destroy();v.name.destroy();v.bar.destroy();this.trackEffect(v.sprite);v.sprite.play(v.kind+'-fall');this.tweens.add({targets:v.sprite,alpha:0,duration:550,onComplete:()=>v.sprite.destroy()});this.visuals.delete(id);}
+  const live=new Set(this.model.enemies.map(e=>e.id));for(const [id,v]of this.visuals){if(live.has(id))continue;v.text.destroy();v.name.destroy();v.bar.destroy();this.trackEffect(v.sprite);v.sprite.play((this.anims.exists(v.kind+'-fall')?v.kind:'slime')+'-fall');this.tweens.add({targets:v.sprite,alpha:0,duration:550,onComplete:()=>v.sprite.destroy()});this.visuals.delete(id);}
   if(this.layoutSignature!==this.signature())this.drawTerrain();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(this.heartbeat>=120){this.heartbeat=0;this.onChange();}
  }
 }

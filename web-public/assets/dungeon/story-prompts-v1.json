@@ -1,0 +1,54 @@
+[
+  {
+    "name": "title-castle-v1",
+    "transparent": false,
+    "refs": [
+      "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/flame-loop-v1.png"
+    ],
+    "prompt": "Use case: illustration-story. Production art for the Korean elementary-school fantasy tower-defense game 'Decimal Castle'. Original cheerful dark-dungeon fantasy, chunky hand-painted 2D game illustration, detailed angular gray stone, restrained gold/brass ornament, glowing amber fire and violet magic, warm hopeful mood, readable silhouettes, no realistic gore or horror. No typography, letters, numerals, UI, logos or watermark. Wide cinematic landscape composition, preferably 16:9. Create a spectacular game title-screen background, not a sprite sheet. Use the castle/flame in the reference only for visual style. A majestic small bastioned gray-stone fortress with one tall amber protective flame on its roof stands on the RIGHT HALF of an immense mysterious underground chamber. Amber reflections across a winding stone path, quiet stone towers in the foreground, hazy tall ruined arches and a faint violet portal in the far distance. Deep navy charcoal shadows and golden floating embers. Leave the LEFT 42 percent dark and visually quiet for a large title and four menu buttons to be added in code. Strong foreground/midground/background separation for cinematic parallax. Fortress appears slightly above the middle vertically. Polished premium game key art, beautiful lighting, fantastical and suitable for age ten.",
+    "mode": "built-in image_gen",
+    "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a106eb-ada0-7333-ab22-fcd5d497aee2\\exec-1570de74-17b8-4860-9dad-fbbb6c3f4d0e.png",
+    "projectFile": "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/title-castle-v1.png"
+  },
+  {
+    "name": "story-rift-v1",
+    "transparent": false,
+    "refs": [
+      "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/monster-king.png"
+    ],
+    "prompt": "Use case: illustration-story. Production art for the Korean elementary-school fantasy tower-defense game 'Decimal Castle'. Original cheerful dark-dungeon fantasy, chunky hand-painted 2D game illustration, detailed angular gray stone, restrained gold/brass ornament, glowing amber fire and violet magic, warm hopeful mood, readable silhouettes, no realistic gore or horror. No typography, letters, numerals, UI, logos or watermark. Wide cinematic landscape composition, preferably 16:9. Create ONE cinematic landscape narrative illustration, not a sprite sheet. A gigantic crowned stone king awakened by a violet magical rift. Broad angular charcoal-gray body, gold crown, amethyst cracks and a single violet chest crystal. The king stands on the RIGHT side in a monumental stone arched portal, purple swirls and levitating stone fragments; tiny amber guardian fortress visible far on the left at the end of a dungeon path. Ominous yet whimsical, determined eyes, no horror. Keep the central lower area dark with uncluttered negative space for story typography added in code. The reference is a sprite sheet but use only one character appearance as a style reference, never reproduce its grid. Epic depth and lateral light shafts.",
+    "mode": "built-in image_gen",
+    "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a106eb-ada0-7333-ab22-fcd5d497aee2\\exec-ab60de7f-8567-4192-a4e7-71194b808583.png",
+    "projectFile": "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/story-rift-v1.png"
+  },
+  {
+    "name": "story-dawn-v1",
+    "transparent": false,
+    "refs": [
+      "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/flame-loop-v1.png"
+    ],
+    "prompt": "Use case: illustration-story. Production art for the Korean elementary-school fantasy tower-defense game 'Decimal Castle'. Original cheerful dark-dungeon fantasy, chunky hand-painted 2D game illustration, detailed angular gray stone, restrained gold/brass ornament, glowing amber fire and violet magic, warm hopeful mood, readable silhouettes, no realistic gore or horror. No typography, letters, numerals, UI, logos or watermark. Wide cinematic landscape composition, preferably 16:9. Create ONE cinematic landscape ending illustration, not a sprite sheet. Dawn returns to an enchanted stone fortress at the edge of a peaceful green valley. The familiar chunky gray castle stands on the RIGHT half, its guardian flame now a radiant warm gold beacon. Broad stairway and rebuilt stone walls, distant tiny village roofs, sunlight streaming through large ruined stone arches, delicate golden fireflies. Violet darkness has dissolved into pale lavender mist. A peaceful small crowned stone guardian rests at the far lower right, no villain pose. The LEFT half contains a softly shaded scenic sky and valley, enough quiet space for a victory title added in code. Warm ivory/gold/soft sage palette, hopeful triumphant storybook illustration.",
+    "mode": "built-in image_gen",
+    "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a106eb-ada0-7333-ab22-fcd5d497aee2\\exec-71b45c7a-f72b-494e-80b7-0759e29bf6b0.png",
+    "projectFile": "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/story-dawn-v1.png"
+  },
+  {
+    "name": "menu-button-v1",
+    "transparent": true,
+    "prompt": "Use case: stylized-concept. A single blank game menu button, production transparent PNG, wide horizontal 4:1 rounded beveled rectangle centered with small transparent padding on all sides. Chunky dark gray forged stone inset, thick carved charcoal border, thin polished antique brass inner edge, two tiny symmetric amber diamond ornaments at the left and right ends. High quality hand-painted 2D fantasy dungeon UI matching gray stone towers and warm protective fire. Center must be empty dark charcoal with usable space for Korean words rendered later by code. Absolutely no text, letters, numbers, logos, icons in the center, backdrop, cast shadows outside the button, extra panels, sprite sheet or grid. True transparent alpha outside the single button.",
+    "mode": "built-in image_gen",
+    "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a106eb-ada0-7333-ab22-fcd5d497aee2\\exec-6ddbdf8c-4724-4203-b57a-8672ed99b3a3.png",
+    "projectFile": "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/menu-button-v1.png"
+  },
+  {
+    "name": "monster-warden-v1",
+    "transparent": true,
+    "refs": [
+      "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/monster-king.png"
+    ],
+    "prompt": "Use case: stylized-concept. Production transparent animation sprite atlas for the FINAL BOSS of a friendly fantasy dungeon tower defense. Exactly FOUR equal columns by FOUR equal rows, 16 perfectly regular square cells on a square canvas, no grid lines. Each cell holds the SAME giant 'Rift Stone King', a new stronger variant inspired by the reference king. Massive broad charcoal-stone body, angular gold crown, violet glowing cracks and a bright AMETHYST CHEST CORE, large armored fists, determined amber eyes, small violet magical fragments floating near shoulders. THREE-QUARTER front view, chunky hand-painted 2D fantasy game art, readable child-friendly villain, not scary or grotesque. ROW ONE: four sequential walking poses with subtle weight shifts. ROW TWO: four sequential hit reaction poses, small purple sparks, no gore. ROW THREE: four slowed/frozen poses with thin cyan crystal haze and icy shards. ROW FOUR: four defeat poses from kneeling to collapsed stone pieces, crown and chest crystal fading to warm gold, no living creature visible in last cell. Identical character scale and cell-centered placement across rows, each pose fully contained in its own cell with at least 10 percent transparent padding. No text, UI, floor, background, shadows outside sprite, watermark or extra characters. Preserve real transparent alpha between all cells.",
+    "mode": "built-in image_gen",
+    "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a106eb-ada0-7333-ab22-fcd5d497aee2\\exec-0d1517ef-9ae3-4eb5-a5e4-64271b35585b.png",
+    "projectFile": "C:/Users/user/myproject/sosoo/game/public/assets/dungeon/monster-warden-v1.png"
+  }
+]

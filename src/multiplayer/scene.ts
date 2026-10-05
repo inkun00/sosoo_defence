@@ -1,3 +1,4 @@
+import {artURL} from '../art';
 import Phaser from 'phaser';
 import {loadDungeon,registerDungeon} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
@@ -20,19 +21,15 @@ export class DuelScene extends Phaser.Scene{
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private hitEquations?:HitEquationPopups;
  private ambient?:AmbientProps;
+ private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
  constructor(public view:()=>DuelView){super('duel');}
- preload(){loadDungeon(this);for(let lv=1;lv<=10;lv++)this.load.image('heroes-'+lv,`/assets/dungeon/heroes-level-${lv}-v1.png`);this.load.image('duel-eggs','/assets/dungeon/hero-eggs-v1.png');}
+ preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));}
  create(){
   registerDungeon(this);
   this.ambient=new AmbientProps(this,this.reduced);
-  for(const kind of MONSTER_KINDS)for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
+  for(const kind of MONSTER_KINDS.filter(k=>this.textures.exists('dungeon-'+MONSTERS[k].atlas)))for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
-  for(let lv=1;lv<=10;lv++){
-   const tex=this.textures.get('heroes-'+lv),source=tex.getSourceImage();
-   for(let row=0;row<3;row++)for(let frame=0;frame<4;frame++){const y=Math.round(row*source.height/3),end=Math.round((row+1)*source.height/3);tex.add(`hero-${lv}-${row}-${frame}`,0,Math.round(frame*source.width/4),y,Math.round(source.width/4),end-y);}
-   for(const h of heroesAtLevel(lv))this.anims.create({key:h.id,frames:Array.from({length:4},(_,i)=>({key:'heroes-'+lv,frame:h.id+'-'+i})),frameRate:5,repeat:-1});
-  }
   const egg=this.textures.get('duel-eggs'),source=egg.getSourceImage();for(let i=0;i<10;i++){const x=Math.round(i%5*source.width/5),y=Math.round(Math.floor(i/5)*source.height/2);egg.add('egg-'+(i+1),0,x,y,Math.round((i%5+1)*source.width/5)-x,Math.round(source.height/2));}
   this.terrain=this.add.container(0,0);this.units=this.add.container(0,0);this.guides=this.add.graphics().setDepth(8);this.ui=this.add.container(0,0).setDepth(10);this.hitEquations=new HitEquationPopups(this,{left:X+4,right:X+24*T-4,top:Y+4,bottom:Y+7*T-4});this.ready=true;this.redraw();
   this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.x>=X&&p.x<X+24*T&&p.y>=Y&&p.y<Y+7*T)this.onCell(Math.floor((p.x-X)/T),Math.floor((p.y-Y)/T));});
@@ -101,14 +98,25 @@ export class DuelScene extends Phaser.Scene{
    for(const t of s?.players[side]?.towers??[]){const x=X+(t.x+.5)*T,y=Y+(t.y+.5)*T,c=this.add.container(x,y-4);this.units.add(c);c.setAlpha(t.enabled?1:.5);const head=this.towerIcon(c,0,0,t.typeId,47);this.text(c,0,30,numberText(t.unit),15,'#ffe4a6').setBackgroundColor('#11131be8');this.towerViews.set(t.id,{head,tower:t});}
   }
  }
+ private ensureHero(level:number){
+  const key='heroes-'+level;if(this.textures.exists(key)||this.loadingHeroes.has(level)||performance.now()<(this.heroRetry.get(level)??0))return;this.loadingHeroes.add(level);
+  const event='filecomplete-image-'+key,complete=()=>{this.load.off('loaderror',failed);const texture=this.textures.get(key),source=texture.getSourceImage();
+   for(let row=0;row<3;row++)for(let frame=0;frame<4;frame++){const y=Math.round(row*source.height/3),end=Math.round((row+1)*source.height/3);texture.add(`hero-${level}-${row}-${frame}`,0,Math.round(frame*source.width/4),y,Math.round(source.width/4),end-y);}
+   for(const h of heroesAtLevel(level))this.anims.create({key:h.id,frames:Array.from({length:4},(_,i)=>({key,frame:h.id+'-'+i})),frameRate:5,repeat:-1});this.loadingHeroes.delete(level);this.syncEnemies();
+  };
+  const failed=(file:Phaser.Loader.File)=>{if(file.key!==key)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingHeroes.delete(level);this.heroRetry.set(level,performance.now()+30000);};
+  this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(key,artURL(`heroes-level-${level}-v1`));if(!this.load.isLoading())this.load.start();
+ }
  private syncEnemies(){const s=this.view().state,live=new Set(s?.enemies.map(e=>e.id));for(const [id,v]of this.enemies)if(!live.has(id)){v.sprite.destroy();v.hp.destroy();v.name.destroy();this.enemies.delete(id);}
   for(const e of s?.enemies??[]){let v=this.enemies.get(e.id);const hero=e.hero?heroSpec(e.hero):null,kind:MonsterKind=e.level>=8?'king':e.level>=6?'crystal':e.level>=4?'golem':e.level>=2?'beetle':'slime',size=hero?44+hero.level*2.6:39+e.level*1.4;
    const x=X+(e.x+.5)*T,y=Y+3.5*T-4;
-   if(!v){const sprite=hero?this.add.sprite(x,y,'heroes-'+hero.level,hero.id+'-0'):this.add.sprite(x,y,'dungeon-'+MONSTERS[kind].atlas,kind+'-0');sprite.setDisplaySize(size,size).setDepth(4).setFlipX(e.target===0);if(!this.reduced)sprite.play(hero?hero.id:kind+'-walk');
+   if(hero)this.ensureHero(hero.level);const heroReady=hero&&this.textures.exists('heroes-'+hero.level),texture=heroReady?'heroes-'+hero.level:'dungeon-'+MONSTERS[kind].atlas,frame=heroReady?hero.id+'-0':kind+'-0';
+   if(!v){const sprite=this.add.sprite(x,y,texture,frame);sprite.setDisplaySize(size,size).setDepth(4).setFlipX(e.target===0);if(!this.reduced)sprite.play(heroReady?hero.id:kind+'-walk');
     const hp=this.add.text(x,y-size*.5-11,'',{fontFamily:'Malgun Gothic',fontSize:18,fontStyle:'bold',color:'#fff2d6',backgroundColor:'#11131dea',padding:{x:3,y:1}}).setOrigin(.5).setDepth(7);
     const name=this.add.text(x,y-size*.5-31,hero?`★ ${hero.name}`:'',{fontFamily:'Malgun Gothic',fontSize:11,color:e.owner===0?'#9fe8ff':'#ffcc8a',backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name,last:e.hp};this.enemies.set(e.id,v);
    }else if(v.last!==e.hp){if(!this.reduced)this.tweens.add({targets:v.sprite,alpha:.4,yoyo:true,duration:90,repeat:1});v.last=e.hp;}
-   if(!hero&&!this.reduced){const anim=kind+'-'+(e.slow>0||e.stun>0?'frozen':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);}
+   if(v.sprite.texture.key!==texture){v.sprite.stop().setTexture(texture,frame).setDisplaySize(size,size);}
+   if(!this.reduced){const anim=heroReady?hero.id:kind+'-'+(e.slow>0||e.stun>0?'frozen':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);}
    const aura=(s?.enemies??[]).filter(o=>o.owner===e.owner&&o.hp>0&&o.hero&&heroSpec(o.hero)?.effect==='haste'&&Math.abs(o.x-e.x)<=3).reduce((a,o)=>Math.max(a,1.12+o.level*.025),1),resistance=hero?.effect==='steadfast'?Math.min(.8,.2+hero.level*.06):0;
    v.hp.setText(numberText(e.hp));v.sprite.setData('x',x);v.sprite.setData('y',y);v.sprite.setData('vx',e.stun>0?0:(e.target===0?-1:1)*(.24+e.level*.009)*aura*(e.slow>0?.6+.4*resistance:1)*T);v.hp.setData('y',y-size*.5-11);v.name.setData('y',y-size*.5-31);
   }

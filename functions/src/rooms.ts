@@ -12,17 +12,22 @@ function invitation(code:unknown,kind:'offer'|'answer',id:string,uid:string){
 }
 function hash(password:string,salt:string){return scryptSync(password,salt,32);}
 export async function pruneRooms(now=Date.now()){
- const expired=await lobby().where('expiresAt','<=',now).limit(100).get();
- if(!expired.empty){const batch=db().batch();for(const doc of expired.docs){batch.delete(doc.ref);batch.delete(secret(doc.id));}await batch.commit();}
- const attempts=await db().collection('decimalLobbyLimits').where('expiresAt','<=',now).limit(100).get();if(!attempts.empty){const batch=db().batch();attempts.docs.forEach(d=>batch.delete(d.ref));await batch.commit();}
+ // Expiry is enforced in list/join immediately. Physical cleanup runs hourly
+ // and drains a bounded backlog instead of billing a scheduled call each minute.
+ for(let page=0;page<10;page++){const expired=await lobby().where('expiresAt','<=',now).limit(100).get();if(expired.empty)break;
+  const batch=db().batch();for(const doc of expired.docs){batch.delete(doc.ref);batch.delete(secret(doc.id));}await batch.commit();if(expired.size<100)break;
+ }
+ for(let page=0;page<10;page++){const attempts=await db().collection('decimalLobbyLimits').where('expiresAt','<=',now).limit(100).get();if(attempts.empty)break;
+  const batch=db().batch();attempts.docs.forEach(d=>batch.delete(d.ref));await batch.commit();if(attempts.size<100)break;
+ }
 }
-export const duelPruneRooms=onSchedule({schedule:'* * * * *',region:'asia-northeast3',maxInstances:1,timeoutSeconds:60},async()=>{await pruneRooms();});
-export const duelRoom=onCall({region:'asia-northeast3',maxInstances:10,timeoutSeconds:30,memory:'256MiB'},async r=>{
+export const duelPruneRooms=onSchedule({schedule:'0 * * * *',region:'asia-northeast3',maxInstances:1,minInstances:0,timeoutSeconds:60,memory:'256MiB',cpu:'gcf_gen1',concurrency:1},async()=>{await pruneRooms();});
+export const duelRoom=onCall({region:'asia-northeast3',maxInstances:10,minInstances:0,timeoutSeconds:30,memory:'256MiB',cpu:'gcf_gen1',concurrency:1},async r=>{
  if(!r.auth)throw new HttpsError('unauthenticated','먼저 로그인해 주세요.');
  const uid=r.auth.uid,d=r.data as Record<string,any>,now=Date.now();
  if(!d||!['list','create','join','answer','poll','close','release','connected'].includes(d.action))throw new HttpsError('invalid-argument','방 조작을 확인해 주세요.');
  if(d.action==='list'){
-  await pruneRooms(now);const rows=await lobby().where('expiresAt','>',now).orderBy('expiresAt','asc').limit(50).get();
+  const rows=await lobby().where('expiresAt','>',now).orderBy('expiresAt','asc').limit(50).get();
   return {now,rooms:rows.docs.map(doc=>publicRoom(doc.id,doc.data(),now))};
  }
  if(!validRoomId(d.id))throw new HttpsError('invalid-argument','방 번호를 확인해 주세요.');

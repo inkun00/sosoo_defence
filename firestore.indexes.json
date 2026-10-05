@@ -1,1 +1,80 @@
-{"indexes":[],"fieldOverrides":[{"collectionGroup":"matches","fieldPath":"wrongQuestions","indexes":[]}]}
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "matches",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "matches",
+      "fieldPath": "endedAt",
+      "indexes": [
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "matches",
+      "fieldPath": "savedAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "decimalLobbyPrivate",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "decimalLobbyOwners",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "decimalResults",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "decimalUsers",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "decimalLobby",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "decimalLobby",
+      "fieldPath": "expiresAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "decimalLobbyLimits",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "decimalLobbyLimits",
+      "fieldPath": "expiresAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    }
+  ]
+}

@@ -34,8 +34,11 @@ export function recordLearning(s:LearningSample,outcome:keyof LearningCount,id?:
 export function practiceWeight(c:LearningCount){return Math.max(0,Math.min(30,(c.wrong*4+c.help*2-c.correct)/(1+c.correct*.2)));}
 export interface HistoricalLearningRecord{matchId:string;hostUid:string;guestUid:string;side:0|1;wrongQuestions:{id:string;a:number;b:number;operation:FusionOperation;kind:string;level:number;attempts:number}[];}
 export function importLearningRecords(records:HistoricalLearningRecord[]){
+ let saved=true;
+ try{if(!localStorage.getItem(KEY))localStorage.setItem(KEY,JSON.stringify(empty()));}catch{saved=false;}
  for(const r of records){if(!r||!Array.isArray(r.wrongQuestions)||typeof r.matchId!=='string')continue;const uid=r.side===0?r.hostUid:r.guestUid;
-  for(const q of r.wrongQuestions){if(!q||!Number.isSafeInteger(q.attempts)||q.attempts<1)continue;recordLearning({a:q.a,b:q.b,operation:q.operation,context:q.kind==='tower'?'money':'wall',digits:q.kind==='tower'&&q.level>=4?3:undefined},'wrong',r.matchId+':'+uid+':'+q.id,q.attempts);}
+  for(const q of r.wrongQuestions){if(!q||!Number.isSafeInteger(q.attempts)||q.attempts<1)continue;const sample:LearningSample={a:q.a,b:q.b,operation:q.operation,context:q.kind==='tower'?'money':'wall',digits:q.kind==='tower'&&q.level>=4?3:undefined};if(!classify(sample))continue;saved=recordLearning(sample,'wrong',r.matchId+':'+uid+':'+q.id,q.attempts)&&saved;}
  }
+ return saved;
 }
 export function importPendingLearning(){try{const rows=JSON.parse(localStorage.getItem('decimal-duel-pending-results-v1')||'[]');if(Array.isArray(rows))importLearningRecords(rows);}catch{/* A malformed old cache never prevents a worksheet. */}}

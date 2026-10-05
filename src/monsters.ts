@@ -19,3 +19,6 @@ export function monsterKind(stage:number,index:number,hp:number):MonsterKind{
  return 'slime';
 }
 export function monsterSize(kind:MonsterKind,stage:number){return MONSTERS[kind].size*(kind==='king'?1+Math.max(0,stage-8)*.04:1);}
+export function stageMonsterKinds(stage:{id:number;hp:number[]}){
+ return [...new Set<MonsterKind>(['slime',...stage.hp.map((hp,index)=>monsterKind(stage.id,index,hp))])];
+}
