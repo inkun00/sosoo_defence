@@ -7,6 +7,7 @@ import {DuelState,Side,DuelTower,DUEL_ROAD,duelLevel,validDuelCell} from './duel
 import {HEROES,heroSpec,heroesAtLevel} from './heroes';
 import {HitEquationPopups} from '../hit-equations';
 import {learningDescription} from './decimal-boards';
+import {AmbientProps} from '../ambient-props';
 const X=37,Y=132,T=38;
 export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];operation:'+'|'-';selectedTower:number;message:string;busy:boolean;connected:boolean;}
 export class DuelScene extends Phaser.Scene{
@@ -17,10 +18,12 @@ export class DuelScene extends Phaser.Scene{
  private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower}>();private signature='';private uiSignature='';private seenShots=new Set<number>();private revision=-1;private receivedAt=0;
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private hitEquations?:HitEquationPopups;
+ private ambient?:AmbientProps;
  constructor(public view:()=>DuelView){super('duel');}
  preload(){loadDungeon(this);for(let lv=1;lv<=10;lv++)this.load.image('heroes-'+lv,`/assets/dungeon/heroes-level-${lv}-v1.png`);this.load.image('duel-eggs','/assets/dungeon/hero-eggs-v1.png');}
  create(){
   registerDungeon(this);
+  this.ambient=new AmbientProps(this,this.reduced);
   for(const kind of MONSTER_KINDS)for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
@@ -83,13 +86,13 @@ export class DuelScene extends Phaser.Scene{
   else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'성벽 없이 곧은 길 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,424,message,18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
   this.syncShots();this.syncEnemies();this.onControls();
  }
- private drawTerrain(){this.terrain.removeAll(true);this.units.removeAll(true);this.towerViews.clear();const s=this.view().state;
+ private drawTerrain(){this.ambient?.prepareRedraw();this.terrain.removeAll(true);this.units.removeAll(true);this.towerViews.clear();const s=this.view().state;
   this.panel(this.terrain,493,266,970,299);this.terrain.add(this.add.tileSprite(X+456,Y+133,912,266,'dungeon-terrain','floor').setTileScale(.35));
   const grid=this.add.graphics();for(let x=0;x<24;x++)for(let y=0;y<7;y++){
    const cx=X+(x+.5)*T,cy=Y+(y+.5)*T;if(y===DUEL_ROAD)this.terrain.add(this.add.image(cx,cy,'dungeon-terrain','path').setDisplaySize(T,T));
    else{grid.lineStyle(1,x<12?0x55aec3:0xe2a569,.18).strokeRect(cx-T/2,cy-T/2,T,T);}
   }this.terrain.add(grid);
-  for(const side of [0,1] as Side[]){const x=X+(side===0?.5:23.5)*T;this.terrain.add(this.add.image(x,Y+3.5*T-10,'dungeon-props','base').setDisplaySize(79,89).setTint(side===0?0xa6e8ff:0xffc382));
+  for(const side of [0,1] as Side[]){const x=X+(side===0?.5:23.5)*T;this.ambient?.add(this.terrain,'guardian-'+side,'flame',x,Y+3.5*T-10,94,92).setTint(side===0?0xa6e8ff:0xffc382);
    for(const t of s?.players[side]?.towers??[]){const x=X+(t.x+.5)*T,y=Y+(t.y+.5)*T,c=this.add.container(x,y-4);this.units.add(c);c.setAlpha(t.enabled?1:.5);const head=this.towerIcon(c,0,0,t.typeId,47);this.text(c,0,30,numberText(t.unit),15,'#ffe4a6').setBackgroundColor('#11131be8');this.towerViews.set(t.id,{head,tower:t});}
   }
  }

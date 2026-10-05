@@ -1,0 +1,248 @@
+{
+  "portal": {
+    "texture": "portal-loop-v1",
+    "canvasWidth": 420,
+    "canvasHeight": 440,
+    "fps": 9,
+    "sourceWidth": 1254,
+    "sourceHeight": 1254,
+    "frames": [
+      {
+        "x": 88,
+        "y": 53,
+        "width": 296,
+        "height": 364,
+        "offsetX": 62,
+        "offsetY": 41
+      },
+      {
+        "x": 483,
+        "y": 53,
+        "width": 295,
+        "height": 364,
+        "offsetX": 62,
+        "offsetY": 42
+      },
+      {
+        "x": 875,
+        "y": 53,
+        "width": 295,
+        "height": 364,
+        "offsetX": 62,
+        "offsetY": 42
+      },
+      {
+        "x": 88,
+        "y": 447,
+        "width": 296,
+        "height": 364,
+        "offsetX": 62,
+        "offsetY": 42
+      },
+      {
+        "x": 482,
+        "y": 447,
+        "width": 295,
+        "height": 364,
+        "offsetX": 62,
+        "offsetY": 42
+      },
+      {
+        "x": 875,
+        "y": 446,
+        "width": 295,
+        "height": 365,
+        "offsetX": 63,
+        "offsetY": 41
+      },
+      {
+        "x": 88,
+        "y": 841,
+        "width": 296,
+        "height": 363,
+        "offsetX": 62,
+        "offsetY": 43
+      },
+      {
+        "x": 481,
+        "y": 840,
+        "width": 296,
+        "height": 364,
+        "offsetX": 62,
+        "offsetY": 42
+      },
+      {
+        "x": 875,
+        "y": 839,
+        "width": 295,
+        "height": 365,
+        "offsetX": 63,
+        "offsetY": 41
+      }
+    ]
+  },
+  "flame": {
+    "texture": "flame-loop-v1",
+    "canvasWidth": 420,
+    "canvasHeight": 440,
+    "fps": 12,
+    "sourceWidth": 1254,
+    "sourceHeight": 1254,
+    "frames": [
+      {
+        "x": 84,
+        "y": 26,
+        "width": 271,
+        "height": 381,
+        "offsetX": 74,
+        "offsetY": 25
+      },
+      {
+        "x": 491,
+        "y": 17,
+        "width": 271,
+        "height": 390,
+        "offsetX": 74,
+        "offsetY": 16
+      },
+      {
+        "x": 900,
+        "y": 31,
+        "width": 269,
+        "height": 376,
+        "offsetX": 76,
+        "offsetY": 30
+      },
+      {
+        "x": 84,
+        "y": 438,
+        "width": 271,
+        "height": 384,
+        "offsetX": 74,
+        "offsetY": 22
+      },
+      {
+        "x": 491,
+        "y": 443,
+        "width": 271,
+        "height": 379,
+        "offsetX": 74,
+        "offsetY": 27
+      },
+      {
+        "x": 899,
+        "y": 444,
+        "width": 270,
+        "height": 378,
+        "offsetX": 75,
+        "offsetY": 28
+      },
+      {
+        "x": 84,
+        "y": 865,
+        "width": 272,
+        "height": 363,
+        "offsetX": 74,
+        "offsetY": 42
+      },
+      {
+        "x": 491,
+        "y": 849,
+        "width": 271,
+        "height": 379,
+        "offsetX": 74,
+        "offsetY": 26
+      },
+      {
+        "x": 899,
+        "y": 857,
+        "width": 270,
+        "height": 371,
+        "offsetX": 75,
+        "offsetY": 34
+      }
+    ]
+  },
+  "torch": {
+    "texture": "torch-loop-v1",
+    "canvasWidth": 420,
+    "canvasHeight": 440,
+    "fps": 10,
+    "sourceWidth": 1254,
+    "sourceHeight": 1254,
+    "frames": [
+      {
+        "x": 133,
+        "y": 36,
+        "width": 167,
+        "height": 372,
+        "offsetX": 126,
+        "offsetY": 34
+      },
+      {
+        "x": 542,
+        "y": 15,
+        "width": 166,
+        "height": 393,
+        "offsetX": 127,
+        "offsetY": 13
+      },
+      {
+        "x": 951,
+        "y": 46,
+        "width": 182,
+        "height": 362,
+        "offsetX": 126,
+        "offsetY": 44
+      },
+      {
+        "x": 133,
+        "y": 442,
+        "width": 167,
+        "height": 379,
+        "offsetX": 126,
+        "offsetY": 26
+      },
+      {
+        "x": 542,
+        "y": 445,
+        "width": 166,
+        "height": 377,
+        "offsetX": 127,
+        "offsetY": 29
+      },
+      {
+        "x": 951,
+        "y": 458,
+        "width": 167,
+        "height": 364,
+        "offsetX": 126,
+        "offsetY": 42
+      },
+      {
+        "x": 133,
+        "y": 867,
+        "width": 167,
+        "height": 363,
+        "offsetX": 126,
+        "offsetY": 43
+      },
+      {
+        "x": 542,
+        "y": 849,
+        "width": 166,
+        "height": 381,
+        "offsetX": 127,
+        "offsetY": 25
+      },
+      {
+        "x": 951,
+        "y": 861,
+        "width": 167,
+        "height": 369,
+        "offsetX": 126,
+        "offsetY": 37
+      }
+    ]
+  }
+}

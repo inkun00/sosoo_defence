@@ -89,3 +89,14 @@ Generated with the built-in OpenAI image_gen tool, transparent-background mode.
 Original PNG pixels and alpha are preserved, with atlas frames registered at runtime.
 Prompts and original/destination paths: assets/dungeon/hero-prompts-v1.json
 and assets/dungeon/egg-prompts-v1.json. No new third-party image assets.
+
+ANIMATED ENTRANCE AND FLAMES
+Original portal, guardian keep flame and decorative torch animation sheets.
+Each sheet contains nine transparent frames, generated using the built-in
+OpenAI image_gen tool with the user's three object screenshots as references.
+Original PNG pixels and alpha are preserved. Runtime frame rectangles and trim
+offsets align the stonework while only the vortex/fire changes between frames.
+Portal: assets/dungeon/portal-loop-v1.png
+Guardian flame: assets/dungeon/flame-loop-v1.png
+Torch: assets/dungeon/torch-loop-v1.png
+Prompts and original source paths: assets/dungeon/ambient-prompts-v1.json

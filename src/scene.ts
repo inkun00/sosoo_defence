@@ -9,6 +9,7 @@ import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize} from './monsters';
 import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
 import {HitEquationPopups} from './hit-equations';
 import {hitEquationsEnabled} from './combat-preferences';
+import {AmbientProps} from './ambient-props';
 export interface Mode{kind:'tower'|'wall'|'inspect';unit:number;effect:Effect;typeId?:string;}
 interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.Image;pivot:Phaser.GameObjects.Container;head:Phaser.GameObjects.Image;angle:number;recoilTime:number;}
 interface ShotData{towerId:number;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
@@ -22,10 +23,12 @@ export class Field extends Phaser.Scene{
  private reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private battleEffects=new Set<Phaser.GameObjects.GameObject>();private lastShakeTime=0;
  private hitEquations?:HitEquationPopups;private shotSequence=0;
+ private ambient?:AmbientProps;
  constructor(model:Defense){super('field');this.model=model;}
  preload(){loadDungeon(this);}
  create(){
   this.readyFlag=true;this.cameras.main.setViewport(FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT);registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
+  this.ambient=new AmbientProps(this,this.reducedMotion);
   this.hitEquations=new HitEquationPopups(this,{left:16,right:FIELD_WIDTH-16,top:12,bottom:FIELD_HEIGHT-16},()=>this.model.phase==='paused');
   for(const kind of MONSTER_KINDS)for(const [name,start]of [['walk',0],['hurt',4],['frozen',8],['fall',12]] as const){this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:name==='walk'?5:8,repeat:name==='fall'?0:-1});}
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
@@ -57,7 +60,7 @@ export class Field extends Phaser.Scene{
   return this.add.text(x,y,text,{fontFamily:'Malgun Gothic, system-ui, sans-serif',fontSize:size,fontStyle:'bold',color,align:'center',padding:{x:5,y:3}}).setOrigin(.5);
  }
  drawTerrain(){
-  if(!this.readyFlag)return;const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();const road=route(this.model.blocks)??[],roadSet=new Set(road.map(key));
+  if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();const road=route(this.model.blocks)??[],roadSet=new Set(road.map(key));
   const backdrop=this.add.graphics();backdrop.fillStyle(0x17191d).fillRoundedRect(9,24,970,558,12);backdrop.lineStyle(2,0x4c4840).strokeRoundedRect(12,27,964,552,10);this.floor.add(backdrop);
   const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(.38).setTint(0xc4c0b8);this.floor.add(stoneFloor);
   const props=(x:number,y:number,name:string,w:number,h=w)=>{const image=this.add.image(x,y,'dungeon-props',name).setDisplaySize(w,h);this.floor.add(image);return image;};
@@ -68,12 +71,12 @@ export class Field extends Phaser.Scene{
    else if(!isRoad&&!this.model.towers.some(t=>key(t)===key(c))&&((x*31+y*7)%23===0))props(xy.x+9,xy.y+9,(x+y)%2?'rubble':'plant',30,30).setAlpha(.7);
   }
   // Quiet grid guides appear only while placing; the path is marked for learning clarity.
-  const lights=this.add.graphics();for(const c of [{x:1,y:0},{x:12,y:8}]){const xy=world(c);for(let r=6;r>=1;r--)lights.fillStyle(0xffa942,.008*(7-r)).fillCircle(xy.x,xy.y,r*14);props(xy.x,xy.y-8,'torch',58,66);}this.floor.add(lights);
+  const lights=this.add.graphics();for(const c of [{x:1,y:0},{x:12,y:8}]){const xy=world(c);for(let r=6;r>=1;r--)lights.fillStyle(0xffa942,.008*(7-r)).fillCircle(xy.x,xy.y,r*14);this.ambient?.add(this.floor,'torch-'+key(c),'torch',xy.x,xy.y-8,60,66);}this.floor.add(lights);
   const dots=this.add.graphics().fillStyle(0xe1be82,.45);road.forEach((c,i)=>{if(i%2)dots.fillCircle(world(c).x,world(c).y,2);});this.floor.add(dots);
   this.model.walls.forEach(w=>{const xy=world(w);props(xy.x,xy.y-5,'wall',76,72);});
-  const start=world(START),end=world(END);props(start.x,start.y-8,'portal',80,88);this.floor.add(this.label(start.x,start.y+36,'입구',14,'#d4bcef'));
+  const start=world(START),end=world(END);this.ambient?.add(this.floor,'entrance','portal',start.x,start.y-8,96,104);this.floor.add(this.label(start.x,start.y+36,'입구',14,'#d4bcef'));
   const glow=this.add.graphics();for(let r=5;r>=1;r--)glow.fillStyle(0xffac52,.015*(6-r)).fillCircle(end.x,end.y,r*14);this.floor.add(glow);
-  props(end.x,end.y-14,'base',108,112);this.floor.add(this.label(end.x,end.y+44,'수호의 불꽃',15,'#ffdd9c'));
+  this.ambient?.add(this.floor,'guardian','flame',end.x,end.y-14,128,116);this.floor.add(this.label(end.x,end.y+44,'수호의 불꽃',15,'#ffdd9c'));
   for(const t of this.model.towers){const xy=world(t);
    const root=this.add.container(xy.x,xy.y-8).setAlpha(t.enabled?1:.45);this.towersView?.add(root);
    const base=this.add.image(0,0,'dungeon-turret-parts-v1','base').setDisplaySize(76,76);root.add(base);
@@ -207,6 +210,7 @@ export class Field extends Phaser.Scene{
  }
  update(_time:number,delta:number){
   const paused=this.model.phase==='paused';this.tweens.timeScale=paused?0:1;if(paused)this.cameras.main.shakeEffect.reset();
+  this.ambient?.setPaused(paused);
   for(const object of this.battleEffects)if(object instanceof Phaser.GameObjects.Sprite){if(paused)object.anims.pause();else if(object.anims.isPaused)object.anims.resume();}
   this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
   for(const v of this.visuals.values()){if(paused)v.sprite.anims.pause();else if(v.sprite.anims.isPaused)v.sprite.anims.resume();}
