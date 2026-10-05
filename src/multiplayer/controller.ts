@@ -26,7 +26,7 @@ const dialog=document.getElementById('duel-dialog')!,content=document.getElement
 let user:User|null=null,state:DuelState|null=null,side:Side=0,room='',selectedType='',shopPage=0,slots:number[]=[],operation:'+'|'-'='+',selectedTower=0,message='',busy=false,connected=true,dialogKind='',quoteNonce='',lastRound=-1;
 let peer:HostPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyProgress(),recorded='',saveMessage='',internetMode=false,progressLoading=false;
 let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRetryAt=0,roomPoll:ReturnType<typeof setInterval>|undefined;
-let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,lastRoomList=0,loadingRoomList=false;
+let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,roomListLoaded=false,loadingRoomList=false;
 const sound=new Sound();sound.sfx=localStorage.getItem('decimal-duel-sfx')!=='off';
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,operation,selectedTower,message,busy,connected});
 const scene=new DuelScene(view);
@@ -65,7 +65,7 @@ function disposeRoom(){clearInterval(roomPoll);roomPoll=undefined;const id=listi
 function profileText(){return `${user?.displayName||'수호자'} · 계정 Lv.${progress.level} · ${progress.wins}승 ${progress.losses}패 · 경험치 ${progress.experience}${firebaseEmulator?' · 테스트 계정':''}`;}
 function lobby(){
  if(!user){authScreen();return;}
- show('lobby',`<p class="eyebrow">소수로 겨루는 1:1 · 방 목록</p><h2>수호자의 대기실</h2><p id="profile-name"></p><p>두 사람 중 낮은 계정 레벨로 같은 문제를 풀어요. 방 목록에서 친구를 찾아 참가해요!</p><section class="room-directory"><div class="duel-row"><h3>입장할 수 있는 방</h3><button id="refresh-rooms">목록 새로고침</button></div><div id="room-list" role="region" aria-label="생성된 방 목록">방 목록을 불러오는 중이에요.</div><p class="room-note">방은 게임이 시작되거나 만든 뒤 5분이 지나면 목록에서 사라져요.</p></section><div class="duel-row"><button class="duel-primary" id="create-room">방 만들기</button><button id="return-room">현재 방 돌아가기</button><button id="close-current-room">현재 방 닫기</button></div><p data-feedback role="status"></p><p>방 목록과 비밀번호 확인은 중앙 서버가 맡고, 전투는 방을 만든 친구의 컴퓨터에서 진행돼요. 호스트는 창을 열어 두세요.</p><div class="duel-row"><button id="duel-settings">게임 설정</button><button id="record-history">전적 · 오답 복습</button><button id="heroes-book">영웅 30종 도감</button><button id="worksheet-heroes">학습지 몬스터 선택</button><button id="sound-toggle"></button><button id="profile-edit">이름 바꾸기</button><button id="logout">로그아웃</button><button id="single">혼자 모험하기</button></div><p id="pending-records"></p>`);
+ show('lobby',`<p class="eyebrow">소수로 겨루는 1:1 · 방 목록</p><h2>수호자의 대기실</h2><p id="profile-name"></p><p>두 사람 중 낮은 계정 레벨로 같은 문제를 풀어요. 방 목록에서 친구를 찾아 참가해요!</p><section class="room-directory"><div class="duel-row"><h3>입장할 수 있는 방</h3><button id="refresh-rooms">목록 새로고침</button></div><div id="room-list" role="region" aria-label="생성된 방 목록">방 목록을 불러오는 중이에요.</div><p class="room-note">새 방은 목록 새로고침을 눌러 확인해요. 만든 뒤 5분이 지난 방은 화면에서도 사라져요.</p></section><div class="duel-row"><button class="duel-primary" id="create-room">방 만들기</button><button id="return-room">현재 방 돌아가기</button><button id="close-current-room">현재 방 닫기</button></div><p data-feedback role="status"></p><p>방 목록과 비밀번호 확인은 중앙 서버가 맡고, 전투는 방을 만든 친구의 컴퓨터에서 진행돼요. 호스트는 창을 열어 두세요.</p><div class="duel-row"><button id="duel-settings">게임 설정</button><button id="record-history">전적 · 오답 복습</button><button id="heroes-book">영웅 30종 도감</button><button id="worksheet-heroes">학습지 몬스터 선택</button><button id="sound-toggle"></button><button id="profile-edit">이름 바꾸기</button><button id="logout">로그아웃</button><button id="single">혼자 모험하기</button></div><p id="pending-records"></p>`);
  document.getElementById('profile-name')!.textContent=progressLoading?'계정 레벨을 불러오는 중이에요…':profileText();
  (document.getElementById('create-room') as HTMLButtonElement).disabled=progressLoading;
  document.getElementById('pending-records')!.textContent=pendingCount(user.uid)?`저장 대기 경기 ${pendingCount(user.uid)}개 · 연결되면 자동 저장해요.`:'';
@@ -78,22 +78,23 @@ function lobby(){
  bind('heroes-book',()=>heroBook(true));bind('single',()=>exitGame());
  bind('logout',async()=>{if(state?.status==='playing')await send({type:'surrender'});await saveFinished();disposeRoom();if(auth)await signOut(auth);authScreen();});
  bind('profile-edit',()=>{show('profile','<h2>수호자 이름 변경</h2><form id="profile-form"><label>새 이름<input name="nickname" minlength="2" maxlength="16" required></label><button class="duel-primary">계정에 저장</button></form><p data-feedback></p><button id="profile-back">대기실</button>');bind('profile-back',lobby);content.querySelector<HTMLFormElement>('form')!.onsubmit=async e=>{e.preventDefault();if(!user)return;try{await updateProfile(user,{displayName:String(new FormData(e.target as HTMLFormElement).get('nickname')).trim()});await user.getIdToken(true);lobby();}catch(e){status(errorText(e));}};});
- roomRowsSignature='';renderRooms();void loadRooms();
+ roomRowsSignature='';renderRooms();
 }
 function canEnterRoom(){if(busy)return false;if(progressLoading){status('계정 레벨을 불러오고 있어요. 잠시 뒤 다시 눌러 주세요.');return false;}if(peer&&state?.status!=='finished'){status('현재 방으로 돌아가거나 현재 방을 닫고 새 방에 입장해요.');return false;}return true;}
 async function loadRooms(){
- if(loadingRoomList||!user||dialogKind!=='lobby')return;loadingRoomList=true;lastRoomList=Date.now();const uid=user.uid;
- try{const data=await listRooms();if(user?.uid!==uid||dialogKind!=='lobby')return;serverOffset=data.now-Date.now();roomRows=data.rooms;renderRooms();}
+ if(loadingRoomList||!user||dialogKind!=='lobby')return;loadingRoomList=true;const uid=user.uid;
+ const button=document.getElementById('refresh-rooms') as HTMLButtonElement|null;if(button){button.disabled=true;button.textContent='불러오는 중…';}
+ try{const data=await listRooms();if(user?.uid!==uid||dialogKind!=='lobby')return;serverOffset=data.now-Date.now();roomRows=data.rooms;roomListLoaded=true;renderRooms();}
  catch(e){if(dialogKind==='lobby'){const root=document.getElementById('room-list');if(root)root.textContent=errorText(e);roomRowsSignature='';}}
- finally{loadingRoomList=false;}
+ finally{loadingRoomList=false;const current=document.getElementById('refresh-rooms') as HTMLButtonElement|null;if(current){current.disabled=false;current.textContent='목록 새로고침';}}
 }
 function renderRooms(){
- const root=document.getElementById('room-list');if(!root)return;const now=Date.now()+serverOffset,visible=roomRows.filter(r=>r.expiresAt>now),signature=JSON.stringify([visible,user?.uid,progressLoading]);
- if(signature!==roomRowsSignature){roomRowsSignature=signature;root.replaceChildren();if(!visible.length)root.textContent='아직 열린 방이 없어요. 첫 번째 방을 만들어 볼까요?';
+ const root=document.getElementById('room-list');if(!root)return;const now=Date.now()+serverOffset,visible=roomRows.filter(r=>r.expiresAt>now),signature=JSON.stringify([visible,user?.uid,progressLoading,roomListLoaded]);
+ if(signature!==roomRowsSignature){roomRowsSignature=signature;root.replaceChildren();if(!visible.length)root.textContent=roomListLoaded?'표시할 방이 없어요. 목록 새로고침으로 새 방을 확인해요.':'목록 새로고침을 눌러 친구의 방을 찾아요.';
  for(const row of visible){const item=document.createElement('article');item.className='room-item';item.dataset.roomId=row.id;const info=document.createElement('div'),title=document.createElement('strong'),description=document.createElement('p'),time=document.createElement('small');title.textContent=(row.protected?'🔒 ':'')+row.title;description.textContent=`${row.hostName} · 계정 Lv.${row.level} · ${row.players}/2명 · ${row.protected?'비밀번호 방':'공개방'}`;time.dataset.expires=String(row.expiresAt);info.append(title,description,time);const button=document.createElement('button');button.className='duel-primary';button.dataset.joinRoom=row.id;button.textContent=row.hostUid===user?.uid?'내 방':row.players===2?'준비 중':row.protected?'비밀번호 입장':'참가하기';button.disabled=progressLoading||row.players===2||row.hostUid===user?.uid;button.onclick=()=>{if(canEnterRoom()){if(row.protected)passwordRoomScreen(row);else void joinListedRoom(row,'');}};item.append(info,button);root.append(item);}}
  root.querySelectorAll<HTMLElement>('[data-expires]').forEach(e=>{const seconds=Math.max(0,Math.ceil((Number(e.dataset.expires)-now)/1000));e.textContent=`목록 표시 ${Math.floor(seconds/60)}분 ${String(seconds%60).padStart(2,'0')}초 남음`;});
 }
-setInterval(()=>{if(dialogKind==='lobby'&&user){renderRooms();if(Date.now()-lastRoomList>=5000)void loadRooms();}},1000);
+setInterval(()=>{if(dialogKind==='lobby'&&user)renderRooms();},1000);
 function createRoomScreen(){
  show('create-room',`<p class="eyebrow">친구와 함께 지키는 불꽃</p><h2>방 만들기</h2><form id="create-room-form"><label>방 이름<input name="title" minlength="2" maxlength="24" required autocomplete="off"></label><label>입장 방식<select id="room-access" name="access"><option value="public">공개방 · 누구나 입장</option><option value="password">비밀번호 방 · 아는 친구만 입장</option></select></label><label id="room-password-label" hidden>방 비밀번호<input name="password" type="password" minlength="4" maxlength="32" autocomplete="new-password" placeholder="4~32글자"></label><label class="setting"><span>서로 다른 인터넷 · 주소 찾기 보조(STUN)<small>같은 Wi-Fi/LAN에서 기본으로 직접 연결해요.</small></span><input id="internet-mode" type="checkbox" ${internetMode?'checked':''}></label><p>게임 시작 또는 생성 후 5분이 지나면 목록에서 사라져요.</p><p data-feedback role="status"></p><div class="duel-row"><button type="button" id="create-back">대기실로</button><button class="duel-primary" id="publish-room">방 생성</button></div></form>`);
  (content.querySelector('[name=title]') as HTMLInputElement).value=(user?.displayName||'수호자')+'의 방';
