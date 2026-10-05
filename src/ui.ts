@@ -133,7 +133,7 @@ export class GameUI extends Phaser.Scene{
  }
  private drawPopup(){
   if(this.getState().panel!==this.previousPanel){this.tweens.killTweensOf(this.popup);this.popup.setScale(1).setPosition(0,0);}
-  this.clear(this.popup,['close','slot:','brick:','brick-page:','fusion:','fuse','wall','stage:','levels','help','settings','credits','retry','next','difficulty','online','purchase-']);
+  this.clear(this.popup,['close','slot:','brick:','brick-page:','fusion:','fuse','wall','stage:','levels','help','settings','credits','retry','next','difficulty','online','home','purchase-']);
   const s=this.getState();if(!s.panel){this.previousPanel=null;return;}
   const veil=this.add.rectangle(640,400,1280,800,0x050609,.85).setInteractive();this.popup.add(veil);
   if(s.panel==='map')this.drawMap();else if(s.panel==='forge')this.drawForge();else if(s.panel==='result')this.drawResult();else if(s.panel==='menu')this.drawMenu();else if(s.panel==='difficulty')this.drawDifficulty();else if(s.panel==='purchase')this.drawPurchase();else this.drawGoals();
@@ -177,11 +177,12 @@ export class GameUI extends Phaser.Scene{
   this.text(this.popup,640,523,`벽돌 ${m.bricks.length}개 · 성벽 ${m.inventory.walls}개 보관! 다음 방어 전에 준비해요.`,20,'#f0c583').setOrigin(.5);
   this.text(this.popup,640,568,won?'방어와 학습 목표를 모두 달성했어요.':'타워의 위치와 발사 순서를 바꾸어 같은 웨이브에 다시 도전해요.',21,'#bdb5a9').setOrigin(.5);
   this.button(this.popup,'retry',450,641,284,68,'같은 단계 다시',true,'button_brown',25);
-  this.button(this.popup,won&&m.level.id<10?'next':'levels',815,641,284,68,won&&m.level.id<10?'다음 단계 ▶':'단계 지도',true,'button_red',25);
+  const final=won&&m.level.id===10;
+  this.button(this.popup,final?'home':won?'next':'levels',815,641,284,68,final?'시작 화면':won?'다음 단계 ▶':'단계 지도',true,'button_red',25);
  }
  private drawMenu(){
-  this.modalFrame('소수의 성 메뉴',540,600);
-  [['levels','모험 지도'],['help','게임 방법'],['settings','화면 · 효과음 · 배경음'],['credits','게임 정보 · 출처'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전']].forEach(([id,label],i)=>this.button(this.popup,id,640,252+i*70,390,66,label,true,id==='online'?'button_red':'button_brown',25));
+  this.modalFrame('소수의 성 메뉴',540,660);
+  [['home','시작 화면'],['levels','모험 지도'],['help','게임 방법'],['settings','화면 · 효과음 · 배경음'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,640,218+i*68,390,62,label,true,id==='online'?'button_red':'button_brown',23));
  }
  private drawPurchase(){
   const s=this.getState(),q=s.model.pendingPurchase;if(!q)return;const t=towerType(q.typeId)!;

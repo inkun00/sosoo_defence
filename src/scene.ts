@@ -178,8 +178,8 @@ export class Field extends Phaser.Scene{
   }
   if(d.unit>=1000||d.killed){const ring=this.effect('dungeon-fx-utility-v1','fx-shockwave',x,y,size*1.35,0,color);ring?.setDepth(3.5).setAlpha(.65);}
   if(d.killed){const deathSize=Math.min(190,monsterSize(d.kind,this.model.level.id)*1.05);this.effect('dungeon-fx-utility-v1','fx-defeat',x,y,deathSize);this.fragments(x,y,deathSize,color,true);}
-  if((d.unit>=1000||d.killed&&d.kind==='king')&&this.time.now-this.lastShakeTime>200&&this.model.phase==='playing'){
-   this.lastShakeTime=this.time.now;this.cameras.main.shake(d.kind==='king'&&d.killed?150:90,d.kind==='king'&&d.killed?0.003:0.0015,false);
+  if((d.unit>=1000||d.killed&&MONSTERS[d.kind].boss)&&this.time.now-this.lastShakeTime>200&&this.model.phase==='playing'){
+   this.lastShakeTime=this.time.now;this.cameras.main.shake(MONSTERS[d.kind].boss&&d.killed?150:90,MONSTERS[d.kind].boss&&d.killed?0.003:0.0015,false);
   }
  }
  private fireShot(ev:GameEvent){

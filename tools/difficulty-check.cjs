@@ -7,7 +7,7 @@ const {answer}=require('./browser-helpers.cjs');
   const context=await browser.newContext({viewport:{width:1280,height:800},hasTouch:true}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(String(e)));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
   await page.addInitScript(()=>{if(!localStorage.getItem('decimal-castle-v1'))localStorage.setItem('decimal-castle-v1',JSON.stringify({version:1,level:6,stars:[3],sfx:false,inventory:{bricks:[600,700,1300],walls:5}}));});
-  const ready=async()=>{await page.goto('http://localhost:5173');await page.waitForFunction(()=>window.__gameTest?.ui.ready);};
+  const ready=async()=>{await page.goto('http://localhost:5173/?mode=adventure');await page.waitForFunction(()=>window.__gameTest?.ui.ready);};
   const action=async(key,touch=false)=>{const c=await page.evaluate(key=>window.__gameTest.ui.getButtonBounds(key),key);assert.ok(c?.enabled,key);const b=await page.locator('canvas').boundingBox(),x=b.x+c.x/1280*b.width,y=b.y+c.y/800*b.height;if(touch)await page.touchscreen.tap(x,y);else await page.mouse.click(x,y);await page.waitForTimeout(80);};
   const cell=async(x,y)=>{const b=await page.locator('canvas').boundingBox();await page.mouse.click(b.x+(40+(x+.5)*58)/1280*b.width,b.y+(118+(y+.5)*58)/800*b.height);};
   await ready();assert.equal(await page.evaluate(()=>window.__gameTest.model.difficulty),'standard');

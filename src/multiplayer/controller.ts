@@ -37,7 +37,7 @@ function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const l
 async function send(action:DuelAction){
  if(busy||!peer)return;busy=true;refresh();try{const r=await peer.send(action);if(r.message)status(r.message);if(r.ok&&action.type==='fuse'){slots=[];sound.play('wall');}if(r.ok&&action.type==='answer')sound.play('money');return r;}catch(e){connected=false;status(errorText(e));}finally{busy=false;refresh();}
 }
-function back(){const url=new URL(location.href);url.searchParams.delete('mode');url.searchParams.delete('emulator');location.assign(url.href);}
+function back(){const url=new URL(location.href);url.searchParams.set('mode','adventure');url.searchParams.delete('emulator');location.assign(url.href);}
 function bind(id:string,fn:()=>unknown){document.getElementById(id)?.addEventListener('click',fn);}
 function settings(fromLobby=false){
  show('settings',`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${sound.sfx?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);

@@ -11,6 +11,7 @@ import {GAME_WIDTH,GAME_HEIGHT} from './layout';
 import type {Cell} from './path';
 import {isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,TOWERS} from './towers';
+import {playCinematic} from './cinematic';
 import './game.css';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
@@ -21,7 +22,8 @@ app.innerHTML=`<main id="game-shell" aria-label="소수의 성 디펜스 게임"
 <p class="portrait-note">태블릿을 가로로 돌리면 더 크게 플레이할 수 있어요.</p>`;
 const $=(id:string)=>document.getElementById(id)!;
 const save=loadSave(),sound=new Sound();sound.sfx=save.sfx;
-let model=new Defense(LEVELS[save.level-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
+save.started=true;
+let model=new Defense(LEVELS[save.resumeStage-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
 let selectedWall:Cell|null=null,brickPage=0,inventorySignature='';
 let towerTypeId='basic',shopPage=0,purchaseInput='',purchaseMessage='',purchaseHelp=false;
 let slots:(number|null)[]=[null,null,null],panel:Panel=null,equation='',hint='',message='',lastHit:BattleEvent|undefined,resultShown=false;
@@ -39,8 +41,9 @@ function update(){
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
  if((model.phase==='won'||model.phase==='lost')&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
-  if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(10,model.level.id+1));if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
+  if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(10,model.level.id+1));save.resumeStage=Math.min(10,model.level.id+1);if(model.level.id===10&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
+  if(model.phase==='won'&&model.level.id===10&&model.bossDefeated)void playCinematic('ending',save,()=>{ui.refresh(true);update();});
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
  $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/12, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}`;
@@ -64,6 +67,7 @@ function closeHTML(){
 function stage(n:number){
  if(n<1||n>10)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;$('modal').classList.add('hidden');
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
+ save.resumeStage=n;save.started=true;writeSave(save);
  model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
 }
 function event(ev:BattleEvent){
@@ -81,10 +85,11 @@ function calculation(){
  openHTML(`<p class="eyebrow">전투 속 계산 기록</p><h2>같은 자리끼리 계산해요</h2><p>${model.level.hint}</p>${d?`<div class="help-equation">${lastHit!.message}</div><pre class="vertical-math">  ${decimal(d.before,model.level.digits).padStart(6)}\n− ${decimal(d.damage,model.level.digits).padStart(6)}\n─────────\n  ${decimal(d.after,model.level.digits).padStart(6)}</pre><p>${d.hint}</p>`:'<p>타워가 실제로 공격한 뒤 최근 공격의 계산을 이곳에서 확인할 수 있어요.</p>'}${equation?`<p class="math-record">최근 기록: ${equation}</p>`:''}<p>0.1은 0.01 열 개, 1은 0.1 열 개와 같아요.<br>0.7 = 0.70처럼 끝에 0을 붙여 생각할 수 있어요.<br>0.001은 돈과 타워 가격에만 사용해요.</p>`);
 }
 function settings(){
- openHTML(`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}/></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${save.sfx?'checked':''}/></label><label class="setting"><span>배경음</span><input id="setting-music" type="checkbox" ${save.music?'checked':''}/></label><p>설정은 같은 브라우저에 자동 저장돼요.</p>`);
+ openHTML(`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}/></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${save.sfx?'checked':''}/></label><label class="setting"><span>배경음</span><input id="setting-music" type="checkbox" ${save.music?'checked':''}/></label><label class="setting"><span>이야기 나레이션</span><input id="setting-voice" type="checkbox" role="switch" ${save.narration?'checked':''}/></label><p>설정은 같은 브라우저에 자동 저장돼요.</p>`);
  $('setting-hit-equations').onchange=()=>{const enabled=($('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);$('setting-equations-state').textContent=enabled?'ON':'OFF';};
  $('setting-sfx').onchange=()=>{save.sfx=($('setting-sfx') as HTMLInputElement).checked;sound.sfx=save.sfx;writeSave(save);};
  $('setting-music').onchange=()=>{save.music=($('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(save.music);writeSave(save);};
+ $('setting-voice').onchange=()=>{save.narration=($('setting-voice') as HTMLInputElement).checked;writeSave(save);};
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 10단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
@@ -104,6 +109,7 @@ function action(key:string){
   case 'pause':model.togglePause();break;
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{const url=new URL(location.href);url.searchParams.set('mode','duel');location.assign(url.href);break;}
+  case 'home':{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.delete('mode');location.assign(url.href);break;}
   case 'toggle':model.toggleTower(selected);break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
   case 'cancel':field.mode.kind='inspect';break;
@@ -130,7 +136,7 @@ function action(key:string){
 }
 ui.onAction=action;
 ui.onControls=(controls:Map<string,Control>)=>{
- const popupKey=(id:string)=>['close','fuse','wall','levels','help','settings','credits','retry','next','difficulty','online'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
+ const popupKey=(id:string)=>['close','fuse','wall','levels','help','settings','credits','retry','next','difficulty','online','home'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
  const active=[...controls].filter(([id])=>$('modal').classList.contains('hidden')&&(!panel||popupKey(id)));
  const signature=active.map(([id,c])=>`${id}:${c.label}:${c.enabled}`).join('|');if(signature===controlsSignature)return;controlsSignature=signature;
  const focus=(document.activeElement as HTMLElement)?.dataset.action;

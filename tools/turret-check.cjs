@@ -6,7 +6,7 @@ const fs=require('node:fs');
  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE||(fs.existsSync(exe)?exe:undefined)});
  const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];
  page.on('pageerror',e=>errors.push(String(e)));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
- await page.goto('http://localhost:5173/');await page.waitForFunction(()=>window.__gameTest?.ui.ready);
+ await page.goto('http://localhost:5173/?mode=adventure');await page.waitForFunction(()=>window.__gameTest?.ui.ready);
  await page.evaluate(()=>{
   window.__gameTest.stage(6);const {model:m,scene:s}=window.__gameTest;
   ['siege','frost','lightning','sniper'].forEach((id,i)=>{m.requestPurchase([{x:1,y:3},{x:3,y:3},{x:1,y:5},{x:1,y:7}][i],id);const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(3));});
@@ -47,7 +47,7 @@ const fs=require('node:fs');
  await page.waitForTimeout(300);await page.screenshot({path:'test-results/turret-tracking.png'});
  const heads=await page.evaluate(()=>[...window.__gameTest.scene.towerArt.values()].map(v=>v.head.frame.name));assert.deepEqual(heads,['siege','frost','lightning','sniper']);
  await page.setViewportSize({width:1024,height:768});await page.screenshot({path:'test-results/turret-tracking-tablet.png'});
- const reduced=await browser.newPage();await reduced.emulateMedia({reducedMotion:'reduce'});await reduced.goto('http://localhost:5173/');await reduced.waitForFunction(()=>window.__gameTest?.ui.ready);
+ const reduced=await browser.newPage();await reduced.emulateMedia({reducedMotion:'reduce'});await reduced.goto('http://localhost:5173/?mode=adventure');await reduced.waitForFunction(()=>window.__gameTest?.ui.ready);
  const reducedResult=await reduced.evaluate(()=>{const {model:m,scene:s}=window.__gameTest;m.requestPurchase({x:1,y:3},'basic');const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(3));s.drawTerrain();m.start();m.spawn();m.towers[0].cooldown=100;const e=m.enemies[0];e.x=175;e.y=236.8;e.stun=100;s.update(0,16);const v=s.towerArt.get(m.towers[0].id);return {angle:v.angle,headY:v.head.y};});
  assert.ok(Math.abs(reducedResult.angle-Math.PI/2)<1e-5);assert.equal(reducedResult.headY,0);
  assert.deepEqual(errors,[]);console.log(JSON.stringify({status:'passed',checks:['four directional aim changes','base stays fixed','OFF and pause hold position','orientation retained across redraw','killing shot aim and real muzzle origin','recoil and recovery','four generated turret heads','tablet rendering','reduced-motion aiming'],stats,errors},null,2));await browser.close();

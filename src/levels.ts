@@ -20,6 +20,8 @@ LEVELS[3].hint='돈은 0.001까지 사용해요. 보유 코인에서 타워 가�
 LEVELS[4].hint='서리탑 0.15, 수정포 0.75! 서로 다른 공격력으로 체력을 줄이고 작은 포탄으로 마무리해요.';
 LEVELS[7].hint='첫 체력 1.0에 기본 포탑 0.1을 쏘아요. 1을 0.1 열 개로 바꾸어 빼는 공격을 경험해요.';
 LEVELS[8].hint='첫 체력 0.10에 바늘탑 0.01을 쏘아요. 0.1을 0.01 열 개로 바꾸어 빼요.';
+LEVELS[9].name='마지막 불꽃';
+LEVELS[9].hint='최종 보스 균열의 돌왕의 체력은 9.99! 큰 공격으로 줄이고 작은 공격으로 정확히 0을 만들면 성을 구할 수 있어요.';
 export const EFFECTS:Record<Effect,{name:string;icon:string;color:number;description:string;unlock:number}>={
  basic:{name:'기본',icon:'●',color:0xe4ac61,description:'정확한 한 발',unlock:1},
  slow:{name:'서리',icon:'❄',color:0x8cd7ed,description:'3초 동안 이동 40% 느리게',unlock:2},

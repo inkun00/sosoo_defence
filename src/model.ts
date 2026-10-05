@@ -17,6 +17,7 @@ export class Defense{
  towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Cell[]=[];blocks=naturalBlocks();events:Event[]=[];
  private nextId=1;private randomState=17;private droppedRecipe=0;
  private carriedWalls=0;
+ bossDefeated=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
  constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
@@ -112,7 +113,8 @@ export class Defense{
   ...(this.level.goal==='money'?[{label:'소수 뺄셈 정답으로 타워 2개 이상 구매',done:this.purchaseAnswers>=2}]:[]),
   ...(this.level.id===8?[{label:'1을 0.1 열 개로 바꾸어 빼는 공격 경험',done:this.borrowTenths>=1}]:[]),
   ...(this.level.id===9?[{label:'0.1을 0.01 열 개로 바꾸어 빼는 공격 경험',done:this.borrowHundredths>=1}]:[]),
-  ...(this.level.goal==='switch'||this.level.goal==='both'?[{label:'서로 다른 공격 단위 2종 사용',done:this.usedUnits.size>=2}]:[])
+  ...(this.level.goal==='switch'||this.level.goal==='both'?[{label:'서로 다른 공격 단위 2종 사용',done:this.usedUnits.size>=2}]:[]),
+  ...(this.level.id===10?[{label:'최종 보스 균열의 돌왕을 정확히 0으로 처치',done:this.bossDefeated}]:[])
  ];}
  damage(e:Enemy,t:Tower){
   const before=e.hp,r=hit(before,t.unit);
@@ -125,6 +127,7 @@ export class Defense{
   const eq=`${decimal(before,this.level.digits)} − ${decimal(t.unit,this.level.digits)} = ${decimal(e.hp,this.level.digits)}`;
   this.emit({type:'hit',message:eq,x:e.x,y:e.y,data:{before,damage:t.unit,after:e.hp,hint:regroupMessage(before,t.unit,this.level.digits)}});
   if(!r.killed)return;
+  if(this.level.id===10&&e.kind==='warden'){this.bossDefeated=true;this.emit({type:'notice',message:'균열의 돌왕의 힘이 정확히 0이 되었어요! 마지막 불꽃을 지켰어요.'});}
   this.kills++;const earn=reward(e.max,e.hits,this.level.units,this.level.id);
   // One recipe per three drops: one guaranteed initial set, then additional sets.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);

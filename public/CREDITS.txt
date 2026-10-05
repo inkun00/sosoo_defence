@@ -100,3 +100,21 @@ Portal: assets/dungeon/portal-loop-v1.png
 Guardian flame: assets/dungeon/flame-loop-v1.png
 Torch: assets/dungeon/torch-loop-v1.png
 Prompts and original source paths: assets/dungeon/ambient-prompts-v1.json
+
+THE LAST FLAME STORY AND TITLE
+Original story: Sosoo Castle, The Last Flame. Restore the guardian flame by
+adding decimal pieces into walls and reducing corrupted stone strength to zero.
+Title environment, rift chapter, dawn chapter, stone-and-brass menu button and
+16-frame final warden boss atlas generated with the built-in OpenAI image_gen.
+Original PNG pixels and alpha are preserved.
+assets/dungeon/title-castle-v1.png
+assets/dungeon/story-rift-v1.png
+assets/dungeon/story-dawn-v1.png
+assets/dungeon/menu-button-v1.png
+assets/dungeon/monster-warden-v1.png
+Prompts, references and source paths: assets/dungeon/story-prompts-v1.json
+Motion design reference (typography, camera movement, transitions):
+https://jasonzhu.ai/en/prompts/claude-opus-5-5/2103424524297420829
+No artwork, video or code copied from that reference.
+Narration uses device-provided Korean Web Speech voices; Korean captions are
+always displayed. Cinematic tones are synthesized locally with Web Audio.

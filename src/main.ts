@@ -1,2 +1,4 @@
-if(new URLSearchParams(location.search).get('mode')==='duel')import('./multiplayer/controller');
-else import('./controller');
+const mode=new URLSearchParams(location.search).get('mode');
+if(mode==='duel')import('./multiplayer/controller');
+else if(mode==='adventure')import('./controller');
+else import('./title');

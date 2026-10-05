@@ -1,4 +1,4 @@
-export type MonsterKind='slime'|'beetle'|'golem'|'crystal'|'king';
+export type MonsterKind='slime'|'beetle'|'golem'|'crystal'|'king'|'warden';
 export interface MonsterArt{name:string;atlas:string;size:number;speed:number;color:number;boss:boolean;}
 // Size affects art only: every enemy follows the same legal one-cell route.
 export const MONSTERS:Record<MonsterKind,MonsterArt>={
@@ -6,10 +6,12 @@ export const MONSTERS:Record<MonsterKind,MonsterArt>={
  beetle:{name:'바위 갑충',atlas:'monster-beetle',size:104,speed:.94,color:0xf0b565,boss:false},
  golem:{name:'철갑 골렘',atlas:'monster-golem',size:132,speed:.86,color:0x6bdce8,boss:false},
  crystal:{name:'수정 거인',atlas:'monster-crystal',size:166,speed:.78,color:0xc89aff,boss:false},
- king:{name:'고대 돌왕',atlas:'monster-king',size:202,speed:.68,color:0xffcc68,boss:true}
+ king:{name:'고대 돌왕',atlas:'monster-king',size:202,speed:.68,color:0xffcc68,boss:true},
+ warden:{name:'균열의 돌왕',atlas:'monster-warden-v1',size:238,speed:.68,color:0xdcb5ff,boss:true}
 };
 export const MONSTER_KINDS=Object.keys(MONSTERS) as MonsterKind[];
 export function monsterKind(stage:number,index:number,hp:number):MonsterKind{
+ if(stage===10&&index===11)return 'warden';
  if(stage>=8&&index===11)return 'king';
  if(stage>=5&&hp>=7500)return 'crystal';
  if(stage>=3&&hp>=2000)return 'golem';
