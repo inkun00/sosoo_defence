@@ -118,3 +118,9 @@ https://jasonzhu.ai/en/prompts/claude-opus-5-5/2103424524297420829
 No artwork, video or code copied from that reference.
 Narration uses device-provided Korean Web Speech voices; Korean captions are
 always displayed. Cinematic tones are synthesized locally with Web Audio.
+
+ORIGINAL PROCEDURAL SOUNDTRACK AND EFFECTS
+Seven original score arrangements and fifteen synthesized effects are defined
+in src/music.ts and src/audio.ts. Web Audio oscillators, deterministic noise,
+filters, envelopes, an echo bus and a compressor generate all audio at runtime.
+No third-party music, samples, audio files or audio service are used.

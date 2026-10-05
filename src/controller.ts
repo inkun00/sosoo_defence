@@ -22,7 +22,7 @@ app.innerHTML=`<main id="game-shell" aria-label="소수의 성 디펜스 게임"
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="게임 도움말"><div class="modal-card"><button id="modal-close" class="modal-close" aria-label="닫기">×</button><div id="modal-body"></div></div></div>
 <p class="portrait-note">태블릿을 가로로 돌리면 더 크게 플레이할 수 있어요.</p>`;
 const $=(id:string)=>document.getElementById(id)!;
-const save=loadSave(),sound=new Sound();sound.sfx=save.sfx;
+const save=loadSave(),sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);let movie=false;
 save.started=true;
 let model=new Defense(LEVELS[save.resumeStage-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
 let selectedWall:Cell|null=null,brickPage=0,inventorySignature='';
@@ -40,12 +40,15 @@ function persistInventory(){
  if(!writeSave(save))notify('이 브라우저에서는 벽돌·성벽 저장이 제한되어 있어요.');
 }
 function update(){
+ sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'?'title':model.level.id===10?'boss':'battle');
+ sound.setPaused(movie||model.phase==='paused');
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
  if((model.phase==='won'||model.phase==='lost')&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
   if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(10,model.level.id+1));save.resumeStage=Math.min(10,model.level.id+1);if(model.level.id===10&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
-  if(model.phase==='won'&&model.level.id===10&&model.bossDefeated)void playCinematic('ending',save,()=>{ui.refresh(true);update();});
+  if(!(model.phase==='won'&&model.level.id===10&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
+  if(model.phase==='won'&&model.level.id===10&&model.bossDefeated){movie=true;sound.setPaused(true);void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();});}
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
  $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/12, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}`;
@@ -73,7 +76,7 @@ function stage(n:number){
  model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
 }
 function event(ev:BattleEvent){
- sound.play(ev.type);ui.animate(ev);
+ sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type);ui.animate(ev);
  if(ev.type==='hit'){lastHit=ev;if(model.level.id<=4){equation=ev.message;hint=(ev.data as {hint:string}).hint;}}
  if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=ev.message;}}
  if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';}
@@ -96,7 +99,7 @@ function settings(){
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 10단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
- sound.resume();
+ sound.resume();sound.play('ui');
  if(key.startsWith('type:')||key==='wall'){selectedWall=null;field.selectedWall=undefined;}
  if(key.startsWith('type:')){const type=towerType(key.slice(5));if(!type||type.unlock>model.level.id)return;towerTypeId=type.id;unit=type.unit;effect=type.effect;field.mode={kind:'tower',typeId:type.id,unit,effect};selected=0;field.selected=undefined;field.hover({x:1,y:3});notify(`${type.name} · 공격력 ${numberText(unit)} · 타워 사이를 한 칸 띄워 코인 뺄셈을 풀어요.`);}
  else if(key.startsWith('shop-page:'))shopPage=Math.max(0,Math.min(1,shopPage+(key.endsWith('next')?1:-1)));
@@ -108,7 +111,7 @@ function action(key:string){
  else if(key.startsWith('brick:')){const id=+key.split(':')[1],i=slots.indexOf(null);if(i<0)notify('슬롯을 눌러 비운 뒤 다른 벽돌을 골라요.');else if(!slots.includes(id)&&model.bricks.some(b=>b.id===id)){slots[i]=id;message='';}}
  else if(key.startsWith('stage:')){const n=+key.split(':')[1];if(n<=save.level)stage(n);}
  else switch(key){
-  case 'start':if(save.music)sound.setMusic(true);model.start();break;
+  case 'start':if(model.start())sound.play('start');break;
   case 'pause':model.togglePause();break;
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{const url=new URL(location.href);url.searchParams.set('mode','duel');location.assign(url.href);break;}
@@ -158,5 +161,6 @@ document.addEventListener('keydown',e=>{
  if(e.code==='Space'&&!panel){e.preventDefault();action('pause');}else if(e.key.toLowerCase()==='f'&&!panel)action('forge');
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&model.phase==='playing'){model.togglePause();update();}});
+window.addEventListener('pagehide',()=>sound.dispose());
 if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();}}});
 

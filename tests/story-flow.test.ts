@@ -5,6 +5,12 @@ import {LEVELS} from '../src/levels';
 import {loadSave,writeSave,hasAdventure,newAdventure} from '../src/save';
 import {STORY,storyFrame,storyDuration} from '../src/story';
 
+test('새 브라우저는 BGM을 켜고 기존에 끈 음악·효과음 설정은 그대로 유지한다',()=>{
+ const previous=Object.getOwnPropertyDescriptor(globalThis,'localStorage');const data=new Map<string,string>();
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>data.get(k)??null,setItem:(k:string,v:string)=>data.set(k,v)}});
+ try{const fresh=loadSave();assert.equal(fresh.music,true);fresh.music=false;fresh.sfx=false;assert.ok(writeSave(fresh));assert.equal(loadSave().music,false);assert.equal(loadSave().sfx,false);}finally{if(previous)Object.defineProperty(globalThis,'localStorage',previous);else Reflect.deleteProperty(globalThis,'localStorage');}
+});
+
 test('최종 보스를 성에 통과시키면 다른 목표를 모두 달성해도 엔딩 조건 실패',()=>{
  const m=new Defense(LEVELS[9],{bricks:[],walls:1});assert.ok(m.placeWall({x:1,y:4}));
  for(let i=0;i<12;i++)m.spawn();const boss=m.enemies[11];assert.equal(boss.kind,'warden');

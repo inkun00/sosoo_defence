@@ -13,6 +13,7 @@ import {HEROES,heroesAtLevel} from './heroes';
 import {numberText,precision} from '../math';
 import {towerType} from '../towers';
 import {Sound} from '../audio';
+import {loadSave,writeSave} from '../save';
 import {hitEquationsEnabled,setHitEquationsEnabled} from '../combat-preferences';
 import {recordLearning,importLearningRecords,LearningSample} from '../learning';
 import {ownedHeroIds,selectedWorksheetHero,selectWorksheetHero} from '../worksheet-store';
@@ -27,14 +28,17 @@ let user:User|null=null,state:DuelState|null=null,side:Side=0,room='',selectedTy
 let peer:HostPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyProgress(),recorded='',saveMessage='',internetMode=false,progressLoading=false;
 let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRetryAt=0,roomPoll:ReturnType<typeof setInterval>|undefined;
 let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,roomListLoaded=false,loadingRoomList=false;
-const sound=new Sound();sound.sfx=localStorage.getItem('decimal-duel-sfx')!=='off';
+let audioStatus='',audioFlame=9000;
+const sound=new Sound();sound.sfx=localStorage.getItem('decimal-duel-sfx')!=='off';sound.setMusic(loadSave().music);
+document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))sound.play('ui');});
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,operation,selectedTower,message,busy,connected});
 const scene=new DuelScene(view);
+scene.onSound=type=>sound.play(type);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:800,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성 1:1: 양쪽 불꽃, 타워, 소수 블럭과 영웅 알');game.canvas.tabIndex=0;});
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
-function refresh(){scene.redraw();}
+function refresh(){const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=240?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');scene.redraw();}
 function show(kind:string,html:string){dialogKind=kind;content.innerHTML=html;dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
 function close(){dialogKind='';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
 function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const labels:Record<string,string>={'auth/email-already-in-use':'이미 가입한 이메일이에요. 로그인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/weak-password':'비밀번호는 6글자 이상 적어 주세요.','auth/invalid-email':'이메일 주소를 확인해 주세요.','auth/too-many-requests':'잠시 기다렸다가 다시 로그인해 주세요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.','functions/unauthenticated':'다시 로그인해 주세요.','functions/resource-exhausted':'잠시 뒤 다시 눌러 주세요.'};return labels[code]||(e as Error)?.message||'연결을 확인하고 다시 시도해 주세요.';}
@@ -50,6 +54,8 @@ function settings(fromLobby=false){
  show('settings',`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${sound.sfx?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
  document.getElementById('setting-hit-equations')!.onchange=()=>{const enabled=(document.getElementById('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);document.getElementById('setting-equations-state')!.textContent=enabled?'ON':'OFF';};
  document.getElementById('setting-sfx')!.onchange=()=>{sound.sfx=(document.getElementById('setting-sfx') as HTMLInputElement).checked;localStorage.setItem('decimal-duel-sfx',sound.sfx?'on':'off');};
+ const musicLabel=document.createElement('label');musicLabel.className='setting';musicLabel.innerHTML=`<span>배경음</span><input id="setting-music" type="checkbox" role="switch" ${sound.music?'checked':''}>`;document.getElementById('setting-sfx')!.closest('label')!.after(musicLabel);
+ document.getElementById('setting-music')!.onchange=()=>{const enabled=(document.getElementById('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(enabled);const save=loadSave();save.music=enabled;writeSave(save);};
  bind('settings-back',()=>fromLobby?lobby():close());
 }
 function authScreen(mode:'login'|'register'='login'){
@@ -175,7 +181,7 @@ scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return
  const tower=p.towers.find(t=>t.x===x&&t.y===y);if(tower){selectedTower=tower.id;selectedType='';refresh();return;}
  if(selectedType){if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 한 칸 띄워 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'quote',x,y,typeId:selectedType});}
 };
-scene.onAction=async key=>{sound.resume();
+scene.onAction=async key=>{sound.resume();sound.play('ui');
  if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;status('한 칸 띄운 내 쪽 빈 바닥을 골라요.');scene.preview(-1,-1);return;}
  if(key.startsWith('block:')){const i=Number(key.slice(6));if(!slots.includes(i)&&slots.length<3)slots.push(i);refresh();return;}
  if(key.startsWith('slot:')){slots.splice(Number(key.slice(5)),1);refresh();return;}
@@ -198,5 +204,6 @@ scene.onControls=()=>{if(scene.input)scene.input.enabled=dialog.classList.contai
 if(auth)onAuthStateChanged(auth,async value=>{user=value;progressLoading=!!value;if(!value){disposeRoom();progress=emptyProgress();authScreen();return;}lobby();try{const loaded=await loadProgress(value.uid);if(user?.uid!==value.uid)return;progress=loaded;const saved=await flushResults(value.uid);if(user?.uid!==value.uid)return;if(saved.progress)progress=saved.progress;const oldMatches=await loadLearningHistory(value.uid);if(user?.uid===value.uid)importLearningRecords(oldMatches);}catch(e){status(errorText(e));}finally{if(user?.uid===value.uid){progressLoading=false;if(dialogKind==='lobby')lobby();}}});else authScreen();
 window.addEventListener('online',()=>{if(!user)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state?.status==='playing'){e.preventDefault();e.returnValue='';}});
+window.addEventListener('pagehide',()=>sound.dispose());
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialogKind==='purchase')send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});
