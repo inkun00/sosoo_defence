@@ -31,7 +31,7 @@ try{
  for(let i=0;i<pages.length;i++)await login(pages[i],accounts[i]);
  check('실제 로그인에서 저장된 계정 레벨을 불러옴',await p.locator('#profile-name').textContent().then(t=>t.includes('계정 Lv.10')));
  await connect(p,q);check('계정 Lv.10을 WebRTC로 전달해 두 화면의 학습 난이도 결정',await p.evaluate(()=>window.__duelTest.state.learningLevel===10&&window.__duelTest.state.players.every(p=>p.accountLevel===10))&&await q.evaluate(()=>window.__duelTest.state.learningLevel===10));
- check('양쪽에 같은 16개 블럭·100 이상 계산 포함',await p.evaluate(()=>{const s=window.__duelTest.state;return s.players[0].board.length===16&&JSON.stringify(s.players[0].board)===JSON.stringify(s.players[1].board)&&s.players[0].board.some(n=>n>=100000);}));
+ check('양쪽에 같은 16개 블럭·모든 자연수 부분 한 자리',await p.evaluate(()=>{const s=window.__duelTest.state;return s.players[0].board.length===16&&JSON.stringify(s.players[0].board)===JSON.stringify(s.players[1].board)&&s.players[0].board.every(n=>n>0&&n<10000);}));
  check('화면과 접근성 설명에 학습 레벨 표시',await q.locator('#duel-state').textContent().then(t=>t.includes('학습 Lv.10'))&&await p.evaluate(()=>window.__duelTest.scene.children.list.some(c=>c.type==='Container'&&c.list?.some(t=>t.type==='Text'&&t.text.includes('학습 Lv.10')))));
  await click(p,'ready');await click(q,'ready');await p.waitForFunction(()=>window.__duelTest.state.status==='playing');
  await solve(p,'+');await solve(p,'-');await solve(q,'-');await solve(q,'+');

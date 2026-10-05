@@ -1,5 +1,16 @@
 // All quantities use thousandths as integers. 0.001 is currency only.
 export const SCALE=1000;
+// Operands and results in learning equations have a one-digit whole part.
+export const LEARNING_LIMIT=10*SCALE;
+export function learningValue(value:number){return Number.isSafeInteger(value)&&value>=0&&value<LEARNING_LIMIT;}
+// Keep the full wallet unlimited, but use an actual affordable portion for a
+// purchase exercise when accumulated rewards exceed the learning range.
+export function purchaseCoins(wallet:number){return wallet<LEARNING_LIMIT?wallet:9000+wallet%SCALE;}
+export function creditMessage(before:number,amount:number,label:string,digits=1){
+ return learningValue(before)&&learningValue(amount)&&learningValue(before+amount)
+  ?`${numberText(before,digits)} + ${numberText(amount,digits)} = ${numberText(before+amount,digits)} · ${label}`
+  :`${numberText(amount,digits)} 코인 · ${label}`;
+}
 export function decimal(value:number,digits=1):string {
  if(!Number.isSafeInteger(value))throw new Error('Exact integer amount required');
  const sign=value<0?'-':'';const v=Math.abs(value);
@@ -13,7 +24,7 @@ export function hit(hp:number,damage:number):{hp:number;valid:boolean;killed:boo
 }
 export type FusionOperation='+'|'-';
 export function recipe(a:number,b:number,c:number,operation:FusionOperation='+'):boolean{
- if(![a,b,c].every(n=>Number.isSafeInteger(n)&&n>0))return false;
+ if(![a,b,c].every(n=>learningValue(n)&&n>0))return false;
  return operation==='+'?a+b===c:operation==='-'&&a-b===c;
 }
 const hitTables=new Map<string,{step:number;values:number[]}>();

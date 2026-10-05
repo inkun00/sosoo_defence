@@ -198,7 +198,7 @@ export class GameUI extends Phaser.Scene{
   keys.forEach((key,i)=>{const id=key==='⌫'?'backspace':key==='.'?'dot':key;this.button(this.popup,'purchase-key:'+id,650+i%3*110,382+Math.floor(i/3)*60,100,56,key,true,'button_brown',27);});
   this.button(this.popup,'purchase-help',348,550,240,56,s.purchaseHelp?'도움말 닫기':'계산 도움말',true,'button_brown',20);
   if(s.purchaseHelp){const needed=q.borrowing.filter(p=>p<1000);this.text(this.popup,211,584,needed.length?'작은 자리가 모자라면 왼쪽 자리에서 1을 가져와 작은 단위 10개로 바꿔요.':'같은 자리끼리 빼고 바뀌지 않는 자리는 그대로 써요.',15,'#edc88d',280);}
-  this.centerLabel(this.fitText(this.text(this.popup,640,638,s.purchaseMessage||'정답일 때만 코인을 내고 선택한 칸에 설치해요.',20,s.purchaseMessage?'#ffc296':C.muted).setOrigin(.5),860,30));
+  this.centerLabel(this.fitText(this.text(this.popup,640,638,s.purchaseMessage||(q.wallet!==q.before?'전체 보유금 중 위 코인만 사용해 계산해요. 나머지 코인은 그대로 보관돼요.':'정답일 때만 코인을 내고 선택한 칸에 설치해요.'),20,s.purchaseMessage?'#ffc296':C.muted).setOrigin(.5),860,30));
   this.button(this.popup,'purchase-cancel',458,692,238,64,'취소 · 돈 유지',true,'button_brown',23);
   this.button(this.popup,'purchase-confirm',805,692,310,64,'정답 확인 · 설치 ▶',!!s.purchaseInput,'button_red',23);
  }

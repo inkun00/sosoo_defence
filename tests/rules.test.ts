@@ -39,8 +39,8 @@ test('감속과 확률 기절은 추가 피해 없이 유효 공격에만 적용
  assert.ok(stuns>=15&&stuns<=35,`100번 중 기절 ${stuns}회`);
  t.effect='slow';m.damage(e,t);assert.equal(e.slow,3);assert.equal(e.hp,89900);
 });
-test('시작 예산과 타워 가격이 커지고 소수 세 자리 가격은 4단계부터 사용한다',()=>{
- for(const l of LEVELS){assert.ok(l.budget>=12800);for(const t of towersForStage(l.id))assert.ok(towerPrice(t,l.budget,l.id)>=1000);}
+test('시작 예산과 타워 가격의 자연수 부분은 한 자리이고 세 자리 돈은 4단계부터 사용한다',()=>{
+ for(const l of LEVELS){assert.ok(l.budget>0&&l.budget<10000);for(const t of towersForStage(l.id))assert.ok(towerPrice(t,l.budget,l.id)>0&&towerPrice(t,l.budget,l.id)<10000);}
  assert.ok(towerPrice(towersForStage(4).find(t=>t.id==='lightning')!,LEVELS[3].budget,4)%10!==0);
 });
 test('처치는 돈 또는 벽돌을 하나만 남기고 세 벽돌 합성은 값을 검증하고 소비한다',()=>{

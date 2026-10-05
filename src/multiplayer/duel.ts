@@ -1,21 +1,21 @@
 import {TOWERS,towerType,towerPrice,parseMoney} from '../towers';
 import {heroSpec} from './heroes';
-import {hit,numberText,recipe,reward} from '../math';
+import {hit,numberText,recipe,reward,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
 import {decimalBoard,normalizedAccountLevel} from './decimal-boards';
 export {decimalBoard} from './decimal-boards';
 export type Side=0|1;
 export interface DuelTower{id:number;typeId:string;x:number;y:number;unit:number;cost:number;enabled:boolean;cooldown:number;}
 export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;slow:number;stun:number;hits:number;}
-export interface Quote{x:number;y:number;typeId:string;before:number;cost:number;digits:number;nonce:string;expires:number;}
+export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;}
 export interface DuelPlayer{uid:string;name:string;accountLevel:number;ready:boolean;flame:number;money:number;escrow:number;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
 export interface DuelShot{id:number;time:number;towerId:number;owner:Side;enemyId:number;x:number;before:number;unit:number;after:number;effect:string;}
 export interface DuelState{version:1;seed:number;learningLevel:number;createdAt:number;startedAt:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'playing'|'finished';players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready'}|{type:'tick'}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'|'-'}|{type:'hatch';heroId:string}|{type:'surrender'};
-export const DUEL_SECONDS=300,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=10000;
+export const DUEL_SECONDS=300,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor(s.elapsed/30));}
 // The room freezes one shared learning level when the second player joins.
-function player(uid:string,name:string,seed:number,now:number,accountLevel:number):DuelPlayer{return {uid,name,accountLevel:normalizedAccountLevel(accountLevel),ready:false,flame:FLAME_MAX,money:12800,escrow:0,egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,accountLevel),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[]};}
+function player(uid:string,name:string,seed:number,now:number,accountLevel:number):DuelPlayer{return {uid,name,accountLevel:normalizedAccountLevel(accountLevel),ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,accountLevel),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[]};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1):DuelState{return {version:1,seed,learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
 export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLevel=1){
  if(s.players.some(p=>p?.uid===uid))return;
@@ -104,15 +104,15 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽 빈 바닥에 타워 사이를 한 칸 띄워 설치해요.');
   if(p.towers.length>=14||(type.unit===10&&p.towers.filter(t=>t.unit===10).length>=3))return bad('설치 제한이에요. 전체 14개, 바늘탑 3개까지예요.');
   const cost=towerPrice(type,p.money,lv);if(cost>p.money)return bad('코인이 부족해요.');
-  p.quote={x:action.x,y:action.y,typeId:type.id,before:p.money,cost,digits:lv===1?1:lv<4?2:3,nonce,expires:now+60000};return ok('남는 코인을 계산해요. 대전은 계속 진행돼요.');
+  p.quote={x:action.x,y:action.y,typeId:type.id,before:purchaseCoins(p.money),wallet:p.money,cost,digits:lv===1?1:lv<4?2:3,nonce,expires:now+60000};return ok('구매에 사용할 코인에서 남는 코인을 계산해요. 대전은 계속 진행돼요.');
  }
  if(action.type==='answer'){
   const q=p.quote;if(!q||q.nonce!==action.nonce)return bad('새 구매 문제를 열어 주세요.');
   if(typeof action.answer!=='string'||action.answer.length>12)return bad('답을 12글자 이내로 입력해 주세요.');
   if(parseMoney(action.answer)!==q.before-q.cost){wrong(s,p,{id:q.nonce,kind:'tower',a:q.before,b:q.cost,operation:'-',submitted:action.answer,correct:q.before-q.cost});return bad('소수점을 맞추고 다시 빼 보세요. 돈은 그대로예요.');}
   if(!validDuelCell(s,side,q.x,q.y))return bad('설치 공간이 바뀌었어요. 취소하고 다시 골라요.');
-  const type=towerType(q.typeId)!;p.money=q.before-q.cost;p.towers.push({id:s.nextId++,typeId:type.id,x:q.x,y:q.y,unit:type.unit,cost:q.cost,enabled:true,cooldown:0});
-  p.purchases++;note(s,`${p.name}: ${numberText(q.before)} − ${numberText(q.cost)} = ${numberText(p.money)} · ${type.name}`);release(p);return ok('정답! 타워를 설치했어요.');
+  const type=towerType(q.typeId)!;p.money=q.wallet-q.cost;p.towers.push({id:s.nextId++,typeId:type.id,x:q.x,y:q.y,unit:type.unit,cost:q.cost,enabled:true,cooldown:0});
+  p.purchases++;note(s,`${p.name}: ${numberText(q.before)} − ${numberText(q.cost)} = ${numberText(q.before-q.cost)} · ${type.name}`);release(p);return ok('정답! 타워를 설치했어요.');
  }
  if(action.type==='toggle'||action.type==='sell'){
   if(p.quote)return bad('구매 문제를 먼저 닫아 주세요.');const t=p.towers.find(t=>t.id===action.towerId);if(!t)return bad('내 타워를 선택해 주세요.');
@@ -123,7 +123,9 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(s.status!=='playing')return bad('양쪽이 준비한 뒤 합성할 수 있어요.');
   if(p.egg>=10)return bad('알은 10레벨이에요. 먼저 부화시켜 주세요.');
   if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==3||new Set(action.slots).size!==3||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15)||!['+','-'].includes(action.operation))return bad('서로 다른 블럭 세 개를 다시 골라요.');
-  const [a,b,c]=action.slots.map(i=>p.board[i]);if(!recipe(a,b,c,action.operation)){wrong(s,p,{id:`fusion-${p.round}-${action.operation}-${a}-${b}`,kind:'fusion',a,b,operation:action.operation,submitted:numberText(c),correct:action.operation==='+'?a+b:a-b},s.learningLevel??1);return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
+  const [a,b,c]=action.slots.map(i=>p.board[i]);
+  if(![a,b,c,action.operation==='+'?a+b:a-b].every(learningValue))return bad('정답의 자연수 부분도 한 자리여야 해요. 다른 블럭 조합을 골라 주세요.');
+  if(!recipe(a,b,c,action.operation)){wrong(s,p,{id:`fusion-${p.round}-${action.operation}-${a}-${b}`,kind:'fusion',a,b,operation:action.operation,submitted:numberText(c),correct:action.operation==='+'?a+b:a-b},s.learningLevel??1);return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
   p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,s.learningLevel??1);return ok(`정답! 돌 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
  }
  if(action.type==='hatch'){

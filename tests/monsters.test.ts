@@ -18,7 +18,7 @@ test('10단계 최강 몬스터의 체력과 크기가 단계마다 커지고 �
 });
 test('거대 보스도 큰 공격을 거부하며 실제 유효 타격으로만 정확히 0이 된다',()=>{
  const m=new Defense(LEVELS[9]);for(let i=0;i<12;i++)m.spawn();
- const boss=m.enemies[11];assert.equal(boss.kind,'king');assert.ok(boss.max>30000);
+ const boss=m.enemies[11];assert.equal(boss.kind,'king');assert.ok(boss.max>9000&&boss.max<10000);
  const t={unit:1000,effect:'basic'} as Tower;
  while(boss.hp>=1000)m.damage(boss,t);
  const tail=boss.hp,hits=boss.hits;m.damage(boss,t);

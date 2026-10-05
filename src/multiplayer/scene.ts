@@ -56,11 +56,11 @@ export class DuelScene extends Phaser.Scene{
   this.button('lobby',1070,42,115,55,'대기실',!v.busy);this.button('leave',1200,42,115,55,'나가기',!v.busy);
   const terrainSig=(s?s.players.map(p=>p?.towers.map(t=>`${t.id}:${t.enabled}`).join(',')).join('|'):'')+v.side;
   if(terrainSig!==this.signature){this.signature=terrainSig;this.drawTerrain();}
-  this.text(this.ui,265,104,(s?.players[0]?.name||'왼쪽 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??10000),21,'#9adbea');
-  this.text(this.ui,734,104,(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??10000),21,'#f7bd85');
+  this.text(this.ui,265,104,(s?.players[0]?.name||'왼쪽 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??9000),21,'#9adbea');
+  this.text(this.ui,734,104,(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??9000),21,'#f7bd85');
   this.panel(this.ui,1130,370,266,572);this.text(this.ui,1130,113,'타워 제작소',23);this.text(this.ui,1130,144,`내 타워 ${p?.towers.length??0}/14 · 코인 뺄셈으로 설치`,13,'#c3b8a8');
   TOWERS.slice(v.shopPage*6,v.shopPage*6+6).forEach((type,i)=>{
-   const cost=towerPrice(type,p?.money??12800,s?duelLevel(s):1),open=!!p&&type.unlock<=duelLevel(s!)&&p.money>=cost&&!v.busy&&s?.status!=='finished';
+   const cost=towerPrice(type,p?.money??8800,s?duelLevel(s):1),open=!!p&&type.unlock<=duelLevel(s!)&&p.money>=cost&&!v.busy&&s?.status!=='finished';
    const c=this.button('type:'+type.id,1130,195+i*70,228,66,'',open,v.selectedType===type.id);this.towerIcon(c,-83,0,type.id,53);
    this.text(c,-49,-20,type.name+' · '+GRADE_NAMES[type.grade],15,'#f6ecdf',false).setOrigin(0,.5);this.text(c,-49,1,'공격 '+numberText(type.unit),14,'#c9bbaa',false).setOrigin(0,.5);this.text(c,-49,21,type.unlock<=duelLevel(s??({elapsed:0} as DuelState))?numberText(cost)+' 코인':`대전 Lv.${type.unlock} 해금`,16,'#ffca7e',false).setOrigin(0,.5);
    this.controls.get('type:'+type.id)!.label=type.name+' 공격 '+numberText(type.unit)+' 가격 '+numberText(cost);

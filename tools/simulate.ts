@@ -1,4 +1,4 @@
-import {Defense} from '../src/model';
+import {Defense,Event} from '../src/model';
 import {LEVELS} from '../src/levels';
 import {route,world,Cell} from '../src/path';
 import {Difficulty} from '../src/difficulty';
@@ -7,7 +7,7 @@ import {numberText} from '../src/math';
 
 // The automated learner answers the real wallet subtraction before each purchase.
 // Repositioning preserves cooldowns; money and placement limits apply.
-export function playLevel(level:number,difficulty:Difficulty='standard'){
+export function playLevel(level:number,difficulty:Difficulty='standard',checkEvents?:(events:Event[])=>void){
  const m=new Defense(LEVELS[level-1],undefined,difficulty);
  const cells=Array.from({length:16*9},(_,i)=>({x:i%16,y:Math.floor(i/16)}));
  function purchase(c:Cell,id:string){if(!m.requestPurchase(c,id))return false;const q=m.pendingPurchase!;return m.answerPurchase(numberText(q.before-q.cost,3));}
@@ -56,7 +56,7 @@ export function playLevel(level:number,difficulty:Difficulty='standard'){
   m.step(.1);
   if(m.bricks.length>=3)m.fuse(m.bricks.slice(0,3).map(b=>b.id));
   if(m.wallStock&&m.walls.length<m.balance.wallLimit){const c=route(m.blocks)!.slice().reverse().find(c=>m.candidate(c,true));if(c)m.placeWall(c);}
-  if(m.spawned<m.level.hp.length||m.enemies.some(e=>e.hp>=(level>=8?2350:level>=6?1500:1200)))spend();m.events=[];
+  if(m.spawned<m.level.hp.length||m.enemies.some(e=>e.hp>=(level>=8?2350:level>=6?1500:1200)))spend();checkEvents?.(m.events);m.events=[];
  }
  return m;
 }

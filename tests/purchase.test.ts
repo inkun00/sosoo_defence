@@ -25,12 +25,12 @@ test('기본 등급은 소수 자리의 받아내림을 피하고 상위 가격�
   const price=towerPrice(towerType('basic')!,before,10);assert.ok(!borrowingPlaces(before,price).some(p=>p<1000));
  }
  assert.ok(borrowingPlaces(18750,towerPrice(towerType('frost')!,18750,2)).some(p=>p<1000));
- const high=towerPrice(towerType('rune')!,94759,10);assert.ok(high>10000);assert.ok(borrowingPlaces(94759,high).filter(p=>p<1000).length>=2);
+ const high=towerPrice(towerType('rune')!,94759,10);assert.ok(high>3000&&high<10000);assert.ok(borrowingPlaces(94759,high).filter(p=>p<1000).length>=2);
 });
 test('타워 잠금·길 위 설치·돈 부족은 문제를 만들거나 돈을 차감하지 않는다',()=>{
  const m=new Defense(LEVELS[0]),money=m.money;
  assert.equal(m.requestPurchase({x:1,y:3},'rune'),false);assert.equal(m.requestPurchase({x:1,y:4},'basic'),false);assert.equal(m.money,money);assert.equal(m.pendingPurchase,null);
- m.money=100;assert.equal(m.requestPurchase({x:1,y:3},'basic'),false);assert.equal(m.money,100);
+ m.money=50;assert.equal(m.requestPurchase({x:1,y:3},'basic'),false);assert.equal(m.money,50);
 });
 test('문제를 연 뒤 돈이나 설치 조건이 바뀌면 오래된 정답으로 설치할 수 없다',()=>{
  const m=new Defense(LEVELS[3]);m.requestPurchase({x:1,y:3},'lightning');const q=m.pendingPurchase!;m.money++;
@@ -57,12 +57,13 @@ test('타워 고유 공격력이 실제 피해에 적용되고 남은 체력보�
  m.damage(e,{unit:350,effect:'stun'} as Tower);assert.equal(e.hp,0);assert.equal(m.kills,1);
 });
 
-test('타워 가격은 매 단계 달라지고 보유금이 달라도 등급 간 가격이 역전되지 않는다',()=>{
- for(const wallet of [0,100000,12800,56842,999999]){
-  for(const t of TOWERS)for(let stage=2;stage<=10;stage++)assert.ok(towerPrice(t,wallet,stage)>towerPrice(t,wallet,stage-1));
-  for(let stage=1;stage<=10;stage++)for(const low of TOWERS)for(const high of TOWERS){
-   if(low.grade<high.grade)for(const otherWallet of [0,12999,94759])assert.ok(towerPrice(low,wallet,stage)<towerPrice(high,otherWallet,stage));
-  }
+test('단계별 시작 기본 가격은 달라지고 보유금이 달라도 등급 가격이 역전되지 않는다',()=>{
+ const basic=towerType('basic')!;
+ assert.equal(new Set(LEVELS.map(l=>towerPrice(basic,l.budget,l.id))).size,10);
+ for(const t of TOWERS){const open=LEVELS.filter(l=>l.id>=t.unlock);assert.equal(new Set(open.map(l=>towerPrice(t,l.budget,l.id))).size,open.length,t.name);}
+ for(const wallet of [0,100000,8800,8842,999999])for(let stage=1;stage<=10;stage++)for(const low of TOWERS)for(const high of TOWERS){
+  const cost=towerPrice(low,wallet,stage);assert.ok(cost>0&&cost<10000);
+  if(low.grade<high.grade)for(const otherWallet of [0,9999,8759])assert.ok(cost<towerPrice(high,otherWallet,stage));
  }
 });
 

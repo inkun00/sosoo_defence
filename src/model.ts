@@ -1,11 +1,11 @@
 import {Level,Effect} from './levels';
 import {Cell,COLS,ROWS,START,END,TILE,OX,OY,key,route,world,naturalBlocks} from './path';
-import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation} from './math';
+import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation,purchaseCoins,creditMessage,learningValue} from './math';
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
 import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
-export interface Purchase extends Cell{typeId:string;before:number;cost:number;digits:number;borrowing:number[];}
+export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;}
 export interface Brick{id:number;value:number;}
 export interface Inventory{bricks:number[];walls:number;}
@@ -18,7 +18,7 @@ export class Defense{
  private nextId=1;private randomState=17;private droppedRecipe=0;
  private carriedWalls=0;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
- constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.map(value=>({id:this.nextId++,value}));}
+ constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
  get canChangeDifficulty(){return this.phase==='ready'&&!this.towers.length&&!this.walls.length;}
  setDifficulty(difficulty:Difficulty){
@@ -57,15 +57,16 @@ export class Defense{
  requestPurchase(c:Cell,typeId:string):boolean{
   const type=towerType(typeId);if(!type||!this.canPurchase(c,type))return false;
   const cost=towerPrice(type,this.money,this.level.id);if(this.money<cost)return this.notice('돈이 부족해요. 다른 타워를 고르거나 보상을 모아 보세요.');
-  this.pendingPurchase={...c,typeId,before:this.money,cost,digits:this.level.id>=4?3:this.level.digits,borrowing:borrowingPlaces(this.money,cost)};return true;
+  const before=purchaseCoins(this.money);
+  this.pendingPurchase={...c,typeId,before,wallet:this.money,cost,digits:this.level.id>=4?3:this.level.digits,borrowing:borrowingPlaces(before,cost)};return true;
  }
  cancelPurchase(){this.pendingPurchase=null;}
  answerPurchase(text:string):boolean{
   const q=this.pendingPurchase;if(!q)return false;const type=towerType(q.typeId)!;
-  if(this.money!==q.before||!this.canPurchase(q,type)){this.pendingPurchase=null;return this.notice('돈이나 설치할 칸이 바뀌었어요. 타워를 다시 선택해 주세요.');}
+  if(this.money!==q.wallet||!this.canPurchase(q,type)){this.pendingPurchase=null;return this.notice('돈이나 설치할 칸이 바뀌었어요. 타워를 다시 선택해 주세요.');}
   const answer=parseMoney(text);if(answer===null)return this.notice('소수점을 사용해 남는 코인을 적어 주세요. 최대 소수 세 자리까지 입력해요.');
   if(answer!==q.before-q.cost)return this.notice('아직 맞지 않아요. 소수점을 맞추고 같은 자리끼리 다시 빼 보세요.');
-  const blocks=this.candidate(q)!;this.money=answer;this.blocks=blocks;this.purchases++;this.purchaseAnswers++;
+  const blocks=this.candidate(q)!;this.money=q.wallet-q.cost;this.blocks=blocks;this.purchases++;this.purchaseAnswers++;
   this.towers.push({x:q.x,y:q.y,id:this.nextId++,typeId:type.id,unit:type.unit,effect:type.effect,enabled:true,cooldown:0,cost:q.cost});this.pendingPurchase=null;
   this.emit({type:'money',message:`${numberText(q.before,q.digits)} − ${numberText(q.cost,q.digits)} = ${numberText(answer,q.digits)} · ${type.name} 설치`,data:{reason:'purchase',grade:type.grade,borrowing:q.borrowing}});return true;
  }
@@ -73,7 +74,7 @@ export class Defense{
   return this.requestPurchase(c,typeId)&&this.answerPurchase(answer);
  }
  toggleTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||this.phase==='won'||this.phase==='lost')return;t.enabled=!t.enabled;this.switches++;this.emit({type:'notice',message:`${decimal(t.unit,this.level.digits)} 타워 · 발사 ${t.enabled?'켜짐':'멈춤'}`});}
- sellTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||!['ready','playing','paused'].includes(this.phase))return;const before=this.money;const back=t.cost;this.money+=back;this.blocks.delete(key(t));this.towers=this.towers.filter(x=>x.id!==id);this.emit({type:'money',message:`${numberText(before)} + ${numberText(back)} = ${numberText(this.money)} · 타워 회수`});}
+ sellTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||!['ready','playing','paused'].includes(this.phase))return;const before=this.money;const back=t.cost;this.money+=back;this.blocks.delete(key(t));this.towers=this.towers.filter(x=>x.id!==id);this.emit({type:'money',message:creditMessage(before,back,'타워 회수')});}
  fuse(ids:number[],operation:FusionOperation='+'):boolean{
   if(ids.length!==3||new Set(ids).size!==3)return this.notice('서로 다른 벽돌 세 개를 골라 주세요.');
   const b=ids.map(id=>this.bricks.find(b=>b.id===id));if(b.some(b=>!b))return this.notice('벽돌을 다시 골라 주세요.');
@@ -128,7 +129,7 @@ export class Defense{
   // One recipe per three drops: one guaranteed initial set, then additional sets.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);
   if(brickDrop){const values=this.droppedRecipe>=3?(this.level.extraBricks??this.level.bricks):this.level.bricks;const value=values[this.droppedRecipe%3];this.droppedRecipe++;this.bricks.push({id:this.nextId++,value});this.emit({type:'brick',message:`${MONSTERS[e.kind].name}이 ${decimal(value,this.level.digits)} 벽돌을 남겼어요!`,x:e.x,y:e.y});}
-  else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:`${numberText(beforeMoney,this.level.id>=4?3:1)} + ${numberText(earn,this.level.id>=4?3:1)} = ${numberText(this.money,this.level.id>=4?3:1)} · ${e.hits}번 타격 보상`,x:e.x,y:e.y});}
+  else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.id>=4?3:1),x:e.x,y:e.y});}
   this.emit({type:'kill',message:`정확히 0! ${e.hits}번 타격`,x:e.x,y:e.y,data:{hits:e.hits,best:minimumHits(e.max,this.level.units),brick:brickDrop}});
  }
  step(dt:number){

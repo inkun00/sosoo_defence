@@ -10,8 +10,8 @@ export function learningDescription(level:number){return [
  '두 자리 소수 · 두 자리 연속 받아내림',
  '다른 자릿수 · 자연수와 소수',
  '자연수·두 자리 소수 · 연속 받아내림',
- '10을 넘는 합 · 0을 거치는 받아내림',
- '100을 넘는 합 · 여러 0을 거치는 받아내림',
+ '한 자리 자연수 · 소수의 0을 거치는 받아내림',
+ '한 자리 자연수 · 두 소수 자리의 0을 거치는 받아내림',
  ][learningLevel(level)-1];}
 function rng(seed:number){let n=seed>>>0;return()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
 // Every triple supports both a+b=c and c-a=b, including repeated values.
@@ -26,13 +26,13 @@ export function decimalTriples(seed:number,round:number,accountLevel=1):DecimalT
   else if(lv===4){a=(pick(0,4)*10+pick(1,4))*10;b=(pick(0,4)*10+pick(1,4))*10;}
   else if(lv===7){const t=pick(4,9);a=pick(1,4)*1000+t*100;b=pick(0,3)*1000+pick(10-t,9)*100+pick(1,9)*10;}
   else if(lv>=9){
-   const integer=lv===9?pick(1,8):pick(10,89),fraction=pick(2,9)*10+pick(2,9),sumUnit=pick(1,fraction%10-1);
-   a=integer*1000+fraction*10;b=((lv===9?9:99)-integer)*1000+(100+sumUnit-fraction)*10;
+   const sumInteger=pick(2,9),integer=pick(1,sumInteger-1),fraction=pick(2,9)*10+pick(2,9),sumUnit=lv===9?pick(1,fraction%10-1):0;
+   a=integer*1000+fraction*10;b=(sumInteger-1-integer)*1000+(100+sumUnit-fraction)*10;
   }else{
    const t=lv===5?pick(1,4):pick(5,9),u=pick(3,9);
    const otherT=lv===5?pick(1,4):pick(10-t,9),otherU=pick(10-u,9);
    a=(t*10+u)*10;b=(otherT*10+otherU)*10;
-   if(lv===8){a+=pick(1,8)*1000;b+=pick(0,8)*1000;}
+   if(lv===8){const whole=pick(1,7);a+=whole*1000;b+=pick(0,8-whole)*1000;}
   }
   return [a,b,a+b] as const;
  });
