@@ -65,7 +65,7 @@ export class GameUI extends Phaser.Scene{
   this.healthIcons.forEach((heart,i)=>heart.setAlpha(i<m.castle?1:.2));
   this.waveText.setText(`방어 ${m.kills} / 12 · ${DIFFICULTIES[m.difficulty].name} · ${m.phase==='ready'?'준비':m.phase==='paused'?'정지':m.phase==='won'?'성공':m.phase==='lost'?'재도전':'진행'}`);
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
-  const shopSig=[s.towerTypeId,s.shopPage,s.mode.kind,m.money,m.level.id,m.phase,m.difficulty,m.towers.length,m.towers.filter(t=>t.unit===10).length].join('|');
+  const shopSig=[s.towerTypeId,s.shopPage,s.mode.kind,m.money,m.level.id,m.phase,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length].join('|');
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
   const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
@@ -91,7 +91,7 @@ export class GameUI extends Phaser.Scene{
   this.text(this.shop,1135,109,'타워 제작소',24).setOrigin(.5);
   this.text(this.shop,1135,139,`타워 ${m.towers.length}/${m.balance.towerLimit} · 바늘 ${m.towers.filter(t=>t.unit===10).length}/${m.balance.precisionLimit}`,15,'#b8b0a4').setOrigin(.5);
   TOWERS.slice(s.shopPage*6,s.shopPage*6+6).forEach((t,i)=>{
-   const unlocked=t.unlock<=m.level.id,cost=towerPrice(t,m.money,m.level.id),active=s.mode.kind==='tower'&&s.towerTypeId===t.id;
+   const unlocked=t.unlock<=m.level.id,cost=towerPrice(t,m.money,m.level.id,m.purchaseVariation),active=s.mode.kind==='tower'&&s.towerTypeId===t.id;
    const b=this.button(this.shop,'type:'+t.id,1135,196+i*72,218,68,'',unlocked&&m.money>=cost&&m.towerAvailable(t.unit)&&!['won','lost'].includes(m.phase),active?'button_red':'button_brown');
    this.towerIcon(b.container,-76,0,t.id,54);
    this.fitText(this.text(b.container,-43,-20,t.name+' · '+GRADE_NAMES[t.grade],16,C.cream).setOrigin(0,.5),142);
@@ -99,7 +99,7 @@ export class GameUI extends Phaser.Scene{
    this.text(b.container,-43,20,unlocked?numberText(cost)+' 코인':`${t.unlock}단계 해금`,17,'#f0c583').setOrigin(0,.5);
    this.controls.get('type:'+t.id)!.label=`${t.name}, ${GRADE_NAMES[t.grade]}, 공격력 ${numberText(t.unit)}, ${numberText(cost)} 코인`;
   });
-  this.text(this.shop,1135,600,'단계별 가격 · 높은 등급은 더 비싸요',12,'#b8b0a4').setOrigin(.5);
+  this.text(this.shop,1135,600,'새 문제마다 가격 변경 · 등급순 가격',12,'#b8b0a4').setOrigin(.5);
   this.button(this.shop,'shop-page:prev',1055,633,64,56,'◀',s.shopPage>0,'button_brown',22);
   this.button(this.shop,'cancel',1135,633,80,56,s.mode.kind==='tower'?'취소':`${s.shopPage+1} / 2`,s.mode.kind==='tower','button_brown',16);
   this.button(this.shop,'shop-page:next',1215,633,64,56,'▶',s.shopPage<1,'button_brown',22);

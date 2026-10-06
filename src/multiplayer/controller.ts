@@ -14,6 +14,7 @@ import {HEROES,heroesAtLevel} from './heroes';
 import {numberText,precision} from '../math';
 import {towerType} from '../towers';
 import {Sound} from '../audio';
+import {mountAudioControls} from '../audio-controls';
 import {loadSave,writeSave} from '../save';
 import {hitEquationsEnabled,setHitEquationsEnabled} from '../combat-preferences';
 import {recordLearning,importLearningRecords,LearningSample} from '../learning';
@@ -30,7 +31,9 @@ let peer:HostPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyPr
 let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRetryAt=0,roomPoll:ReturnType<typeof setTimeout>|undefined;
 let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,roomListLoaded=false,loadingRoomList=false;
 let audioStatus='',audioFlame=9000;
-const sound=new Sound();sound.sfx=localStorage.getItem('decimal-duel-sfx')!=='off';sound.setMusic(loadSave().music);
+const sound=new Sound();sound.sfx=loadSave().sfx;sound.setMusic(loadSave().music);
+function persistAudio(key:'music'|'sfx',enabled:boolean){const save=loadSave();save[key]=enabled;writeSave(save);}
+const audioControls=mountAudioControls(sound,persistAudio);
 document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))sound.play('ui');});
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,operation,selectedTower,message,busy,connected});
 const scene=new DuelScene(view);
@@ -54,9 +57,9 @@ function bind(id:string,fn:()=>unknown){document.getElementById(id)?.addEventLis
 function settings(fromLobby=false){
  show('settings',`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${sound.sfx?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
  document.getElementById('setting-hit-equations')!.onchange=()=>{const enabled=(document.getElementById('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);document.getElementById('setting-equations-state')!.textContent=enabled?'ON':'OFF';};
- document.getElementById('setting-sfx')!.onchange=()=>{sound.sfx=(document.getElementById('setting-sfx') as HTMLInputElement).checked;localStorage.setItem('decimal-duel-sfx',sound.sfx?'on':'off');};
+ document.getElementById('setting-sfx')!.onchange=()=>{sound.sfx=(document.getElementById('setting-sfx') as HTMLInputElement).checked;persistAudio('sfx',sound.sfx);audioControls.refresh();};
  const musicLabel=document.createElement('label');musicLabel.className='setting';musicLabel.innerHTML=`<span>배경음</span><input id="setting-music" type="checkbox" role="switch" ${sound.music?'checked':''}>`;document.getElementById('setting-sfx')!.closest('label')!.after(musicLabel);
- document.getElementById('setting-music')!.onchange=()=>{const enabled=(document.getElementById('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(enabled);const save=loadSave();save.music=enabled;writeSave(save);};
+ document.getElementById('setting-music')!.onchange=()=>{const enabled=(document.getElementById('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(enabled);persistAudio('music',enabled);audioControls.refresh();};
  bind('settings-back',()=>fromLobby?lobby():close());
 }
 function authScreen(mode:'login'|'register'='login'){
@@ -78,7 +81,7 @@ function lobby(){
  document.getElementById('pending-records')!.textContent=pendingCount(user.uid)?`저장 대기 경기 ${pendingCount(user.uid)}개 · 연결되면 자동 저장해요.`:'';
  document.getElementById('sound-toggle')!.textContent=`효과음 ${sound.sfx?'끄기':'켜기'}`;
  bind('worksheet-heroes',()=>rewardCollection(true));bind('duel-settings',()=>settings(true));bind('record-history',history);bind('refresh-rooms',()=>loadRooms());
- bind('sound-toggle',()=>{sound.sfx=!sound.sfx;localStorage.setItem('decimal-duel-sfx',sound.sfx?'on':'off');lobby();});
+ bind('sound-toggle',()=>{sound.sfx=!sound.sfx;persistAudio('sfx',sound.sfx);audioControls.refresh();lobby();});
  bind('create-room',()=>{if(canEnterRoom())createRoomScreen();});
  bind('return-room',()=>peer?(state?.players[1]?close():connectionScreen()):status('먼저 방을 만들거나 참가해 주세요.'));
  bind('close-current-room',()=>{if(state?.status==='playing'){status('진행 중인 대전은 나가기 버튼으로 끝내 주세요.');return;}void cancelRoom();});

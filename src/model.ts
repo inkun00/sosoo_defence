@@ -3,7 +3,7 @@ import {Cell,COLS,ROWS,START,END,TILE,OX,OY,key,route,world,naturalBlocks} from 
 import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation,purchaseCoins,creditMessage,learningValue} from './math';
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
 import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
-import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
+import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation} from './towers';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;}
@@ -19,6 +19,7 @@ export class Defense{
  private carriedWalls=0;
  bossDefeated=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
+ purchaseVariation:PurchaseVariation={round:0};
  constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
  get canChangeDifficulty(){return this.phase==='ready'&&!this.towers.length&&!this.walls.length;}
@@ -56,10 +57,12 @@ export class Defense{
   return true;
  }
  requestPurchase(c:Cell,typeId:string):boolean{
+  if(this.pendingPurchase)return false;
   const type=towerType(typeId);if(!type||!this.canPurchase(c,type))return false;
-  const cost=towerPrice(type,this.money,this.level.id);if(this.money<cost)return this.notice('돈이 부족해요. 다른 타워를 고르거나 보상을 모아 보세요.');
+  const cost=towerPrice(type,this.money,this.level.id,this.purchaseVariation);if(this.money<cost)return this.notice('돈이 부족해요. 다른 타워를 고르거나 보상을 모아 보세요.');
   const before=purchaseCoins(this.money);
-  this.pendingPurchase={...c,typeId,before,wallet:this.money,cost,digits:this.level.id>=4?3:this.level.digits,borrowing:borrowingPlaces(before,cost)};return true;
+  this.pendingPurchase={...c,typeId,before,wallet:this.money,cost,digits:this.level.id>=4?3:this.level.digits,borrowing:borrowingPlaces(before,cost)};
+  this.purchaseVariation={round:this.purchaseVariation.round+1,lastBefore:before,lastCost:cost};return true;
  }
  cancelPurchase(){this.pendingPurchase=null;}
  answerPurchase(text:string):boolean{

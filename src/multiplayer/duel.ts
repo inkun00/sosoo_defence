@@ -1,4 +1,4 @@
-import {TOWERS,towerType,towerPrice,parseMoney} from '../towers';
+import {TOWERS,towerType,towerPrice,parseMoney,PurchaseVariation} from '../towers';
 import {heroSpec} from './heroes';
 import {hit,numberText,recipe,reward,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
@@ -9,7 +9,7 @@ export interface DuelTower{id:number;typeId:string;x:number;y:number;unit:number
 export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;slow:number;stun:number;hits:number;}
 export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;}
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
-export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
+export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
 export interface DuelShot{id:number;time:number;towerId:number;owner:Side;enemyId:number;x:number;before:number;unit:number;after:number;effect:string;}
 export interface DuelState{version:1;seed:number;learningLevel:number;createdAt:number;startedAt:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'playing'|'finished';players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready'}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'|'-'}|{type:'hatch';heroId:string}|{type:'surrender'};
@@ -120,8 +120,9 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   const type=towerType(action.typeId),lv=duelLevel(s);if(!type||type.unlock>lv)return bad('아직 해금되지 않은 타워예요.');
   if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽 빈 바닥에 타워 사이를 한 칸 띄워 설치해요.');
   if(p.towers.length>=14||(type.unit===10&&p.towers.filter(t=>t.unit===10).length>=3))return bad('설치 제한이에요. 전체 14개, 바늘탑 3개까지예요.');
-  const cost=towerPrice(type,p.money,lv);if(cost>p.money)return bad('코인이 부족해요.');
-  p.quote={x:action.x,y:action.y,typeId:type.id,before:purchaseCoins(p.money),wallet:p.money,cost,digits:lv===1?1:lv<4?2:3,nonce,expires:now+60000};return ok('구매에 사용할 코인에서 남는 코인을 계산해요. 대전은 계속 진행돼요.');
+  const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
+  const before=purchaseCoins(p.money);p.quote={x:action.x,y:action.y,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:lv<4?2:3,nonce,expires:now+60000};
+  p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('구매에 사용할 코인에서 남는 코인을 계산해요. 대전은 계속 진행돼요.');
  }
  if(action.type==='answer'){
   const q=p.quote;if(!q||q.nonce!==action.nonce)return bad('새 구매 문제를 열어 주세요.');

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Defense,Tower} from '../src/model';
 import {LEVELS} from '../src/levels';
-import {TOWERS,towerType,towerPrice,borrowingPlaces,parseMoney} from '../src/towers';
+import {TOWERS,towerType,towerPrice,borrowingPlaces,parseMoney,PurchaseVariation} from '../src/towers';
 import {numberText,minimumHits} from '../src/math';
 import {world} from '../src/path';
 
@@ -10,6 +10,38 @@ test('12종 타워는 각각 고정된 서로 다른 공격력을 가지며 0.00
  assert.equal(TOWERS.length,12);assert.equal(new Set(TOWERS.map(t=>t.unit)).size,12);
  assert.ok(TOWERS.every(t=>t.unit>=10&&t.unit%10===0));assert.ok(TOWERS.some(t=>t.unit===2350));
  for(const l of LEVELS)assert.deepEqual(l.units,[...new Set(TOWERS.filter(t=>t.unlock<=l.id).map(t=>t.unit))]);
+});
+
+test('취소·회수 뒤 같은 보유금과 같은 타워로 문제를 열어도 직전 식을 반복하지 않는다',()=>{
+ for(const level of LEVELS)for(const type of TOWERS.filter(t=>t.unlock<=level.id)){
+  const m=new Defense(level),formulas=new Set<string>();let previous='';
+  for(let i=0;i<18;i++){
+   const expected=towerPrice(type,m.money,level.id,m.purchaseVariation);
+   assert.ok(m.requestPurchase({x:1,y:3},type.id));const q=m.pendingPurchase!,formula=`${q.before}-${q.cost}`;
+   assert.equal(q.cost,expected,'상점 가격과 문제의 가격이 같아야 한다');assert.notEqual(formula,previous,`${level.id} ${type.id}`);formulas.add(formula);previous=formula;
+   assert.equal(m.answerPurchase('99'),false);assert.equal(m.pendingPurchase,q,'오답은 식을 바꾸지 않는다');
+   assert.equal(m.requestPurchase({x:3,y:3},type.id),false,'열린 문제를 다른 견적으로 덮어쓰지 않는다');
+   if(i%2===0)m.cancelPurchase();else {assert.ok(m.answerPurchase(numberText(q.before-q.cost)));m.sellTower(m.towers[0].id);}
+   assert.equal(m.money,level.budget);
+  }
+  assert.ok(formulas.size>=3,`${level.id} ${type.id} 다양성`);
+ }
+});
+
+test('변형 가격도 차시별 소수 자리·한 자리 자연수·등급별 가격과 받아내림 난도를 지킨다',()=>{
+ for(const level of LEVELS)for(const type of TOWERS.filter(t=>t.unlock<=level.id)){
+  let variation:PurchaseVariation={round:1};
+  for(let i=0;i<25;i++){
+   const cost=towerPrice(type,level.budget,level.id,variation),places=borrowingPlaces(level.budget,cost).filter(p=>p<1000);
+   assert.ok(cost>0&&cost<=level.budget&&cost<10000);assert.ok(level.budget-cost<10000);
+   assert.equal(cost%(level.id===1?100:level.id<4?10:1),0);
+   if(type.grade===1){assert.ok(cost<=1000);assert.equal(places.length,0);}
+   else {assert.ok(cost>(type.grade-1)*1000&&cost<type.grade*1000);assert.ok(places.length>=(type.grade===2?1:2),`${level.id} ${type.id}: ${cost}`);}
+   variation={round:variation.round+1,lastBefore:level.budget,lastCost:cost};
+  }
+ }
+ const m=new Defense(LEVELS[0]);const before=m.purchaseVariation;m.money=50;
+ assert.equal(m.requestPurchase({x:1,y:3},'basic'),false);assert.equal(m.purchaseVariation,before);
 });
 test('타워는 구매 문제의 정답 이후에만 설치되고 오답·취소는 돈·배치·횟수를 보존한다',()=>{
  const m=new Defense(LEVELS[0]),before=m.money;

@@ -22,7 +22,43 @@ export const GRADE_NAMES=['','기본','희귀','영웅','전설'];
 export const TOWER_RANGE=174,LONG_TOWER_RANGE=232;
 // Prices are quoted against the real wallet. Basic prices avoid borrowing in
 // decimal places; advanced prices favor it, within the stage's money precision.
-export function towerPrice(type:TowerType,money:number,stage:number){
+export interface PurchaseVariation{round:number;lastBefore?:number;lastCost?:number;}
+export function towerPrice(type:TowerType,money:number,stage:number,variation?:PurchaseVariation){
+ const baseline=stagePrice(type,money,stage);
+ if(!variation?.round)return baseline;
+ const before=purchaseCoins(money),step=stage===1?100:type.grade<=2?10:1;
+ const low=type.grade===1?step:(type.grade-1)*1000+step;
+ const high=type.grade===1?1000:type.grade*1000-step;
+ const candidates:number[]=[];
+ for(let cost=low;cost<=Math.min(high,before);cost+=step){
+  // Keep advanced prices near their stage price to preserve combat balance.
+  if(type.grade>1&&Math.abs(cost-baseline)>120)continue;
+  candidates.push(cost);
+ }
+ if(!candidates.length)return baseline;
+ const count=(cost:number)=>borrowingPlaces(before,cost).filter(p=>p<1000).length;
+ const wanted=type.grade===1?0:type.grade===2?1:2;
+ const best=type.grade===1?Math.min(...candidates.map(count)):Math.min(wanted,Math.max(...candidates.map(count)));
+ let practice=candidates.filter(cost=>type.grade===1?count(cost)===best:count(cost)>=best);
+ if(type.grade===1){
+  const nearby=practice.filter(cost=>Math.abs(cost-baseline)<=(stage===1?200:100));
+  // Prefer a modest price change; fall back to the closest easy prices when
+  // the wallet's decimal digits leave too few non-borrowing alternatives.
+  practice=nearby.length>=2?nearby:practice.sort((a,b)=>Math.abs(a-baseline)-Math.abs(b-baseline)||a-b).slice(0,4);
+ }
+ // Deterministic variety shared by the host and shop, independent of combat RNG.
+ let stride=37;while(gcd(stride,practice.length)!==1)stride++;
+ const start=((variation.round-1)*stride+TOWERS.indexOf(type))%practice.length;
+ for(let i=0;i<practice.length;i++){
+  const cost=practice[(start+i)%practice.length];
+  if(before!==variation.lastBefore||cost!==variation.lastCost)return cost;
+ }
+ // A wallet with only one affordable easy price cannot supply a second
+ // distinct non-borrowing question; choose the closest other valid price.
+ return candidates.filter(c=>c!==variation.lastCost).sort((a,b)=>Math.abs(a-baseline)-Math.abs(b-baseline))[0]??practice[0];
+}
+function gcd(a:number,b:number):number{return b?gcd(b,a%b):a;}
+function stagePrice(type:TowerType,money:number,stage:number){
  money=purchaseCoins(money);
  const places=stage===1?1:stage<4?2:3;
  const before=[Math.floor(money/100)%10,Math.floor(money/10)%10,money%10];

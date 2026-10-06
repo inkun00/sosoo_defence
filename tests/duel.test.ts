@@ -20,6 +20,19 @@ test('기존 타워 구매처럼 정답에만 차감·설치하고 상대 진영
  assert.equal(validDuelCell(s,0,4,2),false);assert.equal(validDuelCell(s,0,4,1),false);assert.ok(validDuelCell(s,0,5,2));assert.equal(s.players[1]!.money,8800);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},NOW,'repeat').ok,false);
 });
+
+test('1:1 구매 문제도 취소·회수마다 달라지고 오답 재시도와 상대의 견적은 유지된다',()=>{
+ const s=match(),p=s.players[0];let previous='';const formulas=new Set<string>();
+ for(let i=0;i<12;i++){
+  const nonce=`q-${i}`;assert.ok(applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,nonce).ok);
+  const q=p.quote!,formula=`${q.before}-${q.cost}`;assert.notEqual(formula,previous);previous=formula;formulas.add(formula);
+  assert.equal(applyDuel(s,0,{type:'answer',nonce,answer:'0'},NOW,`wrong-${i}`).ok,false);assert.equal(p.quote,q);
+  if(i%2===0)applyDuel(s,0,{type:'cancel'},NOW,`cancel-${i}`);
+  else {assert.ok(answer(s,0).ok);assert.ok(applyDuel(s,0,{type:'sell',towerId:p.towers[0].id},NOW,`sell-${i}`).ok);}
+  assert.equal(p.money,8800);assert.equal(s.players[1]!.purchaseVariation,undefined);
+ }
+ assert.ok(formulas.size>=3);
+});
 test('계산 중 전투가 계속되고 보상은 보관 후 문제 종료에 반영되며 만료도 환급한다',()=>{
  const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'a');answer(s,0);applyDuel(s,0,{type:'quote',x:5,y:2,typeId:'double'},NOW,'b');s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);
  assert.equal(s.players[0].money,8700);assert.ok(s.players[0].escrow>0);assert.equal(s.enemies.length,0);assert.ok(s.elapsed>0);const escrow=s.players[0].escrow;

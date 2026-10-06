@@ -11,6 +11,12 @@ test('새 브라우저는 BGM을 켜고 기존에 끈 음악·효과음 설정�
  try{const fresh=loadSave();assert.equal(fresh.music,true);fresh.music=false;fresh.sfx=false;assert.ok(writeSave(fresh));assert.equal(loadSave().music,false);assert.equal(loadSave().sfx,false);}finally{if(previous)Object.defineProperty(globalThis,'localStorage',previous);else Reflect.deleteProperty(globalThis,'localStorage');}
 });
 
+test('과거 1:1 효과음 OFF를 보존하고 새 토글 선택은 모든 화면에서 같은 설정으로 저장한다',()=>{
+ const previous=Object.getOwnPropertyDescriptor(globalThis,'localStorage'),data=new Map<string,string>([['decimal-duel-sfx','off']]);
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(k:string)=>data.get(k)??null,setItem:(k:string,v:string)=>data.set(k,v),removeItem:(k:string)=>data.delete(k)}});
+ try{const save=loadSave();assert.equal(save.sfx,false);save.sfx=true;save.music=false;assert.ok(writeSave(save));assert.equal(data.has('decimal-duel-sfx'),false);assert.equal(loadSave().sfx,true);assert.equal(loadSave().music,false);}finally{if(previous)Object.defineProperty(globalThis,'localStorage',previous);else Reflect.deleteProperty(globalThis,'localStorage');}
+});
+
 test('최종 보스를 성에 통과시키면 다른 목표를 모두 달성해도 엔딩 조건 실패',()=>{
  const m=new Defense(LEVELS[9],{bricks:[],walls:1});assert.ok(m.placeWall({x:1,y:4}));
  for(let i=0;i<12;i++)m.spawn();const boss=m.enemies[11];assert.equal(boss.kind,'warden');

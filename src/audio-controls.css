@@ -1,0 +1,10 @@
+.audio-controls{position:absolute;top:0;left:0;right:0;height:48px;z-index:120;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:3px 12px;background:linear-gradient(#28282d,#121419);border-bottom:1px solid #74604a}
+.audio-controls button{height:40px;min-width:132px;padding:4px 14px;border:2px ridge #b69766;border-radius:4px;background:linear-gradient(#514133,#24272e);color:#ffe2ad;font:700 15px 'Malgun Gothic',sans-serif;cursor:pointer;touch-action:manipulation}
+.audio-controls button[aria-pressed=false]{background:linear-gradient(#35373e,#1b1d23);border-color:#6f7076;color:#c5bfba}
+.audio-controls button:hover{filter:brightness(1.2)}
+.audio-controls button:focus-visible{outline:3px solid #ffc670;outline-offset:2px}
+.with-audio-controls #game-shell{inset:48px 0 0}
+.with-audio-controls #field{width:min(100vw,calc((100vh - 48px)*1.6));height:min(62.5vw,calc(100vh - 48px))}
+.with-audio-controls .title-screen{top:48px;height:calc(100% - 48px)}
+.with-audio-controls .modal,.with-audio-controls .title-dialog{top:48px}
+@media(max-width:600px){.audio-controls{padding-inline:6px;gap:6px}.audio-controls button{min-width:118px;padding-inline:8px;font-size:14px}}
