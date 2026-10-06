@@ -43,11 +43,15 @@ Cloud Functions는 인증된 본인의 기록만 받으며 경험치·레벨을 
 
 ## 현재 Firebase 연결 상태
 
-**새 운영 프로젝트 `sosoo-defense-20261005`와 웹 앱을 만들었고, 서울 리전의 기본 Firestore 데이터베이스를 생성하고 접근 규칙·문항 필드 인덱스 설정을 운영에 배포했습니다.** 클라이언트 공개 웹 앱 설정은 `.env.local`에 입력했습니다. 프로젝트 소유 계정은 `inkun00@gmail.com`입니다. API를 통한 Authentication 초기화는 BILLING_NOT_ENABLED 응답을 받았지만, 2026-10-05 Firebase 콘솔에서 시작하기를 진행한 뒤 이메일/비밀번호 제공업체를 활성화하는 데 성공했습니다. 이메일 인증 자체가 Blaze를 요구하는 것은 아닙니다. 경기 기록·방 목록·만료 정리 Cloud Functions의 운영 배포에는 여전히 Blaze 전환과 결제 계정 연결이 필요합니다. 운영 게임에는 인증 활성화를 반영한 재배포와 검증이 아직 남아 있어 `VITE_FIREBASE_AUTH_READY=false`, `VITE_FIREBASE_RECORDS_READY=false`, `VITE_FIREBASE_LOBBY_READY=false`를 유지합니다. 로컬 Firebase 에뮬레이터의 두 테스트 계정으로 실제 WebRTC 연결과 경기 종료 기록 저장을 검증합니다. 에뮬레이터 성공은 운영 계정 등록이나 배포 성공을 의미하지 않습니다.
+**운영 프로젝트 `sosoo-defense-20261005`를 사용합니다.** 이메일/비밀번호 Authentication, 서울 리전의 Firestore, 접근 규칙·색인과 `duelRoom`, `duelSaveResult`, `duelPruneRooms`를 운영에 배포했습니다. Blaze 결제 연결이 활성화되어 있습니다. 인증 허용 도메인에는 `sosoo-defence.vercel.app`을 등록했습니다.
+
+Vercel의 Production·Preview에는 공개 웹 앱 설정 네 항목과 **Config 타입 `VITE_FIREBASE_ENABLED=true`**를 설정합니다. 이 스위치는 인증·방 목록·기록을 함께 활성화하며 비밀 키가 아닙니다. 기존 `VITE_FIREBASE_AUTH_READY`, `VITE_FIREBASE_RECORDS_READY`, `VITE_FIREBASE_LOBBY_READY`는 새 스위치가 없는 환경에서만 사용합니다. 설정 변경 후 웹 화면을 다시 빌드·배포합니다.
+
+운영 연결 점검에서 테스트 계정 가입·로그인, 비밀번호 방 생성과 입장, 잘못된 비밀번호 거부, 방 닫기, 승·패·경험치·레벨·오답 저장과 다른 계정의 기록 읽기 거부를 확인했습니다. 방·접속 정보는 Firebase가 관리하며 전투는 계속 호스트 컴퓨터에서 진행됩니다. 함수는 최소 인스턴스 0이고 만료 자료 정리는 시간당 한 번 수행합니다. 배포 컨테이너 이미지는 하루 뒤 자동 정리합니다.
 
 `.env.example`을 `.env.local`로 복사해 선택한 프로젝트의 공개 웹 앱 설정을 입력합니다. 필요한 값은 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`입니다. 서비스 계정 키나 로그인 토큰을 클라이언트 파일에 넣지 않습니다. 게임 연결로 Firebase 인증 토큰이나 비밀번호를 상대에게 보내지 않습니다.
 
-선택한 프로젝트에서 이메일/비밀번호 Authentication과 Firestore를 설정하고 기록·방 목록·만료 정리 Functions를 배포합니다. Functions에는 Blaze 요금제가 필요합니다. 결제 승인 후 계정 서비스를 설정하고 함수를 배포한 다음 `.env.local`의 세 READY 값을 true로 바꾸어 다시 빌드합니다. 기존 서비스가 있는 프로젝트의 규칙과 Hosting 사이트는 먼저 확인하고 합쳐야 하며, 이 프로젝트의 규칙을 기존 서비스에 그대로 덮어쓰지 않습니다.
+다른 프로젝트로 이전한다면 이메일/비밀번호 Authentication과 Firestore를 설정하고 기록·방 목록·만료 정리 Functions를 배포합니다. Functions에는 Blaze 요금제가 필요합니다. 배포와 검증을 마친 다음 `.env.local`의 `VITE_FIREBASE_ENABLED`를 true로 바꾸어 다시 빌드합니다. 기존 서비스가 있는 프로젝트의 규칙과 Hosting 사이트는 먼저 확인하고 합쳐야 하며, 이 프로젝트의 규칙을 기존 서비스에 그대로 덮어쓰지 않습니다.
 
 ```powershell
 npm run build

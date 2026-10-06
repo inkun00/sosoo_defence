@@ -4,7 +4,7 @@
 
 ## 실행
 
-Windows에서 `게임실행.cmd`를 열고 `http://localhost:4173`으로 접속합니다. Node.js가 필요하며 실행 창을 열어 두세요. 1인 모험은 인터넷 연결 없이 실행할 수 있습니다. 회원가입·온라인 1:1 대전은 운영 Firebase 연결과 인터넷이 필요합니다. 새 운영 프로젝트 sosoo-defense-20261005를 생성했으며, 계정 설정과 기록 함수 배포를 위한 요금제 연결 승인이 남아 있습니다. 로컬 테스트 절차와 배포 안내는 [FIREBASE.md](FIREBASE.md)를 확인하세요. 태블릿은 같은 네트워크에서 `http://PC의IPv4주소:4173`으로 접속합니다. 방화벽 설정에 따라 접속이 제한될 수 있습니다.
+Windows에서 `게임실행.cmd`를 열고 `http://localhost:4173`으로 접속합니다. Node.js가 필요하며 실행 창을 열어 두세요. 1인 모험은 인터넷 연결 없이 실행할 수 있습니다. 회원가입·온라인 1:1 대전은 운영 Firebase 연결과 인터넷이 필요합니다. 운영 프로젝트 sosoo-defense-20261005의 Authentication·Firestore·방 목록·경기 기록 함수를 연결했습니다. 로컬 테스트 절차와 배포 안내는 [FIREBASE.md](FIREBASE.md)를 확인하세요. 태블릿은 같은 네트워크에서 `http://PC의IPv4주소:4173`으로 접속합니다. 방화벽 설정에 따라 접속이 제한될 수 있습니다.
 
 개발용 실행은 `npm install` 후 `npm run dev`, 개발 주소는 `http://localhost:5173`입니다. 원본 코드 ZIP은 `npm run build`로 `dist`를 생성하고 실행합니다. 실행 파일 ZIP에는 `dist`가 포함됩니다.
 
@@ -132,7 +132,7 @@ BGM·효과음은 Web Audio로 브라우저에서 합성하므로 외부 오디�
 
 메뉴의 **회원가입 · 1:1 대전**으로 이동합니다. 가입·로그인 후 중앙 방 목록에서 공개방 또는 비밀번호 방으로 참가하고 함께 준비 완료를 누릅니다. 방은 게임 시작 또는 생성 후 5분이 지나면 목록에서 사라집니다. 접속 정보는 자동 교환합니다. WebRTC로 호스트 컴퓨터에 연결하며 전투는 호스트 브라우저가 진행합니다. Firebase는 대기 방 목록과 접속 정보를 관리하고, 경기 종료 후 승·패·경험치·계정 레벨·오답 문항을 저장합니다. 대기실의 전적 · 오답 복습에서 확인할 수 있습니다. 직선 길의 양쪽 불꽃을 타워로 방어하면서, 동일한 소수 블럭 16개로 덧셈·뺄셈을 맞혀 돌 알을 성장시킵니다. 현재 알 레벨의 영웅 3종 중 하나를 골라 부화시켜 상대 불꽃을 공격합니다. 영웅은 레벨 1~10, 각 3종씩 총 30종으로 별도 생성했습니다. 기본 웨이브와 영웅이 함께 진행합니다.
 
-Firebase를 차단한 상태의 두 브라우저 직접 대전과 종료 후 에뮬레이터 기록 저장을 확인했습니다. 기본은 같은 Wi-Fi/LAN이며 서로 다른 인터넷에는 선택 가능한 STUN 주소 보조가 있습니다. 게임 중계 서버는 구성하지 않아 네트워크에 따라 직접 연결이 제한됩니다. 호스트 창을 열어 두고 새로고침하지 마세요. 새 Firebase 프로젝트와 웹 앱·기본 Firestore는 생성했으며, 기록·방 목록·만료 정리 함수의 운영 배포는 Blaze 요금제 승인을 기다립니다. 자세한 게임 규칙, 계정 연결과 배포 절차는 [FIREBASE.md](FIREBASE.md)에 있습니다.
+Firebase를 차단한 상태의 두 브라우저 직접 대전과 종료 후 에뮬레이터 기록 저장을 확인했습니다. 기본은 같은 Wi-Fi/LAN이며 서로 다른 인터넷에는 선택 가능한 STUN 주소 보조가 있습니다. 게임 중계 서버는 구성하지 않아 네트워크에 따라 직접 연결이 제한됩니다. 호스트 창을 열어 두고 새로고침하지 마세요. Firebase 운영 프로젝트에 인증·Firestore·기록·방 목록·만료 정리 함수를 배포했습니다. 자세한 게임 규칙, 계정 연결과 배포 절차는 [FIREBASE.md](FIREBASE.md)에 있습니다.
 
 ## 몬스터 피격 뺄셈식
 
@@ -150,7 +150,7 @@ Firebase를 차단한 상태의 두 브라우저 직접 대전과 종료 후 에
 
 원본 저장소: [inkun00/sosoo_defence](https://github.com/inkun00/sosoo_defence). 저장소 루트가 게임 프로젝트이며 Node.js 22, `npm ci`, `npm run build`, 출력 디렉터리 `dist`를 사용합니다. `vercel.json`에 Vite 배포 설정이 있습니다. GitHub의 `main`을 Vercel에 연결하면 이후 push도 자동 배포됩니다.
 
-Vercel은 게임 웹 화면을 호스팅합니다. 회원가입·중앙 방 목록·경기 기록은 Firebase 운영 설정과 함수 배포가 완료되어야 사용 가능합니다. 준비 전에는 `VITE_FIREBASE_AUTH_READY=false`, `VITE_FIREBASE_RECORDS_READY=false`, `VITE_FIREBASE_LOBBY_READY=false`를 유지합니다. 공개 Firebase 웹 설정 네 항목은 Vercel 환경 변수에 입력하며, 서버 자격 증명과 로컬 `.env.local`은 Git에 올리지 않습니다. 로컬 에뮬레이터 연결은 localhost에서만 허용합니다.
+Vercel은 게임 웹 화면을 호스팅합니다. 회원가입·중앙 방 목록·경기 기록은 Firebase 운영 프로젝트에 연결했습니다. Vercel의 Production·Preview에서 Config 타입 `VITE_FIREBASE_ENABLED=true`로 활성화합니다. 다른 프로젝트를 준비 중일 때는 이 스위치를 false로 유지합니다. 공개 Firebase 웹 설정 네 항목은 Vercel 환경 변수에 입력하며, 서버 자격 증명과 로컬 `.env.local`은 Git에 올리지 않습니다. 로컬 에뮬레이터 연결은 localhost에서만 허용합니다.
 
 공식 배포 안내: [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite), [GitHub 자동 배포](https://vercel.com/docs/git/vercel-for-github).
 
