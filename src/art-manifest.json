@@ -199,6 +199,14 @@
     "sourceBytes": 2513478,
     "bytes": 282302
   },
+  "story-invasion-v2": {
+    "url": "/assets/dungeon/story-invasion-v2.12bbbde321ff.webp",
+    "sourceHash": "024da43c202593d2ef6fd86b2523090d06412398876c4f8538f8fc8820ef0792",
+    "width": 1659,
+    "height": 948,
+    "sourceBytes": 2466123,
+    "bytes": 280850
+  },
   "story-rift-v1": {
     "url": "/assets/dungeon/story-rift-v1.5f9b1061e93a.webp",
     "sourceHash": "c35961841c97585aa862fe1bc699cc7f1043165036e3d6509006b17ea9e5ea75",
@@ -206,6 +214,14 @@
     "height": 941,
     "sourceBytes": 2363465,
     "bytes": 237142
+  },
+  "story-sorcerer-v2": {
+    "url": "/assets/dungeon/story-sorcerer-v2.8f6fb1c9099c.webp",
+    "sourceHash": "89a32e5cc0167563d24cda97874f203f5dc9665aaee1cb9f9f8d5d9f5ec17e4e",
+    "width": 1659,
+    "height": 948,
+    "sourceBytes": 2436529,
+    "bytes": 270036
   },
   "terrain": {
     "url": "/assets/dungeon/terrain.c99a4f169839.webp",

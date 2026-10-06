@@ -47,6 +47,14 @@ test('이어하기는 마지막 선택 단계를 보존하고 과거 저장은 �
  data.set('decimal-castle-v1',JSON.stringify({...s,resumeStage:11}));assert.equal(loadSave().resumeStage,7);
 });
 test('오프닝·엔딩의 장면 전환과 마지막 프레임은 시간 경계에서 일관된다',()=>{
- assert.equal(storyDuration('opening'),28);assert.equal(storyDuration('ending'),22);
+ assert.equal(storyDuration('opening'),36);assert.equal(storyDuration('ending'),22);
  for(const kind of ['opening','ending'] as const){let time=0;for(let i=0;i<STORY[kind].length;i++){const f=storyFrame(kind,time);assert.equal(f.index,i);assert.equal(f.local,0);time+=STORY[kind][i].duration;}assert.equal(storyFrame(kind,time).index,STORY[kind].length-1);assert.equal(storyFrame(kind,time+50).local,STORY[kind].at(-1)!.duration);}
+});
+
+test('새 오프닝은 평화·저주·마법사·탄생·침공·구원의 이야기만 전달한다',()=>{
+ const beats=STORY.opening,copy=beats.map(b=>b.title+b.subtitle+b.caption).join(' ');
+ assert.equal(beats.length,6);assert.equal(storyDuration('opening'),36);
+ assert.ok(beats.every(b=>!b.formula));assert.doesNotMatch(copy,/타워|포탄|성벽|공격력|체력|구매|계산|더해서|빼서/);
+ for(const word of ['평화','소수로 변','저주','마법사','태어나','점령','세상을 구'])assert.ok(copy.includes(word),word);
+ assert.equal(beats[2].art,'story-sorcerer-v2');assert.equal(beats[4].art,'story-invasion-v2');
 });

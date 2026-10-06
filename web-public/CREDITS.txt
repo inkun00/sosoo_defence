@@ -116,11 +116,19 @@ Prompts, references and source paths: assets/dungeon/story-prompts-v1.json
 Motion design reference (typography, camera movement, transitions):
 https://jasonzhu.ai/en/prompts/claude-opus-5-5/2103424524297420829
 No artwork, video or code copied from that reference.
-Narration uses device-provided Korean Web Speech voices; Korean captions are
-always displayed. Cinematic tones are synthesized locally with Web Audio.
+Story captions are displayed in Korean. There is no voice narration.
+Cinematic tones are synthesized locally with Web Audio.
 
 ORIGINAL PROCEDURAL SOUNDTRACK AND EFFECTS
 Seven original score arrangements and fifteen synthesized effects are defined
 in src/music.ts and src/audio.ts. Web Audio oscillators, deterministic noise,
 filters, envelopes, an echo bus and a compressor generate all audio at runtime.
 No third-party music, samples, audio files or audio service are used.
+
+CURSED WORLD OPENING v2
+Original sorcerer and invasion backgrounds generated with built-in OpenAI image_gen.
+assets/dungeon/story-sorcerer-v2.png
+assets/dungeon/story-invasion-v2.png
+Prompts: assets/dungeon/opening-prompts-v2.json
+Animated curse fragments, decimal particles, summoning spirals and marching
+monster sprites are rendered locally on Canvas. No tutorial appears in the opening.
