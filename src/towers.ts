@@ -23,32 +23,40 @@ export const TOWER_RANGE=174,LONG_TOWER_RANGE=232;
 // Leave two empty cells between towers, including diagonal neighbors.
 export const TOWER_GAP=2;
 export function withinTowerGap(a:{x:number;y:number},b:{x:number;y:number}){return Math.abs(a.x-b.x)<=TOWER_GAP&&Math.abs(a.y-b.y)<=TOWER_GAP;}
-// Prices are quoted against the real wallet. Basic prices avoid borrowing in
-// decimal places; advanced prices favor it, within the stage's money precision.
+// Non-overlapping stage bands make every tower progressively more expensive.
+// Wallet-based selection favors easy basic questions and advanced borrowing.
 export interface PurchaseVariation{round:number;lastBefore?:number;lastCost?:number;}
+export function towerPriceBand(type:TowerType,stage:number){
+ stage=Math.max(1,Math.min(10,Math.floor(stage)));
+ const step=stage===1?100:type.grade<=2?10:1;
+ let low:number;
+ if(type.grade===1){
+  const offset={basic:0,double:10,needle:0,pebble:10}[type.id]??0;
+  low=stage===1?Math.ceil(type.cost/100)*100:420+offset+(stage-2)*50;
+ }else {
+  const opening=({catapult:1680,crystal:2825,sniper:2850,siege:2835,rune:3885} as Record<string,number>)[type.id]??type.cost;
+  low=opening+Math.max(0,stage-type.unlock)*(type.grade===3?30:40);
+  low=Math.ceil(low/step)*step;
+ }
+ return {low,high:low+(stage===1?200:20),step};
+}
 export function towerPrice(type:TowerType,money:number,stage:number,variation?:PurchaseVariation){
- const baseline=stagePrice(type,money,stage);
- if(!variation?.round)return baseline;
- const before=purchaseCoins(money),step=stage===1?100:type.grade<=2?10:1;
- const low=type.grade===1?step:(type.grade-1)*1000+step;
- const high=type.grade===1?1000:type.grade*1000-step;
+ const before=purchaseCoins(money),{low,high,step}=towerPriceBand(type,stage);
  const candidates:number[]=[];
  for(let cost=low;cost<=Math.min(high,before);cost+=step){
-  // Keep advanced prices near their stage price to preserve combat balance.
-  if(type.grade>1&&Math.abs(cost-baseline)>120)continue;
   candidates.push(cost);
  }
- if(!candidates.length)return baseline;
+ // Quote the stage minimum even if unaffordable; never discount past its band.
+ if(!candidates.length)return low;
  const count=(cost:number)=>borrowingPlaces(before,cost).filter(p=>p<1000).length;
  const wanted=type.grade===1?0:type.grade===2?1:2;
- const best=type.grade===1?Math.min(...candidates.map(count)):Math.min(wanted,Math.max(...candidates.map(count)));
- let practice=candidates.filter(cost=>type.grade===1?count(cost)===best:count(cost)>=best);
- if(type.grade===1){
-  const nearby=practice.filter(cost=>Math.abs(cost-baseline)<=(stage===1?200:100));
-  // Prefer a modest price change; fall back to the closest easy prices when
-  // the wallet's decimal digits leave too few non-borrowing alternatives.
-  practice=nearby.length>=2?nearby:practice.sort((a,b)=>Math.abs(a-baseline)-Math.abs(b-baseline)||a-b).slice(0,4);
- }
+ const penalty=(cost:number)=>type.grade===1?count(cost):Math.max(0,wanted-count(cost));
+ const ranked=candidates.slice().sort((a,b)=>penalty(a)-penalty(b)||a-b);
+ if(!variation?.round)return ranked[0];
+ const best=penalty(ranked[0]),preferred=ranked.filter(cost=>penalty(cost)===best);
+ // Keep three different questions when the wallet allows it, even if its
+ // digits leave fewer than three prices at the ideal borrowing difficulty.
+ const practice=preferred.length>=3?preferred:ranked.slice(0,3);
  // Deterministic variety shared by the host and shop, independent of combat RNG.
  let stride=37;while(gcd(stride,practice.length)!==1)stride++;
  const start=((variation.round-1)*stride+TOWERS.indexOf(type))%practice.length;
@@ -56,38 +64,9 @@ export function towerPrice(type:TowerType,money:number,stage:number,variation?:P
   const cost=practice[(start+i)%practice.length];
   if(before!==variation.lastBefore||cost!==variation.lastCost)return cost;
  }
- // A wallet with only one affordable easy price cannot supply a second
- // distinct non-borrowing question; choose the closest other valid price.
- return candidates.filter(c=>c!==variation.lastCost).sort((a,b)=>Math.abs(a-baseline)-Math.abs(b-baseline))[0]??practice[0];
+ return practice[0];
 }
 function gcd(a:number,b:number):number{return b?gcd(b,a%b):a;}
-function stagePrice(type:TowerType,money:number,stage:number){
- money=purchaseCoins(money);
- const places=stage===1?1:stage<4?2:3;
- const before=[Math.floor(money/100)%10,Math.floor(money/10)%10,money%10];
- const nominal=[Math.floor(type.cost/100)%10,Math.floor(type.cost/10)%10,type.cost%10];
- const fraction=[0,0,0];
- if(type.grade===1){
-  // Simple tenths without decimal borrowing. Whole-coin prices cover .0
-  // wallets and the tenth stage without creating a two-digit operand.
-  if(stage>=10||before[0]===0)return 1000;
-  return Math.min(before[0],stage)*100;
- }
- else if(type.grade===2){
-  for(let i=0;i<Math.min(2,places);i++)fraction[i]=nominal[i]||5;
-  const i=before[1]<9&&places>=2?1:before[0]<9?0:-1;
-  if(i>=0)fraction[i]=Math.max(fraction[i],before[i]+1);
- }else{
-  for(let i=0;i<places;i++)fraction[i]=before[i]<9?Math.max(nominal[i],before[i]+1):nominal[i];
- }
- // Rare / hero / legendary occupy separate one-coin price bands. Vary
- // stage digits within each band, then favor borrowing against the wallet.
- if(type.grade===2)fraction[0]=Math.max(1,(fraction[0]+stage-1)%9+1);
- else if(before[0]===9)fraction[0]=Math.max(1,(nominal[0]+stage-1)%9+1);
- if(places>=2&&before[1]===9)fraction[1]=(nominal[1]+stage-1)%9;
- if(type.grade>=3&&places===3)fraction[2]=stage-1;
- return (type.grade-1)*1000+fraction[0]*100+fraction[1]*10+fraction[2];
-}
 export function borrowingPlaces(before:number,cost:number):number[]{
  const result:number[]=[];let borrow=0;
  for(let place=1;place<=1000;place*=10){

@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Defense,Tower} from '../src/model';
 import {LEVELS} from '../src/levels';
-import {TOWERS,towerType,towerPrice,borrowingPlaces,parseMoney,PurchaseVariation} from '../src/towers';
+import {TOWERS,towerType,towerPrice,towerPriceBand,borrowingPlaces,parseMoney,PurchaseVariation} from '../src/towers';
 import {numberText,minimumHits} from '../src/math';
 import {world} from '../src/path';
 
@@ -35,8 +35,9 @@ test('변형 가격도 차시별 소수 자리·한 자리 자연수·등급별 
    const cost=towerPrice(type,level.budget,level.id,variation),places=borrowingPlaces(level.budget,cost).filter(p=>p<1000);
    assert.ok(cost>0&&cost<=level.budget&&cost<10000);assert.ok(level.budget-cost<10000);
    assert.equal(cost%(level.id===1?100:level.id<4?10:1),0);
-   if(type.grade===1){assert.ok(cost<=1000);assert.equal(places.length,0);}
-   else {assert.ok(cost>(type.grade-1)*1000&&cost<type.grade*1000);assert.ok(places.length>=(type.grade===2?1:2),`${level.id} ${type.id}: ${cost}`);}
+   const band=towerPriceBand(type,level.id);assert.ok(cost>=band.low&&cost<=band.high);
+   if(type.grade===1){assert.ok(cost<=1000);assert.ok(places.length<=1,'기본 등급은 시작 코인에서 최대 한 번만 받아내린다');}
+   else assert.ok(cost>(type.grade-1)*1000&&cost<type.grade*1000);
    variation={round:variation.round+1,lastBefore:level.budget,lastCost:cost};
   }
  }
@@ -52,9 +53,13 @@ test('타워는 구매 문제의 정답 이후에만 설치되고 오답·취소
  assert.equal(m.answerPurchase(numberText(q.before-q.cost)),false);assert.equal(m.towers.length,1);
  const money=m.money;assert.ok(m.requestPurchase({x:5,y:3},'double'));m.cancelPurchase();assert.equal(m.money,money);assert.equal(m.towers.length,1);
 });
-test('기본 등급은 소수 자리의 받아내림을 피하고 상위 가격은 가능한 받아내림을 우선한다',()=>{
- for(const before of [12800,10400,9000,56758,94759,12999]){
-  const price=towerPrice(towerType('basic')!,before,10);assert.ok(!borrowingPlaces(before,price).some(p=>p<1000));
+test('상승하는 가격 범위 안에서 기본 등급은 쉬운 계산, 상위 등급은 가능한 받아내림을 우선한다',()=>{
+ for(const level of LEVELS)for(const type of TOWERS.filter(t=>t.unlock<=level.id)){
+  const before=level.budget,{low,high,step}=towerPriceBand(type,level.id),count=(cost:number)=>borrowingPlaces(before,cost).filter(p=>p<1000).length;
+  const counts=[];for(let cost=low;cost<=high;cost+=step)counts.push(count(cost));
+  const quoted=count(towerPrice(type,before,level.id));
+  if(type.grade===1)assert.equal(quoted,Math.min(...counts));
+  else assert.ok(quoted>=Math.min(type.grade===2?1:2,Math.max(...counts)));
  }
  assert.ok(borrowingPlaces(18750,towerPrice(towerType('frost')!,18750,2)).some(p=>p<1000));
  const high=towerPrice(towerType('rune')!,94759,10);assert.ok(high>3000&&high<10000);assert.ok(borrowingPlaces(94759,high).filter(p=>p<1000).length>=2);
@@ -89,10 +94,17 @@ test('타워 고유 공격력이 실제 피해에 적용되고 남은 체력보�
  m.damage(e,{unit:350,effect:'stun'} as Tower);assert.equal(e.hp,0);assert.equal(m.kills,1);
 });
 
-test('단계별 시작 기본 가격은 달라지고 보유금이 달라도 등급 가격이 역전되지 않는다',()=>{
+test('모든 타워의 모든 변형 가격은 다음 단계에서 오르고 보유금이 달라도 등급 가격이 역전되지 않는다',()=>{
  const basic=towerType('basic')!;
  assert.equal(new Set(LEVELS.map(l=>towerPrice(basic,l.budget,l.id))).size,10);
- for(const t of TOWERS){const open=LEVELS.filter(l=>l.id>=t.unlock);assert.equal(new Set(open.map(l=>towerPrice(t,l.budget,l.id))).size,open.length,t.name);}
+ for(const t of TOWERS){
+  const open=LEVELS.filter(l=>l.id>=t.unlock);assert.equal(new Set(open.map(l=>towerPrice(t,l.budget,l.id))).size,open.length,t.name);
+  for(let i=1;i<open.length;i++){
+   const previous=towerPriceBand(t,open[i-1].id),next=towerPriceBand(t,open[i].id);
+   assert.ok(next.low>previous.high,`${t.name}: ${open[i-1].id}→${open[i].id}`);
+   for(const wallet of [0,500,8800,9999,12999])for(let round=0;round<12;round++)assert.ok(towerPrice(t,wallet,open[i].id,{round})>towerPrice(t,wallet,open[i-1].id,{round}));
+  }
+ }
  for(const wallet of [0,100000,8800,8842,999999])for(let stage=1;stage<=10;stage++)for(const low of TOWERS)for(const high of TOWERS){
   const cost=towerPrice(low,wallet,stage);assert.ok(cost>0&&cost<10000);
   if(low.grade<high.grade)for(const otherWallet of [0,9999,8759])assert.ok(cost<towerPrice(high,otherWallet,stage));

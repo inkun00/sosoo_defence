@@ -22,8 +22,8 @@ export function playLevel(level:number,difficulty:Difficulty='standard',checkEve
  const plan=difficulty==='practice'&&level>=8?['rune','needle','basic','pebble','catapult','crystal','rune','siege','lightning','needle',...Array(14).fill('rune')]:roster;
  const wanted=plan.filter((id,i)=>towerType(id)!.unlock<=level&&(id!=='needle'||plan.slice(0,i+1).filter(v=>v==='needle').length<=m.balance.precisionLimit)).slice(0,m.balance.towerLimit);
  function spend(){const remaining=m.towers.map(t=>t.typeId);for(const id of wanted){const i=remaining.indexOf(id);if(i>=0)remaining.splice(i,1);else if(!buy(id))break;}}
- spend();m.start();
- for(let i=0;i<Math.ceil(m.duration/.1)+1&&m.phase==='playing';i++){
+ let simulationSeconds=0;spend();m.start();
+ for(let i=0;i<Math.ceil((m.duration+180)/.1)+1&&m.phase==='playing';i++){
   if(i%10===0&&m.spawned===m.level.hp.length){
    const small=m.enemies.filter(e=>e.hp<(level>=8?2350:level>=6?1500:1200)).sort((a,b)=>b.next-a.next)[0];
    if(small){
@@ -53,11 +53,11 @@ export function playLevel(level:number,difficulty:Difficulty='standard',checkEve
    if(target&&level===9&&!m.borrowHundredths&&target.hp===100&&t.unit!==10)desired=false;
    if(t.enabled!==desired)m.toggleTower(t.id);
   }
-  m.step(.1);
+  m.step(.1);simulationSeconds+=.1;
   if(m.bricks.length>=3)m.fuse(m.bricks.slice(0,3).map(b=>b.id));
   if(m.wallStock&&m.walls.length<m.balance.wallLimit){const c=route(m.blocks)!.slice().reverse().find(c=>m.candidate(c,true));if(c)m.placeWall(c);}
   if(m.spawned<m.level.hp.length||m.enemies.some(e=>e.hp>=(level>=8?2350:level>=6?1500:1200)))spend();checkEvents?.(m.events);m.events=[];
  }
- return m;
+ return Object.assign(m,{simulationSeconds:Number(simulationSeconds.toFixed(1))});
 }
 if(process.argv[1]?.endsWith('simulate.ts'))for(const l of LEVELS){const m=playLevel(l.id);console.log(`${l.id}: ${m.phase}, kills=${m.kills}, leaks=${m.leaks}, hits=${m.successfulHits}, towers=${m.towers.length}, goals=${m.goals.every(g=>g.done)}, remaining=${m.enemies.map(e=>numberText(e.hp)).join(',')}`);}

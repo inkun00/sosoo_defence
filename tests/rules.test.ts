@@ -19,7 +19,7 @@ test('0.001은 4단계부터 돈에만 있고 모든 체력·벽돌·포탄은 �
   assert.ok(!l.units.includes(1));assert.ok(l.units.every(u=>u>=10));
   assert.ok([...l.hp,...l.bricks].every(n=>n%(l.digits===1?100:10)===0));
   const cost=price(l.units[0],'basic',l.id);assert.ok(cost>=1);
-  if(l.id<4){assert.equal(cost%100,0);assert.equal(reward(l.hp[0],10,l.units,l.id)%100,0);}
+  if(l.id<4){assert.equal(cost%(l.id===1?100:10),0);assert.equal(reward(l.hp[0],10,l.units,l.id)%100,0);}
   else assert.ok(towersForStage(l.id).some(t=>towerPrice(t,l.budget,l.id)%10!==0));
  }
 });
@@ -92,7 +92,7 @@ test('길 위 몬스터가 갇히는 성벽 배치도 금지한다',()=>{
 });
 test('일시정지에서는 시간과 체력이 멈추고 목표 미달이면 진급하지 않는다',()=>{
  const m=new Defense(LEVELS[6]);install(m,{x:1,y:3},100,'basic');m.start();m.togglePause();m.step(.1);assert.equal(m.elapsed,0);
- m.togglePause();m.elapsed=m.duration-.05;m.spawned=m.level.hp.length;m.kills=12;m.step(.1);assert.equal(m.phase,'lost');
+ m.togglePause();m.elapsed=m.duration-.05;m.spawned=m.level.hp.length;m.kills=12;m.step(.1);assert.equal(m.phase,'review');assert.equal(m.castle,5);assert.equal(m.stars,0);
 });
 test('2분 동안 첫 등장 8초, 이후 8.4초 간격으로 12마리가 등장하며 정지 중에는 예약도 멈춘다',()=>{
  const m=new Defense(LEVELS[0]);install(m,{x:1,y:3},100,'basic');m.start();
@@ -107,7 +107,26 @@ test('2분 동안 첫 등장 8초, 이후 8.4초 간격으로 12마리가 등장
  }
  assert.deepEqual(times,[8,16.4,24.8,33.2,41.6,50,58.4,66.8,75.2,83.6,92,100.4]);
  // Floating point accumulation can leave the clock just short of the boundary.
- m.step(.1);assert.equal(m.elapsed,120);assert.equal(m.phase,'lost');assert.equal(m.spawned,12);
+ m.step(.1);assert.equal(m.elapsed,120);assert.equal(m.phase,'playing');assert.equal(m.castle,5);assert.equal(m.spawned,12);
+});
+test('성 체력은 한 마리당 하나씩 줄고 다섯 번째 통과에서만 패배한다',()=>{
+ const m=new Defense(LEVELS[0]);m.phase='playing';
+ for(let i=1;i<=5;i++){
+  m.spawn();const e=m.enemies.at(-1)!;e.next=e.path.length;m.step(.1);
+  assert.equal(m.castle,5-i);assert.equal(m.leaks,i);assert.equal(m.phase,i===5?'lost':'playing');
+ }
+ const elapsed=m.elapsed;m.step(.1);assert.equal(m.elapsed,elapsed);assert.equal(m.leaks,5);
+});
+test('여러 몬스터가 동시에 통과해도 체력은 0 아래로 내려가지 않고 5번에서 멈춘다',()=>{
+ const m=new Defense(LEVELS[0]);for(let i=0;i<8;i++){m.spawn();m.enemies.at(-1)!.next=m.enemies.at(-1)!.path.length;}
+ m.phase='playing';m.step(.1);assert.equal(m.castle,0);assert.equal(m.leaks,5);assert.equal(m.phase,'lost');assert.equal(m.kills,0);
+});
+test('2분 이후 한 마리가 통과해도 계속 방어하고 체력이 남으면 목표 달성으로 승리한다',()=>{
+ const m=new Defense(LEVELS[0]);for(let i=0;i<12;i++)m.spawn();m.enemies=m.enemies.slice(-2);m.kills=10;
+ m.phase='playing';m.elapsed=m.duration-.05;m.enemies[0].next=m.enemies[0].path.length;m.enemies[1].stun=100;
+ m.step(.1);assert.equal(m.castle,4);assert.equal(m.phase,'playing');assert.equal(m.elapsed,120);
+ m.damage(m.enemies[0],{unit:m.enemies[0].hp,effect:'basic'} as Tower);m.step(.1);
+ assert.equal(m.phase,'won');assert.equal(m.castle,4);assert.equal(m.leaks,1);assert.equal(m.stars,2);
 });
 test('저장은 레벨·별점·음향과 벽돌·성벽을 유지하며 손상된 저장을 안전하게 복구한다',()=>{
  const map=new Map<string,string>();Object.assign(globalThis,{localStorage:{getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>map.set(k,v)}});

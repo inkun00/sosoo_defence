@@ -17,12 +17,12 @@ test('과거 1:1 효과음 OFF를 보존하고 새 토글 선택은 모든 화�
  try{const save=loadSave();assert.equal(save.sfx,false);save.sfx=true;save.music=false;assert.ok(writeSave(save));assert.equal(data.has('decimal-duel-sfx'),false);assert.equal(loadSave().sfx,true);assert.equal(loadSave().music,false);}finally{if(previous)Object.defineProperty(globalThis,'localStorage',previous);else Reflect.deleteProperty(globalThis,'localStorage');}
 });
 
-test('최종 보스를 성에 통과시키면 다른 목표를 모두 달성해도 엔딩 조건 실패',()=>{
+test('보스 한 마리가 통과해도 성은 살아 있고 학습 목표 연습만 안내하며 엔딩을 열지 않는다',()=>{
  const m=new Defense(LEVELS[9],{bricks:[],walls:1});assert.ok(m.placeWall({x:1,y:4}));
  for(let i=0;i<12;i++)m.spawn();const boss=m.enemies[11];assert.equal(boss.kind,'warden');
  m.enemies=[boss];m.kills=11;m.usedUnits.add(100);m.usedUnits.add(10);boss.next=boss.path.length;
  m.phase='playing';m.elapsed=119.95;m.step(.1);
- assert.equal(m.castle,4);assert.equal(m.phase,'lost');assert.equal(m.bossDefeated,false);
+ assert.equal(m.castle,4);assert.equal(m.phase,'review');assert.equal(m.stars,0);assert.equal(m.bossDefeated,false);
  assert.ok(m.goals.slice(0,-1).every(g=>g.done));assert.equal(m.goals.at(-1)!.done,false);
 });
 test('최종 보스의 힘을 정확히 0으로 만든 경우에만 처치 목표 달성',()=>{

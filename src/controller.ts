@@ -42,14 +42,14 @@ function persistInventory(){
  if(!writeSave(save))notify('이 브라우저에서는 벽돌·성벽 저장이 제한되어 있어요.');
 }
 function update(){
- sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'?'title':model.level.id===10?'boss':'battle');
+ sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'||model.phase==='review'?'title':model.level.id===10?'boss':'battle');
  sound.setPaused(movie||model.phase==='paused');
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
- if((model.phase==='won'||model.phase==='lost')&&!resultShown){
+ if(['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
   if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(10,model.level.id+1));save.resumeStage=Math.min(10,model.level.id+1);if(model.level.id===10&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
-  if(!(model.phase==='won'&&model.level.id===10&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
+  if(model.phase!=='review'&&!(model.phase==='won'&&model.level.id===10&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
   if(model.phase==='won'&&model.level.id===10&&model.bossDefeated){movie=true;sound.setPaused(true);void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();});}
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
@@ -86,7 +86,7 @@ function event(ev:BattleEvent){
  else if(['notice','invalid','wall','brick','leak'].includes(ev.type))notify(ev.message);
  update();
 }
-function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 타워 사이를 가로·세로·대각선 모두 두 칸 이상 띄우세요. 단계마다 가격이 달라지며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 문제를 푸는 동안 전투가 멈추며 오답·취소에는 돈을 쓰지 않아요.</li><li><b>발사 켜기·끄기</b> 설치한 타워를 누르면 하단에 큰 발사 ON/OFF 버튼이 나타나요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 큰 타워를 끄고 0.1 포탄으로 마무리해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 덧셈 또는 뺄셈을 고르고 벽돌 세 개를 □ + □ = □ 또는 □ − □ = □에 넣어요. 식이 맞으면 합성해 성벽을 설치하세요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 모든 길을 막을 수는 없어요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 0.001은 4단계부터 돈과 가격에만 써요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 보관 재고는 사라지지 않아요.</li><li><b>진급과 저장</b> 2분 동안 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 레벨·해금·별점은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 돈·타워 배치는 단계마다 새로 시작하고 설치한 성벽은 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
+function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 타워 사이를 가로·세로·대각선 모두 두 칸 이상 띄우세요. 단계가 올라갈 때마다 모든 타워의 가격 범위가 조금씩 올라가며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 문제를 푸는 동안 전투가 멈추며 오답·취소에는 돈을 쓰지 않아요.</li><li><b>발사 켜기·끄기</b> 설치한 타워를 누르면 하단에 큰 발사 ON/OFF 버튼이 나타나요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 큰 타워를 끄고 0.1 포탄으로 마무리해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 덧셈 또는 뺄셈을 고르고 벽돌 세 개를 □ + □ = □ 또는 □ − □ = □에 넣어요. 식이 맞으면 합성해 성벽을 설치하세요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 모든 길을 막을 수는 없어요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 0.001은 4단계부터 돈과 가격에만 써요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 보관 재고는 사라지지 않아요.</li><li><b>진급과 저장</b> 성 체력은 5개이며 몬스터가 통과할 때 1개씩 줄고, 5개가 모두 소진돼야 패배해요. 2분이 지나도 남은 몬스터는 추가로 방어해요. 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 성을 지켜도 목표가 남으면 패배 대신 학습 목표 연습을 안내해요. 레벨·해금·별점은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 돈·타워 배치는 단계마다 새로 시작하고 설치한 성벽은 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
 function calculation(){
  const learned=lastHit?.data as {before:number;damage:number}|undefined;if(learned)recordLearning({a:learned.before,b:learned.damage,operation:'-',digits:model.level.digits,context:'battle'},'help',learningSession+':hit:'+lastHit!.message);
  const d=lastHit?.data as {before:number;damage:number;after:number;hint:string}|undefined;

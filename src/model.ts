@@ -10,10 +10,10 @@ export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;
 export interface Brick{id:number;value:number;}
 export interface Inventory{bricks:number[];walls:number;}
 export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
-export type Phase='ready'|'playing'|'paused'|'won'|'lost';
-export const STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERVAL=8.4;
+export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
+export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERVAL=8.4;
 export class Defense{
- level:Level;money:number;castle=5;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
+ level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
  towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Cell[]=[];blocks=naturalBlocks();events:Event[]=[];
  private nextId=1;private randomState=17;private droppedRecipe=0;
  private carriedWalls=0;
@@ -77,7 +77,7 @@ export class Defense{
  placeTower(c:Cell,typeId:string,answer:string):boolean{
   return this.requestPurchase(c,typeId)&&this.answerPurchase(answer);
  }
- toggleTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||this.phase==='won'||this.phase==='lost')return;t.enabled=!t.enabled;this.switches++;this.emit({type:'notice',message:`${decimal(t.unit,this.level.digits)} 타워 · 발사 ${t.enabled?'켜짐':'멈춤'}`});}
+ toggleTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||!['ready','playing','paused'].includes(this.phase))return;t.enabled=!t.enabled;this.switches++;this.emit({type:'notice',message:`${decimal(t.unit,this.level.digits)} 타워 · 발사 ${t.enabled?'켜짐':'멈춤'}`});}
  sellTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||!['ready','playing','paused'].includes(this.phase))return;const before=this.money;const back=t.cost;this.money+=back;this.blocks.delete(key(t));this.towers=this.towers.filter(x=>x.id!==id);this.emit({type:'money',message:creditMessage(before,back,'타워 회수')});}
  fuse(ids:number[],operation:FusionOperation='+'):boolean{
   if(ids.length!==3||new Set(ids).size!==3)return this.notice('서로 다른 벽돌 세 개를 골라 주세요.');
@@ -89,7 +89,7 @@ export class Defense{
  }
  get wallStock(){return this.carriedWalls+this.fusions-this.walls.length;}
  placeWall(c:Cell):boolean{
-  if(this.phase==='won'||this.phase==='lost')return false;
+  if(!['ready','playing','paused'].includes(this.phase))return false;
   if(!this.wallStock)return this.notice('벽돌 세 개를 먼저 합성해 성벽을 얻어요.');
   if(this.walls.length>=this.balance.wallLimit)return this.notice(`성벽은 ${this.balance.wallLimit}개까지 배치해요. 설치한 성벽을 회수해 옮겨 보세요.`);
   const blocks=this.candidate(c,true);if(!blocks)return this.notice('여기는 성벽을 놓을 수 없어요. 모든 몬스터가 성까지 갈 길을 남겨 주세요.');
@@ -148,17 +148,19 @@ export class Defense{
    while(travel>0&&e.next<e.path.length){const target=world(e.path[e.next]),dx=target.x-e.x,dy=target.y-e.y,d=Math.hypot(dx,dy);
     if(d<=travel){e.x=target.x;e.y=target.y;e.next++;travel-=d;}else{e.x+=dx/d*travel;e.y+=dy/d*travel;travel=0;}
    }
-   if(e.next>=e.path.length){e.hp=0;this.castle--;this.leaks++;this.emit({type:'leak',message:'몬스터가 성에 도착했어요. 다음 몬스터는 정확히 0으로!',x:e.x,y:e.y});}
+   if(e.next>=e.path.length){e.hp=0;this.castle=Math.max(0,this.castle-1);this.leaks++;this.emit({type:'leak',message:`몬스터가 성에 도착했어요. 성 체력 ${this.castle}/${CASTLE_HEALTH} · 다음 몬스터는 정확히 0으로!`,x:e.x,y:e.y});if(this.castle===0)break;}
   }
   this.enemies=this.enemies.filter(e=>e.hp>0);
+  if(this.castle===0){this.phase='lost';this.emit({type:'notice',message:'성 체력 5개가 모두 소진됐어요. 배치를 바꾸어 같은 웨이브에 다시 도전해요.'});return;}
   for(const t of this.towers){
    t.cooldown=Math.max(0,t.cooldown-dt);if(!t.enabled||t.cooldown)continue;const xy=world(t),e=this.targetFor(t);
    if(!e)continue;t.cooldown=towerType(t.typeId)!.cooldown;
    this.emit({type:'shot',message:'',x:xy.x,y:xy.y,data:{towerId:t.id,targetId:e.id,toX:e.x,toY:e.y,kind:e.kind,effect:t.effect,unit:t.unit,before:e.hp,after:e.hp>=t.unit?e.hp-t.unit:e.hp,valid:e.hp>=t.unit,killed:e.hp===t.unit}});this.damage(e,t);
   }
   this.enemies=this.enemies.filter(e=>e.hp>0);
-  if(this.castle<=0){this.phase='lost';this.emit({type:'notice',message:'성이 무너졌어요. 배치를 바꾸어 같은 웨이브에 다시 도전해요.'});}
-  else if(this.elapsed>=this.duration){this.phase=this.spawned===this.level.hp.length&&this.enemies.length===0&&this.goals.every(g=>g.done)?'won':'lost';this.emit({type:'notice',message:this.phase==='won'?'방어와 학습 목표를 모두 달성했어요!':'방어 시간 종료. 남은 몬스터와 학습 목표를 확인하고 다시 도전해요.'});}
+  // The timer ends the wave schedule, not the castle's remaining lives.
+  // Finish every monster before reviewing the separate learning objectives.
+  if(this.elapsed>=this.duration&&this.spawned===this.level.hp.length&&this.enemies.length===0){this.phase=this.goals.every(g=>g.done)?'won':'review';this.emit({type:'notice',message:this.phase==='won'?'방어와 학습 목표를 모두 달성했어요!':'성은 지켰어요! 다음 단계에 가려면 남은 학습 목표를 연습해요.'});}
  }
  get stars(){if(this.phase!=='won')return 0;const best=this.level.hp.reduce((s,h)=>s+minimumHits(h,this.level.units),0);return this.leaks===0&&this.successfulHits<=best*1.3?3:this.leaks<=1?2:1;}
  targetFor(t:Tower):Enemy|undefined{
