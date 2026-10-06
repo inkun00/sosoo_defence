@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {Defense,Event as GameEvent,Enemy} from './model';
-import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,route,naturalBlocks,key,START,END} from './path';
+import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,key} from './path';
 import {Effect,EFFECTS} from './levels';
 import {decimal} from './math';
 import {FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT} from './layout';
@@ -63,21 +63,22 @@ export class Field extends Phaser.Scene{
  }
  drawTerrain(){
   if(this.readyFlag)for(const kind of stageMonsterKinds(this.model.level))this.ensureMonster(kind);
-  if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();const road=route(this.model.blocks)??[],roadSet=new Set(road.map(key));
+  if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();const road=this.model.path()??[],roadSet=new Set(road.map(key)),map=this.model.map;
   const backdrop=this.add.graphics();backdrop.fillStyle(0x17191d).fillRoundedRect(9,24,970,558,12);backdrop.lineStyle(2,0x4c4840).strokeRoundedRect(12,27,964,552,10);this.floor.add(backdrop);
-  const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(.38).setTint(0xc4c0b8);this.floor.add(stoneFloor);
+  this.floor.add(this.label(FIELD_WIDTH/2,12,`${String(map.id).padStart(2,'0')} · ${map.name}`,16,'#ded0b8'));
+  const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(.38).setTint(map.floorTint);this.floor.add(stoneFloor);
   const props=(x:number,y:number,name:string,w:number,h=w)=>{const image=this.add.image(x,y,'dungeon-props',name).setDisplaySize(w,h);this.floor.add(image);return image;};
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
    const c={x,y},xy=world(c),isRoad=roadSet.has(key(c));
-   if(isRoad){const floor=this.add.image(xy.x,xy.y,'dungeon-terrain',(x+y)%2?'path':'path-alt').setDisplaySize(TILE+.5,TILE+.5).setTint(0xffe1b6);this.floor.add(floor);}
-   if(this.model.blocks.has(key(c))&&!this.model.walls.some(w=>key(w)===key(c))&&!this.model.towers.some(t=>key(t)===key(c)))props(xy.x,xy.y-7,'rock',75,75);
+   if(isRoad){const floor=this.add.image(xy.x,xy.y,'dungeon-terrain',(x+y)%2?'path':'path-alt').setDisplaySize(TILE+.5,TILE+.5).setTint(map.pathTint);this.floor.add(floor);}
+   if(this.model.blocks.has(key(c))&&!this.model.walls.some(w=>key(w)===key(c))&&!this.model.towers.some(t=>key(t)===key(c)))props(xy.x,xy.y-7,'rock',75,75).setTint(map.rockTint);
    else if(!isRoad&&!this.model.towers.some(t=>key(t)===key(c))&&((x*31+y*7)%23===0))props(xy.x+9,xy.y+9,(x+y)%2?'rubble':'plant',30,30).setAlpha(.7);
   }
   // Quiet grid guides appear only while placing; the path is marked for learning clarity.
   const lights=this.add.graphics();for(const c of [{x:1,y:0},{x:12,y:8}]){const xy=world(c);for(let r=6;r>=1;r--)lights.fillStyle(0xffa942,.008*(7-r)).fillCircle(xy.x,xy.y,r*14);this.ambient?.add(this.floor,'torch-'+key(c),'torch',xy.x,xy.y-8,60,66);}this.floor.add(lights);
   const dots=this.add.graphics().fillStyle(0xe1be82,.45);road.forEach((c,i)=>{if(i%2)dots.fillCircle(world(c).x,world(c).y,2);});this.floor.add(dots);
   this.model.walls.forEach(w=>{const xy=world(w);props(xy.x,xy.y-5,'wall',76,72);});
-  const start=world(START),end=world(END);this.ambient?.add(this.floor,'entrance','portal',start.x,start.y-8,96,104);this.floor.add(this.label(start.x,start.y+36,'입구',14,'#d4bcef'));
+  const start=world(map.start),end=world(map.end);this.ambient?.add(this.floor,'entrance','portal',start.x,start.y-8,96,104);this.floor.add(this.label(start.x,start.y+36,'입구',14,'#d4bcef'));
   const glow=this.add.graphics();for(let r=5;r>=1;r--)glow.fillStyle(0xffac52,.015*(6-r)).fillCircle(end.x,end.y,r*14);this.floor.add(glow);
   this.ambient?.add(this.floor,'guardian','flame',end.x,end.y-14,128,116);this.floor.add(this.label(end.x,end.y+44,'수호의 불꽃',15,'#ffdd9c'));
   for(const t of this.model.towers){const xy=world(t);

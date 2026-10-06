@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {hit,recipe,reward,numberText,minimumHits} from '../src/math';
 import {LEVELS,price} from '../src/levels';
 import {Defense,Enemy,Tower} from '../src/model';
-import {route,naturalBlocks,key,world} from '../src/path';
+import {key,world} from '../src/path';
 import {loadSave,writeSave} from '../src/save';
 import {install} from './helpers';
 import {towersForStage,towerPrice} from '../src/towers';
@@ -77,12 +77,12 @@ test('타워는 길 옆에만 설치되고 성벽은 모든 길을 막을 수 �
  const m=new Defense(LEVELS[1]);assert.equal(install(m,{x:1,y:4},100,'basic'),false);
  assert.equal(install(m,{x:1,y:3},100,'basic'),true);assert.ok(m.blocks.has('1,3'));
  m.sellTower(m.towers[0].id);assert.ok(!m.blocks.has('1,3'));
- m.fusions=2;const before=route(m.blocks)!.length;
- const road=route(m.blocks)!;const options=road.filter(c=>m.candidate(c,true));
- const c=options.find(c=>route(m.candidate(c,true)!)!.length>before)!;assert.ok(c);
- assert.equal(m.placeWall(c),true);assert.ok(route(m.blocks)!.length>before);
+ m.fusions=2;const before=m.path()!.length;
+ const road=m.path()!;const options=road.filter(c=>m.candidate(c,true));
+ const c=options.find(c=>m.path(m.candidate(c,true)!)!.length>before)!;assert.ok(c);
+ assert.equal(m.placeWall(c),true);assert.ok(m.path()!.length>before);
  m.blocks=new Set(Array.from({length:8},(_,y)=>`1,${y}`));
- assert.equal(m.placeWall({x:1,y:8}),false);assert.ok(route(m.blocks));
+ assert.equal(m.placeWall({x:1,y:8}),false);assert.ok(m.path());
 });
 test('길 위 몬스터가 갇히는 성벽 배치도 금지한다',()=>{
  const m=new Defense(LEVELS[1]);m.spawn();m.enemies[0].x=world({x:2,y:1}).x;m.enemies[0].y=world({x:2,y:1}).y;
@@ -151,7 +151,7 @@ test('성벽 회수·재배치는 재고를 늘리지 않고 자연 장애물을
  assert.equal(m.recoverWall({x:4,y:0}),false);assert.ok(m.blocks.has('4,0'));
  assert.equal(m.placeWall({x:1,y:4}),true);m.spawn();const e=m.enemies[0],before={x:e.x,y:e.y};
  assert.equal(m.recoverWall({x:1,y:4}),true);assert.equal(m.wallStock,2);assert.ok(!m.blocks.has('1,4'));
- assert.deepEqual({x:e.x,y:e.y},before);assert.ok(route(m.blocks,e.path[0]));
+ assert.deepEqual({x:e.x,y:e.y},before);assert.ok(m.path(m.blocks,e.path[0]));
  assert.equal(m.recoverWall({x:1,y:4}),false);assert.equal(m.wallStock,2);
  assert.equal(m.placeWall({x:8,y:2}),true);assert.equal(m.wallStock,1);
  assert.equal(m.recoverWall({x:8,y:2}),true);assert.equal(m.wallStock,2);assert.equal(m.inventory.walls,2);

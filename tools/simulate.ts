@@ -1,6 +1,6 @@
 import {Defense,Event} from '../src/model';
 import {LEVELS} from '../src/levels';
-import {route,world,Cell} from '../src/path';
+import {world,Cell} from '../src/path';
 import {Difficulty} from '../src/difficulty';
 import {towerType,towerPrice,TOWER_RANGE,LONG_TOWER_RANGE} from '../src/towers';
 import {numberText} from '../src/math';
@@ -13,7 +13,7 @@ export function playLevel(level:number,difficulty:Difficulty='standard',checkEve
  function purchase(c:Cell,id:string){if(!m.requestPurchase(c,id))return false;const q=m.pendingPurchase!;return m.answerPurchase(numberText(q.before-q.cost,3));}
  function buy(id:string){
   const type=towerType(id)!;if(type.unlock>level||!m.towerAvailable(type.unit)||m.money<towerPrice(type,m.money,level))return false;
-  const radius=type.effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE,road=route(m.blocks)!.slice(0,roadSpan);
+  const radius=type.effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE,road=m.path()!.slice(0,roadSpan);
   const score=(c:Cell)=>road.filter(p=>Math.hypot(world(p).x-world(c).x,world(p).y-world(c).y)<=radius).length;
   const focus=m.elapsed>=100?m.enemies.filter(e=>e.hp>=type.unit).sort((a,b)=>b.next-a.next)[0]:undefined;
   const c=cells.filter(c=>m.candidate(c)).sort((a,b)=>focus?Math.hypot(world(a).x-focus.x,world(a).y-focus.y)-Math.hypot(world(b).x-focus.x,world(b).y-focus.y):score(b)-score(a)||a.x-b.x)[0];return !!c&&purchase(c,id);
@@ -55,7 +55,7 @@ export function playLevel(level:number,difficulty:Difficulty='standard',checkEve
   }
   m.step(.1);simulationSeconds+=.1;
   if(m.bricks.length>=3)m.fuse(m.bricks.slice(0,3).map(b=>b.id));
-  if(m.wallStock&&m.walls.length<m.balance.wallLimit){const c=route(m.blocks)!.slice().reverse().find(c=>m.candidate(c,true));if(c)m.placeWall(c);}
+  if(m.wallStock&&m.walls.length<m.balance.wallLimit){const c=m.path()!.slice().reverse().find(c=>m.candidate(c,true));if(c)m.placeWall(c);}
   if(m.spawned<m.level.hp.length||m.enemies.some(e=>e.hp>=(level>=8?2350:level>=6?1500:1200)))spend();checkEvents?.(m.events);m.events=[];
  }
  return Object.assign(m,{simulationSeconds:Number(simulationSeconds.toFixed(1))});

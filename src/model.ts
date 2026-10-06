@@ -1,5 +1,6 @@
 import {Level,Effect} from './levels';
-import {Cell,COLS,ROWS,START,END,TILE,OX,OY,key,route,world,naturalBlocks} from './path';
+import {Cell,COLS,ROWS,TILE,OX,OY,key,route,world,naturalBlocks} from './path';
+import {stageMap,StageMap} from './maps';
 import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation,purchaseCoins,creditMessage,learningValue} from './math';
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
 import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
@@ -14,13 +15,14 @@ export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
 export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERVAL=8.4;
 export class Defense{
  level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
- towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Cell[]=[];blocks=naturalBlocks();events:Event[]=[];
+ towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Cell[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
  private nextId=1;private randomState=17;private droppedRecipe=0;
  private carriedWalls=0;
  bossDefeated=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
  purchaseVariation:PurchaseVariation={round:0};
- constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
+ constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
+ path(blocks=this.blocks,start=this.map.start){return route(blocks,start,this.map.end);}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
  get canChangeDifficulty(){return this.phase==='ready'&&!this.towers.length&&!this.walls.length;}
  setDifficulty(difficulty:Difficulty){
@@ -36,15 +38,15 @@ export class Defense{
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
  towerTooClose(c:Cell){return this.towers.some(t=>withinTowerGap(t,c));}
  candidate(c:Cell,wall=false):Set<string>|null{
-  if(c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(START)||key(c)===key(END)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c)))return null;
+  if(c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(this.map.start)||key(c)===key(this.map.end)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c)))return null;
   if(this.enemies.some(e=>Math.hypot(e.x-world(c).x,e.y-world(c).y)<TILE*.8))return null;
   if(!wall){
    if(this.towerTooClose(c))return null;
-   if(route(this.blocks)?.some(p=>key(p)===key(c)))return null;
+   if(this.path()?.some(p=>key(p)===key(c)))return null;
    const b=new Set(this.blocks);b.add(key(c));return b;
   }
-  const b=new Set(this.blocks);b.add(key(c));if(!route(b))return null;
-  for(const e of this.enemies){const here={x:Math.floor((e.x-OX)/TILE),y:Math.floor((e.y-OY)/TILE)};if(!route(b,here)||!route(b,e.path[Math.min(e.next,e.path.length-1)]))return null;}
+  const b=new Set(this.blocks);b.add(key(c));if(!this.path(b))return null;
+  for(const e of this.enemies){const here={x:Math.floor((e.x-OX)/TILE),y:Math.floor((e.y-OY)/TILE)};if(!this.path(b,here)||!this.path(b,e.path[Math.min(e.next,e.path.length-1)]))return null;}
   return b;
  }
  private canPurchase(c:Cell,type:TowerType):boolean{
@@ -94,19 +96,19 @@ export class Defense{
   if(this.walls.length>=this.balance.wallLimit)return this.notice(`성벽은 ${this.balance.wallLimit}개까지 배치해요. 설치한 성벽을 회수해 옮겨 보세요.`);
   const blocks=this.candidate(c,true);if(!blocks)return this.notice('여기는 성벽을 놓을 수 없어요. 모든 몬스터가 성까지 갈 길을 남겨 주세요.');
   this.blocks=blocks;this.walls.push(c);
-  for(const e of this.enemies){const anchor=e.path[Math.min(e.next,e.path.length-1)];const p=route(blocks,anchor)!;e.path=p;e.next=0;}
+  for(const e of this.enemies){const anchor=e.path[Math.min(e.next,e.path.length-1)];const p=this.path(blocks,anchor)!;e.path=p;e.next=0;}
   this.emit({type:'wall',message:'성벽 설치! 몬스터가 새 길을 찾아 돌아가요.'});return true;
  }
  recoverWall(c:Cell):boolean{
   if(!['ready','playing','paused'].includes(this.phase))return false;
   const index=this.walls.findIndex(w=>key(w)===key(c));if(index<0)return false;
   this.walls.splice(index,1);this.blocks.delete(key(c));
-  for(const e of this.enemies){const anchor=e.path[Math.min(e.next,e.path.length-1)];e.path=route(this.blocks,anchor)!;e.next=0;}
+  for(const e of this.enemies){const anchor=e.path[Math.min(e.next,e.path.length-1)];e.path=this.path(this.blocks,anchor)!;e.next=0;}
   this.emit({type:'wall',message:'성벽을 회수했어요. 재고로 돌아온 성벽을 다른 칸에 다시 놓을 수 있어요.'});return true;
  }
  spawn(){
   if(this.spawned>=this.level.hp.length)return;
-  const p=route(this.blocks)!,xy=world(START),hp=this.level.hp[this.spawned],kind=monsterKind(this.level.id,this.spawned,hp);
+  const p=this.path()!,xy=world(this.map.start),hp=this.level.hp[this.spawned],kind=monsterKind(this.level.id,this.spawned,hp);
   this.enemies.push({id:this.nextId++,kind,hp,max:hp,...xy,path:p,next:1,hits:0,slow:0,stun:0,hitFlash:0,age:0});this.spawned++;
   if(MONSTERS[kind].boss)this.emit({type:'notice',message:`보스 ${MONSTERS[kind].name} 등장! 체력 ${decimal(hp,this.level.digits)} · 1로 줄이고 작은 포탄으로 마무리해요.`});
  }

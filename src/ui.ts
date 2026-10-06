@@ -9,6 +9,7 @@ import {MONSTERS,monsterKind} from './monsters';
 import type {Cell} from './path';
 import {DIFFICULTIES,Difficulty,balanceFor} from './difficulty';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from './towers';
+import {stageMap} from './maps';
 
 export type Panel='forge'|'map'|'menu'|'difficulty'|'purchase'|'goals'|'result'|null;
 export interface UIState{
@@ -161,11 +162,12 @@ export class GameUI extends Phaser.Scene{
  private drawMap(){
   const s=this.getState();this.modalFrame('소수의 성으로 가는 10개의 모험',1120,640);
   this.text(this.popup,640,164,`나의 레벨 ${s.save.level}  ·  배치와 돈은 단계마다 새로 시작해요`,19,'#bdb7ae').setOrigin(.5);
-  const positions=LEVELS.map((_,i)=>({x:i<5?220+i*205:1040-(i-5)*205,y:i<5?290+(i%2)*38:515-((i-5)%2)*30}));
+  const positions=LEVELS.map((_,i)=>({x:i<5?220+i*205:1040-(i-5)*205,y:i<5?290+(i%2)*38:550-((i-5)%2)*20}));
   const road=this.add.graphics().lineStyle(20,0x302a23).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();road.lineStyle(10,0xb28752).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();this.popup.add(road);
   LEVELS.forEach((l,i)=>{const p=positions[i],open=l.id<=s.save.level;const b=this.button(this.popup,`stage:${l.id}`,p.x,p.y,86,82,open?String(l.id):'잠김',open,l.id===s.model.level.id?'button_red':'button_brown',open?34:22);
-   this.text(this.popup,p.x,p.y+59,l.name,19,open?C.ink:'#99959a',180).setOrigin(.5,0);
-   [0,1,2].forEach(j=>{const star=this.add.image(p.x+(j-1)*25,p.y+104,'dungeon-icons','star').setDisplaySize(26,26).setAlpha(j<s.save.stars[i]?1:.17);this.popup.add(star);});
+   this.text(this.popup,p.x,p.y+52,l.name,17,open?C.ink:'#99959a',180).setOrigin(.5,0);
+   this.text(this.popup,p.x,p.y+78,stageMap(l.id).name,13,open?'#dbc29e':'#99959a',180).setOrigin(.5,0);
+   [0,1,2].forEach(j=>{const star=this.add.image(p.x+(j-1)*25,p.y+114,'dungeon-icons','star').setDisplaySize(26,26).setAlpha(j<s.save.stars[i]?1:.17);this.popup.add(star);});
    if(!open)b.container.setAlpha(.7);
   });
  }

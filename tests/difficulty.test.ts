@@ -4,7 +4,7 @@ import {Defense,Tower} from '../src/model';
 import {LEVELS} from '../src/levels';
 import {balanceFor} from '../src/difficulty';
 import {loadSave,writeSave} from '../src/save';
-import {route,world} from '../src/path';
+import {world} from '../src/path';
 import {install} from './helpers';
 
 test('표준은 후반까지 속도가 증가하고 연습·표준·도전의 설치 여유가 차별화된다',()=>{
@@ -32,8 +32,8 @@ test('돈이 많아도 전체 타워 제한을 넘지 못하고 회수하면 한
 });
 test('보유 성벽은 제한 없이 보관하며 설치 제한과 회수는 재고를 소비하거나 복제하지 않는다',()=>{
  const m=new Defense(LEVELS[9],{bricks:[],walls:20},'challenge');
- for(let i=0;i<m.balance.wallLimit;i++){const c=route(m.blocks)!.find(c=>m.candidate(c,true));assert.ok(c);assert.ok(m.placeWall(c));}
- const extra=route(m.blocks)!.find(c=>m.candidate(c,true))!;assert.equal(m.placeWall(extra),false);
+ for(let i=0;i<m.balance.wallLimit;i++){const c=m.path()!.find(c=>m.candidate(c,true));assert.ok(c);assert.ok(m.placeWall(c));}
+ const extra=m.path()!.find(c=>m.candidate(c,true))!;assert.equal(m.placeWall(extra),false);
  assert.equal(m.inventory.walls,20);assert.equal(m.wallStock,17);
  assert.ok(m.recoverWall(m.walls[0]));assert.ok(m.placeWall(extra));assert.equal(m.inventory.walls,20);
 });
