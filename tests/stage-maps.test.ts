@@ -10,7 +10,7 @@ test('10개 단계는 서로 다른 바위 배치·경로와 맵 이름을 사�
  for(const level of LEVELS){
   const m=new Defense(level),road=m.path()!;assert.ok(road,`단계 ${level.id} 길`);assert.equal(m.map.id,level.id);
   assert.deepEqual(road[0],m.map.start);assert.deepEqual(road.at(-1),m.map.end);
-  assert.ok(road.length>=22&&road.length<=38,`단계 ${level.id} 길이 ${road.length}`);
+  assert.ok(road.length>=16&&road.length<=32,`단계 ${level.id} 길이 ${road.length}`);
   for(const p of road){assert.ok(p.x>=0&&p.x<COLS&&p.y>=0&&p.y<ROWS);assert.ok(!m.blocks.has(key(p)));}
   for(let i=1;i<road.length;i++)assert.equal(Math.abs(road[i].x-road[i-1].x)+Math.abs(road[i].y-road[i-1].y),1);
   for(const rock of m.blocks){const [x,y]=rock.split(',').map(Number);assert.ok(x>=0&&x<COLS&&y>=0&&y<ROWS);}
@@ -41,4 +41,10 @@ test('단계마다 이동한 불꽃 칸을 예약하고 성벽 설치·회수 �
   assert.ok(m.recoverWall(wall));assert.deepEqual(e.path.at(-1),m.map.end);
   e.next=e.path.length;m.phase='playing';m.step(.1);assert.equal(m.castle,4);assert.equal(m.leaks,1);assert.equal(m.phase,'playing');
  }
+});
+
+test('후반으로 갈수록 기본 이동 경로가 짧아져 발사 기회가 줄어든다',()=>{
+ const lengths=LEVELS.map(l=>new Defense(l).path()!.length);
+ assert.deepEqual(lengths,[32,31,30,26,24,23,22,21,19,16]);
+ for(let i=1;i<lengths.length;i++)assert.ok(lengths[i]<lengths[i-1]);
 });

@@ -7,7 +7,7 @@ import {FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT} from './layout';
 import {loadDungeon,registerDungeon,registerMonster} from './assets';
 import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize,stageMonsterKinds} from './monsters';
 import {artURL} from './art';
-import {towerType,TOWER_RANGE,LONG_TOWER_RANGE,TOWER_GAP} from './towers';
+import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
 import {HitEquationPopups} from './hit-equations';
 import {hitEquationsEnabled} from './combat-preferences';
 import {AmbientProps} from './ambient-props';
@@ -91,6 +91,7 @@ export class Field extends Phaser.Scene{
    this.towerArt.set(t.id,{root,base,pivot,head,angle,recoilTime:old?.recoilTime??0});
    if(!this.knownTowerIds.has(t.id)&&!this.reducedMotion){root.setScale(0);this.tweens.add({targets:root,scale:1,duration:280,ease:'Back.easeOut'});}this.knownTowerIds.add(t.id);
    const text=this.label(xy.x,xy.y+28,decimal(t.unit,this.model.level.digits),20,'#ffe4a3');text.setBackgroundColor('#15171eea');this.towersView?.add(text);
+   if(this.model.reloadFactor(t)>1){const heat=this.label(xy.x,xy.y+47,'열 간섭 ×'+this.model.reloadFactor(t).toFixed(1),12,'#ffc56b');heat.setBackgroundColor('#15171eea');this.towersView?.add(heat);}
    const status=this.add.image(xy.x+22,xy.y-32,'dungeon-icons',t.enabled?'play':'pause').setDisplaySize(18,18);this.towersView?.add(status);
   }
   this.layoutSignature=this.signature();if(this.mode.kind==='wall'&&this.model.pendingWall)this.hover(this.model.pendingWall);else if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
@@ -98,17 +99,13 @@ export class Field extends Phaser.Scene{
  private signature(){return this.model.towers.map(t=>`${t.id}${t.enabled}`).join(',')+'w'+this.model.walls.map(key).join(';');}
  hover(c:Cell){
   this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);
-  // Keep the reserved gap visible while choosing a location, including on touch.
+  // Show range and optional heat while choosing a legal location.
   this.overlay.clear();if(this.mode.kind!=='inspect'){this.overlay.lineStyle(1,0xe1d1aa,.15);for(let x=0;x<=COLS;x++)this.overlay.lineBetween(OX+x*TILE,OY,OX+x*TILE,OY+ROWS*TILE);for(let y=0;y<=ROWS;y++)this.overlay.lineBetween(OX,OY+y*TILE,OX+COLS*TILE,OY+y*TILE);}if(c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
   if(this.mode.kind==='wall'){this.drawWallPreview(this.model.pendingWall??this.model.previewWall(c));return;}
   const selected=this.model.towers.find(t=>t.id===this.selected),xy=world(selected??this.selectedWall??c);
   if(this.selectedWall&&this.mode.kind==='inspect')this.overlay.lineStyle(3,0xffe7a2).strokeRoundedRect(xy.x-26,xy.y-26,52,52,8);
   if(this.mode.kind==='tower'||selected){const effect=selected?.effect??this.mode.effect,radius=effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE;this.overlay.fillStyle(EFFECTS[effect].color,.11).fillCircle(xy.x,xy.y,radius);this.overlay.lineStyle(2,EFFECTS[effect].color,.7).strokeCircle(xy.x,xy.y,radius);}
-  if(this.mode.kind==='tower')for(const t of this.model.towers)for(let dy=-TOWER_GAP;dy<=TOWER_GAP;dy++)for(let dx=-TOWER_GAP;dx<=TOWER_GAP;dx++){
-   const near={x:t.x+dx,y:t.y+dy};if(near.x<0||near.y<0||near.x>=COLS||near.y>=ROWS||(!dx&&!dy))continue;
-   const p=world(near);this.overlay.fillStyle(0xbe5c48,.14).fillRect(p.x-TILE/2,p.y-TILE/2,TILE,TILE);this.overlay.lineStyle(1,0xbe5c48,.5).strokeRect(p.x-25,p.y-25,50,50);
-  }
-  if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c);this.overlay.lineStyle(3,valid?0xfaf2d6:0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
+  if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c);this.overlay.lineStyle(3,valid?(this.model.reloadFactor(c)>1?0xffbd55:0xfaf2d6):0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
  }
  clearWallPreview(){this.overlay?.clear();this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);}
  private drawWallPreview(preview:WallPreview){

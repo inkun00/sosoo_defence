@@ -4,7 +4,7 @@ import {stageMap,StageMap} from './maps';
 import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation,purchaseCoins,creditMessage,learningValue} from './math';
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
 import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
-import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation,withinTowerGap} from './towers';
+import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation} from './towers';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;}
@@ -36,14 +36,16 @@ export class Defense{
  emit(e:Event){this.events.push(e);if(this.events.length>80)this.events.shift();}
  notice(message:string){this.emit({type:'notice',message});return false;}
  random(){this.randomState=(Math.imul(this.randomState,1664525)+1013904223)>>>0;return this.randomState/4294967296;}
- start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');this.phase='playing';this.emit({type:'notice',message:'돌 몬스터가 다가와요! 체력을 보고 타워의 발사를 조절해요.'});return true;}return false;}
+ start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');if(this.pendingPurchase)return this.notice('열린 설치 문제를 풀거나 취소한 뒤 방어를 시작해요.');this.phase='playing';this.emit({type:'notice',message:'타워 준비 완료! 전투 중에는 설치할 수 없어요. 체력을 보고 발사를 조절해요.'});return true;}return false;}
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
- towerTooClose(c:Cell){return this.towers.some(t=>withinTowerGap(t,c));}
+ get canBuild(){return this.phase==='ready';}
+ // Adjacent towers are legal. Shared heat slows reload, leaving damage exact.
+ reloadFactor(c:Cell){const nearby=this.towers.filter(t=>t!==c&&Math.abs(t.x-c.x)<=1&&Math.abs(t.y-c.y)<=1).length;return 1+Math.min(2,nearby*Math.min(.4,(this.level.id-1)*.05));}
+ reloadTime(t:Tower){return towerType(t.typeId)!.cooldown*this.reloadFactor(t);}
  candidate(c:Cell,wall=false):Set<string>|null{
   if(c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(this.map.start)||key(c)===key(this.map.end)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c)))return null;
   if(this.enemies.some(e=>Math.hypot(e.x-world(c).x,e.y-world(c).y)<TILE*.8))return null;
   if(!wall){
-   if(this.towerTooClose(c))return null;
    if(this.path()?.some(p=>key(p)===key(c)))return null;
    const b=new Set(this.blocks);b.add(key(c));return b;
   }
@@ -52,11 +54,10 @@ export class Defense{
   return b;
  }
  private canPurchase(c:Cell,type:TowerType):boolean{
-  if(!['ready','playing','paused'].includes(this.phase))return false;
+  if(!this.canBuild)return this.notice('타워는 방어 시작 전에만 설치할 수 있어요. 전투 중에는 발사를 조절해요.');
   if(type.unlock>this.level.id)return this.notice('아직 해금되지 않은 타워예요.');
   if(this.towers.length>=this.balance.towerLimit)return this.notice(`타워는 ${this.balance.towerLimit}개까지 설치할 수 있어요. 타워를 회수해 위치나 종류를 바꿔 보세요.`);
   if(type.unit===10&&this.towers.filter(t=>t.unit===10).length>=this.balance.precisionLimit)return this.notice(`바늘탑은 ${this.balance.precisionLimit}개까지 설치해요. 다른 타워로 먼저 체력을 줄여요.`);
-  if(this.towerTooClose(c))return this.notice('타워 사이에 두 칸 이상 비워 주세요. 가로·세로·대각선 모두 적용돼요.');
   if(!this.candidate(c))return this.notice('길 옆의 빈 바닥을 골라 주세요. 타워는 길 위에 설치할 수 없어요.');
   return true;
  }
@@ -174,7 +175,7 @@ export class Defense{
   if(this.castle===0){this.phase='lost';this.emit({type:'notice',message:'성 체력 5개가 모두 소진됐어요. 배치를 바꾸어 같은 웨이브에 다시 도전해요.'});return;}
   for(const t of this.towers){
    t.cooldown=Math.max(0,t.cooldown-dt);if(!t.enabled||t.cooldown)continue;const xy=world(t),e=this.targetFor(t);
-   if(!e)continue;t.cooldown=towerType(t.typeId)!.cooldown;
+   if(!e)continue;t.cooldown=this.reloadTime(t);
    this.emit({type:'shot',message:'',x:xy.x,y:xy.y,data:{towerId:t.id,targetId:e.id,toX:e.x,toY:e.y,kind:e.kind,effect:t.effect,unit:t.unit,before:e.hp,after:e.hp>=t.unit?e.hp-t.unit:e.hp,valid:e.hp>=t.unit,killed:e.hp===t.unit}});this.damage(e,t);
   }
   this.enemies=this.enemies.filter(e=>e.hp>0);

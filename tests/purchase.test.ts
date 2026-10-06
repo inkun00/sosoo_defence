@@ -111,20 +111,19 @@ test('모든 타워의 모든 변형 가격은 다음 단계에서 오르고 보
  }
 });
 
-test('타워는 가로·세로·대각선 두 칸을 비우고 회수하면 주변 공간을 다시 사용할 수 있다',()=>{
- const m=new Defense(LEVELS[9]);assert.ok(m.requestPurchase({x:1,y:3},'basic'));let q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));
- const money=m.money,purchases=m.purchases;
- for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){
-  if(!dx&&!dy)continue;
-  const c={x:1+dx,y:3+dy};assert.ok(m.towerTooClose(c));assert.equal(m.candidate(c),null);assert.equal(m.requestPurchase(c,'double'),false);
- }
- assert.equal(m.money,money);assert.equal(m.purchases,purchases);assert.equal(m.pendingPurchase,null);
- assert.match(m.events.at(-1)!.message,/두 칸/);
- for(const c of [{x:4,y:3},{x:1,y:0},{x:4,y:0}])assert.equal(m.towerTooClose(c),false,'세 칸 떨어진 경계는 간격 제한 밖이다');
- assert.ok(m.requestPurchase({x:1,y:0},'double'));q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));
- m.sellTower(m.towers[0].id);assert.ok(m.candidate({x:1,y:3}));assert.ok(m.requestPurchase({x:1,y:3},'basic'));
- // Walls still follow the path rules rather than reserving a tower gap.
- m.cancelPurchase();m.fusions=1;assert.ok(m.placeWall({x:1,y:4}));
+test('이웃한 칸에도 설치하고 점유된 칸만 거부하며 열 간섭은 재장전만 늦춘다',()=>{
+ const m=new Defense(LEVELS[9]);
+ for(const c of [{x:1,y:3},{x:2,y:3},{x:2,y:2}]){assert.ok(m.requestPurchase(c,'basic'));const q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));}
+ assert.equal(m.candidate({x:1,y:3}),null);assert.equal(m.requestPurchase({x:1,y:3},'double'),false);
+ assert.equal(m.reloadFactor(m.towers[0]),1.8);assert.equal(m.reloadTime(m.towers[0]),3.6);assert.ok(m.towers.every(t=>t.unit===100));
+ m.sellTower(m.towers[1].id);assert.equal(m.reloadFactor(m.towers[0]),1.4);assert.ok(m.candidate({x:2,y:3}));
+});
+test('모험에서는 전투·일시정지 중 설치를 거부하고 열린 견적이 있으면 시작하지 않는다',()=>{
+ const m=new Defense(LEVELS[3]);m.requestPurchase({x:1,y:3},'basic');let q=m.pendingPurchase!;m.answerPurchase(numberText(q.before-q.cost));
+ m.requestPurchase({x:2,y:3},'double');q=m.pendingPurchase!;assert.equal(m.start(),false);assert.equal(m.phase,'ready');m.cancelPurchase();assert.ok(m.start());
+ const money=m.money;assert.equal(m.requestPurchase({x:2,y:3},'double'),false);m.togglePause();assert.equal(m.requestPurchase({x:2,y:3},'double'),false);assert.equal(m.money,money);
+ m.pendingPurchase=q;assert.equal(m.answerPurchase(numberText(q.before-q.cost)),false);assert.equal(m.towers.length,1);
+ m.sellTower(m.towers[0].id);assert.equal(m.requestPurchase({x:1,y:3},'basic'),false);
 });
 
 test('큰 포탄은 사거리 안의 유효한 몬스터를 우선하고 모두 작으면 초과 공격 규칙을 따른다',()=>{

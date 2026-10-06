@@ -10,12 +10,21 @@ for(const difficulty of ['practice','standard','challenge'] as const)for(let sta
    assert.ok(operands.every(n=>n>=0&&n<10),e.message);
   }
  };
- // Wider spacing supports both a distributed midfield layout and entrance
- // control. Verify a legal winning strategy rather than one greedy layout.
+ // Fixed formations must succeed without buying, selling or moving mid-wave.
  let m=playLevel(stage,difficulty,checkEvents);
- if(m.phase!=='won'||!m.goals.every(g=>g.done))m=playLevel(stage,difficulty,checkEvents,9);
+ for(let layout=1;layout<10&&m.phase!=='won';layout++)m=playLevel(stage,difficulty,checkEvents,layout);
+ assert.deepEqual(m.towers.map(t=>({id:t.id,x:t.x,y:t.y,typeId:t.typeId})),m.formation);assert.equal(m.purchases,m.formation.length);
  assert.ok(equations>0);
  assert.equal(m.phase,'won');assert.ok(m.goals.every(g=>g.done));
  assert.equal(m.elapsed,120);assert.ok(m.simulationSeconds>=120&&m.simulationSeconds<=300);assert.ok(m.money>=0);assert.ok(m.castle>0);
  assert.ok(m.towers.length<=m.balance.towerLimit);assert.ok(m.towers.filter(t=>t.unit===10).length<=m.balance.precisionLimit);assert.ok(m.walls.length<=m.balance.wallLimit);
+});
+
+test('후반에는 같은 혼합 타워를 한곳에 몰거나 기본 포탑만 채우면 실패하고 분산 배치로 통과한다',()=>{
+ const spread=playLevel(10,'standard'),cluster=playLevel(10,'standard',undefined,-1),spam=playLevel(10,'standard',undefined,0,Array(14).fill('basic'));
+ assert.equal(spread.phase,'won');assert.equal(cluster.phase,'lost');assert.equal(spam.phase,'lost');
+ assert.deepEqual(cluster.towers.map(t=>t.typeId),spread.towers.map(t=>t.typeId));
+ assert.equal(cluster.money,spread.level.budget-cluster.towers.reduce((sum,t)=>sum+t.cost,0));
+ assert.ok(spam.towers.length>spread.towers.length,'타워 수만 늘려도 통과하지 못한다');
+ assert.ok(cluster.towers.some(t=>cluster.reloadFactor(t)>1));
 });

@@ -1,4 +1,4 @@
-import {TOWERS,towerType,towerPrice,parseMoney,PurchaseVariation,withinTowerGap} from '../towers';
+import {TOWERS,towerType,towerPrice,parseMoney,PurchaseVariation} from '../towers';
 import {heroSpec} from './heroes';
 import {hit,numberText,recipe,reward,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
@@ -31,7 +31,7 @@ function note(s:DuelState,text:string){s.log.push(text);s.log=s.log.slice(-6);}
 function end(s:DuelState,winner:Side|null,reason:string){s.status='finished';s.winner=winner;s.reason=reason;note(s,reason);}
 function owns(side:Side,x:number){return side===0?x>=1&&x<=10:x>=13&&x<=22;}
 export function validDuelCell(s:DuelState,side:Side,x:number,y:number){
- const p=s.players[side];return !!p&&Number.isInteger(x)&&Number.isInteger(y)&&owns(side,x)&&y>=0&&y<DUEL_ROWS&&y!==DUEL_ROAD&&!p.towers.some(t=>withinTowerGap(t,{x,y}));
+ const p=s.players[side];return !!p&&Number.isInteger(x)&&Number.isInteger(y)&&owns(side,x)&&y>=0&&y<DUEL_ROWS&&y!==DUEL_ROAD&&!p.towers.some(t=>t.x===x&&t.y===y);
 }
 function release(p:DuelPlayer){p.quote=null;p.money+=p.escrow;p.escrow=0;}
 function income(p:DuelPlayer,n:number){if(p.quote)p.escrow+=n;else p.money+=n;}
@@ -118,7 +118,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  if(action.type==='quote'){
   if(p.quote)return bad('열린 구매 문제를 먼저 풀거나 취소해요.');
   const type=towerType(action.typeId),lv=duelLevel(s);if(!type||type.unlock>lv)return bad('아직 해금되지 않은 타워예요.');
-  if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽 빈 바닥에 타워 사이를 두 칸 띄워 설치해요.');
+  if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽의 비어 있는 바닥에 설치해요.');
   if(p.towers.length>=14||(type.unit===10&&p.towers.filter(t=>t.unit===10).length>=3))return bad('설치 제한이에요. 전체 14개, 바늘탑 3개까지예요.');
   const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
   const before=purchaseCoins(p.money);p.quote={x:action.x,y:action.y,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:lv<4?2:3,nonce,expires:now+60000};

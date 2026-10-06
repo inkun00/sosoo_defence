@@ -5,7 +5,7 @@ import {LEVELS} from '../src/levels';
 import {key,COLS,ROWS} from '../src/path';
 
 const snapshot=(m:Defense)=>JSON.stringify({blocks:[...m.blocks],walls:m.walls,stock:m.wallStock,inventory:m.inventory,enemies:m.enemies,events:m.events,money:m.money,phase:m.phase});
-const detour=(m:Defense)=>m.path()!.slice(3,-2).find(c=>{const p=m.previewWall(c);return p.valid&&p.extraSteps>0;})!;
+const detour=(m:Defense)=>m.path()!.slice(3,-1).find(c=>{const p=m.previewWall(c);return p.valid&&p.extraSteps>0;})!;
 
 test('全10段階: preview is pure and confirmed entrance/enemy routes exactly match the preview',()=>{
  for(const level of LEVELS){

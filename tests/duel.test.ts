@@ -13,13 +13,13 @@ test('블럭 16개는 같은 시드와 문제 순서에서 양쪽에 같고 모�
  for(let seed=0;seed<40;seed++)for(let round=0;round<10;round++){const a=decimalBoard(seed,round);assert.equal(a.length,16);assert.deepEqual(a,decimalBoard(seed,round));for(const op of ['+','-'] as const)assert.ok(a.some((v,i)=>a.some((w,j)=>i!==j&&a.some((z,k)=>k!==i&&k!==j&&recipe(v,w,z,op)))));assert.ok(a.every(v=>v%100===0));}
 });
 test('두 계정이 준비해야 시작하고 제삼자·다른 방 참가자는 들어갈 수 없다',()=>{const s=createDuel('a','가',17,NOW);applyDuel(s,0,{type:'ready'},NOW,'a');assert.equal(s.status,'waiting');joinDuel(s,'b','나',NOW);assert.throws(()=>joinDuel(s,'c','다',NOW));assert.throws(()=>duelSide(s,'c'));assert.equal(duelSide(s,'b'),1);applyDuel(s,1,{type:'ready'},NOW,'b');assert.equal(s.status,'playing');});
-test('기존 타워 구매처럼 정답에만 차감·설치하고 상대 진영·길·인접 칸을 거부한다',()=>{
+test('기존 타워 구매처럼 정답에만 차감·설치하고 상대 진영·길·점유 칸만 거부한다',()=>{
  const s=match();assert.equal(applyDuel(s,0,{type:'quote',x:13,y:2,typeId:'basic'},NOW,'x').ok,false);assert.equal(validDuelCell(s,0,3,3),false);
  assert.ok(applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'q').ok);assert.equal(s.players[0].money,8800);assert.equal(s.players[0].towers.length,0);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'1'},NOW,'w').ok,false);assert.equal(s.players[0].money,8800);assert.ok(answer(s,0).ok);assert.equal(s.players[0].money,8700);
- assert.equal(validDuelCell(s,0,4,2),false);assert.equal(validDuelCell(s,0,4,1),false);assert.equal(validDuelCell(s,0,5,2),false);assert.equal(validDuelCell(s,0,5,0),false);assert.ok(validDuelCell(s,0,6,2));assert.ok(validDuelCell(s,0,3,5));assert.equal(s.players[1]!.money,8800);
+ assert.equal(validDuelCell(s,0,3,2),false);assert.ok(validDuelCell(s,0,4,2));assert.ok(validDuelCell(s,0,4,1));assert.ok(validDuelCell(s,0,5,2));assert.ok(validDuelCell(s,0,5,0));assert.ok(validDuelCell(s,0,6,2));assert.ok(validDuelCell(s,0,3,5));assert.equal(s.players[1]!.money,8800);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},NOW,'repeat').ok,false);
- assert.ok(applyDuel(s,0,{type:'sell',towerId:s.players[0].towers[0].id},NOW,'reclaim').ok);assert.ok(validDuelCell(s,0,5,2),'회수하면 두 칸 금지 영역도 해제된다');
+ assert.ok(applyDuel(s,0,{type:'sell',towerId:s.players[0].towers[0].id},NOW,'reclaim').ok);assert.ok(validDuelCell(s,0,5,2),'회수한 칸은 다시 사용할 수 있다');
 });
 
 test('1:1 구매 문제도 취소·회수마다 달라지고 오답 재시도와 상대의 견적은 유지된다',()=>{
