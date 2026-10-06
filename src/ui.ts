@@ -68,7 +68,7 @@ export class GameUI extends Phaser.Scene{
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
   const shopSig=[s.towerTypeId,s.shopPage,s.mode.kind,m.money,m.level.id,m.phase,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length].join('|');
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
-  const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
+  const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
   const popupSig=[s.panel,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level:'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
   if(force||popupSig!==this.signatures[2]){this.signatures[2]=popupSig;this.drawPopup();}
@@ -112,10 +112,22 @@ export class GameUI extends Phaser.Scene{
  private drawDock(){
   this.clear(this.dock,['calculation','toggle','sell','forge','wall','wall-recover','start','speed']);const s=this.getState(),m=s.model,t=m.towers.find(t=>t.id===s.selected);
   this.frame(this.dock,509,736,988,112,'panel_brown_dark');
-  const board=this.button(this.dock,'calculation',221,736,392,104,'',true,'button_brown');
+  const board=this.button(this.dock,'calculation',221,736,392,104,'',s.mode.kind!=='wall','button_brown');
+  if(s.mode.kind==='wall'){
+   board.container.setAlpha(1);
+   this.text(board.container,-171,-31,'성벽 경로 미리보기',18,C.cream).setOrigin(0,.5);
+   this.text(board.container,-171,-5,'┄ 기존 길',15,'#ffca65').setOrigin(0,.5);this.text(board.container,-53,-5,'→ 설치 후 길',15,'#53e5ec').setOrigin(0,.5);
+   const p=m.pendingWall,steps=p?.after?`${p.before.length-1}칸 → ${p.after.length-1}칸 (+${p.extraSteps}칸)`:'빈 칸을 선택하세요';
+   this.fitText(this.text(board.container,-171,23,steps+(p?.enemyRoutes.length?' · 보라: 나온 몬스터':''),15,C.ink).setOrigin(0,.5),344);
+  }else{
   this.text(board.container,-171,-30,m.level.id<=4?'전투 속 소수  ·  계산 도움말 ▸':'이번 단계의 전략  ·  도움말 ▸',14,'#c0b9aa').setOrigin(0,.5);
   const value=s.equation||m.level.hint;this.fitText(this.text(board.container,-171,11,value,s.equation?24:16,C.ink,344).setOrigin(0,.5),344,54);
-  if(t){
+  }
+  if(s.mode.kind==='wall'){
+   this.fitText(this.text(this.dock,450,707,m.pendingWall?.message||'칸을 눌러 바뀔 길을 확인하세요',19,C.cream,524).setOrigin(0,.5),524,38);
+   this.button(this.dock,'wall-cancel',553,760,190,56,'취소',true,'button_brown',23);
+   this.button(this.dock,'wall-confirm',815,760,292,56,'성벽 설치 확정',!!m.pendingWall?.valid,'button_red',23);
+  }else if(t){
    this.towerIcon(this.dock,472,729,t.typeId,68);
    this.fitText(this.text(this.dock,520,710,`${towerType(t.typeId)!.name}  ·  공격력 ${numberText(t.unit)}`,21,C.cream).setOrigin(0,.5),446);
    this.button(this.dock,'toggle',643,750,248,58,t.enabled?'▶ 발사 ON':'Ⅱ 발사 OFF',!['won','review','lost'].includes(m.phase),t.enabled?'button_brown':'button_red',25);
@@ -124,17 +136,17 @@ export class GameUI extends Phaser.Scene{
    this.text(this.dock,450,710,'성벽 · 길을 돌아가게 만드는 장애물',21,C.cream).setOrigin(0,.5);
    this.button(this.dock,'wall-recover',640,750,310,58,'성벽 회수 · 다시 배치',!['won','review','lost'].includes(m.phase),'button_brown',23);
   }else{
-   const placing=s.mode.kind==='tower'||s.mode.kind==='wall';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 조종할 수 있어요',21,C.cream,520).setOrigin(0,.5);
+   const placing=s.mode.kind==='tower';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 조종할 수 있어요',21,C.cream,520).setOrigin(0,.5);
    const max=Math.max(...m.level.hp),i=m.level.hp.indexOf(max),strongest=MONSTERS[monsterKind(m.level.id,i,max)];
-   this.text(this.dock,450,750,s.mode.kind==='wall'?'성벽으로 길을 돌아가게 만들어요.':s.mode.kind==='tower'?`공격력 ${numberText(s.unit)} · 타워 사이를 두 칸 이상 띄워요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${decimal(max,m.level.digits)}`:'발사를 켜고 끄며 체력을 정확히 0으로!',18,C.muted,520).setOrigin(0,.5);
+   this.text(this.dock,450,750,s.mode.kind==='tower'?`공격력 ${numberText(s.unit)} · 타워 사이를 두 칸 이상 띄워요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${decimal(max,m.level.digits)}`:'발사를 켜고 끄며 체력을 정확히 0으로!',18,C.muted,520).setOrigin(0,.5);
   }
-  this.button(this.dock,'forge',1135,705,244,58,`성벽 제작  ${m.bricks.length} / 성벽 ${m.wallStock}`,!['won','review','lost'].includes(m.phase),'button_brown',20);
-  if(m.phase==='ready')this.button(this.dock,'start',1135,770,244,58,'방어 시작 ▶',true,'button_red',26);
-  else this.button(this.dock,'speed',1135,770,244,58,`진행 속도 ×${s.speed}`,!['won','review','lost'].includes(m.phase),'button_brown',22);
+  this.button(this.dock,'forge',1135,705,244,58,`성벽 제작  ${m.bricks.length} / 성벽 ${m.wallStock}`,s.mode.kind!=='wall'&&!['won','review','lost'].includes(m.phase),'button_brown',20);
+  if(m.phase==='ready')this.button(this.dock,'start',1135,770,244,58,'방어 시작 ▶',s.mode.kind!=='wall','button_red',26);
+  else this.button(this.dock,'speed',1135,770,244,58,`진행 속도 ×${s.speed}`,s.mode.kind!=='wall'&&!['won','review','lost'].includes(m.phase),'button_brown',22);
  }
  private drawPopup(){
   if(this.getState().panel!==this.previousPanel){this.tweens.killTweensOf(this.popup);this.popup.setScale(1).setPosition(0,0);}
-  this.clear(this.popup,['close','slot:','brick:','brick-page:','fusion:','fuse','wall','stage:','levels','help','settings','credits','retry','next','difficulty','online','home','purchase-']);
+  this.clear(this.popup,['close','slot:','brick:','brick-page:','fusion:','fuse','stage:','levels','help','settings','credits','retry','next','difficulty','online','home','purchase-']);this.controls.delete('wall');
   const s=this.getState();if(!s.panel){this.previousPanel=null;return;}
   const veil=this.add.rectangle(640,400,1280,800,0x050609,.85).setInteractive();this.popup.add(veil);
   if(s.panel==='map')this.drawMap();else if(s.panel==='forge')this.drawForge();else if(s.panel==='result')this.drawResult();else if(s.panel==='menu')this.drawMenu();else if(s.panel==='difficulty')this.drawDifficulty();else if(s.panel==='purchase')this.drawPurchase();else this.drawGoals();

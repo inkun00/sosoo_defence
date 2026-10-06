@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {Defense,Event as GameEvent,Enemy} from './model';
+import {Defense,Event as GameEvent,Enemy,WallPreview} from './model';
 import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,key} from './path';
 import {Effect,EFFECTS} from './levels';
 import {decimal} from './math';
@@ -20,6 +20,8 @@ export class Field extends Phaser.Scene{
  private towersView?:Phaser.GameObjects.Container;private layoutSignature='';private heartbeat=0;private readyFlag=false;selected?:number;
  private towerArt=new Map<number,TowerVisual>();private knownTowerIds=new Set<number>();private cursor:Cell={x:1,y:3};
  selectedWall?:Cell;onWallSelect:(c:Cell)=>void=()=>{};
+ onWallPreview:(c:Cell)=>void=()=>{};
+ private wallGhost?:Phaser.GameObjects.Image;private wallGhostLabel?:Phaser.GameObjects.Text;
  onPurchase:(c:Cell,typeId:string)=>void=()=>{};
  private reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private battleEffects=new Set<Phaser.GameObjects.GameObject>();private lastShakeTime=0;
@@ -35,7 +37,7 @@ export class Field extends Phaser.Scene{
   for(const kind of MONSTER_KINDS)this.monsterAnimations(kind);
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat','shockwave'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
-  this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>{if(!this.inField(pointer)){this.overlay.clear();return;}const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.hover(cellAt(p.x,p.y));});
+  this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>{if(!this.inField(pointer)){if(this.mode.kind==='wall'&&this.model.pendingWall)return;this.clearWallPreview();return;}const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.hover(cellAt(p.x,p.y));});
   this.input.on('pointerdown',(pointer:Phaser.Input.Pointer)=>{
    if(!this.inField(pointer))return;const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.actCell(cellAt(p.x,p.y));
   });
@@ -49,11 +51,11 @@ export class Field extends Phaser.Scene{
  private inField(p:Phaser.Input.Pointer){return p.x>=FIELD_X&&p.x<FIELD_X+FIELD_WIDTH&&p.y>=FIELD_Y&&p.y<FIELD_Y+FIELD_HEIGHT;}
  actCell(c:Cell){
    if(!this.input.enabled||c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
+   if(this.mode.kind==='wall'){this.onWallPreview(c);this.flush();this.onChange();return;}
    const t=this.model.towers.find(t=>t.x===c.x&&t.y===c.y);
    if(this.model.walls.some(w=>key(w)===key(c))){this.mode.kind='inspect';this.selected=undefined;this.onSelect(0);this.selectedWall={...c};this.onWallSelect(this.selectedWall);this.hover(c);}
    else if(t){this.mode.kind='inspect';this.selected=t.id;this.onSelect(t.id);this.hover(c);}
    else if(this.mode.kind==='tower')this.onPurchase(c,this.mode.typeId??'basic');
-   else if(this.mode.kind==='wall'){if(this.model.placeWall(c)){this.mode.kind='inspect';this.onSelect(0);this.drawTerrain();}}
    else {this.selected=undefined;this.onSelect(0);}
    this.flush();this.onChange();
  }
@@ -91,12 +93,14 @@ export class Field extends Phaser.Scene{
    const text=this.label(xy.x,xy.y+28,decimal(t.unit,this.model.level.digits),20,'#ffe4a3');text.setBackgroundColor('#15171eea');this.towersView?.add(text);
    const status=this.add.image(xy.x+22,xy.y-32,'dungeon-icons',t.enabled?'play':'pause').setDisplaySize(18,18);this.towersView?.add(status);
   }
-  this.layoutSignature=this.signature();if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
+  this.layoutSignature=this.signature();if(this.mode.kind==='wall'&&this.model.pendingWall)this.hover(this.model.pendingWall);else if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
  }
  private signature(){return this.model.towers.map(t=>`${t.id}${t.enabled}`).join(',')+'w'+this.model.walls.map(key).join(';');}
  hover(c:Cell){
+  this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);
   // Keep the reserved gap visible while choosing a location, including on touch.
   this.overlay.clear();if(this.mode.kind!=='inspect'){this.overlay.lineStyle(1,0xe1d1aa,.15);for(let x=0;x<=COLS;x++)this.overlay.lineBetween(OX+x*TILE,OY,OX+x*TILE,OY+ROWS*TILE);for(let y=0;y<=ROWS;y++)this.overlay.lineBetween(OX,OY+y*TILE,OX+COLS*TILE,OY+y*TILE);}if(c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
+  if(this.mode.kind==='wall'){this.drawWallPreview(this.model.pendingWall??this.model.previewWall(c));return;}
   const selected=this.model.towers.find(t=>t.id===this.selected),xy=world(selected??this.selectedWall??c);
   if(this.selectedWall&&this.mode.kind==='inspect')this.overlay.lineStyle(3,0xffe7a2).strokeRoundedRect(xy.x-26,xy.y-26,52,52,8);
   if(this.mode.kind==='tower'||selected){const effect=selected?.effect??this.mode.effect,radius=effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE;this.overlay.fillStyle(EFFECTS[effect].color,.11).fillCircle(xy.x,xy.y,radius);this.overlay.lineStyle(2,EFFECTS[effect].color,.7).strokeCircle(xy.x,xy.y,radius);}
@@ -104,7 +108,22 @@ export class Field extends Phaser.Scene{
    const near={x:t.x+dx,y:t.y+dy};if(near.x<0||near.y<0||near.x>=COLS||near.y>=ROWS||(!dx&&!dy))continue;
    const p=world(near);this.overlay.fillStyle(0xbe5c48,.14).fillRect(p.x-TILE/2,p.y-TILE/2,TILE,TILE);this.overlay.lineStyle(1,0xbe5c48,.5).strokeRect(p.x-25,p.y-25,50,50);
   }
-  if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c,this.mode.kind==='wall');this.overlay.lineStyle(3,valid?0xfaf2d6:0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
+  if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c);this.overlay.lineStyle(3,valid?0xfaf2d6:0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
+ }
+ clearWallPreview(){this.overlay?.clear();this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);}
+ private drawWallPreview(preview:WallPreview){
+  const g=this.overlay,old=new Set(preview.before.map(key));
+  for(let i=1;i<preview.before.length;i++){const a=world(preview.before[i-1]),b=world(preview.before[i]);g.lineStyle(3,0xffca65,.65);for(let t=0;t<1;t+=.25)g.lineBetween(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.x+(b.x-a.x)*(t+.13),a.y+(b.y-a.y)*(t+.13));}
+  const trace=(path:Cell[],color:number,width:number,from?:{x:number;y:number})=>{
+   if(from&&path.length){const p=world(path[0]);g.lineStyle(width,color,.9).lineBetween(from.x,from.y,p.x,p.y);}
+   for(let i=1;i<path.length;i++){const a=world(path[i-1]),b=world(path[i]);g.lineStyle(width,color,.95).lineBetween(a.x,a.y,b.x,b.y);if(i%3===0){const dx=(b.x-a.x)/TILE,dy=(b.y-a.y)/TILE;g.lineBetween(b.x-dx*12+dy*7,b.y-dy*12-dx*7,b.x,b.y);g.lineBetween(b.x-dx*12-dy*7,b.y-dy*12+dx*7,b.x,b.y);}}
+  };
+  if(preview.after){for(const c of preview.after)if(!old.has(key(c))){const p=world(c);g.fillStyle(0x53e5ec,.23).fillRect(p.x-28,p.y-28,56,56);}trace(preview.after,0x53e5ec,4);for(const route of preview.enemyRoutes)trace(route.path,0xdca8ff,2,route.from);}
+  const p=world(preview);g.lineStyle(3,preview.valid?0x91efad:0xff675d).strokeRoundedRect(p.x-27,p.y-27,54,54,8);
+  this.wallGhost??=this.add.image(0,0,'dungeon-props','wall').setDisplaySize(76,72).setDepth(9);
+  this.wallGhost.setPosition(p.x,p.y-5).setAlpha(.65).setTint(preview.valid?0xb8ffd0:0xff7777).setVisible(true);
+  this.wallGhostLabel??=this.label(0,0,'',14).setBackgroundColor('#11141de8').setDepth(10);
+  this.wallGhostLabel.setPosition(p.x,Math.max(30,p.y-47)).setText(preview.valid?'예상 성벽':'설치 불가').setVisible(true);
  }
  private monsterAnimations(kind:MonsterKind){
   if(!this.textures.exists('dungeon-'+MONSTERS[kind].atlas))return;registerMonster(this,kind);

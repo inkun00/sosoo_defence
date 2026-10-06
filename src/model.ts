@@ -10,6 +10,7 @@ export interface Purchase extends Cell{typeId:string;before:number;wallet:number
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;}
 export interface Brick{id:number;value:number;}
 export interface Inventory{bricks:number[];walls:number;}
+export interface WallPreview extends Cell{valid:boolean;message:string;before:Cell[];after:Cell[]|null;extraSteps:number;enemyRoutes:{id:number;from:{x:number;y:number};path:Cell[]}[];}
 export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
 export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
 export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERVAL=8.4;
@@ -20,6 +21,7 @@ export class Defense{
  private carriedWalls=0;
  bossDefeated=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
+ pendingWall:WallPreview|null=null;
  purchaseVariation:PurchaseVariation={round:0};
  constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  path(blocks=this.blocks,start=this.map.start){return route(blocks,start,this.map.end);}
@@ -90,6 +92,22 @@ export class Defense{
   this.emit({type:'wall',message:`${numberText(a.value,this.level.digits)} ${operation==='-'?'−':'+'} ${numberText(c.value,this.level.digits)} = ${numberText(d.value,this.level.digits)} · 성벽 +1`,data:{operation}});return true;
  }
  get wallStock(){return this.carriedWalls+this.fusions-this.walls.length;}
+ previewWall(c:Cell):WallPreview{
+  const before=this.path()??[],blocks=this.candidate(c,true);
+  const reason=!['ready','playing','paused'].includes(this.phase)?'방어가 끝났어요. 다음 방어 전에 성벽을 준비해요.':!this.wallStock?'먼저 벽돌을 합성해 성벽을 준비해요.':this.walls.length>=this.balance.wallLimit?`성벽은 ${this.balance.wallLimit}개까지 설치해요. 다른 성벽을 회수해요.`:!blocks?'설치할 수 없어요. 빈 칸을 고르고 몬스터가 불꽃까지 갈 길을 남겨 주세요.':'';
+  const after=reason?null:this.path(blocks!),enemyRoutes=after?this.enemies.map(e=>({id:e.id,from:{x:e.x,y:e.y},path:this.path(blocks!,e.path[Math.min(e.next,e.path.length-1)])!})):[];
+  const extraSteps=after?after.length-before.length:0;
+  return {...c,valid:!!after,message:reason||(extraSteps>0?`길이 ${extraSteps}칸 더 길어져요. 확인 후 성벽을 설치해요.`:'길의 길이는 같아요. 바뀔 경로를 확인하고 설치해요.'),before,after,extraSteps,enemyRoutes};
+ }
+ requestWall(c:Cell){this.pendingWall=this.previewWall(c);return this.pendingWall.valid;}
+ cancelWall(){this.pendingWall=null;}
+ confirmWall(){
+  const shown=this.pendingWall;if(!shown)return false;const current=this.previewWall(shown);
+  if(!current.valid){this.pendingWall=current;return this.notice(current.message);}
+  const paths=(p:WallPreview)=>JSON.stringify([p.before,p.after,p.enemyRoutes]);
+  if(paths(current)!==paths(shown)){this.pendingWall=current;return this.notice('배치나 몬스터 위치가 바뀌었어요. 새 미리보기를 확인하고 다시 확정해요.');}
+  if(!this.placeWall({x:shown.x,y:shown.y}))return false;this.pendingWall=null;return true;
+ }
  placeWall(c:Cell):boolean{
   if(!['ready','playing','paused'].includes(this.phase))return false;
   if(!this.wallStock)return this.notice('벽돌 세 개를 먼저 합성해 성벽을 얻어요.');
