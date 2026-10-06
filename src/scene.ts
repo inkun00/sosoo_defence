@@ -91,7 +91,7 @@ export class Field extends Phaser.Scene{
    this.towerArt.set(t.id,{root,base,pivot,head,angle,recoilTime:old?.recoilTime??0});
    if(!this.knownTowerIds.has(t.id)&&!this.reducedMotion){root.setScale(0);this.tweens.add({targets:root,scale:1,duration:280,ease:'Back.easeOut'});}this.knownTowerIds.add(t.id);
    const text=this.label(xy.x,xy.y+28,decimal(t.unit,this.model.level.digits),20,'#ffe4a3');text.setBackgroundColor('#15171eea');this.towersView?.add(text);
-   if(this.model.reloadFactor(t)>1){const heat=this.label(xy.x,xy.y+47,'열 간섭 ×'+this.model.reloadFactor(t).toFixed(1),12,'#ffc56b');heat.setBackgroundColor('#15171eea');this.towersView?.add(heat);}
+   if(this.model.reloadFactor(t)>1){const heat=this.label(xy.x,xy.y+47,'열×'+this.model.reloadFactor(t).toFixed(2),11,'#ffc56b');heat.setBackgroundColor('#15171eea');this.towersView?.add(heat);}
    const status=this.add.image(xy.x+22,xy.y-32,'dungeon-icons',t.enabled?'play':'pause').setDisplaySize(18,18);this.towersView?.add(status);
   }
   this.layoutSignature=this.signature();if(this.mode.kind==='wall'&&this.model.pendingWall)this.hover(this.model.pendingWall);else if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
