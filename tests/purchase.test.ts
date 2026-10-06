@@ -50,7 +50,7 @@ test('타워는 구매 문제의 정답 이후에만 설치되고 오답·취소
  const q=m.pendingPurchase!;assert.equal(m.answerPurchase(numberText(q.before-q.cost)),true);
  assert.equal(m.money,before-q.cost);assert.equal(m.towers[0].typeId,'basic');assert.equal(m.towers[0].unit,100);assert.equal(m.purchaseAnswers,1);
  assert.equal(m.answerPurchase(numberText(q.before-q.cost)),false);assert.equal(m.towers.length,1);
- const money=m.money;assert.ok(m.requestPurchase({x:3,y:3},'double'));m.cancelPurchase();assert.equal(m.money,money);assert.equal(m.towers.length,1);
+ const money=m.money;assert.ok(m.requestPurchase({x:5,y:3},'double'));m.cancelPurchase();assert.equal(m.money,money);assert.equal(m.towers.length,1);
 });
 test('기본 등급은 소수 자리의 받아내림을 피하고 상위 가격은 가능한 받아내림을 우선한다',()=>{
  for(const before of [12800,10400,9000,56758,94759,12999]){
@@ -99,16 +99,17 @@ test('단계별 시작 기본 가격은 달라지고 보유금이 달라도 등�
  }
 });
 
-test('타워는 가로·세로·대각선 한 칸을 비우고 회수하면 주변 공간을 다시 사용할 수 있다',()=>{
+test('타워는 가로·세로·대각선 두 칸을 비우고 회수하면 주변 공간을 다시 사용할 수 있다',()=>{
  const m=new Defense(LEVELS[9]);assert.ok(m.requestPurchase({x:1,y:3},'basic'));let q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));
  const money=m.money,purchases=m.purchases;
- for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+ for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){
   if(!dx&&!dy)continue;
   const c={x:1+dx,y:3+dy};assert.ok(m.towerTooClose(c));assert.equal(m.candidate(c),null);assert.equal(m.requestPurchase(c,'double'),false);
  }
  assert.equal(m.money,money);assert.equal(m.purchases,purchases);assert.equal(m.pendingPurchase,null);
- assert.match(m.events.at(-1)!.message,/한 칸/);
- assert.ok(m.requestPurchase({x:3,y:3},'double'));q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));
+ assert.match(m.events.at(-1)!.message,/두 칸/);
+ for(const c of [{x:4,y:3},{x:1,y:0},{x:4,y:0}])assert.equal(m.towerTooClose(c),false,'세 칸 떨어진 경계는 간격 제한 밖이다');
+ assert.ok(m.requestPurchase({x:1,y:0},'double'));q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));
  m.sellTower(m.towers[0].id);assert.ok(m.candidate({x:1,y:3}));assert.ok(m.requestPurchase({x:1,y:3},'basic'));
  // Walls still follow the path rules rather than reserving a tower gap.
  m.cancelPurchase();m.fusions=1;assert.ok(m.placeWall({x:1,y:4}));

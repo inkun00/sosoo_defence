@@ -37,7 +37,7 @@ test('대전의 큰 지갑·계산 중 보상·취소에서도 한 자리 문항
  assert.ok([q.before,q.cost,q.before-q.cost].every(learningValue));s.players[0].escrow=200;
  assert.ok(applyDuel(s,0,{type:'answer',nonce:'q',answer:numberText(q.before-q.cost)},now,'a').ok);
  assert.equal(s.players[0].money,12700-q.cost);
- assert.ok(applyDuel(s,0,{type:'quote',x:5,y:2,typeId:'double'},now,'q2').ok);const before=s.players[0].money;s.players[0].escrow=300;
+ assert.ok(applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},now,'q2').ok);const before=s.players[0].money;s.players[0].escrow=300;
  applyDuel(s,0,{type:'cancel'},now,'c');assert.equal(s.players[0].money,before+300);
 });
 

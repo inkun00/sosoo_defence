@@ -7,7 +7,7 @@ import {FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT} from './layout';
 import {loadDungeon,registerDungeon,registerMonster} from './assets';
 import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize,stageMonsterKinds} from './monsters';
 import {artURL} from './art';
-import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
+import {towerType,TOWER_RANGE,LONG_TOWER_RANGE,TOWER_GAP} from './towers';
 import {HitEquationPopups} from './hit-equations';
 import {hitEquationsEnabled} from './combat-preferences';
 import {AmbientProps} from './ambient-props';
@@ -99,7 +99,7 @@ export class Field extends Phaser.Scene{
   const selected=this.model.towers.find(t=>t.id===this.selected),xy=world(selected??this.selectedWall??c);
   if(this.selectedWall&&this.mode.kind==='inspect')this.overlay.lineStyle(3,0xffe7a2).strokeRoundedRect(xy.x-26,xy.y-26,52,52,8);
   if(this.mode.kind==='tower'||selected){const effect=selected?.effect??this.mode.effect,radius=effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE;this.overlay.fillStyle(EFFECTS[effect].color,.11).fillCircle(xy.x,xy.y,radius);this.overlay.lineStyle(2,EFFECTS[effect].color,.7).strokeCircle(xy.x,xy.y,radius);}
-  if(this.mode.kind==='tower')for(const t of this.model.towers)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+  if(this.mode.kind==='tower')for(const t of this.model.towers)for(let dy=-TOWER_GAP;dy<=TOWER_GAP;dy++)for(let dx=-TOWER_GAP;dx<=TOWER_GAP;dx++){
    const near={x:t.x+dx,y:t.y+dy};if(near.x<0||near.y<0||near.x>=COLS||near.y>=ROWS||(!dx&&!dy))continue;
    const p=world(near);this.overlay.fillStyle(0xbe5c48,.14).fillRect(p.x-TILE/2,p.y-TILE/2,TILE,TILE);this.overlay.lineStyle(1,0xbe5c48,.5).strokeRect(p.x-25,p.y-25,50,50);
   }

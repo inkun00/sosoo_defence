@@ -20,6 +20,9 @@ export const towersForStage=(stage:number)=>TOWERS.filter(t=>t.unlock<=stage);
 export const GRADE_NAMES=['','기본','희귀','영웅','전설'];
 // Three/four grid cells keep separated towers useful along the winding road.
 export const TOWER_RANGE=174,LONG_TOWER_RANGE=232;
+// Leave two empty cells between towers, including diagonal neighbors.
+export const TOWER_GAP=2;
+export function withinTowerGap(a:{x:number;y:number},b:{x:number;y:number}){return Math.abs(a.x-b.x)<=TOWER_GAP&&Math.abs(a.y-b.y)<=TOWER_GAP;}
 // Prices are quoted against the real wallet. Basic prices avoid borrowing in
 // decimal places; advanced prices favor it, within the stage's money precision.
 export interface PurchaseVariation{round:number;lastBefore?:number;lastCost?:number;}

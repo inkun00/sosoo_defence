@@ -3,7 +3,7 @@ import {Cell,COLS,ROWS,START,END,TILE,OX,OY,key,route,world,naturalBlocks} from 
 import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation,purchaseCoins,creditMessage,learningValue} from './math';
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
 import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
-import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation} from './towers';
+import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation,withinTowerGap} from './towers';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;}
@@ -34,7 +34,7 @@ export class Defense{
  random(){this.randomState=(Math.imul(this.randomState,1664525)+1013904223)>>>0;return this.randomState/4294967296;}
  start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');this.phase='playing';this.emit({type:'notice',message:'돌 몬스터가 다가와요! 체력을 보고 타워의 발사를 조절해요.'});return true;}return false;}
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
- towerTooClose(c:Cell){return this.towers.some(t=>Math.abs(t.x-c.x)<=1&&Math.abs(t.y-c.y)<=1);}
+ towerTooClose(c:Cell){return this.towers.some(t=>withinTowerGap(t,c));}
  candidate(c:Cell,wall=false):Set<string>|null{
   if(c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(START)||key(c)===key(END)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c)))return null;
   if(this.enemies.some(e=>Math.hypot(e.x-world(c).x,e.y-world(c).y)<TILE*.8))return null;
@@ -52,7 +52,7 @@ export class Defense{
   if(type.unlock>this.level.id)return this.notice('아직 해금되지 않은 타워예요.');
   if(this.towers.length>=this.balance.towerLimit)return this.notice(`타워는 ${this.balance.towerLimit}개까지 설치할 수 있어요. 타워를 회수해 위치나 종류를 바꿔 보세요.`);
   if(type.unit===10&&this.towers.filter(t=>t.unit===10).length>=this.balance.precisionLimit)return this.notice(`바늘탑은 ${this.balance.precisionLimit}개까지 설치해요. 다른 타워로 먼저 체력을 줄여요.`);
-  if(this.towerTooClose(c))return this.notice('타워 사이를 한 칸 이상 띄워 주세요. 대각선도 바로 붙여 설치할 수 없어요.');
+  if(this.towerTooClose(c))return this.notice('타워 사이에 두 칸 이상 비워 주세요. 가로·세로·대각선 모두 적용돼요.');
   if(!this.candidate(c))return this.notice('길 옆의 빈 바닥을 골라 주세요. 타워는 길 위에 설치할 수 없어요.');
   return true;
  }

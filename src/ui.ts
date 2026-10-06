@@ -125,7 +125,7 @@ export class GameUI extends Phaser.Scene{
   }else{
    const placing=s.mode.kind==='tower'||s.mode.kind==='wall';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 조종할 수 있어요',21,C.cream,520).setOrigin(0,.5);
    const max=Math.max(...m.level.hp),i=m.level.hp.indexOf(max),strongest=MONSTERS[monsterKind(m.level.id,i,max)];
-   this.text(this.dock,450,750,s.mode.kind==='wall'?'성벽으로 길을 돌아가게 만들어요.':s.mode.kind==='tower'?`공격력 ${numberText(s.unit)} · 타워 사이를 한 칸 이상 띄워요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${decimal(max,m.level.digits)}`:'발사를 켜고 끄며 체력을 정확히 0으로!',18,C.muted,520).setOrigin(0,.5);
+   this.text(this.dock,450,750,s.mode.kind==='wall'?'성벽으로 길을 돌아가게 만들어요.':s.mode.kind==='tower'?`공격력 ${numberText(s.unit)} · 타워 사이를 두 칸 이상 띄워요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${decimal(max,m.level.digits)}`:'발사를 켜고 끄며 체력을 정확히 0으로!',18,C.muted,520).setOrigin(0,.5);
   }
   this.button(this.dock,'forge',1135,705,244,58,`성벽 제작  ${m.bricks.length} / 성벽 ${m.wallStock}`,!['won','lost'].includes(m.phase),'button_brown',20);
   if(m.phase==='ready')this.button(this.dock,'start',1135,770,244,58,'방어 시작 ▶',true,'button_red',26);

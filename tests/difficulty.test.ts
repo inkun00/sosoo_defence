@@ -17,7 +17,7 @@ test('표준은 후반까지 속도가 증가하고 연습·표준·도전의 �
 });
 test('0.01 바늘탑의 대량 설치를 막고 실패하면 돈·배치·구매 횟수가 그대로이며 회수 후 재설치된다',()=>{
  const m=new Defense(LEVELS[9]);
- const sites=[{x:1,y:3},{x:3,y:3},{x:1,y:5},{x:1,y:7}];
+ const sites=[{x:1,y:3},{x:5,y:3},{x:1,y:0},{x:5,y:0}];
  for(const c of sites.slice(0,3))assert.ok(install(m,c,10,'basic'));
  const before={money:m.money,purchases:m.purchases,blocks:[...m.blocks]};
  assert.equal(install(m,sites[3],10,'slow'),false);assert.equal(m.towers.length,3);
@@ -26,9 +26,9 @@ test('0.01 바늘탑의 대량 설치를 막고 실패하면 돈·배치·구매
 });
 test('돈이 많아도 전체 타워 제한을 넘지 못하고 회수하면 한 자리가 돌아온다',()=>{
  const m=new Defense(LEVELS[0]);m.money=100000;
- for(const c of [{x:1,y:3},{x:3,y:3},{x:1,y:5}])assert.ok(install(m,c,100,'basic'));
- const before=m.money;assert.equal(install(m,{x:1,y:7},100,'basic'),false);assert.equal(m.money,before);
- m.sellTower(m.towers[0].id);assert.ok(install(m,{x:1,y:7},100,'basic'));
+ for(const c of [{x:1,y:3},{x:5,y:3},{x:1,y:0}])assert.ok(install(m,c,100,'basic'));
+ const before=m.money;assert.equal(install(m,{x:5,y:0},100,'basic'),false);assert.equal(m.money,before);
+ m.sellTower(m.towers[0].id);assert.ok(install(m,{x:5,y:0},100,'basic'));
 });
 test('보유 성벽은 제한 없이 보관하며 설치 제한과 회수는 재고를 소비하거나 복제하지 않는다',()=>{
  const m=new Defense(LEVELS[9],{bricks:[],walls:20},'challenge');

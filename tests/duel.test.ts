@@ -17,8 +17,9 @@ test('기존 타워 구매처럼 정답에만 차감·설치하고 상대 진영
  const s=match();assert.equal(applyDuel(s,0,{type:'quote',x:13,y:2,typeId:'basic'},NOW,'x').ok,false);assert.equal(validDuelCell(s,0,3,3),false);
  assert.ok(applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'q').ok);assert.equal(s.players[0].money,8800);assert.equal(s.players[0].towers.length,0);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'1'},NOW,'w').ok,false);assert.equal(s.players[0].money,8800);assert.ok(answer(s,0).ok);assert.equal(s.players[0].money,8700);
- assert.equal(validDuelCell(s,0,4,2),false);assert.equal(validDuelCell(s,0,4,1),false);assert.ok(validDuelCell(s,0,5,2));assert.equal(s.players[1]!.money,8800);
+ assert.equal(validDuelCell(s,0,4,2),false);assert.equal(validDuelCell(s,0,4,1),false);assert.equal(validDuelCell(s,0,5,2),false);assert.equal(validDuelCell(s,0,5,0),false);assert.ok(validDuelCell(s,0,6,2));assert.ok(validDuelCell(s,0,3,5));assert.equal(s.players[1]!.money,8800);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},NOW,'repeat').ok,false);
+ assert.ok(applyDuel(s,0,{type:'sell',towerId:s.players[0].towers[0].id},NOW,'reclaim').ok);assert.ok(validDuelCell(s,0,5,2),'회수하면 두 칸 금지 영역도 해제된다');
 });
 
 test('1:1 구매 문제도 취소·회수마다 달라지고 오답 재시도와 상대의 견적은 유지된다',()=>{
@@ -34,10 +35,10 @@ test('1:1 구매 문제도 취소·회수마다 달라지고 오답 재시도와
  assert.ok(formulas.size>=3);
 });
 test('계산 중 전투가 계속되고 보상은 보관 후 문제 종료에 반영되며 만료도 환급한다',()=>{
- const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'a');answer(s,0);applyDuel(s,0,{type:'quote',x:5,y:2,typeId:'double'},NOW,'b');s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);
+ const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'a');answer(s,0);applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},NOW,'b');s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);
  assert.equal(s.players[0].money,8700);assert.ok(s.players[0].escrow>0);assert.equal(s.enemies.length,0);assert.ok(s.elapsed>0);const escrow=s.players[0].escrow;
  applyDuel(s,0,{type:'cancel'},s.updatedAt,'c');assert.equal(s.players[0].money,8700+escrow);assert.equal(s.players[0].escrow,0);
- applyDuel(s,0,{type:'quote',x:5,y:2,typeId:'double'},s.updatedAt,'expiry');s.players[0].escrow=1234;s.players[0].quote!.expires=s.updatedAt+10;advanceDuel(s,s.updatedAt+20);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].escrow,0);
+ applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},s.updatedAt,'expiry');s.players[0].escrow=1234;s.players[0].quote!.expires=s.updatedAt+10;advanceDuel(s,s.updatedAt+20);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].escrow,0);
 });
 test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 정답만 알 레벨을 올린다',()=>{
  const s=match(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.ok(solve(s,1,'-').ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);

@@ -183,10 +183,10 @@ function result(){const won=state?.winner===side,draw=state?.winner===null,recor
  const root=document.getElementById('result-wrong')!;for(const q of record?.wrongQuestions??[]){const p=document.createElement('p');p.textContent=wrongText(q);root.append(p);}bind('retry-save',saveFinished);bind('result-lobby',()=>{disposeRoom();lobby();});}
 scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;
  const tower=p.towers.find(t=>t.x===x&&t.y===y);if(tower){selectedTower=tower.id;selectedType='';refresh();return;}
- if(selectedType){if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 한 칸 띄워 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'quote',x,y,typeId:selectedType});}
+ if(selectedType){if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 두 칸 띄워 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'quote',x,y,typeId:selectedType});}
 };
 scene.onAction=async key=>{sound.resume();sound.play('ui');
- if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;status('한 칸 띄운 내 쪽 빈 바닥을 골라요.');scene.preview(-1,-1);return;}
+ if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;status('두 칸 띄운 내 쪽 빈 바닥을 골라요.');scene.preview(-1,-1);return;}
  if(key.startsWith('block:')){const i=Number(key.slice(6));if(!slots.includes(i)&&slots.length<3)slots.push(i);refresh();return;}
  if(key.startsWith('slot:')){slots.splice(Number(key.slice(5)),1);refresh();return;}
  if(key==='op:+'||key==='op:-'){operation=key==='op:-'?'-':'+';refresh();return;}

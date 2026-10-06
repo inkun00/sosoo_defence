@@ -7,13 +7,13 @@ import {numberText} from '../src/math';
 
 // The automated learner answers the real wallet subtraction before each purchase.
 // Repositioning preserves cooldowns; money and placement limits apply.
-export function playLevel(level:number,difficulty:Difficulty='standard',checkEvents?:(events:Event[])=>void){
+export function playLevel(level:number,difficulty:Difficulty='standard',checkEvents?:(events:Event[])=>void,roadSpan=16){
  const m=new Defense(LEVELS[level-1],undefined,difficulty);
  const cells=Array.from({length:16*9},(_,i)=>({x:i%16,y:Math.floor(i/16)}));
  function purchase(c:Cell,id:string){if(!m.requestPurchase(c,id))return false;const q=m.pendingPurchase!;return m.answerPurchase(numberText(q.before-q.cost,3));}
  function buy(id:string){
   const type=towerType(id)!;if(type.unlock>level||!m.towerAvailable(type.unit)||m.money<towerPrice(type,m.money,level))return false;
-  const radius=type.effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE,road=route(m.blocks)!.slice(0,9);
+  const radius=type.effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE,road=route(m.blocks)!.slice(0,roadSpan);
   const score=(c:Cell)=>road.filter(p=>Math.hypot(world(p).x-world(c).x,world(p).y-world(c).y)<=radius).length;
   const focus=m.elapsed>=100?m.enemies.filter(e=>e.hp>=type.unit).sort((a,b)=>b.next-a.next)[0]:undefined;
   const c=cells.filter(c=>m.candidate(c)).sort((a,b)=>focus?Math.hypot(world(a).x-focus.x,world(a).y-focus.y)-Math.hypot(world(b).x-focus.x,world(b).y-focus.y):score(b)-score(a)||a.x-b.x)[0];return !!c&&purchase(c,id);

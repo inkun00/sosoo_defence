@@ -1,7 +1,7 @@
 import {artURL} from '../art';
 import Phaser from 'phaser';
 import {loadDungeon,registerDungeon} from '../assets';
-import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
+import {TOWERS,towerType,towerPrice,GRADE_NAMES,TOWER_GAP} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
 import {DuelState,Side,DuelTower,DUEL_ROAD,duelLevel,validDuelCell} from './duel';
@@ -78,7 +78,7 @@ export class DuelScene extends Phaser.Scene{
   this.text(this.ui,730,692,eggLevel?'지금 부화하거나 정답을 더 맞혀요':'정답 1회당 1레벨 · 최고 10레벨',17,'#c1b7aa');this.button('hatch',863,737,229,56,'영웅 부화 ▶',eggLevel>0&&s?.status==='playing'&&!v.busy,true,22);
   const selected=p?.towers.find(t=>t.id===v.selectedTower);
   if(selected){this.button('toggle',1085,696,137,57,selected.enabled?'발사 끄기':'발사 켜기',!v.busy);this.button('sell',1220,696,105,57,'회수',!v.busy);}
-  else this.text(this.ui,1130,697,v.selectedType?'한 칸 띄워 내 쪽에 설치':'타워를 누르면 발사 조절',16,'#c1b7aa');
+  else this.text(this.ui,1130,697,v.selectedType?'두 칸 띄워 내 쪽에 설치':'타워를 누르면 발사 조절',16,'#c1b7aa');
   const reserve=p?.rewardHero?heroSpec(p.rewardHero):null;
   this.text(this.ui,1130,657,reserve?`학습지 · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
   this.button('heroes',1069,756,113,57,'영웅 도감',true,false,16);
@@ -137,7 +137,7 @@ export class DuelScene extends Phaser.Scene{
   }));
  }
  preview(x:number,y:number){this.guides.clear();const v=this.view(),s=v.state;if(!s||!v.selectedType)return;
-  for(const t of s.players[v.side]!.towers)for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){const nx=t.x+dx,ny=t.y+dy;if(nx<0||nx>23||ny<0||ny>=7||(!dx&&!dy))continue;this.guides.fillStyle(0xdd6c50,.2).fillRect(X+nx*T,Y+ny*T,T,T);}
+  for(const t of s.players[v.side]!.towers)for(let dx=-TOWER_GAP;dx<=TOWER_GAP;dx++)for(let dy=-TOWER_GAP;dy<=TOWER_GAP;dy++){const nx=t.x+dx,ny=t.y+dy;if(nx<0||nx>23||ny<0||ny>=7||(!dx&&!dy))continue;this.guides.fillStyle(0xdd6c50,.2).fillRect(X+nx*T,Y+ny*T,T,T);}
   if(x>=0&&x<24&&y>=0&&y<7)this.guides.lineStyle(3,validDuelCell(s,v.side,x,y)?0xffdf94:0xdd6c50).strokeRect(X+x*T+2,Y+y*T+2,T-4,T-4);
  }
  update(_time:number,delta:number){const s=this.view().state;if(!s)return;const smooth=1-Math.exp(-delta/100);
