@@ -1,0 +1,102 @@
+/* Online screens share the title's castle art and gilded stone buttons. */
+.duel-world{position:absolute;inset:0;overflow:hidden;pointer-events:none;background:#080c16}
+.duel-world-art{position:absolute;inset:-2%;background:var(--title-art) 63% center/cover no-repeat;animation:duel-world-breath 24s ease-in-out infinite alternate}
+.duel-world-shade{position:absolute;inset:0;background:linear-gradient(90deg,#070b16cc,#070b1673 55%,#070b1640),linear-gradient(0deg,#060914df,transparent 65%,#080b1670)}
+.duel-world-glow{position:absolute;left:63%;top:6%;width:25%;height:38%;background:radial-gradient(ellipse,#ffa83238,transparent 67%);animation:duel-fire-glow 4s ease-in-out infinite alternate}
+.duel-world-embers{position:absolute;inset:0;background:radial-gradient(circle at 12% 76%,#fbc97899 0 1px,transparent 2px),radial-gradient(circle at 80% 64%,#fbc978bb 0 1px,transparent 2px),radial-gradient(circle at 71% 30%,#fbc97899 0 1px,transparent 2px),radial-gradient(circle at 21% 43%,#fbc97899 0 1px,transparent 2px);animation:duel-embers-rise 12s ease-in-out infinite}
+.duel-hall-header{position:absolute;top:58px;left:4%;right:4%;z-index:110;display:flex;align-items:center;gap:26px;min-height:36px;padding-bottom:10px;border-bottom:1px solid #eec78926;color:#c8b69a}
+.duel-hall-header a{text-decoration:none;color:#ffedc7;font-weight:900;font-size:25px;text-shadow:0 2px 6px #000}
+.duel-hall-header a span{font-size:12px;color:#d4ad70;font-weight:400;margin-left:12px;letter-spacing:.16em}
+.duel-hall-tag{font-size:12px;letter-spacing:.08em}
+#app[data-duel-view="hall"] #game-shell{visibility:hidden}
+#app[data-duel-view="battle"] .duel-world,#app[data-duel-view="battle"] .duel-hall-header{display:none}
+#duel-dialog{padding:62px 24px 18px;background:#05091463;backdrop-filter:none}
+#app[data-duel-view="battle"] #duel-dialog{padding:24px;background:#05070cbc;backdrop-filter:blur(5px)}
+.duel-card{position:relative;width:min(930px,100%);max-height:calc(100dvh - 138px);overflow:auto;padding:26px 36px;color:#eee5d7;border:1px solid #bb965e;border-radius:12px;background:linear-gradient(135deg,#282a2ced,#111722f7),var(--title-art) 60% center/cover;box-shadow:inset 0 0 0 4px #171a22,inset 0 0 0 5px #705633,0 0 0 4px #12151b,0 0 0 5px #6d624e,0 20px 80px #000b;scrollbar-width:thin;scrollbar-color:#927347 #171b25;overscroll-behavior:contain}
+#app[data-duel-view="battle"] .duel-card{max-height:calc(100dvh - 96px)}
+.duel-card:before{content:"";display:block;height:2px;margin:0 0 20px;background:linear-gradient(90deg,transparent,#d3ae6d,transparent)}
+.duel-card h2{margin:10px 0 15px;color:#ffe6b6;font-size:clamp(24px,2.5vw,32px);letter-spacing:-.04em;text-shadow:0 2px 4px #000}
+.duel-card h3{color:#f8dda7}
+.duel-card p{line-height:1.65;color:#cbbfac}
+.duel-card .eyebrow{color:#d5ab68;font-size:12px;letter-spacing:.17em}
+.duel-card .duel-intro{margin:0 0 18px;font-size:14px;color:#c4b7a1}
+.duel-card label{display:block;font-size:15px;font-weight:bold;margin:15px 0;color:#e4d2b2}
+.duel-card input,.duel-card select,.duel-card textarea{display:block;width:100%;min-height:50px;margin-top:7px;padding:11px 14px;background:linear-gradient(#101722,#1a202b);color:#fff1d5;border:1px solid #806745;border-radius:5px;box-shadow:inset 0 2px 7px #0007;font:18px 'Malgun Gothic',sans-serif}
+.duel-card input::placeholder,.duel-card textarea::placeholder{color:#9c9488;opacity:1;font-size:15px}
+.duel-card input:focus-visible,.duel-card select:focus-visible,.duel-card textarea:focus-visible{outline:2px solid #efbb67;outline-offset:3px;border-color:#e1b465}
+.duel-card select{font-size:16px}
+.duel-card select option{background:#17202b;color:#fff0d2}
+.duel-card textarea{min-height:95px;max-height:190px;resize:vertical;font:15px Consolas,monospace;overflow-wrap:anywhere}
+.duel-card button{position:relative;min-height:58px;border:0;border-radius:0;background:transparent var(--menu-art) center 40%/100% 163% no-repeat;color:#fff0d2;font:700 16px 'Malgun Gothic',sans-serif;text-shadow:0 2px 3px #000;padding:12px 28px;filter:drop-shadow(0 4px 5px #0007);transition:filter .16s,transform .16s;touch-action:manipulation}
+.duel-card button:hover:not(:disabled){filter:brightness(1.2) drop-shadow(0 0 10px #df9c3b45);transform:translateY(-1px)}
+.duel-card button:active:not(:disabled){transform:translateY(1px)}
+.duel-card button:focus-visible{outline:2px solid #ffc774;outline-offset:3px}
+.duel-card button:disabled{opacity:.43;cursor:default;filter:grayscale(.7)}
+.duel-card .duel-primary{min-height:66px;font-size:19px;color:#ffe0a0;filter:drop-shadow(0 3px 10px #c2822333);flex:1;border:0;background:transparent var(--menu-art) center 40%/100% 163% no-repeat}
+.duel-card .duel-primary:disabled{filter:grayscale(.7)}
+.duel-card form>.duel-primary{width:100%;margin-top:5px}
+.duel-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}
+.duel-row>button{flex:1;min-width:150px}
+.duel-warning{padding:12px 15px;border:1px solid #a6804566;border-left:3px solid #d4a858;border-radius:3px;background:linear-gradient(90deg,#8a5c202b,#34291c30);font-size:13px!important;color:#e7cfaa!important}
+.duel-card [data-feedback]:empty{display:none}
+.duel-card [data-feedback]:not(:empty){padding:10px 13px;border-radius:4px;border:1px solid #d6a85955;background:#aa74291f;color:#ffe0a4;font-size:14px}
+.duel-auth-layout{display:grid;grid-template-columns:.86fr 1.14fr;gap:40px;align-items:center}
+#duel-dialog[data-screen="auth"] .duel-card{width:min(940px,100%);padding:22px 38px}
+#duel-dialog[data-screen="auth"] .duel-card:before{margin-bottom:10px}
+.duel-auth-story{text-align:center;padding:20px 12px 30px;color:#eed6af;border-right:1px solid #e8bf7424}
+.duel-crest{position:relative;display:grid;place-items:center;margin:26px auto 28px;width:86px;height:86px;font:56px Georgia,serif;color:#ffda84;text-shadow:0 0 24px #e99e44;background:radial-gradient(circle,#d58d2430,transparent 70%)}
+.duel-crest:before,.duel-crest:after{content:"";position:absolute;inset:10px;border:1px solid #be9255;transform:rotate(45deg);box-shadow:0 0 0 5px #8a65331f}
+.duel-crest:after{inset:2px;border-color:#ad844344}
+.duel-auth-story h3{margin:0 0 18px;font-size:clamp(23px,2.5vw,34px);line-height:1.4;letter-spacing:-.04em;text-shadow:0 3px 6px #000}
+.duel-auth-story p{font-size:14px;line-height:1.85}
+.duel-story-rule{display:block;margin-top:24px;font-size:11px;line-height:1.8;color:#beac8e}
+.duel-auth-form{min-width:0}
+.duel-auth-form h2{margin-bottom:8px}
+.duel-auth-form .duel-intro{margin-bottom:10px;font-size:13px}
+.duel-auth-form .duel-warning{margin:12px 0;padding:9px 13px}
+.duel-auth-form label{margin:10px 0;font-size:14px}
+.duel-auth-form input{min-height:46px;font-size:17px}
+.duel-auth-form .duel-primary{min-height:60px}
+.duel-auth-links{display:flex;justify-content:center;gap:22px;margin:8px 0 0}
+.duel-auth-links button{min-height:38px;background:none;padding:7px 0;font-size:13px;color:#cdbb9d;filter:none;border-bottom:1px solid #bc955e40}
+.duel-auth-links button:hover:not(:disabled){color:#ffda97;filter:none}
+.duel-card .duel-adventure{display:block;width:100%;min-height:54px;font-size:16px;margin-top:4px}
+.room-directory{padding:18px 20px;border:1px solid #917345;border-radius:7px;background:linear-gradient(#0b1421d9,#182030b0);box-shadow:inset 0 0 0 3px #131923;margin:20px 0}
+.room-directory h3{margin:0;flex:1;align-self:center;font-size:21px;color:#ffda98}
+.room-directory .duel-row{margin:0 0 12px}
+.room-directory .duel-row>button{flex:none;min-width:160px}
+.room-item{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #ad8d5733}
+.room-item>div{min-width:0}
+.room-item strong{font-size:19px;color:#ffe3b4;overflow-wrap:anywhere}
+.room-item p{margin:6px 0;font-size:14px}
+.room-item small,.room-note{color:#bcae94;font-size:12px}
+.room-item .duel-primary{flex:none;min-width:160px;min-height:58px;font-size:16px}
+#profile-name{padding:12px 15px;border:1px solid #d1a95f38;border-radius:4px;background:#af792018;color:#ffe0a0}
+#duel-dialog[data-screen="lobby"] .duel-card{width:min(1040px,100%)}
+#duel-dialog[data-screen="lobby"] #room-list{max-height:260px;overflow:auto;scrollbar-width:thin;scrollbar-color:#927347 #171b25}
+#duel-dialog[data-screen="lobby"] .duel-row:last-of-type{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#duel-dialog[data-screen="lobby"] .duel-row:last-of-type>button{min-width:0;font-size:14px}
+.duel-keypad button{min-height:57px;font-size:23px;padding:10px}
+.duel-equation{text-align:center;font-family:Consolas,'Malgun Gothic',monospace;font-size:clamp(28px,4vw,44px)!important;color:#ffd790!important}
+.hero-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.duel-card .hero-card{min-height:230px;padding:18px 12px;background:linear-gradient(145deg,#35302a,#121c29);border:1px solid #92764c;border-radius:8px;box-shadow:inset 0 0 0 3px #171c26}
+.duel-card .hero-card:disabled{opacity:1;filter:none}
+.duel-card .collection-card{padding:18px 12px;background:linear-gradient(145deg,#35302a,#121c29);border:1px solid #92764c;border-radius:8px;box-shadow:inset 0 0 0 3px #171c26}
+.duel-card .collection-card.selected{border-color:#f5c974;box-shadow:inset 0 0 0 3px #70512a,0 0 15px #d49b3033}
+.hero-card strong{font-size:16px;color:#ffe1a5}
+.hero-card small{font-size:12px;line-height:1.5;color:#c2b4a0}
+.duel-card .setting{min-height:62px;padding:14px 4px;border-color:#bc945738}
+.duel-card .setting input:is([type="checkbox"],#setting-hit-equations){appearance:none;position:relative;width:54px;min-height:30px;height:30px;padding:0;border:1px solid #806745;border-radius:18px;background:#111722;box-shadow:inset 0 2px 5px #0008;cursor:pointer}
+.duel-card .setting input:is([type="checkbox"],#setting-hit-equations):before{content:"";position:absolute;left:4px;top:4px;width:20px;height:20px;border-radius:50%;background:#8e877b;transition:left .16s,background .16s}
+.duel-card .setting input:is([type="checkbox"],#setting-hit-equations):checked{border-color:#d3a257;background:#745024}
+.duel-card .setting input:is([type="checkbox"],#setting-hit-equations):checked:before{left:28px;background:#ffe3a1;box-shadow:0 0 8px #f8c85c44}
+.duel-card .setting span small{color:#bfb098;font-size:12px;line-height:1.6;margin:5px 0 0}
+.duel-card details{padding:14px;border-radius:5px;background:#10192388}
+.duel-card summary{font-size:16px;color:#f4d49e}
+@keyframes duel-world-breath{to{transform:scale(1.035) translate(-.5%,.15%)}}
+@keyframes duel-fire-glow{from{opacity:.5}to{opacity:1;transform:scale(1.1)}}
+@keyframes duel-embers-rise{0%{opacity:.25;transform:translateY(15px)}50%{opacity:.75}100%{opacity:.25;transform:translateY(-30px)}}
+@media(max-height:700px){#duel-dialog{padding-top:60px;padding-bottom:16px}.duel-card{max-height:calc(100dvh - 134px);padding:24px 30px}#duel-dialog[data-screen="auth"] .duel-card{padding:20px 30px}.duel-auth-layout{gap:28px}.duel-card label{margin:10px 0}.duel-card .duel-intro{margin-bottom:12px}.duel-auth-story{padding:10px}.duel-crest{margin:16px auto}.duel-card h2{font-size:27px}.duel-auth-form .duel-warning{padding:9px 12px}.duel-card input{min-height:46px}.duel-auth-links{margin:8px 0 0}}
+@media(max-width:850px){.duel-hall-tag{display:none}.duel-auth-layout{grid-template-columns:.72fr 1fr;gap:24px}.duel-auth-story h3{font-size:24px}.duel-story-rule{font-size:10px}.duel-card{padding:22px 26px}.duel-row>button{min-width:140px}}
+@media(max-width:650px){#duel-dialog{padding:60px 14px 16px}#duel-dialog[data-screen="auth"] .duel-card{padding:22px}.duel-card{padding:22px;max-height:calc(100dvh - 134px)}.duel-auth-layout{grid-template-columns:1fr;gap:0}.duel-auth-story{display:none}.duel-hall-header{top:59px}.duel-hall-header a{font-size:21px}.duel-hall-header a span{display:none}.duel-row{gap:8px}.duel-row>button{min-width:130px;font-size:14px;padding:12px 20px}.hero-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.room-item{flex-wrap:wrap}.room-item .duel-primary{width:100%}.room-directory{padding:14px}.room-directory .duel-row>button{flex:1}.room-directory h3{flex-basis:100%}#duel-dialog[data-screen="lobby"] .duel-row:last-of-type{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.duel-world-art,.duel-world-glow,.duel-world-embers{animation:none}.duel-card button{transition:none}}
