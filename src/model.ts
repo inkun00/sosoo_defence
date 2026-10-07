@@ -23,7 +23,7 @@ export class Defense{
  private nextId=1;private randomState=17;private droppedRecipe=0;
  private carriedWalls=0;
  private storedWallHealth:number[]=[];wallPlacements=0;
- bossDefeated=false;
+ bossDefeated=false;bossSpawned=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
  pendingWall:WallPreview|null=null;
  purchaseVariation:PurchaseVariation={round:0};
@@ -127,6 +127,12 @@ export class Defense{
   this.enemies.push({id:this.nextId++,kind,hp,max:hp,...xy,path:p,next:1,hits:0,slow:0,stun:0,hitFlash:0,age:0});this.spawned++;
   if(MONSTERS[kind].boss)this.emit({type:'notice',message:`보스 ${MONSTERS[kind].name} 등장! 체력 ${decimal(hp,this.level.digits)} · 1로 줄이고 작은 포탄으로 마무리해요.`});
  }
+ get enemyCount(){return this.level.hp.length+(this.level.boss?1:0);}
+ spawnBoss(){
+  const boss=this.level.boss;if(!boss||this.bossSpawned)return false;
+  const xy=world(this.map.start);this.enemies.push({id:this.nextId++,kind:boss.kind,hp:boss.hp,max:boss.hp,...xy,path:this.path()!,next:1,hits:0,slow:0,stun:0,hitFlash:0,age:0});this.bossSpawned=true;
+  this.emit({type:'notice',message:`최종 보스 ${MONSTERS[boss.kind].name} 등장! 체력 ${numberText(boss.hp)} · 몬스터 웨이브도 계속돼요.`});return true;
+ }
  get goals(){return [
   {label:'정확히 0으로 만들어 6마리 이상 방어',done:this.kills>=6},
   ...(this.level.goal==='wall'||this.level.goal==='both'?[{label:`성벽 ${this.level.requiredFusions??1}개 준비하고 1개 설치`,done:this.carriedWalls+this.fusions>=(this.level.requiredFusions??1)&&this.wallPlacements>=1}]:[]),
@@ -134,7 +140,8 @@ export class Defense{
   ...(this.level.id===8?[{label:'1을 0.1 열 개로 바꾸어 빼는 공격 경험',done:this.borrowTenths>=1}]:[]),
   ...(this.level.id===9?[{label:'0.1을 0.01 열 개로 바꾸어 빼는 공격 경험',done:this.borrowHundredths>=1}]:[]),
   ...(this.level.goal==='switch'||this.level.goal==='both'?[{label:'서로 다른 공격 단위 2종 사용',done:this.usedUnits.size>=2}]:[]),
-  ...(this.level.id===10?[{label:'최종 보스 균열의 돌왕을 정확히 0으로 처치',done:this.bossDefeated}]:[])
+  ...(this.level.id===10?[{label:'균열의 돌왕을 정확히 0으로 처치',done:this.bossDefeated}]:[]),
+  ...(this.level.boss?[{label:`최종 보스 저주 마법사 ${numberText(this.level.boss.hp)} → 0`,done:this.bossDefeated}]:[])
  ];}
  damage(e:Enemy,t:Tower){
   const before=e.hp,r=hit(before,t.unit);
@@ -144,10 +151,12 @@ export class Defense{
   e.hp=r.hp;e.hits++;this.successfulHits++;this.usedUnits.add(t.unit);e.hitFlash=.5;
   if(t.effect==='slow')e.slow=3;
   if(t.effect==='stun'&&this.random()<.25)e.stun=1.5;
-  const eq=`${decimal(before,this.level.digits)} − ${decimal(t.unit,this.level.digits)} = ${decimal(e.hp,this.level.digits)}`;
-  this.emit({type:'hit',message:eq,x:e.x,y:e.y,data:{before,damage:t.unit,after:e.hp,hint:regroupMessage(before,t.unit,this.level.digits)}});
+  const text=(hp:number)=>e.kind==='wizard'?numberText(hp):decimal(hp,this.level.digits);
+  const eq=`${text(before)} − ${text(t.unit)} = ${text(e.hp)}`;
+  this.emit({type:'hit',message:eq,x:e.x,y:e.y,data:{kind:e.kind,before,damage:t.unit,after:e.hp,hint:regroupMessage(before,t.unit,this.level.digits)}});
   if(!r.killed)return;
-  if(this.level.id===10&&e.kind==='warden'){this.bossDefeated=true;this.emit({type:'notice',message:'균열의 돌왕의 힘이 정확히 0이 되었어요! 마지막 불꽃을 지켰어요.'});}
+  if(this.level.id===10&&e.kind==='warden'){this.bossDefeated=true;this.emit({type:'notice',message:'균열의 돌왕의 힘이 정확히 0이 되었어요! 이제 저주 마법사에게 맞서요.'});}
+  if(this.level.boss?.kind===e.kind){this.bossDefeated=true;this.emit({type:'notice',message:'저주 마법사의 힘이 정확히 0이 되었어요! 남은 몬스터를 막아 세상을 구해요.'});}
   this.kills++;const earn=reward(e.max,e.hits,this.level.units,this.level.id);
   // One recipe per three drops: one guaranteed initial set, then additional sets.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);
@@ -158,7 +167,7 @@ export class Defense{
  private collideWall(e:Enemy,w:Wall,dx:number,dy:number,speed:number){
   // Normal impulse with restitution. Heavier stone creatures recoil less;
   // wall displacement is a damped spring, independent of decimal combat HP.
-  const mass={slime:1,beetle:1.3,golem:2,crystal:2.6,king:3.2,warden:3.6}[e.kind];
+  const mass={slime:1,beetle:1.3,golem:2,crystal:2.6,king:3.2,warden:3.6,wizard:4}[e.kind];
   const wallMass=12,restitution=.65,relativeSpeed=Math.max(0,speed-w.vx*dx-w.vy*dy);
   const impulse=(1+restitution)*relativeSpeed/(1/mass+1/wallMass);
   const reflectedSpeed=Math.min(-speed*.1,speed-impulse/mass);
@@ -181,6 +190,7 @@ export class Defense{
   if(this.phase!=='playing')return;dt=Math.max(0,Math.min(dt,.1));this.elapsed=Math.min(this.duration,this.elapsed+dt);
   this.moveWalls(dt);
   if(this.spawned<this.level.hp.length&&this.elapsed+1e-9>=FIRST_SPAWN_DELAY+this.spawned*SPAWN_INTERVAL)this.spawn();
+  if(this.level.boss&&!this.bossSpawned&&this.elapsed+1e-9>=this.level.boss.spawnAt)this.spawnBoss();
   for(const e of this.enemies){
    if(e.hp===0)continue;e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt);
    e.wallCooldown=Math.max(0,(e.wallCooldown??0)-dt);
@@ -209,9 +219,9 @@ export class Defense{
   this.enemies=this.enemies.filter(e=>e.hp>0);
   // The timer ends the wave schedule, not the castle's remaining lives.
   // Finish every monster before reviewing the separate learning objectives.
-  if(this.elapsed>=this.duration&&this.spawned===this.level.hp.length&&this.enemies.length===0){this.phase=this.goals.every(g=>g.done)?'won':'review';this.emit({type:'notice',message:this.phase==='won'?'방어와 학습 목표를 모두 달성했어요!':'성은 지켰어요! 다음 단계에 가려면 남은 학습 목표를 연습해요.'});}
+  if(this.elapsed>=this.duration&&this.spawned===this.level.hp.length&&(!this.level.boss||this.bossSpawned)&&this.enemies.length===0){this.phase=this.goals.every(g=>g.done)?'won':'review';this.emit({type:'notice',message:this.phase==='won'?'방어와 학습 목표를 모두 달성했어요!':'성은 지켰어요! 다음 단계에 가려면 남은 학습 목표를 연습해요.'});}
  }
- get stars(){if(this.phase!=='won')return 0;const best=this.level.hp.reduce((s,h)=>s+minimumHits(h,this.level.units),0);return this.leaks===0&&this.successfulHits<=best*1.3?3:this.leaks<=1?2:1;}
+ get stars(){if(this.phase!=='won')return 0;const best=this.level.hp.reduce((s,h)=>s+minimumHits(h,this.level.units),this.level.boss?minimumHits(this.level.boss.hp,this.level.units):0);return this.leaks===0&&this.successfulHits<=best*1.3?3:this.leaks<=1?2:1;}
  targetFor(t:Tower):Enemy|undefined{
   const xy=world(t),radius=t.effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE;
   return this.enemies.filter(e=>e.hp>0&&Math.hypot(xy.x-e.x,xy.y-e.y)<=radius).sort((a,b)=>Number(b.hp>=t.unit)-Number(a.hp>=t.unit)||b.next-a.next||a.id-b.id)[0];

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {Defense,Event as GameEvent,Enemy,WallPreview,WallImpact,WALL_DURABILITY} from './model';
 import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,key} from './path';
 import {Effect,EFFECTS} from './levels';
-import {decimal} from './math';
+import {decimal,numberText} from './math';
 import {FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT} from './layout';
 import {loadDungeon,registerDungeon,registerMonster} from './assets';
 import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize,stageMonsterKinds} from './monsters';
@@ -147,7 +147,7 @@ export class Field extends Phaser.Scene{
   v.sprite.setPosition(e.x+(normal?e.recoil!.vx/normal*pose:0),sy+(normal?e.recoil!.vy/normal*pose:0));
   v.sprite.setRotation(!this.reducedMotion&&bouncing?Phaser.Math.Clamp(e.recoil!.vx/900,-.12,.12):0);
   const anim=renderedKind+'-'+(bouncing?'hurt':e.stun||e.slow?'frozen':e.hitFlash?'hurt':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);
-  v.text.setPosition(tx,ty).setText(decimal(e.hp,this.model.level.digits));v.name.setPosition(tx,ty-27);
+  v.text.setPosition(tx,ty).setText(e.kind==='wizard'?numberText(e.hp):decimal(e.hp,this.model.level.digits));v.name.setPosition(tx,ty-27);
   const width=art.boss?100:Math.max(44,size*.38),by=ty+22;v.bar.clear();v.bar.fillStyle(0x090a10,.9).fillRoundedRect(tx-width/2,by,width,6,2);v.bar.fillStyle(e.stun?0xb9a4dc:art.color).fillRoundedRect(tx-width/2,by,width*e.hp/e.max,6,2);
  }
  private impactPoint(x:number,y:number,kind:MonsterKind){return {x,y:y+32-monsterSize(kind,this.model.level.id)*.4};}

@@ -146,3 +146,9 @@ Original transparent Korean title artwork generated with built-in OpenAI imagege
 assets/dungeon/title-wordmark-v1.png
 Exact lettering: 소수 디펜스. Prompt: licenses/title-wordmark-v1-prompt.txt
 Source PNG retained; alpha WebP with trimmed margins served on the title screen.
+
+FINAL SORCERER BOSS v1 (2026-10-07)
+Original sixteen-frame atlas generated with built-in OpenAI imagegen.
+assets/dungeon/monster-wizard-v1.png
+Reference: story-sorcerer-v2.png. Prompt: licenses/monster-wizard-v1-prompt.txt
+Transparent source preserved; compressed WebP loaded only for the final stage.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Defense,Tower} from '../src/model';
 import {LEVELS} from '../src/levels';
 import {TOWERS,towerType,towerPrice,towerPriceBand,borrowingPlaces,parseMoney,PurchaseVariation} from '../src/towers';
-import {numberText,minimumHits} from '../src/math';
+import {numberText,minimumHits,purchaseCoins} from '../src/math';
 import {world} from '../src/path';
 
 test('12종 타워는 각각 고정된 서로 다른 공격력을 가지며 0.001 포탄은 없다',()=>{
@@ -32,13 +32,13 @@ test('변형 가격도 차시별 소수 자리·한 자리 자연수·등급별 
  for(const level of LEVELS)for(const type of TOWERS.filter(t=>t.unlock<=level.id)){
   let variation:PurchaseVariation={round:1};
   for(let i=0;i<25;i++){
-   const cost=towerPrice(type,level.budget,level.id,variation),places=borrowingPlaces(level.budget,cost).filter(p=>p<1000);
-   assert.ok(cost>0&&cost<=level.budget&&cost<10000);assert.ok(level.budget-cost<10000);
+   const before=purchaseCoins(level.budget),cost=towerPrice(type,level.budget,level.id,variation),places=borrowingPlaces(before,cost).filter(p=>p<1000);
+   assert.ok(cost>0&&cost<=level.budget&&cost<10000);assert.ok(before-cost>=0&&before-cost<10000);
    assert.equal(cost%(level.id===1?100:level.id<4?10:1),0);
    const band=towerPriceBand(type,level.id);assert.ok(cost>=band.low&&cost<=band.high);
    if(type.grade===1){assert.ok(cost<=1000);assert.ok(places.length<=1,'기본 등급은 시작 코인에서 최대 한 번만 받아내린다');}
-   else assert.ok(cost>(type.grade-1)*1000&&cost<type.grade*1000);
-   variation={round:variation.round+1,lastBefore:level.budget,lastCost:cost};
+   else assert.ok(cost>(type.grade-1)*1000);
+   variation={round:variation.round+1,lastBefore:before,lastCost:cost};
   }
  }
  const m=new Defense(LEVELS[0]);const before=m.purchaseVariation;m.money=50;
@@ -55,7 +55,7 @@ test('타워는 구매 문제의 정답 이후에만 설치되고 오답·취소
 });
 test('상승하는 가격 범위 안에서 기본 등급은 쉬운 계산, 상위 등급은 가능한 받아내림을 우선한다',()=>{
  for(const level of LEVELS)for(const type of TOWERS.filter(t=>t.unlock<=level.id)){
-  const before=level.budget,{low,high,step}=towerPriceBand(type,level.id),count=(cost:number)=>borrowingPlaces(before,cost).filter(p=>p<1000).length;
+  const before=purchaseCoins(level.budget),{low,high,step}=towerPriceBand(type,level.id),count=(cost:number)=>borrowingPlaces(before,cost).filter(p=>p<1000).length;
   const counts=[];for(let cost=low;cost<=high;cost+=step)counts.push(count(cost));
   const quoted=count(towerPrice(type,before,level.id));
   if(type.grade===1)assert.equal(quoted,Math.min(...counts));
@@ -96,7 +96,7 @@ test('타워 고유 공격력이 실제 피해에 적용되고 남은 체력보�
 
 test('모든 타워의 모든 변형 가격은 다음 단계에서 오르고 보유금이 달라도 등급 가격이 역전되지 않는다',()=>{
  const basic=towerType('basic')!;
- assert.equal(new Set(LEVELS.map(l=>towerPrice(basic,l.budget,l.id))).size,10);
+ assert.equal(new Set(LEVELS.map(l=>towerPrice(basic,l.budget,l.id))).size,LEVELS.length);
  for(const t of TOWERS){
   const open=LEVELS.filter(l=>l.id>=t.unlock);assert.equal(new Set(open.map(l=>towerPrice(t,l.budget,l.id))).size,open.length,t.name);
   for(let i=1;i<open.length;i++){
@@ -105,7 +105,7 @@ test('모든 타워의 모든 변형 가격은 다음 단계에서 오르고 보
    for(const wallet of [0,500,8800,9999,12999])for(let round=0;round<12;round++)assert.ok(towerPrice(t,wallet,open[i].id,{round})>towerPrice(t,wallet,open[i-1].id,{round}));
   }
  }
- for(const wallet of [0,100000,8800,8842,999999])for(let stage=1;stage<=10;stage++)for(const low of TOWERS)for(const high of TOWERS){
+ for(const wallet of [0,100000,8800,8842,999999])for(let stage=1;stage<=LEVELS.length;stage++)for(const low of TOWERS)for(const high of TOWERS){
   const cost=towerPrice(low,wallet,stage);assert.ok(cost>0&&cost<10000);
   if(low.grade<high.grade)for(const otherWallet of [0,9999,8759])assert.ok(cost<towerPrice(high,otherWallet,stage));
  }

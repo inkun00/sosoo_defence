@@ -18,6 +18,7 @@ export const STAGE_MAPS:readonly StageMap[]=[
  {id:7,name:'세 개의 관문',start:{x:0,y:4},end:{x:15,y:4},rocks:[[4,0,1,6],[9,4,1,5],[13,0,1,4]],floorTint:0xadc7c5,pathTint:0xc5e3d8,rockTint:0xbbe0d8},
  {id:8,name:'서리 뱀길',start:{x:0,y:4},end:{x:15,y:3},rocks:[[3,0,1,5],[7,4,1,5],[11,0,1,4],[13,5,1,4]],floorTint:0xa6bdd5,pathTint:0xd1e9f2,rockTint:0xc0e0ed},
  {id:9,name:'균열의 우회로',start:{x:0,y:4},end:{x:15,y:5},rocks:[[5,4,2,5],[10,0,2,4],[12,6,2,2]],floorTint:0xc6a6af,pathTint:0xecc3ab,rockTint:0xe2b7c1},
- {id:10,name:'돌왕의 돌격로',start:{x:0,y:4},end:{x:15,y:4},rocks:[[3,0,1,4],[3,5,1,4],[7,0,1,4],[7,5,1,4],[11,0,1,4],[11,5,1,4]],floorTint:0xb5a6c8,pathTint:0xe7bc93,rockTint:0xd5b8e6}
+ {id:10,name:'돌왕의 돌격로',start:{x:0,y:4},end:{x:15,y:4},rocks:[[3,0,1,4],[3,5,1,4],[7,0,1,4],[7,5,1,4],[11,0,1,4],[11,5,1,4]],floorTint:0xb5a6c8,pathTint:0xe7bc93,rockTint:0xd5b8e6},
+ {id:11,name:'저주의 마지막 관문',start:{x:0,y:4},end:{x:14,y:4},rocks:[[4,0,1,4],[4,5,1,4],[8,0,1,4],[8,5,1,4],[12,0,1,4],[12,5,1,4]],floorTint:0x9e87b5,pathTint:0xdca2d7,rockTint:0xc896e0}
 ];
 export function stageMap(stage:number):StageMap{return STAGE_MAPS[stage-1]??STAGE_MAPS[0];}

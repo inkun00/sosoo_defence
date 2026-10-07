@@ -5,11 +5,12 @@ import {TOWERS,towerPrice} from '../src/towers';
 import {Defense} from '../src/model';
 import {HEROES} from '../src/multiplayer/heroes';
 import {createDuel,joinDuel,applyDuel,advanceDuel} from '../src/multiplayer/duel';
-import {learningValue,numberText,recipe,creditMessage} from '../src/math';
+import {learningValue,numberText,recipe,creditMessage,purchaseCoins} from '../src/math';
 
-test('모든 스테이지·영웅의 체력·포탄·재료·초기 코인·가격은 10 미만이다',()=>{
+test('보스 체력 예외 외의 일반 몬스터·영웅·포탄·재료·구매 수식은 10 미만이다',()=>{
  for(const l of LEVELS){
-  assert.ok([l.budget,...l.hp,...l.bricks,...(l.extraBricks??[])].every(learningValue));
+  assert.ok([purchaseCoins(l.budget),...l.hp,...l.bricks,...(l.extraBricks??[])].every(learningValue));
+  if(l.boss)assert.equal(l.boss.hp,99900);else assert.ok(learningValue(l.budget));
   for(const t of TOWERS)for(const wallet of [l.budget,10000,90000,987654])assert.ok(learningValue(towerPrice(t,wallet,l.id)));
  }
  assert.ok(TOWERS.every(t=>learningValue(t.unit)&&learningValue(t.cost)));

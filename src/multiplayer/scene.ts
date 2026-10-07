@@ -23,7 +23,7 @@ export class DuelScene extends Phaser.Scene{
  private ambient?:AmbientProps;
  private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
  constructor(public view:()=>DuelView){super('duel');}
- preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));}
+ preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));}
  create(){
   registerDungeon(this);
   this.ambient=new AmbientProps(this,this.reduced);

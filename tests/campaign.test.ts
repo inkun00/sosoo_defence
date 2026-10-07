@@ -2,12 +2,14 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {playLevel} from '../tools/simulate';
 import type {Event as BattleEvent} from '../src/model';
-for(const difficulty of ['practice','standard','challenge'] as const)for(let stage=1;stage<=10;stage++)test(`${difficulty} 단계 ${stage}: 2분 웨이브와 남은 몬스터 방어에서 합법적인 조작으로 학습 목표 달성`,()=>{
+import {LEVELS} from '../src/levels';
+for(const difficulty of ['practice','standard','challenge'] as const)for(let stage=1;stage<=LEVELS.length;stage++)test(`${difficulty} 단계 ${stage}: 2분 웨이브와 남은 몬스터 방어에서 합법적인 조작으로 학습 목표 달성`,()=>{
  let equations=0;
  const checkEvents=(events:BattleEvent[])=>{
   for(const e of events)if(e.message.includes(' = ')){
    equations++;const operands=e.message.split(' · ')[0].match(/\d+(?:\.\d+)?/g)!.map(Number);
-   assert.ok(operands.every(n=>n>=0&&n<10),e.message);
+   const bossEquation=e.type==='hit'&&(e.data as {kind?:string})?.kind==='wizard';
+   assert.ok(operands.every(n=>n>=0&&n<(bossEquation?100:10)),e.message);
   }
  };
  // Fixed formations must succeed without buying, selling or moving mid-wave.
@@ -16,6 +18,7 @@ for(const difficulty of ['practice','standard','challenge'] as const)for(let sta
  assert.deepEqual(m.towers.map(t=>({id:t.id,x:t.x,y:t.y,typeId:t.typeId})),m.formation);assert.equal(m.purchases,m.formation.length);
  assert.ok(equations>0);
  assert.equal(m.phase,'won');assert.ok(m.goals.every(g=>g.done));
+ if(m.level.boss){assert.ok(m.bossSpawned&&m.bossDefeated);assert.equal(m.enemies.length,0);}
  assert.equal(m.elapsed,120);assert.ok(m.simulationSeconds>=120&&m.simulationSeconds<=300);assert.ok(m.money>=0);assert.ok(m.castle>0);
  assert.ok(m.towers.length<=m.balance.towerLimit);assert.ok(m.towers.filter(t=>t.unit===10).length<=m.balance.precisionLimit);assert.ok(m.walls.length<=m.balance.wallLimit);
 });

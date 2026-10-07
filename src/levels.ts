@@ -1,6 +1,6 @@
 import {towersForStage,towerPrice} from './towers';
 export type Effect='basic'|'slow'|'stun'|'range';
-export interface Level{ id:number;name:string;subtitle:string;hint:string;digits:1|2;units:number[];hp:number[];bricks:[number,number,number];goal:'kill'|'wall'|'switch'|'both'|'money';requiredFusions?:number;extraBricks?:[number,number,number];effects:Effect[];budget:number; }
+export interface Level{ id:number;name:string;subtitle:string;hint:string;digits:1|2;units:number[];hp:number[];bricks:[number,number,number];goal:'kill'|'wall'|'switch'|'both'|'money';requiredFusions?:number;extraBricks?:[number,number,number];effects:Effect[];budget:number;boss?:{kind:'wizard';hp:number;spawnAt:number}; }
 export const LEVELS:Level[]=[
  {id:1,name:'작은 한 걸음',subtitle:'준비 학습 · 0.1의 크기',hint:'체력 0.2는 0.1 포탄 두 번! 길 옆에 타워를 놓고 발사를 켜고 꺼 보세요.',digits:1,units:[100],hp:[200,200,300,200,400,300,200,500,300,400,200,600],bricks:[100,200,300],goal:'kill',effects:['basic'],budget:900},
  {id:2,name:'더 작은 조각',subtitle:'2~3차시 · 0.01과 소수 두 자리 수',hint:'0.1은 0.01 열 개와 같아요. 체력 0.24를 0.1 두 번과 0.01 네 번으로 줄여 보세요.',digits:2,units:[10,100],hp:[200,240,300,420,350,240,450,630,420,550,640,950],bricks:[100,200,300],goal:'kill',effects:['basic','slow'],budget:1400},
@@ -11,17 +11,19 @@ export const LEVELS:Level[]=[
  {id:7,name:'소수점 나란히',subtitle:'9차시 · 두 자리 소수의 덧셈과 받아올림',hint:'먼저 0.42 + 0.53 = 0.95, 다음은 0.75 + 0.56 = 1.31! 보관한 성벽도 활용해 두 개를 준비하고 하나를 설치해요.',digits:2,units:[10,100,1000],hp:[1000,750,2560,1560,5310,3420,6750,8530,7310,7680,8750,9750],bricks:[420,530,950],extraBricks:[750,560,1310],requiredFusions:2,goal:'wall',effects:['basic','slow','stun','range'],budget:6300},
  {id:8,name:'빌려 온 열 조각',subtitle:'10차시 · 한 자리 소수의 뺄셈과 받아내림',hint:'1 타워와 0.01 타워를 잠시 끄고 체력 1.0에 0.1을 먼저 쏘아요. 1을 0.1 열 개로 바꾸어 빼는 공격을 경험해요.',digits:2,units:[10,100,1000],hp:[1000,2600,4500,3700,6600,5900,8500,7500,7800,8400,9600,9870],bricks:[300,500,800],goal:'switch',effects:['basic','slow','stun','range'],budget:7200},
  {id:9,name:'남은 힘을 살펴요',subtitle:'11차시 · 두 자리 소수의 뺄셈',hint:'첫 체력 0.10에 0.01 포탄을 쏘아요. 0.1을 0.01 열 개로 바꾸어 빼는 공격을 경험해요. 큰 타워는 잠시 꺼 두세요.',digits:2,units:[10,100,1000],hp:[100,3520,5640,4880,6780,8690,9540,7400,7950,8780,9380,9890],bricks:[1250,700,1950],goal:'both',effects:['basic','slow','stun','range'],budget:8100},
- {id:10,name:'소수의 성 수호자',subtitle:'12~14차시 · 소수 계산 종합 방어전',hint:'2.75 + 3.56 = 6.31! 포탄, 돈, 벽돌을 계획해요. 큰 포탄으로 줄이고 작은 포탄으로 정확히 0을 만들어요.',digits:2,units:[10,100,1000],hp:[2750,3560,6310,7520,7640,8880,8550,8490,9040,9290,9470,9990],bricks:[2750,3560,6310],goal:'both',effects:['basic','slow','stun','range'],budget:9500}
+ {id:10,name:'소수의 성 수호자',subtitle:'12~14차시 · 소수 계산 종합 방어전',hint:'2.75 + 3.56 = 6.31! 포탄, 돈, 벽돌을 계획해요. 큰 포탄으로 줄이고 작은 포탄으로 정확히 0을 만들어요.',digits:2,units:[10,100,1000],hp:[2750,3560,6310,7520,7640,8880,8550,8490,9040,9290,9470,9990],bricks:[2750,3560,6310],goal:'both',effects:['basic','slow','stun','range'],budget:9500},
+ {id:11,name:'마법사와의 결전',subtitle:'최종 스테이지 · 저주를 풀어라',hint:'체력 99.9의 저주 마법사가 몬스터와 함께 나타나요. 장거리 대포와 감속 타워를 길 전체에 나누어 배치하고, 작은 공격으로 정확히 0을 만들어요.',digits:2,units:[10,100,1000],hp:[3520,4680,5750,6420,7530,8140,8570,8940,9260,9540,9780,9990],bricks:[2750,3560,6310],goal:'switch',effects:['basic','slow','stun','range'],budget:19978,boss:{kind:'wizard',hp:99900,spawnAt:16}}
 ];
-const budgets=[8800,8750,8750,8842,8863,8758,8786,8953,8947,9759];
+export const FINAL_STAGE=LEVELS.length;
+const budgets=[8800,8750,8750,8842,8863,8758,8786,8953,8947,9759,19978];
 for(const level of LEVELS){const types=towersForStage(level.id);level.budget=budgets[level.id-1];level.units=[...new Set(types.map(t=>t.unit))];level.effects=[...new Set(types.map(t=>t.effect))];}
 LEVELS[2].hint='투석기는 공격력 1.2, 빙창탑은 0.25예요. 남은 체력에 맞는 타워를 골라 정확히 0으로 만들어요.';
 LEVELS[3].hint='돈은 0.001까지 사용해요. 보유 코인에서 타워 가격을 빼고 남는 돈을 맞히면 설치돼요.';
 LEVELS[4].hint='서리탑 0.15, 수정포 0.75! 서로 다른 공격력으로 체력을 줄이고 작은 포탄으로 마무리해요.';
 LEVELS[7].hint='첫 체력 1.0에 기본 포탑 0.1을 쏘아요. 1을 0.1 열 개로 바꾸어 빼는 공격을 경험해요.';
 LEVELS[8].hint='첫 체력 0.10에 바늘탑 0.01을 쏘아요. 0.1을 0.01 열 개로 바꾸어 빼요.';
-LEVELS[9].name='마지막 불꽃';
-LEVELS[9].hint='최종 보스 균열의 돌왕의 체력은 9.99! 큰 공격으로 줄이고 작은 공격으로 정확히 0을 만들면 성을 구할 수 있어요.';
+LEVELS[9].name='균열의 돌왕';
+LEVELS[9].hint='균열의 돌왕의 체력은 9.99! 정확히 0으로 처치하면 저주 마법사가 기다리는 최종 스테이지로 갈 수 있어요.';
 export const EFFECTS:Record<Effect,{name:string;icon:string;color:number;description:string;unlock:number}>={
  basic:{name:'기본',icon:'●',color:0xe4ac61,description:'정확한 한 발',unlock:1},
  slow:{name:'서리',icon:'❄',color:0x8cd7ed,description:'3초 동안 이동 40% 느리게',unlock:2},

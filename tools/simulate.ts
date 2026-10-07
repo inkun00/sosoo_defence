@@ -1,4 +1,4 @@
-import {Defense,Event} from '../src/model';
+import {Defense,Event,Inventory} from '../src/model';
 import {LEVELS} from '../src/levels';
 import {world,Cell} from '../src/path';
 import {Difficulty} from '../src/difficulty';
@@ -7,10 +7,10 @@ import {numberText} from '../src/math';
 
 // Prepare a fixed formation, answer the real purchase questions, then only
 // control firing and use earned walls. No purchases, movement or sales in battle.
-export function playLevel(level:number,difficulty:Difficulty='standard',checkEvents?:(events:Event[])=>void,layout=0,rosterOverride?:string[]){
- const m=new Defense(LEVELS[level-1],undefined,difficulty),road=m.path()!;
+export function playLevel(level:number,difficulty:Difficulty='standard',checkEvents?:(events:Event[])=>void,layout=0,rosterOverride?:string[],inventory?:Inventory){
+ const m=new Defense(LEVELS[level-1],inventory,difficulty),road=m.path()!;
  const cells=Array.from({length:16*9},(_,i)=>({x:i%16,y:Math.floor(i/16)}));
- const roster=rosterOverride??(level===1?['double','basic','basic','double']:level===2?['double','frost','basic','pebble','needle']:level===9?['catapult','catapult','needle','frost','pebble','basic','double']:level<=4?['catapult','catapult','frost','basic','pebble','needle']:['catapult','catapult',level===9?'catapult':'crystal','basic','pebble','needle']);
+ const roster=rosterOverride??(level===11?['rune','rune','catapult','catapult','crystal','frost','basic','pebble','needle']:level===1?['double','basic','basic','double']:level===2?['double','frost','basic','pebble','needle']:level===9?['catapult','catapult','needle','frost','pebble','basic','double']:level<=4?['catapult','catapult','frost','basic','pebble','needle']:['catapult','catapult',level===9?'catapult':'crystal','basic','pebble','needle']);
  const used:Record<string,number>={};
  for(const id of roster){
   const type=towerType(id)!;if(type.unlock>level)continue;
@@ -36,4 +36,4 @@ export function playLevel(level:number,difficulty:Difficulty='standard',checkEve
  }
  return Object.assign(m,{formation,simulationSeconds:Number(simulationSeconds.toFixed(1))});
 }
-if(process.argv[1]?.endsWith('simulate.ts'))for(const difficulty of ['practice','standard','challenge'] as const)for(const l of LEVELS){const m=playLevel(l.id,difficulty);console.log(`${difficulty} ${l.id}: ${m.phase}, kills=${m.kills}, leaks=${m.leaks}, boss=${m.bossDefeated}, towers=${m.towers.map(t=>t.typeId+'@'+t.x+','+t.y).join(';')}, goals=${m.goals.filter(g=>!g.done).map(g=>g.label).join(',')}`);}
+if(typeof process!=='undefined'&&process.argv[1]?.endsWith('simulate.ts'))for(const difficulty of ['practice','standard','challenge'] as const)for(const l of LEVELS){const m=playLevel(l.id,difficulty);console.log(`${difficulty} ${l.id}: ${m.phase}, kills=${m.kills}, leaks=${m.leaks}, boss=${m.bossDefeated}, towers=${m.towers.map(t=>t.typeId+'@'+t.x+','+t.y).join(';')}, goals=${m.goals.filter(g=>!g.done).map(g=>g.label).join(',')}`);}

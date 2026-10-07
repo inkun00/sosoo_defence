@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {LEVELS,EFFECTS,Effect} from './levels';
+import {LEVELS,EFFECTS,Effect,FINAL_STAGE} from './levels';
 import {Defense,Event as BattleEvent} from './model';
 import {Field} from './scene';
 import {GameUI,Panel,UIState,Control} from './ui';
@@ -43,18 +43,18 @@ function persistInventory(){
 }
 function update(){
  if(selectedWall&&!model.walls.some(w=>w.x===selectedWall!.x&&w.y===selectedWall!.y)){selectedWall=null;field.selectedWall=undefined;field.clearWallPreview();}
- sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'||model.phase==='review'?'title':model.level.id===10?'boss':'battle');
+ sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'||model.phase==='review'?'title':model.level.id>=10?'boss':'battle');
  sound.setPaused(movie||model.phase==='paused');
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
  if(['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
-  if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(10,model.level.id+1));save.resumeStage=Math.min(10,model.level.id+1);if(model.level.id===10&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
+  if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
-  if(model.phase!=='review'&&!(model.phase==='won'&&model.level.id===10&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
-  if(model.phase==='won'&&model.level.id===10&&model.bossDefeated){movie=true;sound.setPaused(true);void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();});}
+  if(model.phase!=='review'&&!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
+  if(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated){movie=true;sound.setPaused(true);void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();});}
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
- $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/12, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
+ $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/${model.enemyCount}, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
 }
 function notify(text:string){message=text;$('accessible-notice').textContent=text;ui.notify(text);}
 function beginWallPlacement(){
@@ -82,7 +82,7 @@ function closeHTML(){
  $('modal').classList.add('hidden');field.input.enabled=true;if(resumeAfterHTML&&model.phase==='paused')model.togglePause();resumeAfterHTML=false;update();document.querySelector('canvas')?.focus();
 }
 function stage(n:number){
- if(n<1||n>10)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
+ if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
  save.resumeStage=n;save.started=true;writeSave(save);
  model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
@@ -109,7 +109,7 @@ function settings(){
  $('setting-sfx').onchange=()=>{save.sfx=($('setting-sfx') as HTMLInputElement).checked;sound.sfx=save.sfx;writeSave(save);audioControls.refresh();};
  $('setting-music').onchange=()=>{save.music=($('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(save.music);writeSave(save);audioControls.refresh();};
 }
-function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 10단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
+function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
  sound.resume();sound.play('ui');
  if(field.mode.kind==='wall'&&!['wall-confirm','wall-cancel','wall','pause'].includes(key))leaveWallPlacement();
@@ -151,7 +151,7 @@ function action(key:string){
   case 'settings':settings();break;
   case 'credits':credits();break;
   case 'retry':stage(model.level.id);break;
-  case 'next':if(model.phase==='won'&&model.level.id<10)stage(model.level.id+1);break;
+  case 'next':if(model.phase==='won'&&model.level.id<FINAL_STAGE)stage(model.level.id+1);break;
  }
  field.flush();update();
 }

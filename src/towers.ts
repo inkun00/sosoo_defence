@@ -24,7 +24,7 @@ export const TOWER_RANGE=174,LONG_TOWER_RANGE=232;
 // Wallet-based selection favors easy basic questions and advanced borrowing.
 export interface PurchaseVariation{round:number;lastBefore?:number;lastCost?:number;}
 export function towerPriceBand(type:TowerType,stage:number){
- stage=Math.max(1,Math.min(10,Math.floor(stage)));
+ stage=Math.max(1,Math.min(11,Math.floor(stage)));
  const step=stage===1?100:type.grade<=2?10:1;
  let low:number;
  if(type.grade===1){

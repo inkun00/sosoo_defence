@@ -167,6 +167,14 @@
     "sourceBytes": 2412739,
     "bytes": 629354
   },
+  "monster-wizard-v1": {
+    "url": "/assets/dungeon/monster-wizard-v1.6ed49f2fc7c5.webp",
+    "sourceHash": "b00b5c78ae6e91721e03cc1b44da227e71f400445957416d7e08950c806bc2d8",
+    "width": 1254,
+    "height": 1254,
+    "sourceBytes": 2972870,
+    "bytes": 928070
+  },
   "portal-loop-v1": {
     "url": "/assets/dungeon/portal-loop-v1.5627dc9f46f6.webp",
     "sourceHash": "d7891cbce4f625aaa03feaa875a4e559995828a4742d3e03d342adc3927b1d42",

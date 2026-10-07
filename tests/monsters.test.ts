@@ -5,21 +5,21 @@ import {LEVELS} from '../src/levels';
 import {MONSTERS,monsterSize,stageMonsterKinds} from '../src/monsters';
 
 test('단계별 사전 로드는 실제 등장하는 몬스터만 포함한다',()=>{
- for(const level of LEVELS){const m=new Defense(level);for(let i=0;i<level.hp.length;i++)m.spawn();const required=stageMonsterKinds(level);assert.ok(m.enemies.every(e=>required.includes(e.kind)));}
+ for(const level of LEVELS){const m=new Defense(level);for(let i=0;i<level.hp.length;i++)m.spawn();m.spawnBoss();const required=stageMonsterKinds(level);assert.ok(m.enemies.every(e=>required.includes(e.kind)));}
  assert.deepEqual(stageMonsterKinds(LEVELS[0]),['slime']);assert.ok(!stageMonsterKinds(LEVELS[8]).includes('warden'));assert.ok(stageMonsterKinds(LEVELS[9]).includes('warden'));
 });
 
-test('10단계 최강 몬스터의 체력과 크기가 단계마다 커지고 최종 보스를 포함한 6종이 등장한다',()=>{
+test('11단계 최강 몬스터의 체력과 크기가 단계마다 커지고 마법사를 포함한 7종이 등장한다',()=>{
  let hp=0,size=0;const kinds=new Set<string>();
  for(const l of LEVELS){
-  const m=new Defense(l);for(let i=0;i<l.hp.length;i++)m.spawn();
+  const m=new Defense(l);for(let i=0;i<l.hp.length;i++)m.spawn();m.spawnBoss();
   const strongest=m.enemies.reduce((a,b)=>a.max>b.max?a:b);
   assert.ok(strongest.max>hp);hp=strongest.max;
   const nextSize=monsterSize(strongest.kind,l.id);assert.ok(nextSize>=size);size=nextSize;
   m.enemies.forEach(e=>kinds.add(e.kind));
-  assert.equal(m.enemies.length,12);m.spawn();assert.equal(m.enemies.length,12);
+  assert.equal(m.enemies.length,m.enemyCount);m.spawn();m.spawnBoss();assert.equal(m.enemies.length,m.enemyCount);
  }
- assert.equal(kinds.size,6);assert.ok(size>MONSTERS.slime.size*2.5);
+ assert.equal(kinds.size,7);assert.ok(size>MONSTERS.slime.size*2.5);
 });
 test('거대 보스도 큰 공격을 거부하며 실제 유효 타격으로만 정확히 0이 된다',()=>{
  const m=new Defense(LEVELS[9]);for(let i=0;i<12;i++)m.spawn();
