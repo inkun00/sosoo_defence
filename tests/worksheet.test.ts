@@ -48,10 +48,12 @@ test('저장이 실패하면 지급도 완료 처리도 하지 않으며 다시 
 test('레벨 확률은 합계 100이고 고레벨일수록 감소하며 30종 모두 뽑힐 수 있다',()=>{
  assert.equal(HERO_LEVEL_CHANCES.reduce((a,b)=>a+b,0),100);let cumulative=0;const found=new Set<string>();for(let lv=1;lv<=10;lv++){if(lv>1)assert.ok(HERO_LEVEL_CHANCES[lv-1]<HERO_LEVEL_CHANCES[lv-2]);const midpoint=(cumulative+HERO_LEVEL_CHANCES[lv-1]/2)/100;for(let v=0;v<3;v++){let calls=0;const h=drawWorksheetHero(()=>calls++===0?midpoint:(v+.1)/3);assert.equal(h.level,lv);found.add(h.id);}cumulative+=HERO_LEVEL_CHANCES[lv-1];}assert.equal(found.size,30);
 });
-test('출력은 10문항씩 두 쪽에 암호 지도를 포함하며 암호 정답을 인쇄하지 않는다',()=>{
+test('출력은 수식 20문항과 암호 지도를 한 쪽에 포함하며 암호 정답을 인쇄하지 않는다',()=>{
  const s={...generateWorksheet(loadLearning(),4,'print-test',1700000000000,rng()),codeHash:'a'.repeat(64)},html=worksheetPages(s),pages=html.split('<section class="ws-sheet"').slice(1);
- assert.equal(pages.length,2);for(const [i,page] of pages.entries()){assert.equal((page.match(/data-question=/g)||[]).length,10);assert.ok(page.includes((i+1)+' / 2'));}
- assert.equal((html.match(/data-question=/g)||[]).length,20);for(const d of s.decoder)assert.ok(html.includes('<strong>'+d.rune+'</strong>'));
+ assert.equal(pages.length,1);assert.ok(pages[0].includes('1 / 1'));
+ assert.equal((html.match(/data-question=/g)||[]).length,20);assert.equal((html.match(/class="ws-equation"/g)||[]).length,20);
+ for(const question of html.matchAll(/<article\b[^>]*>(.*?)<\/article>/g)){assert.ok(!question[1].includes('<p>'));assert.ok(!/코인|타워|체력|성벽|얼마/.test(question[1]));}
+ assert.equal((html.match(/<i>→<\/i><strong>/g)||[]).length,s.decoder.length);
  assert.equal((html.match(/class="ws-cipher-group"/g)||[]).length,6);assert.ok(!html.includes(worksheetCode(s)));assert.ok(html.includes('20번'));assert.ok(html.includes('알파벳'));
 });
 test('손상된 학습지 하나를 제외하고 기존 수집 목록과 다른 학습지를 보존한다',async()=>{const a=await getOrCreateWorksheet(4,true),b=await getOrCreateWorksheet(4,true);await redeemWorksheet(b.id,worksheetCode(b),()=>0);const raw=loadWorkbook();(raw.sheets[0].decoder as unknown[])[0]=null;cache.set('decimal-workbook-v1',JSON.stringify(raw));assert.equal(loadWorkbook().sheets.length,1);assert.equal(loadWorkbook().collection.length,1);assert.equal(loadWorkbook().sheets[0].id,b.id);const invalid={...b,questions:b.questions.map((q,i)=>i? q:{...q,operation:'x',kind:null})};assert.equal(validWorksheet(invalid as typeof b),false);assert.ok(a.id!==b.id);});
