@@ -1,0 +1,14 @@
+Generated with the built-in OpenAI imagegen tool on 2026-10-07.
+Source: exec-3ff5209d-9445-4920-bcac-c260cbb73d07.png
+Original transparent PNG retained. Delivery WebP trims transparent margins,
+resizes to 1200 pixels wide and preserves alpha. No third-party artwork used.
+
+Use case: stylized-concept
+Asset type: transparent raster title wordmark for a Korean fantasy dungeon tower-defense game.
+Primary request: Create a polished fantasy game title image replacing plain font text on a dark castle and fire background.
+Text (verbatim): "소수 디펜스"
+Render the exact Korean Hangul, one horizontal line: 소 수, a clear word space, 디 펜 스. No other text.
+Style: bold sculpted Korean lettering with readable complete Hangul syllables, beveled antique gold faces, dark bronze dimensional edges, fine subtle stone-metal texture, pointed fantasy serif-like terminals. Small warm ember highlights and restrained flame accents integrated at the lower edges of the letters. Heroic and magical, suitable for a children's fantasy game.
+Composition: entire wordmark centered horizontally, broad and low, fills about 88% of a wide 3:1 canvas, tight transparent margins. Every letter and shadow entirely inside the canvas. Designed to remain clearly readable when displayed at 400 pixels wide.
+Palette and lighting: ivory gold highlights, antique gold, bronze and dark charcoal edges; warm fire rim lighting. Strong silhouette over a navy dungeon backdrop.
+Constraints: genuinely transparent background with alpha, isolated finished lettering only. No rectangular plaque, no background scenery, no characters, no English subtitle, no tagline, no watermark. Do not cover the Hangul counters or strokes with decorations.

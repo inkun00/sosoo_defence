@@ -239,6 +239,14 @@
     "sourceBytes": 1826582,
     "bytes": 134258
   },
+  "title-wordmark-v1": {
+    "url": "/assets/dungeon/title-wordmark-v1.5bb3d9de5342.webp",
+    "sourceHash": "45226f4580a7670573b037ecc98e12c6897a1424009bedc7380657414caa214e",
+    "width": 1200,
+    "height": 297,
+    "sourceBytes": 1648248,
+    "bytes": 159700
+  },
   "torch-loop-v1": {
     "url": "/assets/dungeon/torch-loop-v1.825a08219ae5.webp",
     "sourceHash": "bc4e9c43d326b06efa488421ee07891da03e2d9cc6f9228ed7bbd74ba2530b92",

@@ -140,3 +140,9 @@ Prompt and reference details: licenses/wall-collapse-v1-prompt.txt
 Three durability appearances, nine animated collapse frames. Source PNG retained;
 compressed alpha WebP served only in adventure. Impulse, damped spring response,
 gravity, debris bounce, dust, camera impact and two original sound effects run locally.
+
+FANTASY KOREAN TITLE WORDMARK v1 (2026-10-07)
+Original transparent Korean title artwork generated with built-in OpenAI imagegen.
+assets/dungeon/title-wordmark-v1.png
+Exact lettering: 소수 디펜스. Prompt: licenses/title-wordmark-v1-prompt.txt
+Source PNG retained; alpha WebP with trimmed margins served on the title screen.
