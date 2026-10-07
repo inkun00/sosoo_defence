@@ -27,6 +27,7 @@ export function registerDungeon(scene:Phaser.Scene){
  cells(scene,'terrain',2,2,['floor','path','floor-alt','path-alt']);
  cells(scene,'ui',2,2,['panel','button','active','disabled']);
  cells(scene,'props',3,3,['rock','wall','base','portal','brick','torch','crate','plant','rubble']);
+ if(scene.textures.exists('dungeon-wall-collapse-v1'))cells(scene,'wall-collapse-v1',4,3,['wall-0','wall-1','wall-2',...Array.from({length:9},(_,i)=>'break-'+i)]);
  cells(scene,'icons',4,4,['coin','heart','star','shield','menu','pause','play','close','hammer','book','sound','speed','shot-basic','shot-slow','shot-stun','shot-range']);
  cells(scene,'turret-parts-v1',3,2,['base','head-basic','head-slow','head-stun','head-range','muzzle-flash']);
  for(const sheet of ['a','b'])cells(scene,'tower-heads-'+sheet+'-v1',3,2,TOWERS.filter(t=>t.sheet===sheet).sort((a,b)=>a.frame-b.frame).map(t=>t.id));

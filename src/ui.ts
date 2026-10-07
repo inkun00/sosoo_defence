@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {Defense,Event as BattleEvent} from './model';
+import {Defense,Event as BattleEvent,WALL_DURABILITY} from './model';
 import {Effect,EFFECTS,LEVELS} from './levels';
 import {decimal,numberText,FusionOperation} from './math';
 import {Save} from './save';
@@ -68,7 +68,7 @@ export class GameUI extends Phaser.Scene{
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
   const shopSig=[s.towerTypeId,s.shopPage,s.mode.kind,m.money,m.level.id,m.phase,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length].join('|');
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
-  const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
+  const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.walls.map(w=>`${w.id}:${w.durability}`),m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
   const popupSig=[s.panel,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level:'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
   if(force||popupSig!==this.signatures[2]){this.signatures[2]=popupSig;this.drawPopup();}
@@ -115,16 +115,15 @@ export class GameUI extends Phaser.Scene{
   const board=this.button(this.dock,'calculation',221,736,392,104,'',s.mode.kind!=='wall','button_brown');
   if(s.mode.kind==='wall'){
    board.container.setAlpha(1);
-   this.text(board.container,-171,-31,'성벽 경로 미리보기',18,C.cream).setOrigin(0,.5);
-   this.text(board.container,-171,-5,'┄ 기존 길',15,'#ffca65').setOrigin(0,.5);this.text(board.container,-53,-5,'→ 설치 후 길',15,'#53e5ec').setOrigin(0,.5);
-   const p=m.pendingWall,steps=p?.after?`${p.before.length-1}칸 → ${p.after.length-1}칸 (+${p.extraSteps}칸)`:'빈 칸을 선택하세요';
-   this.fitText(this.text(board.container,-171,23,steps+(p?.enemyRoutes.length?' · 보라: 나온 몬스터':''),15,C.ink).setOrigin(0,.5),344);
+   this.text(board.container,-171,-31,'길 위의 성벽',18,C.cream).setOrigin(0,.5);
+   this.text(board.container,-171,-5,'충돌 1번마다 내구도 1 감소',16,'#ffda92').setOrigin(0,.5);
+   this.fitText(this.text(board.container,-171,23,'새 성벽은 세 번째 충돌에 부서져요.',16,C.ink).setOrigin(0,.5),344);
   }else{
   this.text(board.container,-171,-30,m.level.id<=4?'전투 속 소수  ·  계산 도움말 ▸':'이번 단계의 전략  ·  도움말 ▸',14,'#c0b9aa').setOrigin(0,.5);
   const value=s.equation||m.level.hint;this.fitText(this.text(board.container,-171,11,value,s.equation?24:16,C.ink,344).setOrigin(0,.5),344,54);
   }
   if(s.mode.kind==='wall'){
-   this.fitText(this.text(this.dock,450,707,m.pendingWall?.message||'칸을 눌러 바뀔 길을 확인하세요',19,C.cream,524).setOrigin(0,.5),524,38);
+   this.fitText(this.text(this.dock,450,707,m.pendingWall?.message||'초록색으로 표시된 길 위의 칸을 골라요.',19,C.cream,524).setOrigin(0,.5),524,38);
    this.button(this.dock,'wall-cancel',553,760,190,56,'취소',true,'button_brown',23);
    this.button(this.dock,'wall-confirm',815,760,292,56,'성벽 설치 확정',!!m.pendingWall?.valid,'button_red',23);
   }else if(t){
@@ -133,7 +132,8 @@ export class GameUI extends Phaser.Scene{
    this.button(this.dock,'toggle',643,750,248,58,t.enabled?'▶ 발사 ON':'Ⅱ 발사 OFF',!['won','review','lost'].includes(m.phase),t.enabled?'button_brown':'button_red',25);
    this.button(this.dock,'sell',870,750,184,58,'회수 '+numberText(t.cost),!['won','review','lost'].includes(m.phase),'button_brown',18);
   }else if(s.selectedWall){
-   this.text(this.dock,450,710,'성벽 · 길을 돌아가게 만드는 장애물',21,C.cream).setOrigin(0,.5);
+   const w=m.walls.find(w=>w.x===s.selectedWall!.x&&w.y===s.selectedWall!.y);
+   this.text(this.dock,450,710,`성벽 · 내구도 ${w?.durability??0}/${WALL_DURABILITY} · 충돌하면 반동`,21,C.cream).setOrigin(0,.5);
    this.button(this.dock,'wall-recover',640,750,310,58,'성벽 회수 · 다시 배치',!['won','review','lost'].includes(m.phase),'button_brown',23);
   }else{
    const placing=s.mode.kind==='tower';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 조종할 수 있어요',21,C.cream,520).setOrigin(0,.5);
@@ -188,7 +188,7 @@ export class GameUI extends Phaser.Scene{
   [0,1,2].forEach(i=>{const star=this.add.image(562+i*78,214,'dungeon-icons','star').setDisplaySize(64,64).setAlpha(won&&i<m.stars?1:.24);this.popup.add(star);if(won&&i<m.stars&&!this.reducedMotion)this.tweens.add({targets:star,angle:{from:-20,to:0},scaleX:{from:star.scaleX*.2,to:star.scaleX},scaleY:{from:star.scaleY*.2,to:star.scaleY},delay:200+i*130,duration:450,ease:'Back.easeOut'});});
   this.text(this.popup,640,275,`성 체력 ${m.castle}/5   ·   ${m.kills}마리 방어   ·   유효 타격 ${m.successfulHits}회`,24).setOrigin(.5);
   m.goals.forEach((g,i)=>this.text(this.popup,265,333+i*42,`${g.done?'✓':'○'}  ${g.label}`,22,g.done?'#8bd3a0':'#dfb28e',740));
-  this.text(this.popup,640,523,`벽돌 ${m.bricks.length}개 · 성벽 ${m.inventory.walls}개 보관! 다음 방어 전에 준비해요.`,20,'#f0c583').setOrigin(.5);
+  this.text(this.popup,640,523,`벽돌 ${m.bricks.length}개 · 남은 성벽 ${m.inventory.walls}개 보관! 내구도도 유지돼요.`,20,'#f0c583').setOrigin(.5);
   this.text(this.popup,640,568,won?'방어와 학습 목표를 모두 달성했어요.':review?'패배가 아니에요. ○ 표시된 목표를 연습하면 다음 단계가 열려요.':'타워의 위치와 발사 순서를 바꾸어 같은 웨이브에 다시 도전해요.',21,'#bdb5a9').setOrigin(.5);
   this.button(this.popup,'retry',450,641,284,68,'같은 단계 다시',true,'button_brown',25);
   const final=won&&m.level.id===10;

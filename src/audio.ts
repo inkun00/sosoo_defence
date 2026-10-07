@@ -93,6 +93,8 @@ function effects(type:string):EffectNote[]{
   case 'money':return [tone(86,.18,.055),tone(93,.28,.04,'bell',.09)];
   case 'brick':return [tone(46,.1,.09,'noise'),tone(65,.17,.055,'pluck',.065)];
   case 'wall':return [tone(44,.3,.12,'kick'),...[62,69,74,81].map((n,i)=>tone(n,.45,.045,'bell',i*.085))];
+  case 'wall-impact':return [tone(37,.19,.13,'kick'),tone(48,.12,.09,'noise'),tone(40,.15,.045,'bass',.045)];
+  case 'wall-break':return [tone(32,.32,.14,'kick'),tone(53,.42,.09,'noise'),tone(43,.22,.05,'noise',.08),tone(38,.18,.04,'noise',.19)];
   case 'build':return [tone(48,.15,.09,'noise'),tone(62,.24,.065,'pluck',.08),tone(69,.28,.04,'bell',.16)];
   case 'invalid':return [tone(46,.12,.055,'bass'),tone(43,.14,.05,'bass',.12)];
   case 'leak':return [tone(38,.38,.14,'kick'),tone(50,.4,.055,'sweep',.05)];

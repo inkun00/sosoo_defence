@@ -1,5 +1,5 @@
 import {Level,Effect} from './levels';
-import {Cell,COLS,ROWS,TILE,OX,OY,key,route,world,naturalBlocks} from './path';
+import {Cell,COLS,ROWS,TILE,key,route,world,naturalBlocks} from './path';
 import {stageMap,StageMap} from './maps';
 import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOperation,purchaseCoins,creditMessage,learningValue} from './math';
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
@@ -7,23 +7,27 @@ import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation} from './towers';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
-export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;}
+export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;recoil?:{vx:number;vy:number;remaining:number};wallCooldown?:number;}
 export interface Brick{id:number;value:number;}
-export interface Inventory{bricks:number[];walls:number;}
-export interface WallPreview extends Cell{valid:boolean;message:string;before:Cell[];after:Cell[]|null;extraSteps:number;enemyRoutes:{id:number;from:{x:number;y:number};path:Cell[]}[];}
-export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
+export interface Inventory{bricks:number[];walls:number;wallDurabilities?:number[];}
+export const WALL_DURABILITY=3;
+export interface Wall extends Cell{id:number;durability:number;offsetX:number;offsetY:number;vx:number;vy:number;}
+export interface WallPreview extends Cell{valid:boolean;message:string;}
+export interface WallImpact{wallId:number;enemyId:number;kind:MonsterKind;durability:number;dx:number;dy:number;force:number;}
+export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'wall-impact'|'wall-break'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
 export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
 export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERVAL=8.4;
 export class Defense{
  level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
- towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Cell[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
+ towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Wall[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
  private nextId=1;private randomState=17;private droppedRecipe=0;
  private carriedWalls=0;
+ private storedWallHealth:number[]=[];wallPlacements=0;
  bossDefeated=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
  pendingWall:WallPreview|null=null;
  purchaseVariation:PurchaseVariation={round:0};
- constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
+ constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.storedWallHealth=Array.from({length:inventory.walls},(_,i)=>{const hp=inventory.wallDurabilities?.[i];return hp===1||hp===2?hp:WALL_DURABILITY;});this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  path(blocks=this.blocks,start=this.map.start){return route(blocks,start,this.map.end);}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
  get canChangeDifficulty(){return this.phase==='ready'&&!this.towers.length&&!this.walls.length;}
@@ -32,7 +36,7 @@ export class Defense{
   this.difficulty=difficulty;this.emit({type:'notice',message:`${DIFFICULTIES[difficulty].name} 난이도 · 타워 ${this.balance.towerLimit}개까지 설치할 수 있어요.`});return true;
  }
  towerAvailable(unit:number){return this.towers.length<this.balance.towerLimit&&(unit!==10||this.towers.filter(t=>t.unit===10).length<this.balance.precisionLimit);}
- get inventory():Inventory{return {bricks:this.bricks.map(b=>b.value),walls:this.carriedWalls+this.fusions};}
+ get inventory():Inventory{const health=[...this.storedWallHealth,...this.walls.map(w=>w.durability)];return {bricks:this.bricks.map(b=>b.value),walls:health.length,...(health.some(h=>h<WALL_DURABILITY)?{wallDurabilities:health}:{})};}
  emit(e:Event){this.events.push(e);if(this.events.length>80)this.events.shift();}
  notice(message:string){this.emit({type:'notice',message});return false;}
  random(){this.randomState=(Math.imul(this.randomState,1664525)+1013904223)>>>0;return this.randomState/4294967296;}
@@ -43,15 +47,14 @@ export class Defense{
  reloadFactor(c:Cell){const nearby=this.towers.filter(t=>t!==c&&Math.abs(t.x-c.x)<=1&&Math.abs(t.y-c.y)<=1).length;return 1+Math.min(2,nearby*Math.min(.4,(this.level.id-1)*.05));}
  reloadTime(t:Tower){return towerType(t.typeId)!.cooldown*this.reloadFactor(t);}
  candidate(c:Cell,wall=false):Set<string>|null{
-  if(c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(this.map.start)||key(c)===key(this.map.end)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c)))return null;
+  if(!Number.isInteger(c.x)||!Number.isInteger(c.y)||c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(this.map.start)||key(c)===key(this.map.end)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c))||this.walls.some(w=>key(w)===key(c)))return null;
   if(this.enemies.some(e=>Math.hypot(e.x-world(c).x,e.y-world(c).y)<TILE*.8))return null;
   if(!wall){
    if(this.path()?.some(p=>key(p)===key(c)))return null;
    const b=new Set(this.blocks);b.add(key(c));return b;
   }
-  const b=new Set(this.blocks);b.add(key(c));if(!this.path(b))return null;
-  for(const e of this.enemies){const here={x:Math.floor((e.x-OX)/TILE),y:Math.floor((e.y-OY)/TILE)};if(!this.path(b,here)||!this.path(b,e.path[Math.min(e.next,e.path.length-1)]))return null;}
-  return b;
+  // Barricades occupy the existing road without entering the routing graph.
+  return this.path()?.some(p=>key(p)===key(c))?new Set(this.blocks):null;
  }
  private canPurchase(c:Cell,type:TowerType):boolean{
   if(!this.canBuild)return this.notice('타워는 방어 시작 전에만 설치할 수 있어요. 전투 중에는 발사를 조절해요.');
@@ -89,41 +92,34 @@ export class Defense{
   const b=ids.map(id=>this.bricks.find(b=>b.id===id));if(b.some(b=>!b))return this.notice('벽돌을 다시 골라 주세요.');
   const [a,c,d]=b as Brick[];
   if(!recipe(a.value,c.value,d.value,operation))return this.notice(`왼쪽 두 벽돌의 ${operation==='-'?'차':'합'}이 오른쪽 벽돌과 같아야 해요. 소수점을 맞춰 생각해 보세요.`);
-  this.bricks=this.bricks.filter(b=>!ids.includes(b.id));this.fusions++;
+  this.bricks=this.bricks.filter(b=>!ids.includes(b.id));this.fusions++;this.storedWallHealth.push(WALL_DURABILITY);
   this.emit({type:'wall',message:`${numberText(a.value,this.level.digits)} ${operation==='-'?'−':'+'} ${numberText(c.value,this.level.digits)} = ${numberText(d.value,this.level.digits)} · 성벽 +1`,data:{operation}});return true;
  }
- get wallStock(){return this.carriedWalls+this.fusions-this.walls.length;}
+ get wallStock(){return this.storedWallHealth.length;}
  previewWall(c:Cell):WallPreview{
-  const before=this.path()??[],blocks=this.candidate(c,true);
-  const reason=!['ready','playing','paused'].includes(this.phase)?'방어가 끝났어요. 다음 방어 전에 성벽을 준비해요.':!this.wallStock?'먼저 벽돌을 합성해 성벽을 준비해요.':this.walls.length>=this.balance.wallLimit?`성벽은 ${this.balance.wallLimit}개까지 설치해요. 다른 성벽을 회수해요.`:!blocks?'설치할 수 없어요. 빈 칸을 고르고 몬스터가 불꽃까지 갈 길을 남겨 주세요.':'';
-  const after=reason?null:this.path(blocks!),enemyRoutes=after?this.enemies.map(e=>({id:e.id,from:{x:e.x,y:e.y},path:this.path(blocks!,e.path[Math.min(e.next,e.path.length-1)])!})):[];
-  const extraSteps=after?after.length-before.length:0;
-  return {...c,valid:!!after,message:reason||(extraSteps>0?`길이 ${extraSteps}칸 더 길어져요. 확인 후 성벽을 설치해요.`:'길의 길이는 같아요. 바뀔 경로를 확인하고 설치해요.'),before,after,extraSteps,enemyRoutes};
+  const reason=!['ready','playing','paused'].includes(this.phase)?'방어가 끝났어요. 다음 방어 전에 성벽을 준비해요.':!this.wallStock?'먼저 벽돌을 합성해 성벽을 준비해요.':this.walls.length>=this.balance.wallLimit?`성벽은 ${this.balance.wallLimit}개까지 설치해요. 다른 성벽을 회수해요.`:!this.candidate(c,true)?'몬스터가 없는 길 위의 칸을 골라요. 입구와 불꽃에는 설치할 수 없어요.':'';
+  return {...c,valid:!reason,message:reason||`길 위에 설치 · 내구도 ${this.storedWallHealth[0]}/${WALL_DURABILITY} · 충돌할 때마다 1 감소`};
  }
  requestWall(c:Cell){this.pendingWall=this.previewWall(c);return this.pendingWall.valid;}
  cancelWall(){this.pendingWall=null;}
  confirmWall(){
   const shown=this.pendingWall;if(!shown)return false;const current=this.previewWall(shown);
   if(!current.valid){this.pendingWall=current;return this.notice(current.message);}
-  const paths=(p:WallPreview)=>JSON.stringify([p.before,p.after,p.enemyRoutes]);
-  if(paths(current)!==paths(shown)){this.pendingWall=current;return this.notice('배치나 몬스터 위치가 바뀌었어요. 새 미리보기를 확인하고 다시 확정해요.');}
   if(!this.placeWall({x:shown.x,y:shown.y}))return false;this.pendingWall=null;return true;
  }
  placeWall(c:Cell):boolean{
   if(!['ready','playing','paused'].includes(this.phase))return false;
   if(!this.wallStock)return this.notice('벽돌 세 개를 먼저 합성해 성벽을 얻어요.');
   if(this.walls.length>=this.balance.wallLimit)return this.notice(`성벽은 ${this.balance.wallLimit}개까지 배치해요. 설치한 성벽을 회수해 옮겨 보세요.`);
-  const blocks=this.candidate(c,true);if(!blocks)return this.notice('여기는 성벽을 놓을 수 없어요. 모든 몬스터가 성까지 갈 길을 남겨 주세요.');
-  this.blocks=blocks;this.walls.push(c);
-  for(const e of this.enemies){const anchor=e.path[Math.min(e.next,e.path.length-1)];const p=this.path(blocks,anchor)!;e.path=p;e.next=0;}
-  this.emit({type:'wall',message:'성벽 설치! 몬스터가 새 길을 찾아 돌아가요.'});return true;
+  if(!this.candidate(c,true))return this.notice('성벽은 몬스터가 없는 길 위에만 놓을 수 있어요.');
+  const durability=this.storedWallHealth.shift()!;this.walls.push({...c,id:this.nextId++,durability,offsetX:0,offsetY:0,vx:0,vy:0});this.wallPlacements++;
+  this.emit({type:'wall',message:`성벽 설치! 내구도 ${durability}/${WALL_DURABILITY} · 충돌하면 몬스터가 뒤로 튕겨요.`});return true;
  }
  recoverWall(c:Cell):boolean{
   if(!['ready','playing','paused'].includes(this.phase))return false;
   const index=this.walls.findIndex(w=>key(w)===key(c));if(index<0)return false;
-  this.walls.splice(index,1);this.blocks.delete(key(c));
-  for(const e of this.enemies){const anchor=e.path[Math.min(e.next,e.path.length-1)];e.path=this.path(this.blocks,anchor)!;e.next=0;}
-  this.emit({type:'wall',message:'성벽을 회수했어요. 재고로 돌아온 성벽을 다른 칸에 다시 놓을 수 있어요.'});return true;
+  const [wall]=this.walls.splice(index,1);this.storedWallHealth.push(wall.durability);
+  this.emit({type:'wall',message:`성벽을 회수했어요. 내구도 ${wall.durability}/${WALL_DURABILITY}를 유지해서 다시 설치해요.`});return true;
  }
  spawn(){
   if(this.spawned>=this.level.hp.length)return;
@@ -133,7 +129,7 @@ export class Defense{
  }
  get goals(){return [
   {label:'정확히 0으로 만들어 6마리 이상 방어',done:this.kills>=6},
-  ...(this.level.goal==='wall'||this.level.goal==='both'?[{label:`성벽 ${this.level.requiredFusions??1}개 준비하고 1개 설치`,done:this.carriedWalls+this.fusions>=(this.level.requiredFusions??1)&&this.walls.length>=1}]:[]),
+  ...(this.level.goal==='wall'||this.level.goal==='both'?[{label:`성벽 ${this.level.requiredFusions??1}개 준비하고 1개 설치`,done:this.carriedWalls+this.fusions>=(this.level.requiredFusions??1)&&this.wallPlacements>=1}]:[]),
   ...(this.level.goal==='money'?[{label:'소수 뺄셈 정답으로 타워 2개 이상 구매',done:this.purchaseAnswers>=2}]:[]),
   ...(this.level.id===8?[{label:'1을 0.1 열 개로 바꾸어 빼는 공격 경험',done:this.borrowTenths>=1}]:[]),
   ...(this.level.id===9?[{label:'0.1을 0.01 열 개로 바꾸어 빼는 공격 경험',done:this.borrowHundredths>=1}]:[]),
@@ -159,14 +155,46 @@ export class Defense{
   else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.id>=4?3:1),x:e.x,y:e.y});}
   this.emit({type:'kill',message:`정확히 0! ${e.hits}번 타격`,x:e.x,y:e.y,data:{hits:e.hits,best:minimumHits(e.max,this.level.units),brick:brickDrop}});
  }
+ private collideWall(e:Enemy,w:Wall,dx:number,dy:number,speed:number){
+  // Normal impulse with restitution. Heavier stone creatures recoil less;
+  // wall displacement is a damped spring, independent of decimal combat HP.
+  const mass={slime:1,beetle:1.3,golem:2,crystal:2.6,king:3.2,warden:3.6}[e.kind];
+  const wallMass=12,restitution=.65,relativeSpeed=Math.max(0,speed-w.vx*dx-w.vy*dy);
+  const impulse=(1+restitution)*relativeSpeed/(1/mass+1/wallMass);
+  const reflectedSpeed=Math.min(-speed*.1,speed-impulse/mass);
+  e.recoil={vx:dx*reflectedSpeed,vy:dy*reflectedSpeed,remaining:.6};e.wallCooldown=.75;
+  const force=impulse/wallMass;
+  w.vx+=dx*force;w.vy+=dy*force;w.durability--;
+  const xy=world(w),data:WallImpact={wallId:w.id,enemyId:e.id,kind:e.kind,durability:w.durability,dx,dy,force};
+  this.emit({type:'wall-impact',message:`성벽 충돌 · 내구도 ${w.durability}/${WALL_DURABILITY}`,x:xy.x,y:xy.y,data});
+  if(w.durability===0){this.walls=this.walls.filter(wall=>wall.id!==w.id);this.emit({type:'wall-break',message:'세 번째 충돌! 성벽이 부서졌어요.',x:xy.x,y:xy.y,data});}
+ }
+ private moveWalls(dt:number){
+  // Small substeps keep the spring stable on slow tablets and 10 fps frames.
+  const count=Math.max(1,Math.ceil(dt*120)),h=dt/count;
+  for(const w of this.walls)for(let i=0;i<count;i++){
+   w.vx+=(-60*w.offsetX-10*w.vx)*h;w.vy+=(-60*w.offsetY-10*w.vy)*h;
+   w.offsetX+=w.vx*h;w.offsetY+=w.vy*h;
+  }
+ }
  step(dt:number){
   if(this.phase!=='playing')return;dt=Math.max(0,Math.min(dt,.1));this.elapsed=Math.min(this.duration,this.elapsed+dt);
+  this.moveWalls(dt);
   if(this.spawned<this.level.hp.length&&this.elapsed+1e-9>=FIRST_SPAWN_DELAY+this.spawned*SPAWN_INTERVAL)this.spawn();
   for(const e of this.enemies){
    if(e.hp===0)continue;e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt);
+   e.wallCooldown=Math.max(0,(e.wallCooldown??0)-dt);
+   if(e.recoil&&e.recoil.remaining>0){const h=Math.min(dt,e.recoil.remaining),friction=1.2,decay=Math.exp(-friction*h);e.x+=e.recoil.vx*(1-decay)/friction;e.y+=e.recoil.vy*(1-decay)/friction;e.recoil.vx*=decay;e.recoil.vy*=decay;e.recoil.remaining=Math.max(0,e.recoil.remaining-dt);continue;}
    if(e.stun)continue;
-   let travel=this.balance.speed*MONSTERS[e.kind].speed*(e.slow?.6:1)*dt;
+   const next=e.path[e.next],approachingWall=next&&this.walls.some(w=>key(w)===key(next)),target=next?world(next):null;
+   // Creatures accelerate into a short ram; the collision reflects that
+   // actual approach velocity rather than creating extra bounce energy.
+   const charge=approachingWall&&target?1+.8*Math.max(0,Math.min(1,(TILE-Math.hypot(target.x-e.x,target.y-e.y))/(TILE*.6))):1;
+   const speed=this.balance.speed*MONSTERS[e.kind].speed*(e.slow?.6:1)*charge;
+   let travel=speed*dt;
    while(travel>0&&e.next<e.path.length){const target=world(e.path[e.next]),dx=target.x-e.x,dy=target.y-e.y,d=Math.hypot(dx,dy);
+    const wall=this.walls.find(w=>key(w)===key(e.path[e.next])),contact=TILE*.4;
+    if(wall&&d-travel<=contact){const distance=Math.max(0,d-contact),nx=d?dx/d:1,ny=d?dy/d:0;e.x+=nx*distance;e.y+=ny*distance;travel=0;if(!e.wallCooldown)this.collideWall(e,wall,nx,ny,speed);break;}
     if(d<=travel){e.x=target.x;e.y=target.y;e.next++;travel-=d;}else{e.x+=dx/d*travel;e.y+=dy/d*travel;travel=0;}
    }
    if(e.next>=e.path.length){e.hp=0;this.castle=Math.max(0,this.castle-1);this.leaks++;this.emit({type:'leak',message:`몬스터가 성에 도착했어요. 성 체력 ${this.castle}/${CASTLE_HEALTH} · 다음 몬스터는 정확히 0으로!`,x:e.x,y:e.y});if(this.castle===0)break;}

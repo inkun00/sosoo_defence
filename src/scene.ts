@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import {Defense,Event as GameEvent,Enemy,WallPreview} from './model';
+import {Defense,Event as GameEvent,Enemy,WallPreview,WallImpact,WALL_DURABILITY} from './model';
 import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,key} from './path';
 import {Effect,EFFECTS} from './levels';
 import {decimal} from './math';
@@ -19,6 +19,7 @@ export class Field extends Phaser.Scene{
  private floor!:Phaser.GameObjects.Container;private overlay!:Phaser.GameObjects.Graphics;private visuals=new Map<number,{kind:MonsterKind;sprite:Phaser.GameObjects.Sprite;text:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;bar:Phaser.GameObjects.Graphics}>();
  private towersView?:Phaser.GameObjects.Container;private layoutSignature='';private heartbeat=0;private readyFlag=false;selected?:number;
  private towerArt=new Map<number,TowerVisual>();private knownTowerIds=new Set<number>();private cursor:Cell={x:1,y:3};
+ private wallArt=new Map<number,{image:Phaser.GameObjects.Image;health:Phaser.GameObjects.Text}>();
  selectedWall?:Cell;onWallSelect:(c:Cell)=>void=()=>{};
  onWallPreview:(c:Cell)=>void=()=>{};
  private wallGhost?:Phaser.GameObjects.Image;private wallGhostLabel?:Phaser.GameObjects.Text;
@@ -29,7 +30,7 @@ export class Field extends Phaser.Scene{
  private ambient?:AmbientProps;
  private loadingMonsters=new Set<MonsterKind>();private monsterRetry=new Map<MonsterKind,number>();
  constructor(model:Defense){super('field');this.model=model;}
- preload(){loadDungeon(this,stageMonsterKinds(this.model.level));}
+ preload(){loadDungeon(this,stageMonsterKinds(this.model.level));this.load.image('dungeon-wall-collapse-v1',artURL('wall-collapse-v1'));}
  create(){
   this.readyFlag=true;this.cameras.main.setViewport(FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT);registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
   this.ambient=new AmbientProps(this,this.reducedMotion);
@@ -37,6 +38,7 @@ export class Field extends Phaser.Scene{
   for(const kind of MONSTER_KINDS)this.monsterAnimations(kind);
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat','shockwave'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
+  this.anims.create({key:'wall-collapse',frames:Array.from({length:9},(_,i)=>({key:'dungeon-wall-collapse-v1',frame:'break-'+i})),frameRate:15,repeat:0});
   this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>{if(!this.inField(pointer)){if(this.mode.kind==='wall'&&this.model.pendingWall)return;this.clearWallPreview();return;}const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.hover(cellAt(p.x,p.y));});
   this.input.on('pointerdown',(pointer:Phaser.Input.Pointer)=>{
    if(!this.inField(pointer))return;const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.actCell(cellAt(p.x,p.y));
@@ -65,7 +67,7 @@ export class Field extends Phaser.Scene{
  }
  drawTerrain(){
   if(this.readyFlag)for(const kind of stageMonsterKinds(this.model.level))this.ensureMonster(kind);
-  if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();const road=this.model.path()??[],roadSet=new Set(road.map(key)),map=this.model.map;
+  if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();for(const v of this.wallArt.values()){v.image.destroy();v.health.destroy();}this.wallArt.clear();const road=this.model.path()??[],roadSet=new Set(road.map(key)),map=this.model.map;
   const backdrop=this.add.graphics();backdrop.fillStyle(0x17191d).fillRoundedRect(9,24,970,558,12);backdrop.lineStyle(2,0x4c4840).strokeRoundedRect(12,27,964,552,10);this.floor.add(backdrop);
   this.floor.add(this.label(FIELD_WIDTH/2,12,`${String(map.id).padStart(2,'0')} · ${map.name}`,16,'#ded0b8'));
   const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(.38).setTint(map.floorTint);this.floor.add(stoneFloor);
@@ -79,7 +81,8 @@ export class Field extends Phaser.Scene{
   // Quiet grid guides appear only while placing; the path is marked for learning clarity.
   const lights=this.add.graphics();for(const c of [{x:1,y:0},{x:12,y:8}]){const xy=world(c);for(let r=6;r>=1;r--)lights.fillStyle(0xffa942,.008*(7-r)).fillCircle(xy.x,xy.y,r*14);this.ambient?.add(this.floor,'torch-'+key(c),'torch',xy.x,xy.y-8,60,66);}this.floor.add(lights);
   const dots=this.add.graphics().fillStyle(0xe1be82,.45);road.forEach((c,i)=>{if(i%2)dots.fillCircle(world(c).x,world(c).y,2);});this.floor.add(dots);
-  this.model.walls.forEach(w=>{const xy=world(w);props(xy.x,xy.y-5,'wall',76,72);});
+  this.model.walls.forEach(w=>{const xy=world(w),image=this.add.image(xy.x,xy.y-8,'dungeon-wall-collapse-v1','wall-'+(WALL_DURABILITY-w.durability)).setDisplaySize(94,88).setDepth(4.1);
+   const health=this.label(xy.x,xy.y+34,'◆'.repeat(w.durability)+'◇'.repeat(WALL_DURABILITY-w.durability),14,'#ffda92').setBackgroundColor('#13151bea').setDepth(7.2);this.wallArt.set(w.id,{image,health});});
   const start=world(map.start),end=world(map.end);this.ambient?.add(this.floor,'entrance','portal',start.x,start.y-8,96,104);this.floor.add(this.label(start.x,start.y+36,'입구',14,'#d4bcef'));
   const glow=this.add.graphics();for(let r=5;r>=1;r--)glow.fillStyle(0xffac52,.015*(6-r)).fillCircle(end.x,end.y,r*14);this.floor.add(glow);
   this.ambient?.add(this.floor,'guardian','flame',end.x,end.y-14,128,116);this.floor.add(this.label(end.x,end.y+44,'수호의 불꽃',15,'#ffdd9c'));
@@ -96,7 +99,7 @@ export class Field extends Phaser.Scene{
   }
   this.layoutSignature=this.signature();if(this.mode.kind==='wall'&&this.model.pendingWall)this.hover(this.model.pendingWall);else if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
  }
- private signature(){return this.model.towers.map(t=>`${t.id}${t.enabled}`).join(',')+'w'+this.model.walls.map(key).join(';');}
+ private signature(){return this.model.towers.map(t=>`${t.id}${t.enabled}`).join(',')+'w'+this.model.walls.map(w=>w.id).join(';');}
  hover(c:Cell){
   this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);
   // Show range and optional heat while choosing a legal location.
@@ -109,16 +112,11 @@ export class Field extends Phaser.Scene{
  }
  clearWallPreview(){this.overlay?.clear();this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);}
  private drawWallPreview(preview:WallPreview){
-  const g=this.overlay,old=new Set(preview.before.map(key));
-  for(let i=1;i<preview.before.length;i++){const a=world(preview.before[i-1]),b=world(preview.before[i]);g.lineStyle(3,0xffca65,.65);for(let t=0;t<1;t+=.25)g.lineBetween(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.x+(b.x-a.x)*(t+.13),a.y+(b.y-a.y)*(t+.13));}
-  const trace=(path:Cell[],color:number,width:number,from?:{x:number;y:number})=>{
-   if(from&&path.length){const p=world(path[0]);g.lineStyle(width,color,.9).lineBetween(from.x,from.y,p.x,p.y);}
-   for(let i=1;i<path.length;i++){const a=world(path[i-1]),b=world(path[i]);g.lineStyle(width,color,.95).lineBetween(a.x,a.y,b.x,b.y);if(i%3===0){const dx=(b.x-a.x)/TILE,dy=(b.y-a.y)/TILE;g.lineBetween(b.x-dx*12+dy*7,b.y-dy*12-dx*7,b.x,b.y);g.lineBetween(b.x-dx*12-dy*7,b.y-dy*12+dx*7,b.x,b.y);}}
-  };
-  if(preview.after){for(const c of preview.after)if(!old.has(key(c))){const p=world(c);g.fillStyle(0x53e5ec,.23).fillRect(p.x-28,p.y-28,56,56);}trace(preview.after,0x53e5ec,4);for(const route of preview.enemyRoutes)trace(route.path,0xdca8ff,2,route.from);}
+  const g=this.overlay;
+  for(const c of this.model.path()??[])if(this.model.candidate(c,true)){const p=world(c);g.fillStyle(0x91efad,.13).fillRect(p.x-25,p.y-25,50,50);}
   const p=world(preview);g.lineStyle(3,preview.valid?0x91efad:0xff675d).strokeRoundedRect(p.x-27,p.y-27,54,54,8);
-  this.wallGhost??=this.add.image(0,0,'dungeon-props','wall').setDisplaySize(76,72).setDepth(9);
-  this.wallGhost.setPosition(p.x,p.y-5).setAlpha(.65).setTint(preview.valid?0xb8ffd0:0xff7777).setVisible(true);
+  this.wallGhost??=this.add.image(0,0,'dungeon-wall-collapse-v1','wall-0').setDisplaySize(94,88).setDepth(9);
+  this.wallGhost.setPosition(p.x,p.y-8).setAlpha(.65).setTint(preview.valid?0xb8ffd0:0xff7777).setVisible(true);
   this.wallGhostLabel??=this.label(0,0,'',14).setBackgroundColor('#11141de8').setDepth(10);
   this.wallGhostLabel.setPosition(p.x,Math.max(30,p.y-47)).setText(preview.valid?'예상 성벽':'설치 불가').setVisible(true);
  }
@@ -144,7 +142,11 @@ export class Field extends Phaser.Scene{
    const bar=this.add.graphics().setDepth(6);v={kind:e.kind,sprite,text,name,bar};this.visuals.set(e.id,v);
   }
   const texture='dungeon-'+MONSTERS[renderedKind].atlas;if(v.sprite.texture.key!==texture)v.sprite.stop().setTexture(texture,renderedKind+'-0').setDisplaySize(size,size);
-  v.sprite.setPosition(e.x,sy);const anim=renderedKind+'-'+(e.stun||e.slow?'frozen':e.hitFlash?'hurt':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);
+  const bouncing=(e.recoil?.remaining??0)>0,pose=!this.reducedMotion&&bouncing?Math.sin(Math.PI*(1-e.recoil!.remaining/.6))*12:0;
+  const normal=bouncing?Math.hypot(e.recoil!.vx,e.recoil!.vy):0;
+  v.sprite.setPosition(e.x+(normal?e.recoil!.vx/normal*pose:0),sy+(normal?e.recoil!.vy/normal*pose:0));
+  v.sprite.setRotation(!this.reducedMotion&&bouncing?Phaser.Math.Clamp(e.recoil!.vx/900,-.12,.12):0);
+  const anim=renderedKind+'-'+(bouncing?'hurt':e.stun||e.slow?'frozen':e.hitFlash?'hurt':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);
   v.text.setPosition(tx,ty).setText(decimal(e.hp,this.model.level.digits));v.name.setPosition(tx,ty-27);
   const width=art.boss?100:Math.max(44,size*.38),by=ty+22;v.bar.clear();v.bar.fillStyle(0x090a10,.9).fillRoundedRect(tx-width/2,by,width,6,2);v.bar.fillStyle(e.stun?0xb9a4dc:art.color).fillRoundedRect(tx-width/2,by,width*e.hp/e.max,6,2);
  }
@@ -165,6 +167,46 @@ export class Field extends Phaser.Scene{
    const strength=t.unit>=1000?7:t.unit>=100?4:2.5;
    v.head.y=!this.reducedMotion&&v.recoilTime>0?strength*(elapsed<.055?elapsed/.055:1-(elapsed-.055)/.165):0;
   }
+ }
+ private animateWalls(){
+  for(const w of this.model.walls){const view=this.wallArt.get(w.id);if(!view)continue;const p=world(w);
+   view.image.setFrame('wall-'+(WALL_DURABILITY-w.durability)).setPosition(p.x+(this.reducedMotion?0:w.offsetX*2.5),p.y-8+(this.reducedMotion?0:w.offsetY*2.5));
+   view.image.setRotation(this.reducedMotion?0:Phaser.Math.Clamp(w.offsetX*.025,-.1,.1));
+   view.health.setText('◆'.repeat(w.durability)+'◇'.repeat(WALL_DURABILITY-w.durability));
+  }
+ }
+ private wallImpact(ev:GameEvent){
+  const d=ev.data as WallImpact,x=ev.x!,y=ev.y!;
+  // Keep durability feedback away from the monster's decimal HP and equations.
+  const below=y+88<FIELD_HEIGHT,labelX=below?x:Math.min(FIELD_WIDTH-70,x+64),labelY=below?y+68:y+8;
+  const label=this.trackEffect(this.label(labelX,labelY,d.durability?`충돌! ${d.durability}/${WALL_DURABILITY}`:'성벽 파괴!',17,d.durability?'#ffde9b':'#ffb494').setBackgroundColor('#13151deb').setDepth(10));
+  this.tweens.add({targets:label,y:label.y+(this.reducedMotion?0:8),alpha:0,delay:350,duration:550,onComplete:()=>label.destroy()});
+  if(this.reducedMotion)return;
+  const ring=this.effect('dungeon-fx-utility-v1','fx-shockwave',x-d.dx*15,y-d.dy*15,74,0,0xe8d6b3);ring?.setAlpha(.5);
+  const view=this.visuals.get(d.enemyId);if(view){const sprite=view.sprite,size=monsterSize(d.kind,this.model.level.id);this.tweens.killTweensOf(sprite);sprite.setDisplaySize(size,size);
+   this.tweens.add({targets:sprite,scaleX:sprite.scaleX*(Math.abs(d.dx)>.5?.86:1.1),scaleY:sprite.scaleY*(Math.abs(d.dy)>.5?.86:1.1),duration:65,yoyo:true,ease:'Quad.easeOut'});
+  }
+  this.wallDebris(x-d.dx*18,y-d.dy*18,d.dx,d.dy);
+  if(this.time.now-this.lastShakeTime>160&&this.model.phase==='playing'){this.lastShakeTime=this.time.now;this.cameras.main.shake(d.durability?65:120,d.durability ? .0011 : .0022,false);}
+ }
+ private wallDebris(x:number,y:number,dx:number,dy:number){
+  for(let i=0;i<6&&this.battleEffects.size<160;i++){
+   const piece=this.trackEffect(this.add.image(x,y-12,'dungeon-fx-utility-v1','particle-stone').setDisplaySize(6+Math.random()*7,6+Math.random()*7).setDepth(5.4));
+   const vx=dx*(35+Math.random()*45)+(Math.random()-.5)*95,vy=-70-Math.random()*65+dy*20,g=500,ground=y+22;
+   const land=(-vy+Math.sqrt(vy*vy+2*g*34))/g,clock={t:0},spin=(Math.random()-.5)*360;
+   piece.once('destroy',()=>this.tweens.killTweensOf(clock));
+   this.tweens.add({targets:clock,t:.85,duration:850,onUpdate:()=>{if(!piece.active)return;const t=clock.t,after=Math.max(0,t-land),bounce=-.3*(vy+g*land);
+    piece.x=x+vx*(t<=land?t:land+(1-Math.exp(-5*after))/5);
+    piece.y=t<=land?y-12+vy*t+g*t*t/2:Math.min(ground,ground+bounce*after+g*after*after/2);
+    piece.setAngle(spin*t).setAlpha(Math.min(1,(.85-t)/.25));
+   },onComplete:()=>piece.destroy()});
+  }
+ }
+ private breakWall(ev:GameEvent){
+  const x=ev.x!,y=ev.y!;
+  if(this.reducedMotion){const rubble=this.trackEffect(this.add.image(x,y-8,'dungeon-wall-collapse-v1','break-7').setDisplaySize(94,88).setDepth(4.4));this.tweens.add({targets:rubble,alpha:0,delay:350,duration:300,onComplete:()=>rubble.destroy()});return;}
+  const collapse=this.trackEffect(this.add.sprite(x,y-8,'dungeon-wall-collapse-v1','break-0').setName('wall-collapse').setDisplaySize(94,88).setDepth(4.4));
+  collapse.once('animationcomplete',()=>this.tweens.add({targets:collapse,alpha:0,duration:250,onComplete:()=>collapse.destroy()}));collapse.play('wall-collapse');
  }
  private trackEffect<T extends Phaser.GameObjects.GameObject>(object:T):T{
   this.battleEffects.add(object);object.once('destroy',()=>this.battleEffects.delete(object));return object;
@@ -237,7 +279,7 @@ export class Field extends Phaser.Scene{
   },onComplete:()=>{shot.destroy();this.impact(d,point.x,point.y,sequence);}});
  }
  flush(){
-  const events=this.model.events.splice(0);for(const ev of events){this.onEvent(ev);if(ev.type==='shot')this.fireShot(ev);
+  const events=this.model.events.splice(0);for(const ev of events){this.onEvent(ev);if(ev.type==='shot')this.fireShot(ev);else if(ev.type==='wall-impact')this.wallImpact(ev);else if(ev.type==='wall-break')this.breakWall(ev);
    if(['hit','invalid','kill'].includes(ev.type)&&ev.x!==undefined){const data=ev.data as {damage?:number;after?:number}|undefined;const value=ev.type==='hit'?(hitEquationsEnabled()||data?.after===0?'':`− ${decimal(data!.damage!,this.model.level.digits)}`):ev.type==='kill'?'정확히 0!':ev.message;if(value){const t=this.label(ev.x,ev.y!+36,value,ev.type==='invalid'?13:19,ev.type==='invalid'?'#ffb494':'#ffe3a0').setDepth(10).setBackgroundColor('#13151dea');this.tweens.add({targets:t,y:ev.y!+18,alpha:0,duration:1600,ease:'Cubic.easeOut',onComplete:()=>t.destroy()});}}
   }
  }
@@ -248,7 +290,7 @@ export class Field extends Phaser.Scene{
   this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
   for(const v of this.visuals.values()){if(paused)v.sprite.anims.pause();else if(v.sprite.anims.isPaused)v.sprite.anims.resume();}
   const live=new Set(this.model.enemies.map(e=>e.id));for(const [id,v]of this.visuals){if(live.has(id))continue;v.text.destroy();v.name.destroy();v.bar.destroy();this.trackEffect(v.sprite);v.sprite.play((this.anims.exists(v.kind+'-fall')?v.kind:'slime')+'-fall');this.tweens.add({targets:v.sprite,alpha:0,duration:550,onComplete:()=>v.sprite.destroy()});this.visuals.delete(id);}
-  if(this.layoutSignature!==this.signature())this.drawTerrain();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(this.heartbeat>=120){this.heartbeat=0;this.onChange();}
+  if(this.layoutSignature!==this.signature())this.drawTerrain();this.animateWalls();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(this.heartbeat>=120){this.heartbeat=0;this.onChange();}
  }
 }
 

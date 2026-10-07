@@ -278,5 +278,13 @@
     "height": 1254,
     "sourceBytes": 1658189,
     "bytes": 149360
+  },
+  "wall-collapse-v1": {
+    "url": "/assets/dungeon/wall-collapse-v1.faed079b0a9c.webp",
+    "sourceHash": "b75d4bbffa048324a2957b4029bc788735e0f519163293d42c40ecbe1ff6a2df",
+    "width": 1448,
+    "height": 1086,
+    "sourceBytes": 1595456,
+    "bytes": 423646
   }
 }

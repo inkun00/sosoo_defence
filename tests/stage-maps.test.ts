@@ -23,9 +23,9 @@ test('10개 단계는 서로 다른 바위 배치·경로와 맵 이름을 사�
 test('재도전은 같은 맵을 복원하고 타워·성벽 배치는 다른 단계의 바위를 바꾸지 않는다',()=>{
  for(const level of LEVELS){
   const m=new Defense(level,{bricks:[],walls:1}),original=naturalBlocks(level.id),road=m.path()!;
-  const wall=road.find(c=>m.candidate(c,true)&&m.path(m.candidate(c,true)!)!.length>road.length);
-  assert.ok(wall,`단계 ${level.id} 우회 성벽`);assert.ok(m.placeWall(wall));assert.ok(m.path()!.length>road.length);
-  const retry=new Defense(level);assert.deepEqual(retry.blocks,original);assert.notDeepEqual(m.blocks,retry.blocks);
+  const wall=road.find(c=>m.candidate(c,true));
+  assert.ok(wall,`단계 ${level.id} 길 위 성벽`);assert.ok(m.placeWall(wall));assert.deepEqual(m.path(),road);
+  const retry=new Defense(level);assert.deepEqual(retry.blocks,original);assert.deepEqual(m.blocks,retry.blocks);
   assert.ok(m.recoverWall(wall));assert.deepEqual(m.blocks,original);
   assert.deepEqual(new Defense(LEVELS[level.id%10]).blocks,naturalBlocks(level.id%10+1));
  }

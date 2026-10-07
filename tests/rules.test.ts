@@ -73,22 +73,19 @@ test('덧셈과 뺄셈 합성을 함께 사용해도 세 재료만 소비하고 
  assert.equal(m.fuse([96,95,94],'-'),false);assert.equal(m.wallStock,2);
  assert.equal(m.placeWall({x:1,y:4}),true);assert.equal(m.goals[1].done,true);
 });
-test('타워는 길 옆에만 설치되고 성벽은 모든 길을 막을 수 없다',()=>{
+test('타워는 길 옆에만, 성벽은 길 위에만 설치되고 우회 경로를 만들지 않는다',()=>{
  const m=new Defense(LEVELS[1]);assert.equal(install(m,{x:1,y:4},100,'basic'),false);
  assert.equal(install(m,{x:1,y:3},100,'basic'),true);assert.ok(m.blocks.has('1,3'));
  m.sellTower(m.towers[0].id);assert.ok(!m.blocks.has('1,3'));
- m.fusions=2;const before=m.path()!.length;
- const road=m.path()!;const options=road.filter(c=>m.candidate(c,true));
- const c=options.find(c=>m.path(m.candidate(c,true)!)!.length>before)!;assert.ok(c);
- assert.equal(m.placeWall(c),true);assert.ok(m.path()!.length>before);
- m.blocks=new Set(Array.from({length:8},(_,y)=>`1,${y}`));
- assert.equal(m.placeWall({x:1,y:8}),false);assert.ok(m.path());
+ const walls=new Defense(LEVELS[1],{bricks:[],walls:2}),road=walls.path()!;
+ assert.equal(walls.placeWall({x:1,y:3}),false);
+ const c=road.find(c=>walls.candidate(c,true))!;assert.ok(c);
+ assert.equal(walls.placeWall(c),true);assert.deepEqual(walls.path(),road);assert.ok(!walls.blocks.has(key(c)));
+ assert.equal(walls.placeWall(c),false);
 });
-test('길 위 몬스터가 갇히는 성벽 배치도 금지한다',()=>{
- const m=new Defense(LEVELS[1]);m.spawn();m.enemies[0].x=world({x:2,y:1}).x;m.enemies[0].y=world({x:2,y:1}).y;
- m.enemies[0].path=[{x:2,y:1}];m.enemies[0].next=0;
- for(const c of [{x:1,y:1},{x:3,y:1},{x:2,y:0}])m.blocks.add(key(c));
- assert.equal(m.candidate({x:2,y:2},true),null);
+test('몬스터가 밟고 있는 길 위에는 성벽을 겹쳐 놓지 못한다',()=>{
+ const m=new Defense(LEVELS[1]);m.spawn();const c={x:1,y:4};m.enemies[0].x=world(c).x;m.enemies[0].y=world(c).y;
+ assert.equal(m.candidate(c,true),null);
 });
 test('일시정지에서는 시간과 체력이 멈추고 목표 미달이면 진급하지 않는다',()=>{
  const m=new Defense(LEVELS[6]);install(m,{x:1,y:3},100,'basic');m.start();m.togglePause();m.step(.1);assert.equal(m.elapsed,0);
@@ -146,15 +143,16 @@ test('설치한 성벽과 남은 벽돌은 다음 단계·재도전에서 재고
   assert.equal(next.money,level.budget);assert.equal(next.towers.length,0);
  }
 });
-test('성벽 회수·재배치는 재고를 늘리지 않고 자연 장애물을 제거하지 않으며 몬스터 경로도 복구한다',()=>{
+test('성벽 회수·재배치는 재고를 늘리지 않고 자연 장애물과 몬스터 경로를 유지한다',()=>{
  const m=new Defense(LEVELS[6],{bricks:[],walls:2});
  assert.equal(m.recoverWall({x:4,y:0}),false);assert.ok(m.blocks.has('4,0'));
  assert.equal(m.placeWall({x:1,y:4}),true);m.spawn();const e=m.enemies[0],before={x:e.x,y:e.y};
  assert.equal(m.recoverWall({x:1,y:4}),true);assert.equal(m.wallStock,2);assert.ok(!m.blocks.has('1,4'));
  assert.deepEqual({x:e.x,y:e.y},before);assert.ok(m.path(m.blocks,e.path[0]));
  assert.equal(m.recoverWall({x:1,y:4}),false);assert.equal(m.wallStock,2);
- assert.equal(m.placeWall({x:8,y:2}),true);assert.equal(m.wallStock,1);
- assert.equal(m.recoverWall({x:8,y:2}),true);assert.equal(m.wallStock,2);assert.equal(m.inventory.walls,2);
+ const other=m.path()!.slice(4).find(c=>m.candidate(c,true))!;
+ assert.equal(m.placeWall(other),true);assert.equal(m.wallStock,1);
+ assert.equal(m.recoverWall(other),true);assert.equal(m.wallStock,2);assert.equal(m.inventory.walls,2);
 });
 test('과거 저장은 빈 재고로 호환되고 손상된 재료·성벽 값만 제거한다',()=>{
  const map=new Map<string,string>();Object.assign(globalThis,{localStorage:{getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>map.set(k,v)}});
