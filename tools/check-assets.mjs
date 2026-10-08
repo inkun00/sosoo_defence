@@ -19,5 +19,9 @@ const sourceNames=(await readdir('public/assets/dungeon')).filter(n=>n.endsWith(
 assert.deepEqual(Object.keys(manifest).sort(),sourceNames.sort(),'every active image optimized');
 const deployed=(await readdir('dist/assets/dungeon')).filter(n=>/\.(png|jpe?g|webp)$/i.test(n));
 assert.deepEqual(deployed.sort(),Object.values(manifest).map(art=>art.url.split('/').at(-1)).sort(),'only current optimized images deployed');
-assert.ok(bytes<8*1048576,'image payload must remain below 8 MiB');
-console.log(`PASS ${count} compressed images (${(bytes/1048576).toFixed(2)} MiB): dimensions, lossless alpha, content hashes, full coverage, and no stale/source images deployed.`);
+assert.ok(bytes<7*1048576,'image payload must remain below 7 MiB');
+const licenses=await readdir('dist/licenses');
+for(const required of ['hahmlet-OFL.txt','Phaser-MIT.txt','tower-audio-LICENSES.txt','tower-audio-v1.json'])assert.ok(licenses.includes(required),'missing public attribution: '+required);
+assert.ok(!(await readdir('dist/assets/dungeon')).some(name=>/prompt/i.test(name)),'generation prompts must stay out of game downloads');
+assert.ok(!licenses.some(name=>/prompt/i.test(name)),'license folder must not publish generation prompts');
+console.log(`PASS ${count} compressed images (${(bytes/1048576).toFixed(2)} MiB): dimensions, lossless alpha, content hashes, full coverage, and no stale/source images or generation prompts deployed. Required credits preserved.`);

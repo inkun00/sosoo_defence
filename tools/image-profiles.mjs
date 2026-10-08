@@ -1,8 +1,8 @@
 // Atlas dimensions retain whole grid cells; backgrounds keep their resolution.
 // Alpha stays lossless, including every resized sprite's transparent outline.
 export function imageProfile(name){
- const profile={quality:84,alphaQuality:100,effort:6};
- if(name.startsWith('story-')||name==='title-castle-v1')return {...profile,quality:80};
+ const profile={quality:80,alphaQuality:100,effort:6};
+ if(name.startsWith('story-')||name==='title-castle-v1')return {...profile,quality:76};
  if(name.startsWith('heroes-level-'))return {...profile,width:768};
  if(name.startsWith('fx-flight-'))return {...profile,width:768};
  if(name==='fx-impact-v1'||name==='fx-utility-v1')return {...profile,width:1152};
@@ -10,8 +10,8 @@ export function imageProfile(name){
  if(name==='menu-button-v1')return {...profile,quality:86,width:960};
  if(name==='hero-eggs-v1')return {...profile,width:960};
  if(name==='icons'||name==='ui')return {...profile,quality:88,width:512};
- if(name==='terrain')return {...profile,quality:84,width:768};
- if(name==='props'||name.startsWith('tower-heads-')||name==='turret-parts-v1')return {...profile,quality:86,width:768};
+ if(name==='terrain')return {...profile,width:768};
+ if(name==='props'||name.startsWith('tower-heads-')||name==='turret-parts-v1')return {...profile,width:768};
  if(name==='slime'||name==='monster-beetle')return {...profile,width:768};
  if(name.startsWith('monster-'))return {...profile,width:1024};
  if(name.endsWith('-loop-v1')||name==='wall-collapse-v1')return {...profile,width:768};

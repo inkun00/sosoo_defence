@@ -1,8 +1,0 @@
-{
-  "mode": "builtin image_gen",
-  "transparent_background": true,
-  "prompt": "Use case: stylized-concept. Asset type: transparent stone monster egg growth atlas for a Korean educational top-down dark-fantasy tower defense. ONE 1536x1024 landscape sheet, EXACTLY FIVE equally spaced columns and TWO equally spaced rows, ten cells, no visible borders or grid. Each cell is one centered stone MONSTER EGG carved from cracked granite with glowing cyan and gold seams, thick hand-painted outline, genuine TRANSPARENT background. Growth stages progress left to right then next row from small simple pebble egg to magnificent enormous rune-encrusted royal stone egg with gold crown plates. Never a hatched monster. Identical consistent egg center and bottom anchor, each egg takes no more than 74% of its cell width and height, clear transparent margins. Small early eggs friendly, late eggs grand and magical. Dungeon sprite art, three-quarter view, warm rim light, original design. NO text, digits, letters, labels, ground, shadow background or watermark.",
-  "source": "C:/Users/user/.codex/generated_images/01a106eb-ada0-7333-ab22-fcd5d497aee2/exec-0d8c86e8-5e40-423e-bdcd-9f108ab155c4.png",
-  "destination": "public/assets/dungeon/hero-eggs-v1.png",
-  "layout": "5 columns × 2 rows; level 1–10"
-}

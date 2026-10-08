@@ -2,12 +2,12 @@ import {Sound,renderTowerShots} from '../src/audio';
 import {TOWERS} from '../src/towers';
 import {TOWER_AUDIO_MANIFEST,type TowerAudioSample,type TowerAudioStatus} from '../src/tower-audio-samples';
 
-type SampleMetadata=TowerAudioSample & {
- sourceUrl?:string;packUrl?:string;source?:string;sourceName?:string;sourcePack?:string;
- license?:string;licenseUrl?:string;sampleRate?:number;channels?:number;sourceBytes?:number;
- sources?:{title:string;author:string;url:string;license:string;licenseUrl:string}[];
-};
-const assets=TOWER_AUDIO_MANIFEST as Readonly<Record<string,SampleMetadata>>;
+type AudioSource={title:string;author:string;url:string;license:string;licenseUrl:string};
+type AudioProvenance={sources:Record<string,AudioSource>;towers:Record<string,{description:string;sources:string[];referenceStereoWavBytes:number}>};
+// The game only imports playback data. The development audition page retrieves
+// provenance separately, so authors and URLs do not enlarge every audio bundle.
+const assets=TOWER_AUDIO_MANIFEST as Readonly<Record<string,TowerAudioSample>>;
+const provenanceRequest=new AbortController();
 const ids=TOWERS.map(tower=>tower.id),spacing=1.2,sound=new Sound();
 const element=<T extends HTMLElement>(selector:string)=>document.querySelector<T>(selector)!;
 const status=element('#status'),summary=element('#summary'),weapons=element('#weapons');
@@ -22,33 +22,47 @@ sound.setMusic(false);
 
 const size=(bytes:number)=>`${(bytes/1024).toFixed(1)} KiB`;
 const statusLabels:Record<TowerAudioStatus,string>={idle:'idle · 준비 전',loading:'loading · 다운로드 / 디코딩',ready:'ready · 실제 샘플 준비됨',failed:'failed · 파일 준비 실패'};
-const sourceUrl=(asset:SampleMetadata)=>asset.sourceUrl??asset.packUrl;
-const sourceName=(asset:SampleMetadata)=>asset.sourceName??asset.sourcePack??asset.source??'공개 원본';
 
 for(const tower of TOWERS){
  const asset=assets[tower.id],card=document.createElement('article');card.className='weapon';card.dataset.tower=tower.id;card.dataset.status='idle';
  const heading=document.createElement('h2');heading.textContent=tower.name;
  const badge=document.createElement('span');badge.className='state';badge.textContent=statusLabels.idle;
- const details=document.createElement('p');details.className='details';details.textContent=asset?`${asset.source}\n${asset.duration.toFixed(3)}초 · ${size(asset.bytes)} · MP3`:'샘플 manifest 대기 중';
+ const details=document.createElement('p');details.className='details';details.textContent=asset?`${asset.duration.toFixed(3)}초 · ${size(asset.bytes)} · MP3`:'샘플 manifest 대기 중';
  const button=document.createElement('button');button.type='button';button.textContent='발사 소리 듣기';button.setAttribute('aria-label',`${tower.name} 발사 소리 듣기`);button.onclick=()=>void audition(tower.id);
  card.append(heading,badge,details,button);
- if(asset&&sourceUrl(asset)){const link=document.createElement('a');link.className='source';link.href=sourceUrl(asset)!;link.target='_blank';link.rel='noopener noreferrer';link.textContent=sourceName(asset);card.append(link);}
  weapons.append(card);cards.set(tower.id,card);badges.set(tower.id,badge);
 }
 
 const uniqueAssets=new Map(ids.flatMap(id=>assets[id]?[[assets[id].url,assets[id]] as const]:[]));
 const totalBytes=[...uniqueAssets.values()].reduce((sum,asset)=>sum+asset.bytes,0);
-const sourceBytes=[...uniqueAssets.values()].reduce((sum,asset)=>sum+(asset.sourceBytes??0),0);
-summary.textContent=`타워 ${ids.length}종 · 고유 샘플 ${uniqueAssets.size}개 · 총 압축 크기 ${size(totalBytes)} (${totalBytes.toLocaleString()} bytes)${sourceBytes?` · 원본 대비 ${(100-totalBytes/sourceBytes*100).toFixed(1)}% 감소`:''} · BGM OFF`;
-const sourceLinks=element('#source-links'),sources=new Map<string,string>();
-for(const asset of uniqueAssets.values()){if(asset.sources)for(const source of asset.sources)sources.set(source.url,`${source.author} — ${source.title} (${source.license})`);else if(sourceUrl(asset))sources.set(sourceUrl(asset)!,sourceName(asset));}
-if(sources.size){const list=document.createElement('ul');for(const [url,name] of sources){const item=document.createElement('li'),link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=name;item.append(link);list.append(item);}sourceLinks.append(list);}
-else{const waiting=document.createElement('p');waiting.textContent='원본 출처가 manifest에 등록되면 링크가 표시됩니다.';sourceLinks.append(waiting);}
-const licenses=new Map<string,string>();
-for(const asset of uniqueAssets.values()){if(asset.sources)for(const source of asset.sources)licenses.set(source.licenseUrl,source.license);else if(asset.licenseUrl)licenses.set(asset.licenseUrl,asset.license??'공개 라이선스');}
-if(!licenses.size)licenses.set('https://creativecommons.org/publicdomain/zero/1.0/','CC0 1.0 Universal');
-for(const [url,name] of licenses){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=name;sourceLinks.append(link,document.createTextNode(' '));}
+const summaryText=`타워 ${ids.length}종 · 고유 샘플 ${uniqueAssets.size}개 · 총 압축 크기 ${size(totalBytes)} (${totalBytes.toLocaleString()} bytes)`;
+summary.textContent=summaryText+' · BGM OFF';
+const sourceLinks=element('#source-links'),provenanceStatus=document.createElement('p');
+provenanceStatus.textContent='공개 원본 출처와 라이선스를 확인하는 중…';sourceLinks.append(provenanceStatus);
 const provenance=document.createElement('p'),provenanceLink=document.createElement('a');provenanceLink.href='/licenses/tower-audio-v1.json';provenanceLink.textContent='샘플별 전체 출처와 압축 기록';provenance.append(provenanceLink);sourceLinks.append(provenance);
+
+async function showSources(){
+ try{
+  const response=await fetch(provenanceLink.href,{signal:provenanceRequest.signal});if(!response.ok)throw Error('Provenance unavailable');
+  const report=await response.json() as AudioProvenance;if(disposed)return;
+  const sources=new Map<string,AudioSource>();let sourceBytes=0;
+  for(const id of ids){
+   const clip=report.towers[id],asset=assets[id],card=cards.get(id);if(!clip||!asset||!card)continue;
+   card.querySelector('.details')!.textContent=`${clip.description}\n${asset.duration.toFixed(3)}초 · ${size(asset.bytes)} · MP3`;
+   sourceBytes+=clip.referenceStereoWavBytes;
+   for(const key of clip.sources){const record=report.sources[key];if(record)sources.set(record.url,record);}
+   const first=report.sources[clip.sources[0]];
+   if(first){const link=document.createElement('a');link.className='source';link.href=first.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=first.title;card.append(link);}
+  }
+  if(sourceBytes)summary.textContent=summaryText+` · 동일 길이 WAV 대비 ${(100-totalBytes/sourceBytes*100).toFixed(2)}% 감소 · BGM OFF`;
+  const list=document.createElement('ul'),licenses=new Map<string,string>();
+  for(const record of sources.values()){
+   const item=document.createElement('li'),link=document.createElement('a');link.href=record.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=`${record.author} — ${record.title} (${record.license})`;item.append(link);list.append(item);licenses.set(record.licenseUrl,record.license);
+  }
+  provenanceStatus.replaceWith(list);
+  for(const [url,name] of licenses){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=name;sourceLinks.insertBefore(link,provenance);sourceLinks.insertBefore(document.createTextNode(' '),provenance);}
+ }catch{if(!disposed)provenanceStatus.textContent='출처 자료를 불러오지 못했습니다. 아래 전체 출처 링크에서 확인하세요.';}
+}
 
 function refreshStates(){for(const id of ids){const state=sound.towerAudioStatus(id);cards.get(id)!.dataset.status=state;badges.get(id)!.textContent=statusLabels[state];}}
 function valid(token:number){return !disposed&&token===revision&&!document.hidden;}
@@ -72,7 +86,7 @@ async function prepare(token:number,needed:readonly string[]){
   if(context.state!=='running')await context.resume();
   if(!valid(token))return false;
   status.textContent='실제 샘플 다운로드와 디코딩을 기다리는 중…';
-  const pending=sound.preloadTowerShots(ids);loadingPoll(token);await pending;await sound.waitForTowerAudio();
+  const pending=sound.preloadTowerShots(needed);loadingPoll(token);await pending;await sound.waitForTowerAudio();
   if(!valid(token))return false;
   refreshStates();const failed=needed.filter(id=>sound.towerAudioStatus(id)!=='ready');
   if(failed.length){status.textContent=`실제 샘플 준비 실패: ${failed.map(id=>TOWERS.find(tower=>tower.id===id)!.name).join(', ')}. 파일 경로를 확인하고 새로고침하세요.`;return false;}
@@ -132,8 +146,9 @@ rendered.addEventListener('play',()=>{
 });
 rendered.addEventListener('ended',()=>{if(!disposed)status.textContent='WAV 청취 완료 · ready 12/12';});
 function visibility(){if(document.hidden){halt('탭이 숨겨져 재생 중단 · 다시 버튼을 누르면 재생됩니다.');exportStatus.textContent=rendered.src?'WAV 준비됨 · 자동 재생하지 않습니다.':'';}}
-function dispose(){if(disposed)return;halt();disposed=true;sound.dispose();rendered.pause();rendered.removeAttribute('src');rendered.load();if(blobUrl)URL.revokeObjectURL(blobUrl);document.removeEventListener('visibilitychange',visibility);}
+function dispose(){if(disposed)return;halt();disposed=true;provenanceRequest.abort();sound.dispose();rendered.pause();rendered.removeAttribute('src');rendered.load();if(blobUrl)URL.revokeObjectURL(blobUrl);document.removeEventListener('visibilitychange',visibility);}
 document.addEventListener('visibilitychange',visibility);
 window.addEventListener('pagehide',event=>{halt();if(!event.persisted)dispose();});
 (import.meta as ImportMeta & {hot?:{dispose:(callback:()=>void)=>void}}).hot?.dispose(dispose);
 refreshStates();
+void showSources();

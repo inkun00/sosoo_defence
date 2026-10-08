@@ -16,8 +16,9 @@ test('every tower ships a distinct, short, licensed MP3 within the audio budget'
   assert.match(asset.url,/^\/assets\/audio\/towers\/[a-z]+\.[a-f0-9]{12}\.mp3$/);
   const sourceLicenses=clip.sources.map(source=>report.sources[source as keyof typeof report.sources].license);
   assert.ok(sourceLicenses.every(license=>['CC0-1.0','CC-BY-3.0','CC-BY-4.0'].includes(license)));
-  assert.equal(asset.license,clip.license);
-  assert.deepEqual(asset.sources.map(source=>source.license),sourceLicenses);
+  assert.deepEqual(Object.keys(asset).sort(),['bytes','duration','url'],'runtime catalog must contain only playback data; provenance remains separately available');
+  const nonPublicDomain=sourceLicenses.filter(license=>license!=='CC0-1.0');
+  assert.equal(clip.license,(nonPublicDomain.length?[...new Set(nonPublicDomain)].sort():['CC0-1.0']).join(' + '));
   assert.ok(asset.duration>0&&asset.duration<=1.1);
   assert.ok(clip.decodedPeak<.97,'normalized encoded audio must not clip');
   assert.ok(clip.decodedRms>.025,'sample must contain audible signal');
@@ -31,4 +32,6 @@ test('every tower ships a distinct, short, licensed MP3 within the audio budget'
  }
  assert.equal(total,report.totalBytes);
  assert.equal(report.processing.rate,24000);assert.equal(report.processing.channels,1);assert.equal(report.processing.bitrate,64000);
+ assert.deepEqual(JSON.parse(await readFile(new URL('../web-public/licenses/tower-audio-v1.json',import.meta.url),'utf8')),report,'removing playback metadata must preserve published attribution and preparation details');
+ assert.equal(await readFile(new URL('../web-public/licenses/tower-audio-LICENSES.txt',import.meta.url),'utf8'),await readFile(new URL('../public/licenses/tower-audio-LICENSES.txt',import.meta.url),'utf8'));
 });

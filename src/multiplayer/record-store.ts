@@ -1,4 +1,4 @@
-import {doc,getDoc,collection,query,orderBy,limit,getDocs,where,startAfter,documentId,QueryConstraint} from 'firebase/firestore';
+import {doc,getDoc,collection,query,orderBy,limit,getDocs,where,startAfter,documentId,QueryConstraint} from 'firebase/firestore/lite';
 import {httpsCallable} from 'firebase/functions';
 import {auth,firestore,functions,recordsReady} from './firebase';
 import {MatchRecord,Progress,emptyProgress} from './records';

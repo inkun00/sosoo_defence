@@ -1,237 +1,237 @@
 {
   "flame-loop-v1": {
-    "url": "/assets/dungeon/flame-loop-v1.57d7ee84ce5c.webp",
-    "sourceHash": "588fee299142b80642e5c3ca5bbbc58e64812583d4a1a6ef0218f1ca8bddd2ca",
+    "url": "/assets/dungeon/flame-loop-v1.558c5de5af84.webp",
+    "sourceHash": "f79e56a41c411e5ca4967771648aebd198aed08b6a5d7f7eac0b9fb96eb0bc37",
     "width": 768,
     "height": 768,
     "sourceBytes": 1138403,
-    "bytes": 111824,
+    "bytes": 103224,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "fx-flight-element-v1": {
-    "url": "/assets/dungeon/fx-flight-element-v1.b39fb3df489a.webp",
-    "sourceHash": "3295093a54d9eb3cf6bd3b83d15d49c82707bd04e2260a0ae2dacffb09b96313",
+    "url": "/assets/dungeon/fx-flight-element-v1.c9a6453ec2b3.webp",
+    "sourceHash": "c441902a3102fa284e0d0e5d0f16b889584eaacab04c2eae4218c01832e37662",
     "width": 768,
     "height": 512,
     "sourceBytes": 2286729,
-    "bytes": 164264,
+    "bytes": 154592,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "fx-flight-magic-v1": {
-    "url": "/assets/dungeon/fx-flight-magic-v1.fab8ae62c7e0.webp",
-    "sourceHash": "e28abaa0a8c2245eb006483b6947528d593e7c549980edfdf02707fe0bff00d2",
+    "url": "/assets/dungeon/fx-flight-magic-v1.a37c1bb4438b.webp",
+    "sourceHash": "aa9dd4822e1e32b50025c7cd4f9b7a741ca7315d7dd19f1b6b0275dad2c233ef",
     "width": 768,
     "height": 512,
     "sourceBytes": 1911574,
-    "bytes": 140422,
+    "bytes": 132390,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "fx-flight-stone-v1": {
-    "url": "/assets/dungeon/fx-flight-stone-v1.705eaadaaecf.webp",
-    "sourceHash": "f95ad3290a0196e7e07d2ead9bab898353dd5d132a917bfd2c24d154d7ea0f97",
+    "url": "/assets/dungeon/fx-flight-stone-v1.3dd676e13604.webp",
+    "sourceHash": "37065756f7c09771e5afd1d49d974dfdacf8e48a1e461a7a2ec11b5b01d2cefc",
     "width": 768,
     "height": 512,
     "sourceBytes": 1842099,
-    "bytes": 104588,
+    "bytes": 99168,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "fx-impact-v1": {
-    "url": "/assets/dungeon/fx-impact-v1.924f3593dcda.webp",
-    "sourceHash": "b94b53a9bc106912d7f64e6be5a5fbcfb14f744b6281e3a0b4611541d0af2aaf",
+    "url": "/assets/dungeon/fx-impact-v1.e7240ee391db.webp",
+    "sourceHash": "bec3d827da7897166e2072ff6427b0b86a63294a07aaaa2c15ab6b77c463eef0",
     "width": 1152,
     "height": 768,
     "sourceBytes": 2229217,
-    "bytes": 351626,
+    "bytes": 329688,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1152
     }
   },
   "fx-utility-v1": {
-    "url": "/assets/dungeon/fx-utility-v1.3ad30f98053f.webp",
-    "sourceHash": "229b76f43d3211ba44ae72146b368b49e3e09aaa170450ed5eba6407ccb04df8",
+    "url": "/assets/dungeon/fx-utility-v1.d43d9ca7f555.webp",
+    "sourceHash": "c683b239ad18cf3b2b16ac48fb10b6709b9d8e51f76356397b5e3ea4628f523b",
     "width": 1152,
     "height": 768,
     "sourceBytes": 1901263,
-    "bytes": 243564,
+    "bytes": 228186,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1152
     }
   },
   "hero-eggs-v1": {
-    "url": "/assets/dungeon/hero-eggs-v1.9912b89219c8.webp",
-    "sourceHash": "11d53729fa782c46ec76cffd4a11f7e6308089a8b973efe24ce7e6828eb1f538",
+    "url": "/assets/dungeon/hero-eggs-v1.09ceb06deb48.webp",
+    "sourceHash": "3db54dba4050a545923683582011eb786bc3cba6648a41be168d1e7cefa21a9c",
     "width": 960,
     "height": 640,
     "sourceBytes": 2380496,
-    "bytes": 151702,
+    "bytes": 139554,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 960
     }
   },
   "heroes-level-1-v1": {
-    "url": "/assets/dungeon/heroes-level-1-v1.f45085b5da8c.webp",
-    "sourceHash": "0fe0de14b3c403aed61e3f06841dd91aea51bc930236a1f15cb4af826a5bf728",
+    "url": "/assets/dungeon/heroes-level-1-v1.bab61df6d390.webp",
+    "sourceHash": "f9450355017c8cb29d8f5de4c7659c323ed85df874abecbe31bcab9d869a966f",
     "width": 768,
     "height": 512,
     "sourceBytes": 2556314,
-    "bytes": 132428,
+    "bytes": 122694,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-10-v1": {
-    "url": "/assets/dungeon/heroes-level-10-v1.bfe48a500145.webp",
-    "sourceHash": "efaa1e2752bae9993685167403a7597f6802e20472b6135916abae1110c2f887",
+    "url": "/assets/dungeon/heroes-level-10-v1.56f92f7a2fee.webp",
+    "sourceHash": "fdde10cc0e662ea1e14b7ded5260e4ff44a37337ef3748f567f27f2581c38be6",
     "width": 768,
     "height": 512,
     "sourceBytes": 3240888,
-    "bytes": 217394,
+    "bytes": 203000,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-2-v1": {
-    "url": "/assets/dungeon/heroes-level-2-v1.ab375b906074.webp",
-    "sourceHash": "c4f9d03d298c61dea196dc665119ba2b064ffdb830fbe8b7f6b9455693b0fcc2",
+    "url": "/assets/dungeon/heroes-level-2-v1.a7f0782409c2.webp",
+    "sourceHash": "4d6a7851c490624c7db6b4714299e7f889e9cdf99975cf8e0fef30c06e48b6e2",
     "width": 768,
     "height": 512,
     "sourceBytes": 2789011,
-    "bytes": 147822,
+    "bytes": 136484,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-3-v1": {
-    "url": "/assets/dungeon/heroes-level-3-v1.09f2fd942cff.webp",
-    "sourceHash": "c03bc504814a27638b0ba53b38e381fd733e54f3717c3694ed7a57a3a596cf39",
+    "url": "/assets/dungeon/heroes-level-3-v1.d3b935b59b3b.webp",
+    "sourceHash": "a5b115cb9081b7eb739ab7df199454cd0ced202d0cebb5837c2509474e0ba237",
     "width": 768,
     "height": 512,
     "sourceBytes": 2749899,
-    "bytes": 162916,
+    "bytes": 151166,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-4-v1": {
-    "url": "/assets/dungeon/heroes-level-4-v1.843fe119825c.webp",
-    "sourceHash": "9e3adafe38e819e2410b5a7cbdccbb315dfad31ec29a17c29b89fdde0b28efb9",
+    "url": "/assets/dungeon/heroes-level-4-v1.e40e177664be.webp",
+    "sourceHash": "46c25e499775177d7f445b88ad527601c6b82bc311c5ffd6e643b32288b1277d",
     "width": 768,
     "height": 512,
     "sourceBytes": 2752619,
-    "bytes": 153664,
+    "bytes": 141290,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-5-v1": {
-    "url": "/assets/dungeon/heroes-level-5-v1.738c205dd56a.webp",
-    "sourceHash": "60adfb6065c73cf4a0f64bfe96d2115ee6f0fc94564e2b8ea0cf860c4e4469d1",
+    "url": "/assets/dungeon/heroes-level-5-v1.ef9d9d1d7fe0.webp",
+    "sourceHash": "bd33cd38b528801be12f2143d035f7382abe224528f387ece37b8f17ee9118d0",
     "width": 768,
     "height": 512,
     "sourceBytes": 2961954,
-    "bytes": 192442,
+    "bytes": 180320,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-6-v1": {
-    "url": "/assets/dungeon/heroes-level-6-v1.003f1d60abee.webp",
-    "sourceHash": "9ba30f105a75f8a8aec3a0ea855d6e7e13793273a4092021dc2486f206a91a65",
+    "url": "/assets/dungeon/heroes-level-6-v1.34f8fe10d89b.webp",
+    "sourceHash": "67a8c134d47572a5e98314de296c117b2683eafdb72be43d90b99a7e77b23cfc",
     "width": 768,
     "height": 512,
     "sourceBytes": 2924544,
-    "bytes": 179848,
+    "bytes": 166978,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-7-v1": {
-    "url": "/assets/dungeon/heroes-level-7-v1.44b9d9d730b0.webp",
-    "sourceHash": "4262b944cd31f0a4561824a13728413d6dca74b82c39c8bc061081a6c71d249b",
+    "url": "/assets/dungeon/heroes-level-7-v1.2be0d35b6054.webp",
+    "sourceHash": "cf186f9a272de712b37b84e26bb34c6957fb0bf00c0b9c0dcd6c1874b691b7f4",
     "width": 768,
     "height": 512,
     "sourceBytes": 2898585,
-    "bytes": 188208,
+    "bytes": 174938,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-8-v1": {
-    "url": "/assets/dungeon/heroes-level-8-v1.80fbd3ff42ad.webp",
-    "sourceHash": "dff097f5854f319b74ecc8e4bd3fbed77649b1a5b0ec72d2e011e96fc2f25a46",
+    "url": "/assets/dungeon/heroes-level-8-v1.ac161352f6ee.webp",
+    "sourceHash": "b8e8556fac370a367c03a04b8209c28a639bd24bbdbd94a8cfa32637ebd0cfbf",
     "width": 768,
     "height": 512,
     "sourceBytes": 3127537,
-    "bytes": 202304,
+    "bytes": 187804,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "heroes-level-9-v1": {
-    "url": "/assets/dungeon/heroes-level-9-v1.690b43337476.webp",
-    "sourceHash": "a21f7f853b3e3b177d4f94c877083d358ac5cae0fee581896e74177c4a64bc86",
+    "url": "/assets/dungeon/heroes-level-9-v1.69303660bc06.webp",
+    "sourceHash": "d65326ee369dcd23930d34a16e1b52fb940654c4383d0b16d3a85b5abc67f900",
     "width": 768,
     "height": 512,
     "sourceBytes": 3245169,
-    "bytes": 220984,
+    "bytes": 204882,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
@@ -266,206 +266,206 @@
     }
   },
   "monster-beetle": {
-    "url": "/assets/dungeon/monster-beetle.9eba6490d86d.webp",
-    "sourceHash": "84c2e78356425f1f70835492c69f2349c16c480d3c715a2805c69c9c7f2fc55a",
+    "url": "/assets/dungeon/monster-beetle.f7ca0d88439d.webp",
+    "sourceHash": "45935f36d363ead1924e8c069cf6c99e0a0156c8f9dc7208ec8af7d28c55d32e",
     "width": 768,
     "height": 768,
     "sourceBytes": 1716375,
-    "bytes": 167812,
+    "bytes": 155880,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "monster-crystal": {
-    "url": "/assets/dungeon/monster-crystal.674a78e43236.webp",
-    "sourceHash": "62c5773e9bace6e01544f4d0c3efdbb4e6086d45c2d9bafb2643d465e5e9863a",
+    "url": "/assets/dungeon/monster-crystal.14f5bdb81ce9.webp",
+    "sourceHash": "fdeea894d5e2a804d0d966c76129ea6313c4fca55fd84952be4e28f6d705e897",
     "width": 1024,
     "height": 1024,
     "sourceBytes": 2271114,
-    "bytes": 355826,
+    "bytes": 330706,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1024
     }
   },
   "monster-golem": {
-    "url": "/assets/dungeon/monster-golem.4df2c5dccf1c.webp",
-    "sourceHash": "be9d1ba87548a98259741692b992794303162cfebc228f5c149d6e0157f4dfb5",
+    "url": "/assets/dungeon/monster-golem.b5f69d4fb36b.webp",
+    "sourceHash": "82cb37dcd7ba6e601a3a8f3907fa34b703b6e4fc6fe39c240b236d7d7bc52d20",
     "width": 1024,
     "height": 1024,
     "sourceBytes": 2116372,
-    "bytes": 341068,
+    "bytes": 316348,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1024
     }
   },
   "monster-king": {
-    "url": "/assets/dungeon/monster-king.ab5bde7bf485.webp",
-    "sourceHash": "d2ac75c8feacd5c2a739ba98377f677c324968716d9e03ba525342c3a214e36c",
+    "url": "/assets/dungeon/monster-king.b649b99f9d9c.webp",
+    "sourceHash": "e27ec7a05f0a73cc44a6d8f9cb4a40dbffeca06c209ad26aef2afdbbffa8b1d1",
     "width": 1024,
     "height": 1024,
     "sourceBytes": 2302886,
-    "bytes": 372712,
+    "bytes": 342066,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1024
     }
   },
   "monster-warden-v1": {
-    "url": "/assets/dungeon/monster-warden-v1.d554a3065a8e.webp",
-    "sourceHash": "9f6ba95c573136f36de41cafba66a192099a94f179a4e8136976f1a32813894b",
+    "url": "/assets/dungeon/monster-warden-v1.fc01315f7a55.webp",
+    "sourceHash": "aa801da949f6ec373236ff5a222f1b817241ed49352d214d638d44d23a267707",
     "width": 1024,
     "height": 1024,
     "sourceBytes": 2412739,
-    "bytes": 388574,
+    "bytes": 359884,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1024
     }
   },
   "monster-wizard-v1": {
-    "url": "/assets/dungeon/monster-wizard-v1.05c93344bcd3.webp",
-    "sourceHash": "a830263f226c4b6ac1e1d2fcbca79c28cdc2ee8fa3424c762643c2c4a67d1cc9",
+    "url": "/assets/dungeon/monster-wizard-v1.25c1d97c0c06.webp",
+    "sourceHash": "a2e149550243beda5e3afed8e23405eaef4e0422c5ffaa0a3afd278fee4be01b",
     "width": 1024,
     "height": 1024,
     "sourceBytes": 2972870,
-    "bytes": 596452,
+    "bytes": 563678,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 1024
     }
   },
   "portal-loop-v1": {
-    "url": "/assets/dungeon/portal-loop-v1.3b96751b5b0c.webp",
-    "sourceHash": "ec78e5737cea37e34132e4d3506802bc6db6c909dbbcf5633f669976608fab5b",
+    "url": "/assets/dungeon/portal-loop-v1.61aa5f3d205b.webp",
+    "sourceHash": "9ea1f58103b4c1babdcfb3a492306869362b58afee703e145a202f063a0fe944",
     "width": 768,
     "height": 768,
     "sourceBytes": 1393644,
-    "bytes": 92232,
+    "bytes": 84634,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "props": {
-    "url": "/assets/dungeon/props.5a3a1621db4c.webp",
-    "sourceHash": "ac4b649387be9c0441e56de09de02643f9c7129ec0bf176061e69e30507651dd",
+    "url": "/assets/dungeon/props.3169d97adf64.webp",
+    "sourceHash": "2ddfa172077d981921fdc4832e5655399cab7eedde0788d944dee42e11c6b484",
     "width": 768,
     "height": 768,
     "sourceBytes": 1203621,
-    "bytes": 96628,
+    "bytes": 84240,
     "encoding": {
-      "quality": 86,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "slime": {
-    "url": "/assets/dungeon/slime.cb9bf0a4efa6.webp",
-    "sourceHash": "83f42e36160719da2d88c0b18bb344a2e364f342d1083b6eeb872b5ad6d7c2b3",
+    "url": "/assets/dungeon/slime.4f87fcca6e41.webp",
+    "sourceHash": "584ddf2043d02c51a65ec18005b8902474f17db3db5aae7b8e241dd8954020e1",
     "width": 768,
     "height": 768,
     "sourceBytes": 1466186,
-    "bytes": 154584,
+    "bytes": 143592,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "story-dawn-v1": {
-    "url": "/assets/dungeon/story-dawn-v1.0fd9cca6a5db.webp",
-    "sourceHash": "646ad2c81e8430e299829a134e71cc3978e30703db729199615a6d304e017134",
+    "url": "/assets/dungeon/story-dawn-v1.c00def104d65.webp",
+    "sourceHash": "8f7b0ee5a58178e86c82ef42cfb7fdbf47f7049ad07a356a7239f283c4532926",
     "width": 1672,
     "height": 941,
     "sourceBytes": 2513478,
-    "bytes": 213854,
+    "bytes": 183434,
     "encoding": {
-      "quality": 80,
+      "quality": 76,
       "alphaQuality": 100,
       "effort": 6
     }
   },
   "story-invasion-v2": {
-    "url": "/assets/dungeon/story-invasion-v2.b8c5e9b6132c.webp",
-    "sourceHash": "cd10e81f0fcffac475464793900024760ef35c1694239d1c686ed1ac592bf787",
+    "url": "/assets/dungeon/story-invasion-v2.5b80c27fd41d.webp",
+    "sourceHash": "79efb18dfc0fdd13b57d8e2c971ab5d380efb14c02ca277a8a2609e270789890",
     "width": 1659,
     "height": 948,
     "sourceBytes": 2466123,
-    "bytes": 212340,
+    "bytes": 179114,
     "encoding": {
-      "quality": 80,
+      "quality": 76,
       "alphaQuality": 100,
       "effort": 6
     }
   },
   "story-rift-v1": {
-    "url": "/assets/dungeon/story-rift-v1.ef968636bef2.webp",
-    "sourceHash": "21c3eb5102f287a7ceca04c90f15b65edaaf4b4c61aa65f37579ec40954ea030",
+    "url": "/assets/dungeon/story-rift-v1.41cb4eca452a.webp",
+    "sourceHash": "86eff2ee926c5ca2744465c42c270649b3d307df385a17104ac6e4ce910d1a03",
     "width": 1672,
     "height": 941,
     "sourceBytes": 2363465,
-    "bytes": 177172,
+    "bytes": 151466,
     "encoding": {
-      "quality": 80,
+      "quality": 76,
       "alphaQuality": 100,
       "effort": 6
     }
   },
   "story-sorcerer-v2": {
-    "url": "/assets/dungeon/story-sorcerer-v2.67bb7a4c1ad6.webp",
-    "sourceHash": "b0dea8ff134adf18660b7bf807d179ea4587f67fa6be69082ddfe31d2120019a",
+    "url": "/assets/dungeon/story-sorcerer-v2.a26a91b7e157.webp",
+    "sourceHash": "66c8a0b05d56746f599c062d0355aa0460e2ce20428cbc84a65b4a8f09e7d492",
     "width": 1659,
     "height": 948,
     "sourceBytes": 2436529,
-    "bytes": 199366,
+    "bytes": 169814,
     "encoding": {
-      "quality": 80,
+      "quality": 76,
       "alphaQuality": 100,
       "effort": 6
     }
   },
   "terrain": {
-    "url": "/assets/dungeon/terrain.d3270a984f76.webp",
-    "sourceHash": "0578b45620b4bf4773d7bbe51f28e1d268abffd578582e38e4e2937d17701b37",
+    "url": "/assets/dungeon/terrain.99d9a117b20d.webp",
+    "sourceHash": "14a8089a818a1efe3dc92194ba6f8008fa82e4fbdfdb906e72853c5053389389",
     "width": 768,
     "height": 768,
     "sourceBytes": 2079966,
-    "bytes": 49820,
+    "bytes": 38502,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "title-castle-v1": {
-    "url": "/assets/dungeon/title-castle-v1.f575d695daa2.webp",
-    "sourceHash": "870491ba3c3e53dc2d1824208d22ffdbf228c796316334439487715027644cd0",
+    "url": "/assets/dungeon/title-castle-v1.844e2f15b80d.webp",
+    "sourceHash": "70f6a2c37d9cad2fbb3d22c273bf9a76b874f267b8b48b2ab9c85238c8937d3c",
     "width": 1672,
     "height": 941,
     "sourceBytes": 1826582,
-    "bytes": 99932,
+    "bytes": 85452,
     "encoding": {
-      "quality": 80,
+      "quality": 76,
       "alphaQuality": 100,
       "effort": 6
     }
@@ -486,56 +486,56 @@
     }
   },
   "torch-loop-v1": {
-    "url": "/assets/dungeon/torch-loop-v1.d28c4e30d441.webp",
-    "sourceHash": "26fee8ff5c4117419459195e9147442c82d4c519ad544bddb8f3a94a1e2dd764",
+    "url": "/assets/dungeon/torch-loop-v1.54d26dc7914e.webp",
+    "sourceHash": "1b4cb734513edbb2af8d3555bb4e4dd7fc4c261086aeaa7b63f3c951860a37f0",
     "width": 768,
     "height": 768,
     "sourceBytes": 773172,
-    "bytes": 92466,
+    "bytes": 85958,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "tower-heads-a-v1": {
-    "url": "/assets/dungeon/tower-heads-a-v1.2737971ca941.webp",
-    "sourceHash": "84bfa9e13fa8c810e387c4be31ebc7f937cf3af20fa0442a78bf11848e474562",
+    "url": "/assets/dungeon/tower-heads-a-v1.50e752ff2764.webp",
+    "sourceHash": "53553da7e9c772cc078eb5df830898a668582d87b6d121576764079e3b14a1ff",
     "width": 768,
     "height": 512,
     "sourceBytes": 2209729,
-    "bytes": 89362,
+    "bytes": 78216,
     "encoding": {
-      "quality": 86,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "tower-heads-b-v1": {
-    "url": "/assets/dungeon/tower-heads-b-v1.24f0061e33a7.webp",
-    "sourceHash": "fe7703a165b87ba9d1d6879d60623bba70b2a94448d48fe9f6645012291bae2a",
+    "url": "/assets/dungeon/tower-heads-b-v1.6c7e3bdea09f.webp",
+    "sourceHash": "8dfa02012ebfded71c876cf1b40637ae916094daedfbbfe03eca295ce3a7d444",
     "width": 768,
     "height": 512,
     "sourceBytes": 2359707,
-    "bytes": 108258,
+    "bytes": 95210,
     "encoding": {
-      "quality": 86,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
     }
   },
   "turret-parts-v1": {
-    "url": "/assets/dungeon/turret-parts-v1.130933ed0923.webp",
-    "sourceHash": "691ca5f3b86568de3b32407ae9c8927584603480025100bff16969173bdb57ea",
+    "url": "/assets/dungeon/turret-parts-v1.e98a3817365e.webp",
+    "sourceHash": "a1d60121dfc57458de1da113d83e3b795db85a9f8972d5ef18c89744392bd4a4",
     "width": 768,
     "height": 512,
     "sourceBytes": 1991776,
-    "bytes": 86668,
+    "bytes": 76284,
     "encoding": {
-      "quality": 86,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768
@@ -556,14 +556,14 @@
     }
   },
   "wall-collapse-v1": {
-    "url": "/assets/dungeon/wall-collapse-v1.e7dd8ac7eac1.webp",
-    "sourceHash": "b57d096bdc0c75c6d5c21f3c17a6dee7c754a96901b01d6f94be93516f89b80b",
+    "url": "/assets/dungeon/wall-collapse-v1.275f2b6797fe.webp",
+    "sourceHash": "8a11f49f07fa68be0f4c5a2f2fcde0cfdc6d3dd10a9bf3645ddff0c279b9c2f6",
     "width": 768,
     "height": 576,
     "sourceBytes": 1595456,
-    "bytes": 137214,
+    "bytes": 127928,
     "encoding": {
-      "quality": 84,
+      "quality": 80,
       "alphaQuality": 100,
       "effort": 6,
       "width": 768

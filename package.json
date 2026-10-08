@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "optimize:assets": "node tools/optimize-assets.mjs",
+    "check:assets": "node tools/check-assets.mjs",
+    "report:payload": "node tools/report-payload.mjs",
     "predev": "npm run optimize:assets",
     "prebuild": "npm run optimize:assets",
     "dev": "vite --host 0.0.0.0 --port 5173",

@@ -1,6 +1,6 @@
 import {initializeApp} from 'firebase/app';
 import {getAuth,connectAuthEmulator} from 'firebase/auth';
-import {getFirestore,connectFirestoreEmulator} from 'firebase/firestore';
+import {getFirestore,connectFirestoreEmulator} from 'firebase/firestore/lite';
 import {getFunctions,connectFunctionsEmulator} from 'firebase/functions';
 const env=(import.meta as ImportMeta&{env:Record<string,string|boolean>}).env;
 // A public Config switch enables the fully deployed integration. Legacy
