@@ -195,3 +195,11 @@ Exact original filenames, licenses, hashes and recipes: licenses/tower-audio-v1.
 Preparation script: tools/prepare-tower-audio.py (local only, not web build).
 Source packs are excluded from deployment. Only installed tower types are
 preloaded in gameplay, with one request/decode per URL and immutable caching.
+
+ENDING KOREAN SERIF TYPEFACE (2026-10-09)
+Hahmlet by Minjoo Ham and Mark Fromberg / Hypertype - SIL Open Font License 1.1.
+Copyright 2020 The Hahmlet Project Authors (https://github.com/hyper-type/hahmlet).
+Official distribution: https://github.com/google/fonts/tree/main/ofl/hahmlet
+Modified for this game: ending text glyph subset, variable weight range
+400-800 and WOFF2 compression. Served locally; no external font requests.
+The subset retains the original font license: licenses/hahmlet-OFL.txt.

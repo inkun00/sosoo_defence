@@ -2,3 +2,11 @@
 
 /* The same story is exposed to screen readers without duplicating the canvas subtitles. */
 .cinematic-caption{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;left:0;bottom:0}.cinematic-caption p{padding:0}
+
+@font-face{font-family:'HahmletEnding';src:url('./assets/fonts/hahmlet-ending-v1.woff2') format('woff2');font-weight:400 800;font-display:swap}
+.cinematic-ending{font-family:'HahmletEnding','Batang',serif}
+.cinematic-ending .cinematic-top{letter-spacing:.08em;color:#e8d6b6}
+.cinematic-ending .cinematic-top button{border-color:#cda96966;background:#18151dc9;border-radius:2px}
+.cinematic-ending .cinematic-track i{background:linear-gradient(90deg,#bda0d9,#ffdf9d);box-shadow:0 0 12px #ffdc93}
+.cinematic-ending .cinematic-footer{letter-spacing:.1em;color:#e8d5ac}
+.cinematic-ending [data-movie="time"]{display:none}

@@ -47,14 +47,26 @@ test('이어하기는 마지막 선택 단계를 보존하고 과거 저장은 �
  data.set('decimal-castle-v1',JSON.stringify({...s,resumeStage:11}));assert.equal(loadSave().resumeStage,7);
 });
 test('오프닝·엔딩의 장면 전환과 마지막 프레임은 시간 경계에서 일관된다',()=>{
- assert.equal(storyDuration('opening'),36);assert.equal(storyDuration('ending'),22);
+ assert.equal(storyDuration('opening'),36);assert.equal(storyDuration('ending'),24);
  for(const kind of ['opening','ending'] as const){let time=0;for(let i=0;i<STORY[kind].length;i++){const f=storyFrame(kind,time);assert.equal(f.index,i);assert.equal(f.local,0);time+=STORY[kind][i].duration;}assert.equal(storyFrame(kind,time).index,STORY[kind].length-1);assert.equal(storyFrame(kind,time+50).local,STORY[kind].at(-1)!.duration);}
 });
 
 test('새 오프닝은 평화·저주·마법사·탄생·침공·구원의 이야기만 전달한다',()=>{
  const beats=STORY.opening,copy=beats.map(b=>b.title+b.subtitle+b.caption).join(' ');
  assert.equal(beats.length,6);assert.equal(storyDuration('opening'),36);
- assert.ok(beats.every(b=>!b.formula));assert.doesNotMatch(copy,/타워|포탄|성벽|공격력|체력|구매|계산|더해서|빼서/);
+ assert.ok(beats.every(b=>!Object.hasOwn(b,'formula')));assert.doesNotMatch(copy,/타워|포탄|성벽|공격력|체력|구매|계산|더해서|빼서/);
  for(const word of ['평화','소수로 변','저주','마법사','태어나','점령','세상을 구'])assert.ok(copy.includes(word),word);
  assert.equal(beats[2].art,'story-sorcerer-v2');assert.equal(beats[4].art,'story-invasion-v2');
+});
+
+test('엔딩은 수식 없이 마법사 퇴치부터 저주 해제와 세상의 회복까지 이어진다',()=>{
+ const beats=STORY.ending,copy=beats.map(b=>b.title+b.subtitle+b.caption).join(' ');
+ assert.equal(beats.length,4);assert.equal(storyDuration('ending'),24);
+ assert.ok(beats.every(b=>!Object.hasOwn(b,'formula')));
+ assert.doesNotMatch(copy,/소수|수학|계산|덧셈|뺄셈|더하고|빼며|정확히|남은 힘|[0-9=+]/);
+ assert.match(beats[0].caption,/마법사를 물리쳤다/);
+ assert.match(beats[1].caption,/저주가 풀렸다/);assert.match(beats[1].caption,/원래의 모습/);
+ assert.match(beats[2].caption,/나무/);assert.match(beats[2].caption,/마을/);
+ assert.match(beats[3].caption,/평화/);
+ assert.equal(beats[0].art,'story-sorcerer-v2');assert.ok(beats.slice(1).every(b=>b.art==='story-dawn-v1'));
 });

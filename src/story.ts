@@ -1,5 +1,5 @@
 export type StoryKind='opening'|'ending';
-export interface StoryBeat{duration:number;art:'title-castle-v1'|'story-rift-v1'|'story-dawn-v1'|'story-sorcerer-v2'|'story-invasion-v2';title:string;subtitle:string;caption:string;formula?:string;accent:string;}
+export interface StoryBeat{duration:number;art:'title-castle-v1'|'story-rift-v1'|'story-dawn-v1'|'story-sorcerer-v2'|'story-invasion-v2';title:string;subtitle:string;caption:string;accent:string;}
 export const STORY:Record<StoryKind,StoryBeat[]>={
  opening:[
   {duration:5,art:'story-dawn-v1',title:'평화롭던 세상',subtitle:'숲과 마을, 그리고 모두의 작은 일상.',caption:'숲과 마을이 어우러진 세상은 평화로웠다.',accent:'#ffdc92'},
@@ -10,10 +10,10 @@ export const STORY:Record<StoryKind,StoryBeat[]>={
   {duration:5,art:'title-castle-v1',title:'이제, 세상을 구할 시간',subtitle:'소수 몬스터를 막아내고 저주에 맞서라.',caption:'소수 몬스터를 막아내고 세상을 구해야 한다. 우리의 이야기는 지금 시작된다.',accent:'#ffe4a9'}
  ],
  ending:[
-  {duration:5,art:'story-rift-v1',title:'마침내, 정확히 0',subtitle:'저주 마법사의 힘이 사라지고 세상이 돌아왔다.',caption:'저주 마법사의 힘이 영이 되었어요. 소수 몬스터를 막아내고 세상을 구했어요.',formula:'남은 힘 = 0',accent:'#d9bbff'},
-  {duration:6,art:'story-dawn-v1',title:'불꽃이 다시 타오르고',subtitle:'작은 빛이, 새로운 아침을 열었다.',caption:'불꽃이 다시 밝게 타올라요. 새로운 아침이 왔어요.',accent:'#ffd783'},
-  {duration:6,art:'story-dawn-v1',title:'작은 조각이 만든 큰 용기',subtitle:'더하고 빼며 쌓은 지혜가 성을 구했다.',caption:'더하고 빼며 쌓은 지혜가 소수의 성을 구했어요.',formula:'0.3 + 0.4 = 0.7',accent:'#fff0c7'},
-  {duration:5,art:'story-dawn-v1',title:'소수의 성 수호자',subtitle:'이 성의 이야기는, 당신 덕분에 계속된다.',caption:'축하해요! 여러분은 소수의 성 수호자예요.',accent:'#ffdc92'}
+  {duration:6,art:'story-sorcerer-v2',title:'마침내, 마법사가 쓰러졌다',subtitle:'용기 끝에, 어둠의 지배가 끝났다.',caption:'마법사를 물리쳤다. 세상을 뒤덮던 어둠이 무너져 내렸다.',accent:'#d9bbff'},
+  {duration:6,art:'story-dawn-v1',title:'저주가 걷히다',subtitle:'긴 밤을 지나, 새벽빛이 스며들었다.',caption:'마법사의 저주가 풀렸다. 세상은 천천히 원래의 모습을 되찾았다.',accent:'#ffd783'},
+  {duration:6,art:'story-dawn-v1',title:'다시 살아난 세상',subtitle:'숲에는 바람이, 마을에는 웃음이 돌아왔다.',caption:'나무는 다시 푸르게 자라고, 마을에는 사람들의 웃음소리가 울려 퍼졌다.',accent:'#fff0c7'},
+  {duration:6,art:'story-dawn-v1',title:'평화가 돌아왔다',subtitle:'당신이 지켜 낸 세상에, 새로운 아침이 밝았다.',caption:'세상은 다시 평화로워졌다. 모두가 함께 살아갈 새로운 이야기가 시작된다.',accent:'#ffdc92'}
  ]
 };
 export function storyDuration(kind:StoryKind){return STORY[kind].reduce((s,b)=>s+b.duration,0);}

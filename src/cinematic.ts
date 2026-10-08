@@ -3,16 +3,19 @@ import {STORY,storyDuration,storyFrame,StoryKind} from './story';
 import {Sound} from './audio';
 import {Save} from './save';
 import {drawOpeningMotion,OPENING_ASSETS} from './opening-motion';
+import {drawEndingMotion,drawRestoredWorld,ENDING_CHAPTERS} from './ending-motion';
 import './cinematic.css';
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const ease=(n:number)=>1-Math.pow(1-clamp(n),3);
 const images=new Map<string,Promise<HTMLImageElement>>();
 function image(name:string){let pending=images.get(name);if(!pending){pending=new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(Error('장면 그림을 불러오지 못했어요.'));i.src=artURL(name);});images.set(name,pending);}return pending;}
+let fontReady:Promise<void>|undefined;
+function endingFont(){return fontReady??=document.fonts.load("700 70px 'HahmletEnding'",STORY.ending.map(b=>b.title+b.subtitle).join('')).then(()=>{}).catch(()=>{fontReady=undefined;});}
 
 export async function playCinematic(kind:StoryKind,preferences:Save,onComplete:()=>void){
  const previous=document.activeElement as HTMLElement|null,root=document.createElement('section');
- root.className='cinematic';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label',kind==='opening'?'소수의 성 오프닝':'소수의 성 엔딩');
- root.innerHTML=`<div class="cinematic-stage"><canvas aria-label="소수의 성 이야기 모션 그래픽"></canvas><div class="cinematic-top"><span>${kind==='opening'?'프롤로그 · 소수의 저주':'에필로그 · 돌아온 아침'}</span><div><button type="button" data-movie="pause">일시 정지</button><button type="button" data-movie="skip">${kind==='opening'?'건너뛰기':'엔딩 마치기'} ↗</button></div></div><div class="cinematic-caption" aria-live="polite"><h2></h2><p></p></div><div class="cinematic-footer"><span data-movie="chapter"></span><div class="cinematic-track"><i></i></div><span data-movie="time"></span></div><div class="cinematic-loading" role="status">이야기의 막이 오르는 중…</div></div>`;
+ root.className=`cinematic cinematic-${kind}`;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label',kind==='opening'?'소수의 성 오프닝':'평화의 귀환 · 엔딩');
+ root.innerHTML=`<div class="cinematic-stage"><canvas aria-label="${kind==='ending'?'마법사 퇴치와 세상의 회복 이야기':'소수의 성 이야기 모션 그래픽'}"></canvas><div class="cinematic-top"><span>${kind==='opening'?'프롤로그 · 소수의 저주':'에필로그 · 돌아온 아침'}</span><div><button type="button" data-movie="pause">일시 정지</button><button type="button" data-movie="skip">${kind==='opening'?'건너뛰기':'엔딩 마치기'} ↗</button></div></div><div class="cinematic-caption" aria-live="polite"><h2></h2><p></p></div><div class="cinematic-footer"><span data-movie="chapter"></span><div class="cinematic-track"><i></i></div><span data-movie="time"></span></div><div class="cinematic-loading" role="status">이야기의 막이 오르는 중…</div></div>`;
  const app=document.getElementById('app')!,wasInert=app.inert;app.inert=true;
  document.body.append(root);const canvas=root.querySelector('canvas')!,ctx=canvas.getContext('2d')!;canvas.width=1600;canvas.height=900;
  const title=root.querySelector('h2')!,subtitle=root.querySelector('.cinematic-caption p')!,bar=root.querySelector<HTMLElement>('.cinematic-track i')!,loading=root.querySelector<HTMLElement>('.cinematic-loading')!;
@@ -26,9 +29,8 @@ export async function playCinematic(kind:StoryKind,preferences:Save,onComplete:(
  function keyboard(e:KeyboardEvent){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish();}else if(e.code==='Space'&&!(e.target as HTMLElement).closest('button')){e.preventDefault();e.stopPropagation();setPaused(!paused);}else if(e.key==='Tab'){const buttons=[pauseButton,skip],index=buttons.indexOf(document.activeElement as HTMLButtonElement);if(e.shiftKey&&index<=0){e.preventDefault();skip.focus();}else if(!e.shiftKey&&index===1){e.preventDefault();pauseButton.focus();}}}
  root.addEventListener('keydown',keyboard);document.addEventListener('visibilitychange',visibility);skip.onclick=finish;pauseButton.onclick=()=>setPaused(!paused);skip.focus();
  const needed=new Set<string>(STORY[kind].map(b=>b.art));
- if(STORY[kind].some(b=>b.formula==='0.3 + 0.4 = 0.7'))needed.add('props');
  if(kind==='opening')for(const name of OPENING_ASSETS)needed.add(name);
- try{await Promise.all([...needed].map(async name=>art.set(name,await image(name))));}catch{loading.textContent='그림을 불러오지 못했어요. 건너뛰기로 모험을 시작할 수 있어요.';pauseButton.disabled=true;return;}
+ try{await Promise.all([...needed].map(async name=>art.set(name,await image(name))));if(kind==='ending')await endingFont();}catch{loading.textContent='그림을 불러오지 못했어요. 건너뛰기로 모험을 시작할 수 있어요.';pauseButton.disabled=true;return;}
  if(disposed)return;loading.hidden=true;sound.setPaused(paused);window.addEventListener('pagehide',leave);
  function background(name:string,progress:number,opacity=1){
   const i=art.get(name)!;const zoom=reduced?1:1.03+progress*.065,scale=Math.max(1600/i.width,900/i.height)*zoom,w=i.width*scale,h=i.height*scale;
@@ -36,28 +38,22 @@ export async function playCinematic(kind:StoryKind,preferences:Save,onComplete:(
  }
  function draw(){
   const f=storyFrame(kind,time),b=f.beat,p=f.local/b.duration;ctx.fillStyle='#080a10';ctx.fillRect(0,0,1600,900);background(b.art,p);
-  if(f.index>0&&f.local<.8&&!reduced)background(STORY[kind][f.index-1].art,1,1-ease(f.local/.8));
+  if(kind==='ending'&&f.index===0)drawRestoredWorld(ctx,f.local,reduced,()=>background('story-dawn-v1',p));
+  if(kind==='opening'&&f.index>0&&f.local<.8&&!reduced)background(STORY[kind][f.index-1].art,1,1-ease(f.local/.8));
   const shade=ctx.createLinearGradient(0,0,0,900);shade.addColorStop(0,'#080b16aa');shade.addColorStop(.45,'#0a0c161c');shade.addColorStop(1,'#060912ef');ctx.fillStyle=shade;ctx.fillRect(0,0,1600,900);
   if(!reduced){for(let i=0;i<52;i++){const x=(i*397.31+time*(i%3-1)*8+1600)%1600,y=900-((i*147.7+time*(15+i%9*2))%920);ctx.globalAlpha=.15+.45*Math.pow(Math.sin(time+i),2);ctx.fillStyle=b.accent;ctx.beginPath();ctx.arc(x,y,1.2+i%3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;}
   // A broad ring and travelling ribbons create a reveal, never rapid flashing.
   if(!reduced&&f.local<1.6){ctx.save();ctx.globalAlpha=.18*(1-f.local/1.6);ctx.strokeStyle=b.accent;ctx.lineWidth=4;ctx.beginPath();ctx.arc(800,445,90+ease(f.local/1.6)*850,0,Math.PI*2);ctx.stroke();ctx.restore();}
-  // The existing ending keeps its celebration of the restored castle.
-  if(b.formula==='0.3 + 0.4 = 0.7'){
-   const props=art.get('props')!,cw=props.width/3,ch=props.height/3,join=reduced?1:ease((f.local-1.2)/2.2);
-   ctx.save();ctx.globalAlpha=ease(f.local/.9)*clamp((b.duration-f.local)/.5);
-   for(let i=0;i<7;i++){const origin=i<3?470+i*92:790+(i-3)*92,destination=500+i*100,x=origin+(destination-origin)*join,y=319+(1-join)*Math.sin(i*1.2)*35;ctx.drawImage(props,cw,0,cw,ch,x-45,y-45,90,90);ctx.fillStyle=b.accent;ctx.font="700 24px 'Malgun Gothic',sans-serif";ctx.textAlign='center';ctx.fillText('0.1',x,y+65);}
-   ctx.strokeStyle=b.accent;ctx.globalAlpha*=.3;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(438,412);ctx.lineTo(1162,412);ctx.stroke();ctx.restore();
-  }
   if(kind==='opening')drawOpeningMotion(ctx,f.index,f.local,reduced,art);
+  else drawEndingMotion(ctx,f.index,f.local,reduced);
   const entry=ease(f.local/.9),end=clamp((b.duration-f.local)/.5);ctx.save();ctx.globalAlpha=entry*end;ctx.translate(0,reduced?0:30*(1-entry));
-  ctx.textAlign='center';ctx.textBaseline='middle';ctx.font="900 68px 'Malgun Gothic',sans-serif";ctx.shadowColor='#000';ctx.shadowBlur=20;ctx.fillStyle='#fff1d8';ctx.fillText(b.title,800,b.formula?494:552);ctx.shadowBlur=0;
-  ctx.fillStyle=b.accent;ctx.fillRect(748,b.formula?548:610,104,3);
-  ctx.font="500 26px 'Malgun Gothic',sans-serif";ctx.fillStyle='#eee4d5';ctx.fillText(b.subtitle,800,b.formula?594:657);
-  if(b.formula){const tokens=b.formula.split(' '),spacing=b.formula.includes('0.3')||b.formula.includes('0.6')?155:180;ctx.font="800 74px 'Malgun Gothic',sans-serif";tokens.forEach((token,i)=>{const a=reduced?1:ease((f.local-.65-i*.2)/.7);ctx.save();ctx.globalAlpha*=a;ctx.translate(800+(i-(tokens.length-1)/2)*spacing,707+(1-a)*28);ctx.scale(.86+.14*a,.86+.14*a);ctx.shadowColor=b.accent;ctx.shadowBlur=18;ctx.fillStyle=token==='+'||token==='−'||token==='='?'#eee1cc':b.accent;ctx.fillText(token,0,0);ctx.restore();});}
+  const ending=kind==='ending';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=ending?"700 70px 'HahmletEnding','Batang',serif":"900 68px 'Malgun Gothic',sans-serif";ctx.shadowColor='#000';ctx.shadowBlur=20;ctx.fillStyle='#fff1d8';ctx.fillText(b.title,800,552,1350);ctx.shadowBlur=0;
+  if(!ending){ctx.fillStyle=b.accent;ctx.fillRect(748,610,104,3);}
+  ctx.font=ending?"500 30px 'HahmletEnding','Batang',serif":"500 26px 'Malgun Gothic',sans-serif";ctx.fillStyle='#eee4d5';ctx.fillText(b.subtitle,800,657,1350);
   ctx.restore();
-  if(f.index!==chapter){chapter=f.index;title.textContent=b.title;subtitle.textContent=b.caption;root.querySelector('[data-movie="chapter"]')!.textContent=`${chapter+1} / ${STORY[kind].length}`;sound.play(kind==='ending'?(chapter===0?'victory':'dawn'):['dawn','portal','portal','portal','leak','start'][chapter]);}
+  if(f.index!==chapter){chapter=f.index;title.textContent=b.title;subtitle.textContent=b.caption;root.querySelector('[data-movie="chapter"]')!.textContent=kind==='ending'?ENDING_CHAPTERS[chapter]:`${chapter+1} / ${STORY[kind].length}`;sound.play(kind==='ending'?(chapter===0?'victory':'dawn'):['dawn','portal','portal','portal','leak','start'][chapter]);}
   if(kind==='opening'&&!paused){for(const [scene,at,effect]of [[3,1.6,'brick'],[3,2.6,'portal'],[4,3,'leak']] as const){const id=scene+effect;if(chapter===scene&&f.local>=at&&!cues.has(id)){cues.add(id);sound.play(effect);}}}
-  bar.style.width=String(time/total*100)+'%';root.querySelector('[data-movie="time"]')!.textContent=`${String(Math.floor(time)).padStart(2,'0')} / ${total}초`;
+  bar.style.width=String(time/total*100)+'%';root.querySelector('[data-movie="time"]')!.textContent=kind==='ending'?'':`${String(Math.floor(time)).padStart(2,'0')} / ${total}초`;
  }
  function tick(now:number){if(disposed)return;if(last&&!paused&&!document.hidden)time+=Math.min(.1,(now-last)/1000);last=now;draw();if(time>=total){finish();return;}raf=requestAnimationFrame(tick);}
  raf=requestAnimationFrame(tick);
