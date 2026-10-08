@@ -103,7 +103,7 @@ function effects(type:string):EffectNote[]{
  const tone=(note:number,duration:number,volume:number,instrument:Voice['instrument']='bell',at=0):EffectNote=>[at,{note,duration,volume,instrument}];
  switch(type){
   case 'ui':return [tone(79,.09,.055,'pluck'),tone(86,.12,.025,'bell',.035)];
-  case 'hit':return [tone(42,.12,.11,'kick'),tone(69,.09,.065,'noise'),tone(88,.13,.025)];
+  case 'hit':return [tone(42,.1,.045,'kick'),tone(60,.07,.025,'noise')];
   case 'kill':return [tone(50,.22,.07,'noise'),...[74,81,86].map((n,i)=>tone(n,.28,.05,'bell',i*.055))];
   case 'money':return [tone(86,.18,.055),tone(93,.28,.04,'bell',.09)];
   case 'brick':return [tone(46,.1,.09,'noise'),tone(65,.17,.055,'pluck',.065)];

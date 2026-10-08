@@ -1,0 +1,66 @@
+SOSOO DEFENCE — TWELVE TOWER LAUNCH SAMPLES v2
+
+These audio files use the sources below. The licenses are not all CC0.
+Creator names, original titles and source pages are supplied for attribution.
+The exact source-to-tower mapping and individual clip licenses are recorded
+in licenses/tower-audio-v1.json. No endorsement by the source creators is implied.
+
+CC0 1.0 Universal
+License: https://creativecommons.org/publicdomain/zero/1.0/
+Legal code: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+Thimras — Cannon fire
+https://opengameart.org/content/cannon-fire
+Original download: https://opengameart.org/sites/default/files/cannon_fire_0.ogg
+
+Vehicle / Jan Schupke — Fantasy Sound Effects (Tinysized SFX)
+https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx
+Original download: https://opengameart.org/sites/default/files/tinysized.zip
+
+LeMudCrab — Crossbow Shot
+https://freesound.org/people/LeMudCrab/sounds/163453/
+Official HQ preview used: https://cdn.freesound.org/previews/163/163453_2263027-hq.mp3
+
+Brian MacIntosh / BMacZero — Electricity Sound Effects
+https://opengameart.org/content/electricity-sound-effects-0
+Original downloads:
+https://opengameart.org/sites/default/files/continuousspark.wav
+https://opengameart.org/sites/default/files/spark.wav
+
+Creative Commons Attribution 4.0 International (CC-BY 4.0)
+License: https://creativecommons.org/licenses/by/4.0/
+Legal code: https://creativecommons.org/licenses/by/4.0/legalcode
+
+leohpaz — 8 Magic Attacks
+https://opengameart.org/content/8-magic-attacks
+Original download: https://opengameart.org/sites/default/files/8_rpg_battle_magic_sfx_free_samples.zip
+
+Creative Commons Attribution 3.0 Unported (CC-BY 3.0)
+License: https://creativecommons.org/licenses/by/3.0/
+Legal code: https://creativecommons.org/licenses/by/3.0/legalcode
+
+The Berklee College of Music, submitted by qubodup — Shimmer glitter magic
+https://opengameart.org/content/shimmer-glitter-magic
+Original download: https://opengameart.org/sites/default/files/shimmer_1.flac
+
+Michel Baradari — Chaingun, pistol, rifle, shotgun shots
+https://opengameart.org/content/chaingun-pistol-rifle-shotgun-shots
+Original download: https://opengameart.org/sites/default/files/shots.7z
+
+MODIFICATIONS BY SOSOO DEFENCE
+Silence trimming, light EQ, layer mixing for the weapons listed in the report,
+short fades, finished-mix level balancing, mono downmix, 24kHz/64kbps MP3
+encoding and removal of nonessential metadata. The original attack dynamics
+are preserved without dynamic compression during asset preparation.
+Only siege uses a 0.95 playback-rate adjustment; other clips retain the
+original source pitch. Source filenames, hashes, timing and settings are in
+licenses/tower-audio-v1.json. Reproduction: tools/prepare-tower-audio.py.
+
+CC-BY source material and the corresponding derived clips retain the stated
+attribution licenses. They are not offered under CC0. CC0 source material
+remains available under CC0. For layered clips, retain every source credit
+listed in the report when redistributing the audio.
+
+Source archives are not included in the web release. The optimized audio is
+loaded from this game's own assets/audio/towers/ directory. Music, UI,
+collision and emergency fallback effects remain original local Web Audio.

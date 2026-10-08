@@ -17,6 +17,7 @@ interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.
 interface ShotData{towerId:number;typeId:string;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
 export class Field extends Phaser.Scene{
  model:Defense;mode:Mode={kind:'inspect',unit:100,effect:'basic'};onChange:()=>void=()=>{};onEvent:(event:GameEvent)=>void=()=>{};onSelect:(id:number)=>void=()=>{};
+ onImpactAudio:(type:'hit'|'kill'|'invalid')=>void=()=>{};
  private floor!:Phaser.GameObjects.Container;private overlay!:Phaser.GameObjects.Graphics;private visuals=new Map<number,{kind:MonsterKind;sprite:Phaser.GameObjects.Sprite;text:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;bar:Phaser.GameObjects.Graphics}>();
  private towersView?:Phaser.GameObjects.Container;private layoutSignature='';private heartbeat=0;private readyFlag=false;selected?:number;
  private towerArt=new Map<number,TowerVisual>();private knownTowerIds=new Set<number>();private cursor:Cell={x:1,y:3};
@@ -235,6 +236,7 @@ export class Field extends Phaser.Scene{
   }
  }
  private impact(d:ShotData,x:number,y:number,sequence:number){
+  this.onImpactAudio(!d.valid?'invalid':d.killed?'kill':'hit');
   const size=d.unit>=1000?108:d.unit>=100?72:46,color=EFFECTS[d.effect].color;
   if(d.valid)this.hitEquations?.show(d.targetId,d.before,d.unit,d.after,()=>{
    const target=this.visuals.get(d.targetId),bodySize=monsterSize(d.kind,this.model.level.id);

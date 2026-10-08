@@ -5,6 +5,7 @@ import {TOWER_AUDIO_MANIFEST,type TowerAudioSample,type TowerAudioStatus} from '
 type SampleMetadata=TowerAudioSample & {
  sourceUrl?:string;packUrl?:string;source?:string;sourceName?:string;sourcePack?:string;
  license?:string;licenseUrl?:string;sampleRate?:number;channels?:number;sourceBytes?:number;
+ sources?:{title:string;author:string;url:string;license:string;licenseUrl:string}[];
 };
 const assets=TOWER_AUDIO_MANIFEST as Readonly<Record<string,SampleMetadata>>;
 const ids=TOWERS.map(tower=>tower.id),spacing=1.2,sound=new Sound();
@@ -22,13 +23,13 @@ sound.setMusic(false);
 const size=(bytes:number)=>`${(bytes/1024).toFixed(1)} KiB`;
 const statusLabels:Record<TowerAudioStatus,string>={idle:'idle · 준비 전',loading:'loading · 다운로드 / 디코딩',ready:'ready · 실제 샘플 준비됨',failed:'failed · 파일 준비 실패'};
 const sourceUrl=(asset:SampleMetadata)=>asset.sourceUrl??asset.packUrl;
-const sourceName=(asset:SampleMetadata)=>asset.sourceName??asset.sourcePack??asset.source??'CC0 원본';
+const sourceName=(asset:SampleMetadata)=>asset.sourceName??asset.sourcePack??asset.source??'공개 원본';
 
 for(const tower of TOWERS){
  const asset=assets[tower.id],card=document.createElement('article');card.className='weapon';card.dataset.tower=tower.id;card.dataset.status='idle';
  const heading=document.createElement('h2');heading.textContent=tower.name;
  const badge=document.createElement('span');badge.className='state';badge.textContent=statusLabels.idle;
- const details=document.createElement('p');details.className='details';details.textContent=asset?`${asset.duration.toFixed(3)}초 · ${size(asset.bytes)} · MP3`:'샘플 manifest 대기 중';
+ const details=document.createElement('p');details.className='details';details.textContent=asset?`${asset.source}\n${asset.duration.toFixed(3)}초 · ${size(asset.bytes)} · MP3`:'샘플 manifest 대기 중';
  const button=document.createElement('button');button.type='button';button.textContent='발사 소리 듣기';button.setAttribute('aria-label',`${tower.name} 발사 소리 듣기`);button.onclick=()=>void audition(tower.id);
  card.append(heading,badge,details,button);
  if(asset&&sourceUrl(asset)){const link=document.createElement('a');link.className='source';link.href=sourceUrl(asset)!;link.target='_blank';link.rel='noopener noreferrer';link.textContent=sourceName(asset);card.append(link);}
@@ -40,14 +41,14 @@ const totalBytes=[...uniqueAssets.values()].reduce((sum,asset)=>sum+asset.bytes,
 const sourceBytes=[...uniqueAssets.values()].reduce((sum,asset)=>sum+(asset.sourceBytes??0),0);
 summary.textContent=`타워 ${ids.length}종 · 고유 샘플 ${uniqueAssets.size}개 · 총 압축 크기 ${size(totalBytes)} (${totalBytes.toLocaleString()} bytes)${sourceBytes?` · 원본 대비 ${(100-totalBytes/sourceBytes*100).toFixed(1)}% 감소`:''} · BGM OFF`;
 const sourceLinks=element('#source-links'),sources=new Map<string,string>();
-for(const asset of uniqueAssets.values())if(sourceUrl(asset))sources.set(sourceUrl(asset)!,sourceName(asset));
+for(const asset of uniqueAssets.values()){if(asset.sources)for(const source of asset.sources)sources.set(source.url,`${source.author} — ${source.title} (${source.license})`);else if(sourceUrl(asset))sources.set(sourceUrl(asset)!,sourceName(asset));}
 if(sources.size){const list=document.createElement('ul');for(const [url,name] of sources){const item=document.createElement('li'),link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=name;item.append(link);list.append(item);}sourceLinks.append(list);}
 else{const waiting=document.createElement('p');waiting.textContent='원본 출처가 manifest에 등록되면 링크가 표시됩니다.';sourceLinks.append(waiting);}
 const licenses=new Map<string,string>();
-for(const asset of uniqueAssets.values())if(asset.licenseUrl)licenses.set(asset.licenseUrl,asset.license??'CC0 라이선스');
+for(const asset of uniqueAssets.values()){if(asset.sources)for(const source of asset.sources)licenses.set(source.licenseUrl,source.license);else if(asset.licenseUrl)licenses.set(asset.licenseUrl,asset.license??'공개 라이선스');}
 if(!licenses.size)licenses.set('https://creativecommons.org/publicdomain/zero/1.0/','CC0 1.0 Universal');
 for(const [url,name] of licenses){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=name;sourceLinks.append(link,document.createTextNode(' '));}
-const provenance=document.createElement('p'),provenanceLink=document.createElement('a');provenanceLink.href='/licenses/tower-audio-v1.json';provenanceLink.textContent='샘플별 전체 CC0 출처와 압축 기록';provenance.append(provenanceLink);sourceLinks.append(provenance);
+const provenance=document.createElement('p'),provenanceLink=document.createElement('a');provenanceLink.href='/licenses/tower-audio-v1.json';provenanceLink.textContent='샘플별 전체 출처와 압축 기록';provenance.append(provenanceLink);sourceLinks.append(provenance);
 
 function refreshStates(){for(const id of ids){const state=sound.towerAudioStatus(id);cards.get(id)!.dataset.status=state;badges.get(id)!.textContent=statusLabels[state];}}
 function valid(token:number){return !disposed&&token===revision&&!document.hidden;}

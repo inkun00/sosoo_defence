@@ -35,7 +35,7 @@ test('hidden tabs suspend audio; disposal removes unlock handlers and prevents r
  const {sound,doc,context}=fixture(t);sound.setMusic(true);sound.resume();const c=context();doc.hidden=true;doc.dispatchEvent(new Event('visibilitychange'));assert.equal(c.state,'suspended');const count=c.sources.length;sound.play('hit');assert.equal(c.sources.length,count);doc.hidden=false;doc.dispatchEvent(new Event('visibilitychange'));await Promise.resolve();assert.equal(c.state,'running');sound.dispose();doc.dispatchEvent(new Event('pointerdown'));sound.setMusic(true);assert.equal(c.state,'closed');
 });
 test('combat effect storms are bounded and narration lowers only the music bus',t=>{
- const {sound,context}=fixture(t);sound.resume();const c=context();for(let i=0;i<100;i++)sound.play('hit');assert.equal(c.sources.length,3);sound.setDucking(true);assert.equal(c.gains[0].gain.value,.25);assert.equal(c.gains[1].gain.value,.85);sound.setDucking(false);assert.equal(c.gains[0].gain.value,.72);
+ const {sound,context}=fixture(t);sound.resume();const c=context();for(let i=0;i<100;i++)sound.play('hit');assert.equal(c.sources.length,2);sound.setDucking(true);assert.equal(c.gains[0].gain.value,.25);assert.equal(c.gains[1].gain.value,.85);sound.setDucking(false);assert.equal(c.gains[0].gain.value,.72);
 });
 test('every full arrangement contains playable, finite notes and distinct instrumentation',()=>{
  for(const track of Object.keys(TRACKS) as MusicTrack[]){const notes=Array.from({length:128},(_,i)=>scoreStep(track,i)).flat();assert.ok(notes.length>32);assert.ok(notes.every(v=>Number.isFinite(v.note)&&v.note>=20&&v.note<=110&&v.volume>0&&v.volume<=.2&&v.duration>0));}
@@ -90,7 +90,7 @@ for(const action of ['mute','hidden','dispose'] as const)test(`${action} cannot 
 
 test('sample and procedural voices share the same 32-voice limit and muting releases it',async t=>{
  const request=t.mock.method(globalThis,'fetch',async()=>sampleResponse()),{sound,context}=fixture(t,new TowerAudioSamples(sampledAssets));sound.resume();const c=context();await sound.preloadTowerShots(['basic']);
- sound.play('hit');const fallback=3;assert.equal(c.sources.length,fallback);
+ sound.play('hit');const fallback=2;assert.equal(c.sources.length,fallback);
  for(let i=0;i<100;i++){c.currentTime+=.1;sound.play('shot','basic');}assert.equal(c.sources.length,32);assert.equal(c.sources.filter(n=>n.buffer===c.decoded).length,32-fallback);assert.equal(request.mock.callCount(),1);
  c.sources.find(n=>n.buffer===c.decoded)!.onended!();c.currentTime+=.1;sound.play('shot','basic');assert.equal(c.sources.length,33);
  const old=c.sources.length;sound.sfx=false;sound.sfx=true;c.currentTime+=1;sound.play('shot','basic');assert.equal(c.sources.length,old+1);

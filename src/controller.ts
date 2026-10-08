@@ -93,7 +93,8 @@ function stage(n:number){
  model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
 }
 function event(ev:BattleEvent){
- sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
+ // Damage and learning state update immediately; impact audio follows the flight.
+ if(!['hit','kill','invalid'].includes(ev.type))sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
  if(ev.type==='hit'){lastHit=ev;if(model.level.id<=4){equation=ev.message;hint=(ev.data as {hint:string}).hint;}}
  if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=`${ev.message} · 전체 잔액 ${numberText(model.money,model.level.id>=4?3:model.level.digits)} 코인`;}}
  if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';if(field.mode.kind==='wall')notify(`${equation} · 합성 성공! 초록 길을 눌러 놓아요.`);}
@@ -166,7 +167,7 @@ ui.onControls=(controls:Map<string,Control>)=>{
  const focus=(document.activeElement as HTMLElement)?.dataset.action;
  $('accessible-controls').replaceChildren();for(const [id,c]of active){const b=document.createElement('button');b.type='button';b.textContent=c.label||id;b.dataset.action=id;b.disabled=!c.enabled;b.onclick=c.run;$('accessible-controls').append(b);if(id===focus)b.focus();}
 };
-field.onChange=update;field.onEvent=event;field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
+field.onChange=update;field.onEvent=event;field.onImpactAudio=type=>sound.play(type);field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
 field.onWallPlace=c=>{
  model.cancelWall();const placed=model.placeWall(c);field.flush();
  if(!placed){field.focusCell(c);update();return;}

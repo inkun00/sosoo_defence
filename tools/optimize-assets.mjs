@@ -35,7 +35,7 @@ for(const [id,sample] of Object.entries(audioReport.towers)){
  if(hash(buffer)!==sample.sha256||buffer.length!==sample.bytes)throw Error(`Tower audio metadata mismatch: ${id}`);
  const url=`/assets/audio/towers/${id}.${hash(buffer).slice(0,12)}.mp3`,firstSource=audioReport.sources[sample.sources[0]];
  await writeFile(join(out,url),buffer);
- audioManifest[id]={url,bytes:buffer.length,duration:sample.duration,source:sample.description,sourceUrl:firstSource.url,license:audioReport.license,licenseUrl:audioReport.licenseUrl};
+ audioManifest[id]={url,bytes:buffer.length,duration:sample.duration,source:sample.description,sourceUrl:firstSource.url,license:sample.license,licenseUrl:sample.licenseUrl,sources:sample.sources.map(key=>{const s=audioReport.sources[key];return {title:s.title,author:s.author,url:s.url,license:s.license,licenseUrl:s.licenseUrl};})};
 }
 const audioKeep=new Set(Object.values(audioManifest).map(v=>basename(v.url)));
 for(const file of await readdir(audioDirectory))if(/\.[a-f0-9]{12}\.mp3$/.test(file)&&!audioKeep.has(file))await unlink(join(audioDirectory,file));

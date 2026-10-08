@@ -1,110 +1,246 @@
 {
   "basic": {
-    "url": "/assets/audio/towers/basic.8b51afeb8cfc.mp3",
+    "url": "/assets/audio/towers/basic.efb40e70799a.mp3",
     "bytes": 4800,
     "duration": 0.6,
-    "source": "중형 철포탄 폭발",
-    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+    "source": "대포의 짧은 화약 발사",
+    "sourceUrl": "https://opengameart.org/content/cannon-fire",
     "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sources": [
+      {
+        "title": "Cannon fire",
+        "author": "Thimras",
+        "url": "https://opengameart.org/content/cannon-fire",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      }
+    ]
   },
   "double": {
-    "url": "/assets/audio/towers/double.f68ae51d71dd.mp3",
-    "bytes": 4416,
-    "duration": 0.552,
-    "source": "65ms 간격 쌍석포",
-    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
-  },
-  "needle": {
-    "url": "/assets/audio/towers/needle.c68df64c2a06.mp3",
-    "bytes": 2880,
-    "duration": 0.36,
-    "source": "금속 바늘과 빠른 바람",
-    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
-  },
-  "pebble": {
-    "url": "/assets/audio/towers/pebble.336de34f50cb.mp3",
-    "bytes": 4224,
-    "duration": 0.528,
-    "source": "작은 돌이 흩어지는 자갈포",
-    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
-  },
-  "frost": {
-    "url": "/assets/audio/towers/frost.612dd02b3ad9.mp3",
-    "bytes": 5760,
-    "duration": 0.72,
-    "source": "냉기 구체와 얼음 울림",
-    "sourceUrl": "https://opengameart.org/content/ice-spells",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
-  },
-  "ice": {
-    "url": "/assets/audio/towers/ice.b28764266201.mp3",
+    "url": "/assets/audio/towers/double.a1f45d5ed3f2.mp3",
     "bytes": 5184,
     "duration": 0.648,
-    "source": "날카로운 얼음창 파열",
-    "sourceUrl": "https://opengameart.org/content/ice-breakingshattering",
+    "source": "65ms 간격의 두 포신 발사",
+    "sourceUrl": "https://opengameart.org/content/cannon-fire",
     "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sources": [
+      {
+        "title": "Cannon fire",
+        "author": "Thimras",
+        "url": "https://opengameart.org/content/cannon-fire",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      }
+    ]
+  },
+  "needle": {
+    "url": "/assets/audio/towers/needle.ec060b5aebab.mp3",
+    "bytes": 2304,
+    "duration": 0.288,
+    "source": "쇠뇌 장력이 풀리는 날카로운 발사",
+    "sourceUrl": "https://freesound.org/people/LeMudCrab/sounds/163453/",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sources": [
+      {
+        "title": "Crossbow Shot",
+        "author": "LeMudCrab",
+        "url": "https://freesound.org/people/LeMudCrab/sounds/163453/",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      }
+    ]
+  },
+  "pebble": {
+    "url": "/assets/audio/towers/pebble.2702736b1761.mp3",
+    "bytes": 4224,
+    "duration": 0.528,
+    "source": "작은 돌이 튀는 흙 파열",
+    "sourceUrl": "https://opengameart.org/content/8-magic-attacks",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sources": [
+      {
+        "title": "8 Magic Attacks",
+        "author": "leohpaz",
+        "url": "https://opengameart.org/content/8-magic-attacks",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+      }
+    ]
+  },
+  "frost": {
+    "url": "/assets/audio/towers/frost.a9750d3c256b.mp3",
+    "bytes": 5760,
+    "duration": 0.72,
+    "source": "차가운 바람과 부드러운 냉기",
+    "sourceUrl": "https://opengameart.org/content/8-magic-attacks",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sources": [
+      {
+        "title": "8 Magic Attacks",
+        "author": "leohpaz",
+        "url": "https://opengameart.org/content/8-magic-attacks",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+      }
+    ]
+  },
+  "ice": {
+    "url": "/assets/audio/towers/ice.4bc77c35404f.mp3",
+    "bytes": 7104,
+    "duration": 0.888,
+    "source": "얼음창의 선명한 결정 파열",
+    "sourceUrl": "https://opengameart.org/content/8-magic-attacks",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sources": [
+      {
+        "title": "8 Magic Attacks",
+        "author": "leohpaz",
+        "url": "https://opengameart.org/content/8-magic-attacks",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+      }
+    ]
   },
   "catapult": {
-    "url": "/assets/audio/towers/catapult.0314c9e5a1b4.mp3",
-    "bytes": 6720,
-    "duration": 0.84,
-    "source": "나무 장력과 무거운 바위 비행",
-    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
-  },
-  "lightning": {
-    "url": "/assets/audio/towers/lightning.15491f9af4af.mp3",
-    "bytes": 2880,
-    "duration": 0.36,
-    "source": "연결된 전격의 지직거림과 방전",
-    "sourceUrl": "https://opengameart.org/content/electric-buzz",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
-  },
-  "crystal": {
-    "url": "/assets/audio/towers/crystal.883aa7e9425e.mp3",
+    "url": "/assets/audio/towers/catapult.450ae8613d0e.mp3",
     "bytes": 5952,
     "duration": 0.744,
-    "source": "회전 수정의 유리 울림과 마법",
-    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    "source": "목재 장력과 무거운 바위 비행",
+    "sourceUrl": "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sources": [
+      {
+        "title": "Fantasy Sound Effects (Tinysized SFX)",
+        "author": "Vehicle / Jan Schupke",
+        "url": "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      {
+        "title": "8 Magic Attacks",
+        "author": "leohpaz",
+        "url": "https://opengameart.org/content/8-magic-attacks",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+      }
+    ]
+  },
+  "lightning": {
+    "url": "/assets/audio/towers/lightning.00b0e925f89b.mp3",
+    "bytes": 5184,
+    "duration": 0.648,
+    "source": "연결된 테슬라 방전과 짧은 천둥",
+    "sourceUrl": "https://opengameart.org/content/electricity-sound-effects-0",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sources": [
+      {
+        "title": "Electricity Sound Effects",
+        "author": "Brian MacIntosh / BMacZero",
+        "url": "https://opengameart.org/content/electricity-sound-effects-0",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      {
+        "title": "Electricity Sound Effects (spark)",
+        "author": "Brian MacIntosh / BMacZero",
+        "url": "https://opengameart.org/content/electricity-sound-effects-0",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      {
+        "title": "8 Magic Attacks",
+        "author": "leohpaz",
+        "url": "https://opengameart.org/content/8-magic-attacks",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+      }
+    ]
+  },
+  "crystal": {
+    "url": "/assets/audio/towers/crystal.a3b52c069429.mp3",
+    "bytes": 6144,
+    "duration": 0.768,
+    "source": "맑게 울리는 수정 마법",
+    "sourceUrl": "https://opengameart.org/content/shimmer-glitter-magic",
+    "license": "CC-BY-3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "sources": [
+      {
+        "title": "Shimmer glitter magic",
+        "author": "The Berklee College of Music; submitted by qubodup",
+        "url": "https://opengameart.org/content/shimmer-glitter-magic",
+        "license": "CC-BY-3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0/"
+      }
+    ]
   },
   "sniper": {
-    "url": "/assets/audio/towers/sniper.5d231d603e32.mp3",
-    "bytes": 3456,
-    "duration": 0.432,
-    "source": "날카로운 장거리 발사와 탄도",
-    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    "url": "/assets/audio/towers/sniper.8567e9d50343.mp3",
+    "bytes": 3648,
+    "duration": 0.456,
+    "source": "소총의 짧고 선명한 단발",
+    "sourceUrl": "https://opengameart.org/content/chaingun-pistol-rifle-shotgun-shots",
+    "license": "CC-BY-3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "sources": [
+      {
+        "title": "Chaingun, pistol, rifle, shotgun shots",
+        "author": "Michel Baradari",
+        "url": "https://opengameart.org/content/chaingun-pistol-rifle-shotgun-shots",
+        "license": "CC-BY-3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0/"
+      }
+    ]
   },
   "siege": {
-    "url": "/assets/audio/towers/siege.816f8f62cbf2.mp3",
+    "url": "/assets/audio/towers/siege.f553ffe29a62.mp3",
     "bytes": 8064,
     "duration": 1.008,
-    "source": "대포 폭발과 묵직한 저역 충격",
-    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+    "source": "깊은 화약 폭발과 긴 대포 잔향",
+    "sourceUrl": "https://opengameart.org/content/cannon-fire",
     "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "sources": [
+      {
+        "title": "Cannon fire",
+        "author": "Thimras",
+        "url": "https://opengameart.org/content/cannon-fire",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      }
+    ]
   },
   "rune": {
-    "url": "/assets/audio/towers/rune.98452e815313.mp3",
-    "bytes": 6528,
-    "duration": 0.816,
-    "source": "쇠뇌 장력과 룬 마법 잔향",
-    "sourceUrl": "https://opengameart.org/content/battle-sound-effects",
-    "license": "CC0-1.0",
-    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    "url": "/assets/audio/towers/rune.58b562cc3e91.mp3",
+    "bytes": 7104,
+    "duration": 0.888,
+    "source": "쇠뇌 발사와 룬의 충전 잔향",
+    "sourceUrl": "https://freesound.org/people/LeMudCrab/sounds/163453/",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "sources": [
+      {
+        "title": "Crossbow Shot",
+        "author": "LeMudCrab",
+        "url": "https://freesound.org/people/LeMudCrab/sounds/163453/",
+        "license": "CC0-1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+      },
+      {
+        "title": "8 Magic Attacks",
+        "author": "leohpaz",
+        "url": "https://opengameart.org/content/8-magic-attacks",
+        "license": "CC-BY-4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+      }
+    ]
   }
 }

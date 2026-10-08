@@ -1,690 +1,606 @@
 {
-  "version": 1,
-  "license": "CC0-1.0",
-  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "version": 2,
   "sources": {
-    "bangs": {
-      "title": "25 CC0 bang / firework SFX",
-      "author": "rubberduck",
-      "url": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
-      "download": "https://opengameart.org/sites/default/files/25-CC0-bang-sfx.zip",
-      "archive": "bangs.zip",
+    "cannon": {
+      "title": "Cannon fire",
+      "author": "Thimras",
+      "url": "https://opengameart.org/content/cannon-fire",
+      "download": "https://opengameart.org/sites/default/files/cannon_fire_0.ogg",
+      "archive": "cannon-fire.ogg",
       "license": "CC0-1.0",
       "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "c0c9ecc11e2dc0d190f0cced755569858234b8528286bc83becb6314c663407f"
+      "downloadSha256": "2b21ffa41e5c3be4eecdfbd3490544f5aa8b6d1581787265863e13de1a8e599d",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
     },
-    "rpg": {
-      "title": "80 CC0 RPG SFX",
-      "author": "rubberduck",
-      "url": "https://opengameart.org/content/80-cc0-rpg-sfx",
-      "download": "https://opengameart.org/sites/default/files/80-CC0-RPG-SFX_0.zip",
-      "archive": "rpg.zip",
+    "foley": {
+      "title": "Fantasy Sound Effects (Tinysized SFX)",
+      "author": "Vehicle / Jan Schupke",
+      "url": "https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx",
+      "download": "https://opengameart.org/sites/default/files/tinysized.zip",
+      "archive": "tinysized.zip",
       "license": "CC0-1.0",
       "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "1c2f06ff4e8563b5b8b745b23cf213c1474142a69bb82bd8f5e10d9b3f7a7bbd"
-    },
-    "battle": {
-      "title": "Battle Sound Effects",
-      "author": "artisticdude",
-      "url": "https://opengameart.org/content/battle-sound-effects",
-      "download": "https://opengameart.org/sites/default/files/battle_sound_effects_0.zip",
-      "archive": "battle.zip",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "44e3d26b2378d2eb3a4f28b4c5cbc71908ad13c7389038348dbe9b8cde4f4c05"
-    },
-    "ice": {
-      "title": "Ice spells",
-      "author": "bart",
-      "url": "https://opengameart.org/content/ice-spells",
-      "download": "https://opengameart.org/sites/default/files/icespells.zip",
-      "archive": "ice.zip",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "45f02a204fc7cc896a17487080376c521ac2e564fe3da4d24cffa0086f8d6a54"
-    },
-    "shatters": {
-      "title": "Ice breaking/shattering",
-      "author": "IgnasD",
-      "url": "https://opengameart.org/content/ice-breakingshattering",
-      "download": "https://opengameart.org/sites/default/files/IceShatters_0.zip",
-      "archive": "shatters.zip",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "b84ea396fac1af183dd2cb205a01edaa94b493ffb36965eafe59912e41cf9eb7"
-    },
-    "buzz": {
-      "title": "Electric Buzz",
-      "author": "themightyglider; original recording soundtracvkradio",
-      "url": "https://opengameart.org/content/electric-buzz",
-      "originalUrl": "https://freesound.org/people/soundtracvkradio/sounds/394679/",
-      "download": "https://opengameart.org/sites/default/files/buzz_0.ogg",
-      "archive": "buzz.ogg",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "4427905b12e7dbd35613a45ab3cf6b74b10816888db3446b3acbadbe36829dd8"
-    },
-    "electric": {
-      "title": "Spell sounds (electricspell2)",
-      "author": "Augmentality / Brandon Morris; submitted by HaelDB",
-      "url": "https://opengameart.org/content/spell-sounds",
-      "download": "https://opengameart.org/sites/default/files/electricspell2.ogg",
-      "archive": "electricspell2.ogg",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "5fcb8824064d9dba2e3880d439a44b798ecdc2a58041cd028f094d774302a9a1"
+      "downloadSha256": "7f00e2b1dae15e68db0e1d6096767f03755e9e7c247128afc3e935e63774d7db",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
     },
     "magic": {
-      "title": "Magic Spell SFX (magical_7)",
-      "author": "JaggedStone",
-      "url": "https://opengameart.org/content/magic-spell-sfx",
-      "download": "https://opengameart.org/sites/default/files/magical_7.ogg",
-      "archive": "magical7.ogg",
-      "license": "CC0-1.0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "2817da4f5df69ff993baffd6594a2f2a069f85ee2a02019f97db2246e350a76b"
+      "title": "8 Magic Attacks",
+      "author": "leohpaz",
+      "url": "https://opengameart.org/content/8-magic-attacks",
+      "download": "https://opengameart.org/sites/default/files/8_rpg_battle_magic_sfx_free_samples.zip",
+      "archive": "magic-attacks.zip",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "downloadSha256": "9a80a925c33e9862975806e69f9a5cc6d2c23c77ed01522df6dd396d5047c01f",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
     },
-    "cannon": {
-      "title": "Cannon hit",
-      "author": "Thimras",
-      "url": "https://opengameart.org/content/cannon-hit",
-      "download": "https://opengameart.org/sites/default/files/cannon_hit_0.ogg",
-      "archive": "cannon-hit.ogg",
+    "electric": {
+      "title": "Electricity Sound Effects",
+      "author": "Brian MacIntosh / BMacZero",
+      "url": "https://opengameart.org/content/electricity-sound-effects-0",
+      "download": "https://opengameart.org/sites/default/files/continuousspark.wav",
+      "archive": "continuous-spark.wav",
       "license": "CC0-1.0",
       "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "downloadSha256": "fd116464dda58e5c94436d17f0e76437b475b5f773603d4aaf8fa21c5f2d3b9e"
+      "downloadSha256": "4ec24045b4fb6a88b958d00f16cc39b8aa992cd6e6a5edb4ecb0f34b36ddb18b",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
+    },
+    "spark": {
+      "title": "Electricity Sound Effects (spark)",
+      "author": "Brian MacIntosh / BMacZero",
+      "url": "https://opengameart.org/content/electricity-sound-effects-0",
+      "download": "https://opengameart.org/sites/default/files/spark.wav",
+      "archive": "spark.wav",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "9a3d987bdf7f405570aa015f6da42596ce84c5073c18c0561be7cd3ae401bc97",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
+    },
+    "crystal": {
+      "title": "Shimmer glitter magic",
+      "author": "The Berklee College of Music; submitted by qubodup",
+      "url": "https://opengameart.org/content/shimmer-glitter-magic",
+      "download": "https://opengameart.org/sites/default/files/shimmer_1.flac",
+      "archive": "shimmer.flac",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "downloadSha256": "b6802e6ef22189058a4406ae5c7bda9a54c47e908fad3fd6212650c1aa0170af",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
+    },
+    "crossbow": {
+      "title": "Crossbow Shot",
+      "author": "LeMudCrab",
+      "url": "https://freesound.org/people/LeMudCrab/sounds/163453/",
+      "download": "https://cdn.freesound.org/previews/163/163453_2263027-hq.mp3",
+      "archive": "crossbow-fire.mp3",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "ab5bd32e3ad08cc3ef6b5f6b33b100cc1527f079be22c924a255bc39b80233a8",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
+    },
+    "rifle": {
+      "title": "Chaingun, pistol, rifle, shotgun shots",
+      "author": "Michel Baradari",
+      "url": "https://opengameart.org/content/chaingun-pistol-rifle-shotgun-shots",
+      "download": "https://opengameart.org/sites/default/files/shots.7z",
+      "archive": "shots.7z",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "downloadSha256": "4a5d78c7520396a4a1da7617d56c456031ac0041c77cb90a019fd75918bfb618",
+      "modifications": "silence trimming, light EQ, short fades, finished-mix level balancing, mono MP3 encoding; speed=.95 only for siege"
     }
   },
+  "licenseNotice": "tower-audio-LICENSES.txt",
   "processing": {
     "rate": 24000,
     "channels": 1,
     "codec": "MP3",
     "bitrate": 64000,
-    "compressor": "threshold=.05:ratio=4:attack=.05:release=35:makeup=1",
-    "targetPeak": 0.78,
-    "fadeInMs": 3,
-    "fadeOutMs": 35,
+    "compressor": "none; preserve transients",
+    "normalization": "finished mix, 85th percentile of active 20ms RMS windows; linear gain limited by peak",
+    "targetActiveRms": 0.15,
+    "targetPeak": 0.82,
+    "fadeInMs": 2,
+    "fadeOutMs": 60,
     "metadata": "removed",
     "runtime": "lazy loaded, decoded once, fingerprinted immutable cache"
   },
   "towers": {
     "basic": {
-      "description": "중형 철포탄 폭발",
+      "description": "대포의 짧은 화약 발사",
       "sources": [
-        "bangs"
+        "cannon"
       ],
+      "licenses": [
+        "CC0-1.0"
+      ],
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "layers": [
         {
-          "file": "bangs/cannon_03.ogg",
-          "sourceSha256": "c3690a013befc16be1432e6fe62422db71c7b606980ddfe62429e864c5caf1d2",
-          "sourceBytes": 38818,
-          "trimStart": 0.03575,
-          "seconds": 0.53,
+          "file": "cannon-fire.ogg",
+          "sourceSha256": "2b21ffa41e5c3be4eecdfbd3490544f5aa8b6d1581787265863e13de1a8e599d",
+          "sourceBytes": 179939,
+          "trimStart": 0,
+          "seconds": 0.54,
           "gain": 1,
           "speed": 1,
           "at": 0,
-          "high": 55,
+          "high": 35,
           "low": 11000
         }
       ],
+      "normalizationGain": 0.780905,
       "filename": "basic.mp3",
-      "sha256": "8b51afeb8cfcfb7b2cee2ca560e202d407a12fd2764f08a69b988f51e9a48554",
+      "sha256": "efb40e70799afe1c471198e40bc9786c8269cd8d05da47f4f7f2a5e10a9ea733",
       "bytes": 4800,
       "duration": 0.6,
-      "sourceDuration": 0.55,
-      "referenceStereoWavBytes": 105644,
-      "decodedPeak": 0.761458,
-      "decodedRms": 0.129702
+      "sourceDuration": 0.54,
+      "referenceStereoWavBytes": 103724,
+      "decodedPeak": 0.780502,
+      "decodedRms": 0.120959
     },
     "double": {
-      "description": "65ms 간격 쌍석포",
+      "description": "65ms 간격의 두 포신 발사",
       "sources": [
-        "bangs",
-        "rpg"
+        "cannon"
       ],
+      "licenses": [
+        "CC0-1.0"
+      ],
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "layers": [
         {
-          "file": "bangs/bang_08.ogg",
-          "sourceSha256": "aaaba1cdaeb9e5e61abf3ebdff09c967b5d451c42b45259e3b00f62575baafea",
-          "sourceBytes": 19546,
-          "trimStart": 0.050208,
-          "seconds": 0.4,
-          "gain": 0.65,
-          "speed": 1.2,
-          "at": 0,
-          "high": 55,
-          "low": 11000
-        },
-        {
-          "file": "rpg/item_stone_03.ogg",
-          "sourceSha256": "91bc96742252fedcfed2b664f03336c33f6ffbc2039ba6fcaada32b9bb758da6",
-          "sourceBytes": 24923,
-          "trimStart": 0.004979,
-          "seconds": 0.22,
-          "gain": 0.65,
+          "file": "cannon-fire.ogg",
+          "sourceSha256": "2b21ffa41e5c3be4eecdfbd3490544f5aa8b6d1581787265863e13de1a8e599d",
+          "sourceBytes": 179939,
+          "trimStart": 0,
+          "seconds": 0.5,
+          "gain": 0.7,
           "speed": 1,
           "at": 0,
-          "high": 55,
+          "high": 35,
           "low": 11000
         },
         {
-          "file": "bangs/bang_08.ogg",
-          "sourceSha256": "aaaba1cdaeb9e5e61abf3ebdff09c967b5d451c42b45259e3b00f62575baafea",
-          "sourceBytes": 19546,
-          "trimStart": 0.050208,
-          "seconds": 0.4,
-          "gain": 0.65,
-          "speed": 1.2,
-          "at": 0.065,
-          "high": 55,
-          "low": 11000
-        },
-        {
-          "file": "rpg/item_stone_03.ogg",
-          "sourceSha256": "91bc96742252fedcfed2b664f03336c33f6ffbc2039ba6fcaada32b9bb758da6",
-          "sourceBytes": 24923,
-          "trimStart": 0.004979,
-          "seconds": 0.22,
+          "file": "cannon-fire.ogg",
+          "sourceSha256": "2b21ffa41e5c3be4eecdfbd3490544f5aa8b6d1581787265863e13de1a8e599d",
+          "sourceBytes": 179939,
+          "trimStart": 0,
+          "seconds": 0.5,
           "gain": 0.65,
           "speed": 1,
           "at": 0.065,
-          "high": 55,
+          "high": 35,
           "low": 11000
         }
       ],
+      "normalizationGain": 0.893491,
       "filename": "double.mp3",
-      "sha256": "f68ae51d71dd52410f2ce83dcf763099d35a9fa13306ac551fd181f321448b3c",
-      "bytes": 4416,
-      "duration": 0.552,
-      "sourceDuration": 0.49,
-      "referenceStereoWavBytes": 94124,
-      "decodedPeak": 0.753909,
-      "decodedRms": 0.123298
+      "sha256": "a1f45d5ed3f2a53725cbb8361ec5b32400799b0c9f6a2eac612460fe4c8e7a5b",
+      "bytes": 5184,
+      "duration": 0.648,
+      "sourceDuration": 0.59,
+      "referenceStereoWavBytes": 113324,
+      "decodedPeak": 0.625051,
+      "decodedRms": 0.121206
     },
     "needle": {
-      "description": "금속 바늘과 빠른 바람",
+      "description": "쇠뇌 장력이 풀리는 날카로운 발사",
       "sources": [
-        "rpg",
-        "battle"
+        "crossbow"
       ],
+      "licenses": [
+        "CC0-1.0"
+      ],
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
       "layers": [
         {
-          "file": "rpg/blade_01.ogg",
-          "sourceSha256": "caf7a7cb9b25cda4bd487c1d12d18b74a34bb18c816fd67277cf3c8d7ef32a3a",
-          "sourceBytes": 15142,
-          "trimStart": 0.004562,
-          "seconds": 0.19,
+          "file": "crossbow-fire.mp3",
+          "sourceSha256": "ab5bd32e3ad08cc3ef6b5f6b33b100cc1527f079be22c924a255bc39b80233a8",
+          "sourceBytes": 6837,
+          "trimStart": 0.010401,
+          "seconds": 0.2,
           "gain": 1,
-          "speed": 1.4,
-          "at": 0,
-          "high": 400,
-          "low": 11000
-        },
-        {
-          "file": "battle/battle_sound_effects/swish_2.wav",
-          "sourceSha256": "690725fd44a99a4abd32d59c0efe8e28486afb564d3f5710cca75a2c786cf0f1",
-          "sourceBytes": 66114,
-          "trimStart": 0.043327,
-          "seconds": 0.23,
-          "gain": 0.6,
-          "speed": 1.35,
-          "at": 0,
-          "high": 800,
-          "low": 11000
-        }
-      ],
-      "filename": "needle.mp3",
-      "sha256": "c68df64c2a06ceb793c6434efcefcd5b8d571104ad93d688e9d7c88002b8dbde",
-      "bytes": 2880,
-      "duration": 0.36,
-      "sourceDuration": 0.29,
-      "referenceStereoWavBytes": 55724,
-      "decodedPeak": 0.725871,
-      "decodedRms": 0.098268
-    },
-    "pebble": {
-      "description": "작은 돌이 흩어지는 자갈포",
-      "sources": [
-        "rpg"
-      ],
-      "layers": [
-        {
-          "file": "rpg/stones_04.ogg",
-          "sourceSha256": "66f1cef820f66d86414d481b37a48a7b7ea11f4a5d7358372ebcfb506af0e652",
-          "sourceBytes": 20176,
-          "trimStart": 0.019042,
-          "seconds": 0.37,
-          "gain": 0.8,
           "speed": 1,
           "at": 0,
-          "high": 55,
-          "low": 11000
-        },
-        {
-          "file": "rpg/item_stone_02.ogg",
-          "sourceSha256": "bc9d36c83f44415b16411878f460a5005bea1ede42259daeb179f59d82a754b5",
-          "sourceBytes": 15303,
-          "trimStart": 0.016729,
-          "seconds": 0.2,
-          "gain": 0.6,
-          "speed": 1.25,
-          "at": 0.035,
-          "high": 55,
-          "low": 11000
-        },
-        {
-          "file": "rpg/item_stone_04.ogg",
-          "sourceSha256": "bfd2516d62b68f9c0fa02ad2924065b4d7dadbb2fba04e229da774df75ea45b6",
-          "sourceBytes": 17029,
-          "trimStart": 0.00775,
-          "seconds": 0.2,
-          "gain": 0.45,
-          "speed": 1.45,
-          "at": 0.1,
-          "high": 55,
+          "high": 100,
           "low": 11000
         }
       ],
+      "normalizationGain": 0.919024,
+      "filename": "needle.mp3",
+      "sha256": "ec060b5aebab4a4c5ce09c96457553ac1247cac3de5f8977e56863bcea3b9d79",
+      "bytes": 2304,
+      "duration": 0.288,
+      "sourceDuration": 0.24,
+      "referenceStereoWavBytes": 46124,
+      "decodedPeak": 0.647467,
+      "decodedRms": 0.050466
+    },
+    "pebble": {
+      "description": "작은 돌이 튀는 흙 파열",
+      "sources": [
+        "magic"
+      ],
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "layers": [
+        {
+          "file": "magic-attacks/30_Earth_02.wav",
+          "sourceSha256": "096ed69309b460103fc1149919674cc6af2b29af0b715fe8b0275205a2471d98",
+          "sourceBytes": 706336,
+          "trimStart": 0.08,
+          "seconds": 0.46,
+          "gain": 1,
+          "speed": 1,
+          "at": 0,
+          "high": 160,
+          "low": 11000
+        }
+      ],
+      "normalizationGain": 2.406486,
       "filename": "pebble.mp3",
-      "sha256": "336de34f50cb9e8a90bf46382952670c75f32158a80044472e00b9c0fa853cd3",
+      "sha256": "2702736b1761a6bfe55d46e3ab451d7d317576eca95a0e5333084210cfa4c1a1",
       "bytes": 4224,
       "duration": 0.528,
       "sourceDuration": 0.46,
       "referenceStereoWavBytes": 88364,
-      "decodedPeak": 0.733502,
-      "decodedRms": 0.068402
+      "decodedPeak": 0.485336,
+      "decodedRms": 0.098735
     },
     "frost": {
-      "description": "냉기 구체와 얼음 울림",
+      "description": "차가운 바람과 부드러운 냉기",
       "sources": [
-        "ice",
-        "rpg"
+        "magic"
       ],
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
       "layers": [
         {
-          "file": "ice/ice.wav",
-          "sourceSha256": "c3039c864d056d0e4951b84b96a7bb0044ca8cb58aeae514fc256145872b6a94",
-          "sourceBytes": 205356,
-          "trimStart": 0.001422,
-          "seconds": 0.62,
-          "gain": 0.85,
-          "speed": 1.1,
+          "file": "magic-attacks/25_Wind_01.wav",
+          "sourceSha256": "78fbb9ac12dc03788e4b50638c15496472324e3944d71290fe878ce842534ed7",
+          "sourceBytes": 529936,
+          "trimStart": 0.00124,
+          "seconds": 0.66,
+          "gain": 0.7,
+          "speed": 1,
           "at": 0,
-          "high": 200,
-          "low": 11000
+          "high": 35,
+          "low": 6000
         },
         {
-          "file": "rpg/item_gem_02.ogg",
-          "sourceSha256": "a5f4b0b3ae0e272765619289ef6709513e0dfa0785d7559e8a223176a8bcf181",
-          "sourceBytes": 9058,
-          "trimStart": 0.008125,
-          "seconds": 0.25,
-          "gain": 0.3,
-          "speed": 0.8,
-          "at": 0.045,
-          "high": 400,
-          "low": 11000
+          "file": "magic-attacks/13_Ice_explosion_01.wav",
+          "sourceSha256": "b76c65adbc704f095fbc27593f0c2ad3dd0e6f2c105a6b70b7a6e061694d2c96",
+          "sourceBytes": 706336,
+          "trimStart": 0,
+          "seconds": 0.52,
+          "gain": 0.4,
+          "speed": 1,
+          "at": 0,
+          "high": 35,
+          "low": 6500
         }
       ],
+      "normalizationGain": 1.931791,
       "filename": "frost.mp3",
-      "sha256": "612dd02b3ad9f0d77b3c328173cd2b1c62d77e68ad9a0e230bb8c5f0f10ce040",
+      "sha256": "a9750d3c256ba9e8a664db89f690673ee65d42382ef827cc6b1496e827d27ebb",
       "bytes": 5760,
       "duration": 0.72,
-      "sourceDuration": 0.65,
-      "referenceStereoWavBytes": 124844,
-      "decodedPeak": 0.759836,
-      "decodedRms": 0.070363
+      "sourceDuration": 0.66,
+      "referenceStereoWavBytes": 126764,
+      "decodedPeak": 0.532153,
+      "decodedRms": 0.099225
     },
     "ice": {
-      "description": "날카로운 얼음창 파열",
+      "description": "얼음창의 선명한 결정 파열",
       "sources": [
-        "shatters",
-        "ice",
-        "battle"
+        "magic"
       ],
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
       "layers": [
         {
-          "file": "shatters/IceShatters/LedasLuzta2.ogg",
-          "sourceSha256": "92a20369f866c852f841ffaef31676cb70f542592504b040327c60f5101f9c47",
-          "sourceBytes": 10448,
-          "trimStart": 0.030583,
-          "seconds": 0.35,
-          "gain": 1,
-          "speed": 1.15,
-          "at": 0,
-          "high": 350,
-          "low": 11000
-        },
-        {
-          "file": "ice/coldsnap.wav",
-          "sourceSha256": "090977264d65d90a50b04e9f0c1c4e02fb194e5b50d9fe244f0079a4da54158c",
-          "sourceBytes": 467244,
-          "trimStart": 0.003122,
-          "seconds": 0.52,
-          "gain": 0.6,
-          "speed": 1.15,
-          "at": 0,
-          "high": 450,
-          "low": 11000
-        },
-        {
-          "file": "battle/battle_sound_effects/swish_4.wav",
-          "sourceSha256": "a53382f21d9c7e4d7a1d6e8cddc9ce9779740f9ad2ba4d9012ee20318c04f24c",
-          "sourceBytes": 66850,
-          "trimStart": 0.054075,
-          "seconds": 0.3,
-          "gain": 0.45,
-          "speed": 1.2,
-          "at": 0,
-          "high": 650,
-          "low": 11000
-        }
-      ],
-      "filename": "ice.mp3",
-      "sha256": "b28764266201aa37e409a776c40b963573748074a829f907b31284ccc7f270c8",
-      "bytes": 5184,
-      "duration": 0.648,
-      "sourceDuration": 0.58,
-      "referenceStereoWavBytes": 111404,
-      "decodedPeak": 0.690505,
-      "decodedRms": 0.072359
-    },
-    "catapult": {
-      "description": "나무 장력과 무거운 바위 비행",
-      "sources": [
-        "rpg",
-        "battle"
-      ],
-      "layers": [
-        {
-          "file": "rpg/wood_04.ogg",
-          "sourceSha256": "bd5dc8469c4f1cb3abff35e2e01b541d4c97d58033f67dfe1c8e3b62ad5350ba",
-          "sourceBytes": 20667,
-          "trimStart": 0.048042,
-          "seconds": 0.5,
-          "gain": 0.75,
-          "speed": 0.8,
-          "at": 0,
-          "high": 55,
-          "low": 5000
-        },
-        {
-          "file": "rpg/stones_01.ogg",
-          "sourceSha256": "d11ce95031c2c36ae2a00979620fa95a7a3f5c6d6f2ac86962ed292aa556be8d",
-          "sourceBytes": 27110,
-          "trimStart": 0.020771,
-          "seconds": 0.67,
-          "gain": 0.7,
-          "speed": 0.78,
-          "at": 0.06,
-          "high": 55,
-          "low": 6500
-        },
-        {
-          "file": "battle/battle_sound_effects/swish_3.wav",
-          "sourceSha256": "7767c7b6ba063d8d5de6e05ba29c037af5c4a19d02b00b6b5ff398f72732e1c9",
-          "sourceBytes": 102130,
-          "trimStart": 0.003463,
-          "seconds": 0.62,
-          "gain": 0.8,
-          "speed": 0.82,
-          "at": 0,
-          "high": 55,
-          "low": 5000
-        }
-      ],
-      "filename": "catapult.mp3",
-      "sha256": "0314c9e5a1b4b6c00e0f77f297b884b0d5a725fd5af736b4fa199e4633b59f1b",
-      "bytes": 6720,
-      "duration": 0.84,
-      "sourceDuration": 0.78,
-      "referenceStereoWavBytes": 149804,
-      "decodedPeak": 0.749553,
-      "decodedRms": 0.139592
-    },
-    "lightning": {
-      "description": "연결된 전격의 지직거림과 방전",
-      "sources": [
-        "buzz",
-        "electric"
-      ],
-      "layers": [
-        {
-          "file": "buzz.ogg",
-          "sourceSha256": "4427905b12e7dbd35613a45ab3cf6b74b10816888db3446b3acbadbe36829dd8",
-          "sourceBytes": 23644,
-          "trimStart": 0.18,
-          "seconds": 0.245,
+          "file": "magic-attacks/13_Ice_explosion_01.wav",
+          "sourceSha256": "b76c65adbc704f095fbc27593f0c2ad3dd0e6f2c105a6b70b7a6e061694d2c96",
+          "sourceBytes": 706336,
+          "trimStart": 0,
+          "seconds": 0.82,
           "gain": 1,
           "speed": 1,
           "at": 0,
-          "high": 180,
-          "low": 11000
-        },
-        {
-          "file": "electricspell2.ogg",
-          "sourceSha256": "5fcb8824064d9dba2e3880d439a44b798ecdc2a58041cd028f094d774302a9a1",
-          "sourceBytes": 215995,
-          "trimStart": 3.259902,
-          "seconds": 0.26,
-          "gain": 0.45,
-          "speed": 2.2,
-          "at": 0,
-          "high": 500,
+          "high": 35,
           "low": 11000
         }
       ],
-      "filename": "lightning.mp3",
-      "sha256": "15491f9af4afb2d758a533b54d35740ea5df94415e8a5b8d73ea85c2fc2f8230",
-      "bytes": 2880,
-      "duration": 0.36,
-      "sourceDuration": 0.31,
-      "referenceStereoWavBytes": 59564,
-      "decodedPeak": 0.794384,
-      "decodedRms": 0.162071
+      "normalizationGain": 2.448582,
+      "filename": "ice.mp3",
+      "sha256": "4bc77c35404f0bd75efccd8be90b1298d3e2e33e23ad5006b20577e689528bf1",
+      "bytes": 7104,
+      "duration": 0.888,
+      "sourceDuration": 0.82,
+      "referenceStereoWavBytes": 157484,
+      "decodedPeak": 0.756993,
+      "decodedRms": 0.096918
     },
-    "crystal": {
-      "description": "회전 수정의 유리 울림과 마법",
+    "catapult": {
+      "description": "목재 장력과 무거운 바위 비행",
       "sources": [
-        "rpg",
-        "electric",
+        "foley",
         "magic"
       ],
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
       "layers": [
         {
-          "file": "rpg/item_gem_04.ogg",
-          "sourceSha256": "e12eb95d0458675c2692831454ed09c7a680de966e7c705ce67a7e12560aa73a",
-          "sourceBytes": 28423,
-          "trimStart": 0.013688,
-          "seconds": 0.44,
-          "gain": 0.85,
-          "speed": 1.25,
+          "file": "tinysized/sfx-cc0/floor-creak-01.wav",
+          "sourceSha256": "565bd04de41d915c2ff7eb875f2a0b965e1b3688607215f7820ca9ca80a14b41",
+          "sourceBytes": 114480,
+          "trimStart": 0.016796,
+          "seconds": 0.25,
+          "gain": 0.9,
+          "speed": 1,
           "at": 0,
-          "high": 550,
+          "high": 35,
           "low": 11000
         },
         {
-          "file": "electricspell2.ogg",
-          "sourceSha256": "5fcb8824064d9dba2e3880d439a44b798ecdc2a58041cd028f094d774302a9a1",
-          "sourceBytes": 215995,
-          "trimStart": 3.259902,
-          "seconds": 0.57,
-          "gain": 0.45,
-          "speed": 1.6,
-          "at": 0,
-          "high": 850,
-          "low": 11000
-        },
-        {
-          "file": "magical7.ogg",
-          "sourceSha256": "2817da4f5df69ff993baffd6594a2f2a069f85ee2a02019f97db2246e350a76b",
-          "sourceBytes": 76383,
-          "trimStart": 0,
-          "seconds": 0.58,
+          "file": "magic-attacks/25_Wind_01.wav",
+          "sourceSha256": "78fbb9ac12dc03788e4b50638c15496472324e3944d71290fe878ce842534ed7",
+          "sourceBytes": 529936,
+          "trimStart": 0.00124,
+          "seconds": 0.53,
           "gain": 0.35,
-          "speed": 1.7,
-          "at": 0.045,
-          "high": 900,
-          "low": 11000
+          "speed": 1,
+          "at": 0.13,
+          "high": 35,
+          "low": 4000
         }
       ],
-      "filename": "crystal.mp3",
-      "sha256": "883aa7e9425edc257038dcc5c0d81ca41146ef728cc6f6f57269864a4b56f242",
+      "normalizationGain": 0.900978,
+      "filename": "catapult.mp3",
+      "sha256": "450ae8613d0e73f510432bf5e4c82ca20a142b223bb4551aed1d109758e73c7c",
       "bytes": 5952,
       "duration": 0.744,
-      "sourceDuration": 0.68,
-      "referenceStereoWavBytes": 130604,
-      "decodedPeak": 0.709761,
-      "decodedRms": 0.172075
+      "sourceDuration": 0.69,
+      "referenceStereoWavBytes": 132524,
+      "decodedPeak": 0.74719,
+      "decodedRms": 0.067628
     },
-    "sniper": {
-      "description": "날카로운 장거리 발사와 탄도",
+    "lightning": {
+      "description": "연결된 테슬라 방전과 짧은 천둥",
       "sources": [
-        "bangs",
-        "battle",
-        "rpg"
+        "electric",
+        "spark",
+        "magic"
       ],
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
       "layers": [
         {
-          "file": "bangs/shot_03.ogg",
-          "sourceSha256": "f3cfbf0af36a717ff9c8f58640f181db7b73266e8263591014d453c4e77c6418",
-          "sourceBytes": 17081,
+          "file": "continuous-spark.wav",
+          "sourceSha256": "4ec24045b4fb6a88b958d00f16cc39b8aa992cd6e6a5edb4ecb0f34b36ddb18b",
+          "sourceBytes": 19244,
           "trimStart": 0,
-          "seconds": 0.22,
+          "seconds": 0.19,
+          "gain": 0.9,
+          "speed": 1,
+          "at": 0,
+          "high": 35,
+          "low": 11000
+        },
+        {
+          "file": "continuous-spark.wav",
+          "sourceSha256": "4ec24045b4fb6a88b958d00f16cc39b8aa992cd6e6a5edb4ecb0f34b36ddb18b",
+          "sourceBytes": 19244,
+          "trimStart": 0,
+          "seconds": 0.19,
+          "gain": 0.7,
+          "speed": 1,
+          "at": 0.17,
+          "high": 35,
+          "low": 11000
+        },
+        {
+          "file": "spark.wav",
+          "sourceSha256": "9a3d987bdf7f405570aa015f6da42596ce84c5073c18c0561be7cd3ae401bc97",
+          "sourceBytes": 29740,
+          "trimStart": 0.136592,
+          "seconds": 0.21,
+          "gain": 0.55,
+          "speed": 1,
+          "at": 0.3,
+          "high": 35,
+          "low": 11000
+        },
+        {
+          "file": "magic-attacks/18_Thunder_02.wav",
+          "sourceSha256": "f97cd32aacb0e65085aafed9895f4a9a2740ad7b44e0d0fce2069b854c543f43",
+          "sourceBytes": 706336,
+          "trimStart": 0,
+          "seconds": 0.57,
+          "gain": 0.45,
+          "speed": 1,
+          "at": 0,
+          "high": 70,
+          "low": 4500
+        }
+      ],
+      "normalizationGain": 1.073491,
+      "filename": "lightning.mp3",
+      "sha256": "00b0e925f89b17ed5f471b27b7d65166b80494e973f1ac25e290de383b9ae514",
+      "bytes": 5184,
+      "duration": 0.648,
+      "sourceDuration": 0.59,
+      "referenceStereoWavBytes": 113324,
+      "decodedPeak": 0.710129,
+      "decodedRms": 0.042855
+    },
+    "crystal": {
+      "description": "맑게 울리는 수정 마법",
+      "sources": [
+        "crystal"
+      ],
+      "licenses": [
+        "CC-BY-3.0"
+      ],
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "layers": [
+        {
+          "file": "shimmer.flac",
+          "sourceSha256": "b6802e6ef22189058a4406ae5c7bda9a54c47e908fad3fd6212650c1aa0170af",
+          "sourceBytes": 46885,
+          "trimStart": 0,
+          "seconds": 0.66,
           "gain": 1,
-          "speed": 1.1,
+          "speed": 1,
           "at": 0,
-          "high": 200,
-          "low": 11000
-        },
-        {
-          "file": "battle/battle_sound_effects/swish_4.wav",
-          "sourceSha256": "a53382f21d9c7e4d7a1d6e8cddc9ce9779740f9ad2ba4d9012ee20318c04f24c",
-          "sourceBytes": 66850,
-          "trimStart": 0.054075,
-          "seconds": 0.24,
-          "gain": 0.4,
-          "speed": 1.6,
-          "at": 0,
-          "high": 900,
-          "low": 11000
-        },
-        {
-          "file": "rpg/blade_03.ogg",
-          "sourceSha256": "2cd9e6926f4602a4350e703eeae4df520053e290f358ab692632d651ad368a7c",
-          "sourceBytes": 15184,
-          "trimStart": 0.005104,
-          "seconds": 0.28,
-          "gain": 0.3,
-          "speed": 1.35,
-          "at": 0.025,
-          "high": 1000,
+          "high": 35,
           "low": 11000
         }
       ],
-      "filename": "sniper.mp3",
-      "sha256": "5d231d603e329412aab9ed66879680e4405dae6cc8cc24a186ca746dce4f8a26",
-      "bytes": 3456,
-      "duration": 0.432,
-      "sourceDuration": 0.38,
-      "referenceStereoWavBytes": 73004,
-      "decodedPeak": 0.761382,
-      "decodedRms": 0.104113
+      "normalizationGain": 1.051695,
+      "filename": "crystal.mp3",
+      "sha256": "a3b52c069429289551c0b9332a6f1bfc4188b199a28789d22922a5afe03560b7",
+      "bytes": 6144,
+      "duration": 0.768,
+      "sourceDuration": 0.72,
+      "referenceStereoWavBytes": 138284,
+      "decodedPeak": 0.559413,
+      "decodedRms": 0.091412
     },
-    "siege": {
-      "description": "대포 폭발과 묵직한 저역 충격",
+    "sniper": {
+      "description": "소총의 짧고 선명한 단발",
       "sources": [
-        "bangs",
-        "cannon"
+        "rifle"
       ],
+      "licenses": [
+        "CC-BY-3.0"
+      ],
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
       "layers": [
         {
-          "file": "bangs/cannon_02.ogg",
-          "sourceSha256": "716392af61b29dabe637c2616091207f390d25357aae3d4c625df5dfea7e961d",
-          "sourceBytes": 69097,
-          "trimStart": 0.002021,
-          "seconds": 0.88,
+          "file": "shots/shots/rifle.wav",
+          "sourceSha256": "6324903225b5637f1187fd93cfbcb0f359394b8c1f7881273ffe740d51a5b98f",
+          "sourceBytes": 336800,
+          "trimStart": 0,
+          "seconds": 0.4,
+          "gain": 1,
+          "speed": 1,
+          "at": 0,
+          "high": 35,
+          "low": 11000
+        }
+      ],
+      "normalizationGain": 0.344392,
+      "filename": "sniper.mp3",
+      "sha256": "8567e9d503434d31b1e5a01f1b7a951e474f0da0a12612d04b4603403cfd7783",
+      "bytes": 3648,
+      "duration": 0.456,
+      "sourceDuration": 0.4,
+      "referenceStereoWavBytes": 76844,
+      "decodedPeak": 0.49155,
+      "decodedRms": 0.101231
+    },
+    "siege": {
+      "description": "깊은 화약 폭발과 긴 대포 잔향",
+      "sources": [
+        "cannon"
+      ],
+      "licenses": [
+        "CC0-1.0"
+      ],
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "layers": [
+        {
+          "file": "cannon-fire.ogg",
+          "sourceSha256": "2b21ffa41e5c3be4eecdfbd3490544f5aa8b6d1581787265863e13de1a8e599d",
+          "sourceBytes": 179939,
+          "trimStart": 0,
+          "seconds": 0.94,
           "gain": 1,
           "speed": 0.95,
           "at": 0,
-          "high": 55,
-          "low": 11000
-        },
-        {
-          "file": "cannon-hit.ogg",
-          "sourceSha256": "fd116464dda58e5c94436d17f0e76437b475b5f773603d4aaf8fa21c5f2d3b9e",
-          "sourceBytes": 327787,
-          "trimStart": 0.007688,
-          "seconds": 0.86,
-          "gain": 0.55,
-          "speed": 0.85,
-          "at": 0.025,
-          "high": 55,
-          "low": 3500
+          "high": 35,
+          "low": 6500
         }
       ],
+      "normalizationGain": 0.797681,
       "filename": "siege.mp3",
-      "sha256": "816f8f62cbf2b1262e1f2438980a4dd5b08660073d1fd29788abcf583a93e148",
+      "sha256": "f553ffe29a62ce4c6004ca54f0c30e5fe5afb89e1470ab38c825bbc37c24b306",
       "bytes": 8064,
       "duration": 1.008,
       "sourceDuration": 0.94,
       "referenceStereoWavBytes": 180524,
-      "decodedPeak": 0.753933,
-      "decodedRms": 0.271403
+      "decodedPeak": 0.769802,
+      "decodedRms": 0.097587
     },
     "rune": {
-      "description": "쇠뇌 장력과 룬 마법 잔향",
+      "description": "쇠뇌 발사와 룬의 충전 잔향",
       "sources": [
-        "battle",
-        "rpg",
+        "crossbow",
         "magic"
       ],
+      "licenses": [
+        "CC-BY-4.0"
+      ],
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
       "layers": [
         {
-          "file": "battle/battle_sound_effects/Bow.wav",
-          "sourceSha256": "0dc8cf132cf583563936ac3a4d776e196210d5f6703b4ebdd7c68e8f35b9f3e3",
-          "sourceBytes": 96814,
-          "trimStart": 0.101127,
-          "seconds": 0.33,
-          "gain": 0.9,
+          "file": "crossbow-fire.mp3",
+          "sourceSha256": "ab5bd32e3ad08cc3ef6b5f6b33b100cc1527f079be22c924a255bc39b80233a8",
+          "sourceBytes": 6837,
+          "trimStart": 0.010401,
+          "seconds": 0.2,
+          "gain": 1.4,
           "speed": 1,
           "at": 0,
-          "high": 55,
+          "high": 35,
           "low": 11000
         },
         {
-          "file": "rpg/spell_01.ogg",
-          "sourceSha256": "09821a53c418c5eeeac4fa25bada9d245e822fed302eeeae9ae4151522a45ae5",
-          "sourceBytes": 29121,
-          "trimStart": 0.008062,
-          "seconds": 0.6,
-          "gain": 0.6,
-          "speed": 0.9,
-          "at": 0.025,
-          "high": 250,
-          "low": 11000
-        },
-        {
-          "file": "magical7.ogg",
-          "sourceSha256": "2817da4f5df69ff993baffd6594a2f2a069f85ee2a02019f97db2246e350a76b",
-          "sourceBytes": 76383,
+          "file": "magic-attacks/45_Charge_05.wav",
+          "sourceSha256": "b3cbf3109a3bd08f979ab12920e62fed8dbafdcdc6175fee2804089d070e3e16",
+          "sourceBytes": 1411936,
           "trimStart": 0,
-          "seconds": 0.64,
-          "gain": 0.5,
-          "speed": 0.8,
-          "at": 0.06,
-          "high": 350,
+          "seconds": 0.75,
+          "gain": 0.6,
+          "speed": 1,
+          "at": 0.045,
+          "high": 35,
           "low": 11000
         }
       ],
+      "normalizationGain": 0.721165,
       "filename": "rune.mp3",
-      "sha256": "98452e8153138ac02e489a7763bc5fb2f500df9c096b9de9377ec46d337b49d5",
-      "bytes": 6528,
-      "duration": 0.816,
-      "sourceDuration": 0.76,
-      "referenceStereoWavBytes": 145964,
-      "decodedPeak": 0.77004,
-      "decodedRms": 0.197649
+      "sha256": "58b562cc3e91b5f5a2d4a912161500ed5f2f93d41f6cf348e700e10e15b86c53",
+      "bytes": 7104,
+      "duration": 0.888,
+      "sourceDuration": 0.84,
+      "referenceStereoWavBytes": 161324,
+      "decodedPeak": 0.774266,
+      "decodedRms": 0.074322
     }
   },
   "tools": {
@@ -694,7 +610,7 @@
     "soundfile": "0.14.0",
     "libsndfile": "1.2.2"
   },
-  "totalBytes": 60864,
-  "referenceStereoWavBytes": 1319568,
-  "reductionPercent": 95.39
+  "totalBytes": 65472,
+  "referenceStereoWavBytes": 1438608,
+  "reductionPercent": 95.45
 }

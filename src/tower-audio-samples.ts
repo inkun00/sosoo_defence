@@ -5,7 +5,9 @@ export type TowerAudioStatus='idle'|'loading'|'ready'|'failed';
 type SampleEntry={status:TowerAudioStatus;buffer?:AudioBuffer;promise?:Promise<AudioBuffer|undefined>;controller?:AbortController;};
 
 export const TOWER_AUDIO_MANIFEST=manifest as Readonly<Record<string,TowerAudioSample>>;
-const gains:Readonly<Record<string,number>>={basic:.35,double:.39,needle:.28,pebble:.34,frost:.38,ice:.4,catapult:.44,lightning:.42,crystal:.4,sniper:.44,siege:.48,rune:.44};
+// Samples already have balanced active RMS. Grade changes timbre and decay,
+// rather than making the heaviest weapon many times louder than frost magic.
+const gains:Readonly<Record<string,number>>={basic:.5,double:.49,needle:.5,pebble:.5,frost:.52,ice:.5,catapult:.51,lightning:.5,crystal:.49,sniper:.48,siege:.52,rune:.52};
 export function towerShotSampleGain(typeId='basic'){return gains[typeId]??gains.basic;}
 
 // Entries are keyed by the fingerprinted URL, so aliases share a single request

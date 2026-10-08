@@ -53,7 +53,7 @@ Korean labels, mathematical values, health bars, range indicators and light
 halos are engine text or dynamic geometry. They are kept separate from image
 pixels so arithmetic and gameplay state remain exact and readable.
 Music, UI/collision effects and emergency launch fallbacks use original local
-Web Audio tones. Tower launch samples use the CC0 sounds credited below.
+Web Audio tones. Tower launch samples use the licensed sounds credited below.
 
 VISUAL REFERENCE
 User-supplied YouTube gameplay reference was viewed at multiple timestamps:
@@ -124,7 +124,7 @@ ORIGINAL PROCEDURAL SOUNDTRACK AND EFFECTS
 Seven original score arrangements and local UI/collision effects are defined
 in src/music.ts and src/audio.ts. Web Audio oscillators, deterministic noise,
 filters, envelopes, an echo bus and a compressor generate those sounds locally.
-Tower launches now use the twelve CC0-derived samples credited below, with
+Tower launches now use the twelve licensed samples credited below, with
 procedural fallbacks when a sample is unavailable. No remote audio service.
 
 CURSED WORLD OPENING v2
@@ -165,33 +165,33 @@ Source PNGs retained; alpha WebP served in adventure and peer-to-peer duels.
 Each weapon has distinct launch audio. Flight paths, trails, connected lightning,
 gravity arcs and visual effects run locally.
 
-TWELVE CC0 TOWER LAUNCH SAMPLES v1 (2026-10-08)
-Source sound packs and creators:
-rubberduck — 25 CC0 bang / firework SFX (recorded fireworks, bangs and cannons)
-https://opengameart.org/content/25-cc0-bang-firework-sfx
-rubberduck — 80 CC0 RPG SFX (stone, wood, blades, gems, spells)
-https://opengameart.org/content/80-cc0-rpg-sfx
-artisticdude — Battle Sound Effects (bow and swishes)
-https://opengameart.org/content/battle-sound-effects
-bart — Ice spells
-https://opengameart.org/content/ice-spells
-IgnasD — Ice breaking/shattering
-https://opengameart.org/content/ice-breakingshattering
-themightyglider / soundtracvkradio — Electric Buzz
-https://opengameart.org/content/electric-buzz
-https://freesound.org/people/soundtracvkradio/sounds/394679/
-Augmentality / Brandon Morris, submitted by HaelDB — Spell sounds
-https://opengameart.org/content/spell-sounds
-JaggedStone — Magic Spell SFX
-https://opengameart.org/content/magic-spell-sfx
-Thimras — Cannon hit
-https://opengameart.org/content/cannon-hit
-All sources offer CC0; this project selects CC0 where multiple licenses appear.
-Modified: silence trimming, EQ, rate/pitch shifts, layering, compression,
-normalization, short fades, mono downmix, metadata removal and MP3 encoding.
-Twelve derived clips: assets/audio/towers/; 24kHz mono, 64kbps MP3.
-Exact source filenames, hashes and recipes: licenses/tower-audio-v1.json.
-CC0 notice: licenses/tower-audio-CC0.txt. Derivative clips also offered under CC0.
+TWELVE TOWER LAUNCH SAMPLES v2 (2026-10-08)
+Sources and creators; each source retains its stated license:
+Thimras — Cannon fire — CC0 1.0
+https://opengameart.org/content/cannon-fire
+Vehicle / Jan Schupke — Fantasy Sound Effects (Tinysized SFX) — CC0 1.0
+https://opengameart.org/content/fantasy-sound-effects-tinysized-sfx
+LeMudCrab — Crossbow Shot — CC0 1.0
+https://freesound.org/people/LeMudCrab/sounds/163453/
+Brian MacIntosh / BMacZero — Electricity Sound Effects (continuous spark
+and spark) — CC0 1.0
+https://opengameart.org/content/electricity-sound-effects-0
+leohpaz — 8 Magic Attacks — CC-BY 4.0
+https://opengameart.org/content/8-magic-attacks
+The Berklee College of Music, submitted by qubodup — Shimmer glitter magic
+— CC-BY 3.0
+https://opengameart.org/content/shimmer-glitter-magic
+Michel Baradari — Chaingun, pistol, rifle, shotgun shots — CC-BY 3.0
+https://opengameart.org/content/chaingun-pistol-rifle-shotgun-shots
+
+Modified by Sosoo Defence: silence trimming, light EQ, layer mixing where
+listed in the report, short fades, finished-mix level balancing, mono downmix,
+metadata removal and 24kHz/64kbps MP3 encoding. Only siege uses a 0.95 playback
+rate adjustment. The other source recordings retain their original pitch.
+CC-BY material and its derived clips retain their respective attribution
+licenses; this release does not relicense all tower sounds as CC0.
+License links and attribution: licenses/tower-audio-LICENSES.txt.
+Exact original filenames, licenses, hashes and recipes: licenses/tower-audio-v1.json.
 Preparation script: tools/prepare-tower-audio.py (local only, not web build).
 Source packs are excluded from deployment. Only installed tower types are
 preloaded in gameplay, with one request/decode per URL and immutable caching.
