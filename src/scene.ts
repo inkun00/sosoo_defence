@@ -4,7 +4,7 @@ import {Cell,TILE,COLS,ROWS,OX,OY,world,cellAt,key} from './path';
 import {Effect,EFFECTS} from './levels';
 import {decimal,numberText} from './math';
 import {FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT} from './layout';
-import {loadDungeon,registerDungeon,registerMonster} from './assets';
+import {loadDungeon,registerDungeon,registerMonster,terrainTileScale} from './assets';
 import {MonsterKind,MONSTERS,MONSTER_KINDS,monsterSize,stageMonsterKinds} from './monsters';
 import {artURL} from './art';
 import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
@@ -72,7 +72,8 @@ export class Field extends Phaser.Scene{
   if(!this.readyFlag)return;this.ambient?.prepareRedraw();const previous=new Map(this.towerArt);for(const v of previous.values())this.tweens.killTweensOf(v.root);this.floor.removeAll(true);this.towersView?.removeAll(true);this.towerArt.clear();for(const v of this.wallArt.values()){v.image.destroy();v.health.destroy();}this.wallArt.clear();const road=this.model.path()??[],roadSet=new Set(road.map(key)),map=this.model.map;
   const backdrop=this.add.graphics();backdrop.fillStyle(0x17191d).fillRoundedRect(9,24,970,558,12);backdrop.lineStyle(2,0x4c4840).strokeRoundedRect(12,27,964,552,10);this.floor.add(backdrop);
   this.floor.add(this.label(FIELD_WIDTH/2,12,`${String(map.id).padStart(2,'0')} · ${map.name}`,16,'#ded0b8'));
-  const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(.38).setTint(map.floorTint);this.floor.add(stoneFloor);
+  const floorScale=terrainTileScale(this,.38);
+  const stoneFloor=this.add.tileSprite(OX+COLS*TILE/2,OY+ROWS*TILE/2,COLS*TILE,ROWS*TILE,'dungeon-terrain','floor').setTileScale(floorScale.x,floorScale.y).setTint(map.floorTint);this.floor.add(stoneFloor);
   const props=(x:number,y:number,name:string,w:number,h=w)=>{const image=this.add.image(x,y,'dungeon-props',name).setDisplaySize(w,h);this.floor.add(image);return image;};
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
    const c={x,y},xy=world(c),isRoad=roadSet.has(key(c));

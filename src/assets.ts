@@ -16,6 +16,12 @@ export function registerMonster(scene:Phaser.Scene,kind:MonsterKind){
  const atlas=MONSTERS[kind].atlas;
  if(scene.textures.exists('dungeon-'+atlas)&&!scene.textures.get('dungeon-'+atlas).has(kind+'-0'))cells(scene,atlas,4,4,Array.from({length:16},(_,i)=>kind+'-'+i));
 }
+// Tile size is measured in source pixels. Keep the existing world-space stone
+// pattern when the texture is downsized, including its rounded atlas edges.
+export function terrainTileScale(scene:Phaser.Scene,scale:number){
+ const frame=scene.textures.get('dungeon-terrain').get('floor');
+ return {x:scale*627/frame.cutWidth,y:scale*627/frame.cutHeight};
+}
 function cells(scene:Phaser.Scene,atlas:string,cols:number,rows:number,names:string[],trim=0){
  const texture=scene.textures.get('dungeon-'+atlas),source=texture.getSourceImage();
  names.forEach((name,i)=>{const cw=source.width/cols,ch=source.height/rows;

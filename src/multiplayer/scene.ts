@@ -1,6 +1,6 @@
 import {artURL} from '../art';
 import Phaser from 'phaser';
-import {loadDungeon,registerDungeon} from '../assets';
+import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
@@ -93,7 +93,8 @@ export class DuelScene extends Phaser.Scene{
   this.syncShots();this.syncEnemies();this.onControls();
  }
  private drawTerrain(){this.ambient?.prepareRedraw();this.terrain.removeAll(true);this.units.removeAll(true);this.towerViews.clear();const s=this.view().state;
-  this.panel(this.terrain,493,266,970,299);this.terrain.add(this.add.tileSprite(X+456,Y+133,912,266,'dungeon-terrain','floor').setTileScale(.35));
+  const floorScale=terrainTileScale(this,.35);
+  this.panel(this.terrain,493,266,970,299);this.terrain.add(this.add.tileSprite(X+456,Y+133,912,266,'dungeon-terrain','floor').setTileScale(floorScale.x,floorScale.y));
   const grid=this.add.graphics();for(let x=0;x<24;x++)for(let y=0;y<7;y++){
    const cx=X+(x+.5)*T,cy=Y+(y+.5)*T;if(y===DUEL_ROAD)this.terrain.add(this.add.image(cx,cy,'dungeon-terrain','path').setDisplaySize(T,T));
    else{grid.lineStyle(1,x<12?0x55aec3:0xe2a569,.18).strokeRect(cx-T/2,cy-T/2,T,T);}

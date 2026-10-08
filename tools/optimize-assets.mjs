@@ -3,6 +3,7 @@ import {readFile,writeFile,mkdir,readdir,copyFile,stat,unlink} from 'node:fs/pro
 import {resolve,dirname,basename,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {imageProfile,transformedImage} from './image-profiles.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),source=join(root,'public'),out=join(root,'web-public');
 if(dirname(out)!==root||basename(out)!=='web-public')throw Error('Invalid generated asset directory');
 const manifestPath=join(root,'src','art-manifest.json');let prior={};try{prior=JSON.parse(await readFile(manifestPath,'utf8'));}catch{}
@@ -12,14 +13,12 @@ for(const file of (await readdir(join(source,'assets','dungeon'))).sort()){
  if(!file.endsWith('.png')){await copyFile(join(source,'assets','dungeon',file),join(out,'assets','dungeon',file));continue;}
  // These four source sheets have been replaced by the rotating-head atlases.
  if(/^tower-(basic|slow|stun|range)\.png$/.test(file))continue;
- const name=file.slice(0,-4),input=await readFile(join(source,'assets','dungeon',file)),quality=name.startsWith('story-')||name==='title-castle-v1'?86:90;
- const width=name.startsWith('heroes-level-')?768:name.startsWith('fx-flight-')?1152:name==='menu-button-v1'||name==='title-wordmark-v1'?1200:undefined;
- const fingerprint=hash(Buffer.concat([input,Buffer.from(`webp-${quality}-width${width??'original'}-alpha100-effort5${name==='title-wordmark-v1'?'-trim1':''}-${sharp.versions.webp}`)]));const old=prior[name];
+ const name=file.slice(0,-4),input=await readFile(join(source,'assets','dungeon',file)),profile=imageProfile(name);
+ const fingerprint=hash(Buffer.concat([input,Buffer.from(JSON.stringify({format:'webp',...profile,sharp:sharp.versions.sharp,webp:sharp.versions.webp}))]));const old=prior[name];
  if(old?.sourceHash===fingerprint&&await stat(join(out,old.url)).catch(()=>null)){manifest[name]=old;original+=input.length;optimized+=old.bytes;continue;}
- const pipeline=sharp(input);if(name==='title-wordmark-v1')pipeline.trim({threshold:1});
- const {data:buffer,info:meta}=await pipeline.resize({width,withoutEnlargement:true}).webp({quality,alphaQuality:100,effort:5}).toBuffer({resolveWithObject:true});
+ const {data:buffer,info:meta}=await transformedImage(sharp,input,profile).webp(profile).toBuffer({resolveWithObject:true});
  const url=`/assets/dungeon/${name}.${hash(buffer).slice(0,12)}.webp`;
- await writeFile(join(out,url),buffer);manifest[name]={url,sourceHash:fingerprint,width:meta.width,height:meta.height,sourceBytes:input.length,bytes:buffer.length};
+ await writeFile(join(out,url),buffer);manifest[name]={url,sourceHash:fingerprint,width:meta.width,height:meta.height,sourceBytes:input.length,bytes:buffer.length,encoding:profile};
  original+=input.length;optimized+=buffer.length;converted++;
 }
 const keep=new Set(Object.values(manifest).map(v=>basename(v.url)));
