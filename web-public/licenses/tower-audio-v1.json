@@ -1,0 +1,700 @@
+{
+  "version": 1,
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "sources": {
+    "bangs": {
+      "title": "25 CC0 bang / firework SFX",
+      "author": "rubberduck",
+      "url": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+      "download": "https://opengameart.org/sites/default/files/25-CC0-bang-sfx.zip",
+      "archive": "bangs.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "c0c9ecc11e2dc0d190f0cced755569858234b8528286bc83becb6314c663407f"
+    },
+    "rpg": {
+      "title": "80 CC0 RPG SFX",
+      "author": "rubberduck",
+      "url": "https://opengameart.org/content/80-cc0-rpg-sfx",
+      "download": "https://opengameart.org/sites/default/files/80-CC0-RPG-SFX_0.zip",
+      "archive": "rpg.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "1c2f06ff4e8563b5b8b745b23cf213c1474142a69bb82bd8f5e10d9b3f7a7bbd"
+    },
+    "battle": {
+      "title": "Battle Sound Effects",
+      "author": "artisticdude",
+      "url": "https://opengameart.org/content/battle-sound-effects",
+      "download": "https://opengameart.org/sites/default/files/battle_sound_effects_0.zip",
+      "archive": "battle.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "44e3d26b2378d2eb3a4f28b4c5cbc71908ad13c7389038348dbe9b8cde4f4c05"
+    },
+    "ice": {
+      "title": "Ice spells",
+      "author": "bart",
+      "url": "https://opengameart.org/content/ice-spells",
+      "download": "https://opengameart.org/sites/default/files/icespells.zip",
+      "archive": "ice.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "45f02a204fc7cc896a17487080376c521ac2e564fe3da4d24cffa0086f8d6a54"
+    },
+    "shatters": {
+      "title": "Ice breaking/shattering",
+      "author": "IgnasD",
+      "url": "https://opengameart.org/content/ice-breakingshattering",
+      "download": "https://opengameart.org/sites/default/files/IceShatters_0.zip",
+      "archive": "shatters.zip",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "b84ea396fac1af183dd2cb205a01edaa94b493ffb36965eafe59912e41cf9eb7"
+    },
+    "buzz": {
+      "title": "Electric Buzz",
+      "author": "themightyglider; original recording soundtracvkradio",
+      "url": "https://opengameart.org/content/electric-buzz",
+      "originalUrl": "https://freesound.org/people/soundtracvkradio/sounds/394679/",
+      "download": "https://opengameart.org/sites/default/files/buzz_0.ogg",
+      "archive": "buzz.ogg",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "4427905b12e7dbd35613a45ab3cf6b74b10816888db3446b3acbadbe36829dd8"
+    },
+    "electric": {
+      "title": "Spell sounds (electricspell2)",
+      "author": "Augmentality / Brandon Morris; submitted by HaelDB",
+      "url": "https://opengameart.org/content/spell-sounds",
+      "download": "https://opengameart.org/sites/default/files/electricspell2.ogg",
+      "archive": "electricspell2.ogg",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "5fcb8824064d9dba2e3880d439a44b798ecdc2a58041cd028f094d774302a9a1"
+    },
+    "magic": {
+      "title": "Magic Spell SFX (magical_7)",
+      "author": "JaggedStone",
+      "url": "https://opengameart.org/content/magic-spell-sfx",
+      "download": "https://opengameart.org/sites/default/files/magical_7.ogg",
+      "archive": "magical7.ogg",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "2817da4f5df69ff993baffd6594a2f2a069f85ee2a02019f97db2246e350a76b"
+    },
+    "cannon": {
+      "title": "Cannon hit",
+      "author": "Thimras",
+      "url": "https://opengameart.org/content/cannon-hit",
+      "download": "https://opengameart.org/sites/default/files/cannon_hit_0.ogg",
+      "archive": "cannon-hit.ogg",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadSha256": "fd116464dda58e5c94436d17f0e76437b475b5f773603d4aaf8fa21c5f2d3b9e"
+    }
+  },
+  "processing": {
+    "rate": 24000,
+    "channels": 1,
+    "codec": "MP3",
+    "bitrate": 64000,
+    "compressor": "threshold=.05:ratio=4:attack=.05:release=35:makeup=1",
+    "targetPeak": 0.78,
+    "fadeInMs": 3,
+    "fadeOutMs": 35,
+    "metadata": "removed",
+    "runtime": "lazy loaded, decoded once, fingerprinted immutable cache"
+  },
+  "towers": {
+    "basic": {
+      "description": "중형 철포탄 폭발",
+      "sources": [
+        "bangs"
+      ],
+      "layers": [
+        {
+          "file": "bangs/cannon_03.ogg",
+          "sourceSha256": "c3690a013befc16be1432e6fe62422db71c7b606980ddfe62429e864c5caf1d2",
+          "sourceBytes": 38818,
+          "trimStart": 0.03575,
+          "seconds": 0.53,
+          "gain": 1,
+          "speed": 1,
+          "at": 0,
+          "high": 55,
+          "low": 11000
+        }
+      ],
+      "filename": "basic.mp3",
+      "sha256": "8b51afeb8cfcfb7b2cee2ca560e202d407a12fd2764f08a69b988f51e9a48554",
+      "bytes": 4800,
+      "duration": 0.6,
+      "sourceDuration": 0.55,
+      "referenceStereoWavBytes": 105644,
+      "decodedPeak": 0.761458,
+      "decodedRms": 0.129702
+    },
+    "double": {
+      "description": "65ms 간격 쌍석포",
+      "sources": [
+        "bangs",
+        "rpg"
+      ],
+      "layers": [
+        {
+          "file": "bangs/bang_08.ogg",
+          "sourceSha256": "aaaba1cdaeb9e5e61abf3ebdff09c967b5d451c42b45259e3b00f62575baafea",
+          "sourceBytes": 19546,
+          "trimStart": 0.050208,
+          "seconds": 0.4,
+          "gain": 0.65,
+          "speed": 1.2,
+          "at": 0,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "rpg/item_stone_03.ogg",
+          "sourceSha256": "91bc96742252fedcfed2b664f03336c33f6ffbc2039ba6fcaada32b9bb758da6",
+          "sourceBytes": 24923,
+          "trimStart": 0.004979,
+          "seconds": 0.22,
+          "gain": 0.65,
+          "speed": 1,
+          "at": 0,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "bangs/bang_08.ogg",
+          "sourceSha256": "aaaba1cdaeb9e5e61abf3ebdff09c967b5d451c42b45259e3b00f62575baafea",
+          "sourceBytes": 19546,
+          "trimStart": 0.050208,
+          "seconds": 0.4,
+          "gain": 0.65,
+          "speed": 1.2,
+          "at": 0.065,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "rpg/item_stone_03.ogg",
+          "sourceSha256": "91bc96742252fedcfed2b664f03336c33f6ffbc2039ba6fcaada32b9bb758da6",
+          "sourceBytes": 24923,
+          "trimStart": 0.004979,
+          "seconds": 0.22,
+          "gain": 0.65,
+          "speed": 1,
+          "at": 0.065,
+          "high": 55,
+          "low": 11000
+        }
+      ],
+      "filename": "double.mp3",
+      "sha256": "f68ae51d71dd52410f2ce83dcf763099d35a9fa13306ac551fd181f321448b3c",
+      "bytes": 4416,
+      "duration": 0.552,
+      "sourceDuration": 0.49,
+      "referenceStereoWavBytes": 94124,
+      "decodedPeak": 0.753909,
+      "decodedRms": 0.123298
+    },
+    "needle": {
+      "description": "금속 바늘과 빠른 바람",
+      "sources": [
+        "rpg",
+        "battle"
+      ],
+      "layers": [
+        {
+          "file": "rpg/blade_01.ogg",
+          "sourceSha256": "caf7a7cb9b25cda4bd487c1d12d18b74a34bb18c816fd67277cf3c8d7ef32a3a",
+          "sourceBytes": 15142,
+          "trimStart": 0.004562,
+          "seconds": 0.19,
+          "gain": 1,
+          "speed": 1.4,
+          "at": 0,
+          "high": 400,
+          "low": 11000
+        },
+        {
+          "file": "battle/battle_sound_effects/swish_2.wav",
+          "sourceSha256": "690725fd44a99a4abd32d59c0efe8e28486afb564d3f5710cca75a2c786cf0f1",
+          "sourceBytes": 66114,
+          "trimStart": 0.043327,
+          "seconds": 0.23,
+          "gain": 0.6,
+          "speed": 1.35,
+          "at": 0,
+          "high": 800,
+          "low": 11000
+        }
+      ],
+      "filename": "needle.mp3",
+      "sha256": "c68df64c2a06ceb793c6434efcefcd5b8d571104ad93d688e9d7c88002b8dbde",
+      "bytes": 2880,
+      "duration": 0.36,
+      "sourceDuration": 0.29,
+      "referenceStereoWavBytes": 55724,
+      "decodedPeak": 0.725871,
+      "decodedRms": 0.098268
+    },
+    "pebble": {
+      "description": "작은 돌이 흩어지는 자갈포",
+      "sources": [
+        "rpg"
+      ],
+      "layers": [
+        {
+          "file": "rpg/stones_04.ogg",
+          "sourceSha256": "66f1cef820f66d86414d481b37a48a7b7ea11f4a5d7358372ebcfb506af0e652",
+          "sourceBytes": 20176,
+          "trimStart": 0.019042,
+          "seconds": 0.37,
+          "gain": 0.8,
+          "speed": 1,
+          "at": 0,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "rpg/item_stone_02.ogg",
+          "sourceSha256": "bc9d36c83f44415b16411878f460a5005bea1ede42259daeb179f59d82a754b5",
+          "sourceBytes": 15303,
+          "trimStart": 0.016729,
+          "seconds": 0.2,
+          "gain": 0.6,
+          "speed": 1.25,
+          "at": 0.035,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "rpg/item_stone_04.ogg",
+          "sourceSha256": "bfd2516d62b68f9c0fa02ad2924065b4d7dadbb2fba04e229da774df75ea45b6",
+          "sourceBytes": 17029,
+          "trimStart": 0.00775,
+          "seconds": 0.2,
+          "gain": 0.45,
+          "speed": 1.45,
+          "at": 0.1,
+          "high": 55,
+          "low": 11000
+        }
+      ],
+      "filename": "pebble.mp3",
+      "sha256": "336de34f50cb9e8a90bf46382952670c75f32158a80044472e00b9c0fa853cd3",
+      "bytes": 4224,
+      "duration": 0.528,
+      "sourceDuration": 0.46,
+      "referenceStereoWavBytes": 88364,
+      "decodedPeak": 0.733502,
+      "decodedRms": 0.068402
+    },
+    "frost": {
+      "description": "냉기 구체와 얼음 울림",
+      "sources": [
+        "ice",
+        "rpg"
+      ],
+      "layers": [
+        {
+          "file": "ice/ice.wav",
+          "sourceSha256": "c3039c864d056d0e4951b84b96a7bb0044ca8cb58aeae514fc256145872b6a94",
+          "sourceBytes": 205356,
+          "trimStart": 0.001422,
+          "seconds": 0.62,
+          "gain": 0.85,
+          "speed": 1.1,
+          "at": 0,
+          "high": 200,
+          "low": 11000
+        },
+        {
+          "file": "rpg/item_gem_02.ogg",
+          "sourceSha256": "a5f4b0b3ae0e272765619289ef6709513e0dfa0785d7559e8a223176a8bcf181",
+          "sourceBytes": 9058,
+          "trimStart": 0.008125,
+          "seconds": 0.25,
+          "gain": 0.3,
+          "speed": 0.8,
+          "at": 0.045,
+          "high": 400,
+          "low": 11000
+        }
+      ],
+      "filename": "frost.mp3",
+      "sha256": "612dd02b3ad9f0d77b3c328173cd2b1c62d77e68ad9a0e230bb8c5f0f10ce040",
+      "bytes": 5760,
+      "duration": 0.72,
+      "sourceDuration": 0.65,
+      "referenceStereoWavBytes": 124844,
+      "decodedPeak": 0.759836,
+      "decodedRms": 0.070363
+    },
+    "ice": {
+      "description": "날카로운 얼음창 파열",
+      "sources": [
+        "shatters",
+        "ice",
+        "battle"
+      ],
+      "layers": [
+        {
+          "file": "shatters/IceShatters/LedasLuzta2.ogg",
+          "sourceSha256": "92a20369f866c852f841ffaef31676cb70f542592504b040327c60f5101f9c47",
+          "sourceBytes": 10448,
+          "trimStart": 0.030583,
+          "seconds": 0.35,
+          "gain": 1,
+          "speed": 1.15,
+          "at": 0,
+          "high": 350,
+          "low": 11000
+        },
+        {
+          "file": "ice/coldsnap.wav",
+          "sourceSha256": "090977264d65d90a50b04e9f0c1c4e02fb194e5b50d9fe244f0079a4da54158c",
+          "sourceBytes": 467244,
+          "trimStart": 0.003122,
+          "seconds": 0.52,
+          "gain": 0.6,
+          "speed": 1.15,
+          "at": 0,
+          "high": 450,
+          "low": 11000
+        },
+        {
+          "file": "battle/battle_sound_effects/swish_4.wav",
+          "sourceSha256": "a53382f21d9c7e4d7a1d6e8cddc9ce9779740f9ad2ba4d9012ee20318c04f24c",
+          "sourceBytes": 66850,
+          "trimStart": 0.054075,
+          "seconds": 0.3,
+          "gain": 0.45,
+          "speed": 1.2,
+          "at": 0,
+          "high": 650,
+          "low": 11000
+        }
+      ],
+      "filename": "ice.mp3",
+      "sha256": "b28764266201aa37e409a776c40b963573748074a829f907b31284ccc7f270c8",
+      "bytes": 5184,
+      "duration": 0.648,
+      "sourceDuration": 0.58,
+      "referenceStereoWavBytes": 111404,
+      "decodedPeak": 0.690505,
+      "decodedRms": 0.072359
+    },
+    "catapult": {
+      "description": "나무 장력과 무거운 바위 비행",
+      "sources": [
+        "rpg",
+        "battle"
+      ],
+      "layers": [
+        {
+          "file": "rpg/wood_04.ogg",
+          "sourceSha256": "bd5dc8469c4f1cb3abff35e2e01b541d4c97d58033f67dfe1c8e3b62ad5350ba",
+          "sourceBytes": 20667,
+          "trimStart": 0.048042,
+          "seconds": 0.5,
+          "gain": 0.75,
+          "speed": 0.8,
+          "at": 0,
+          "high": 55,
+          "low": 5000
+        },
+        {
+          "file": "rpg/stones_01.ogg",
+          "sourceSha256": "d11ce95031c2c36ae2a00979620fa95a7a3f5c6d6f2ac86962ed292aa556be8d",
+          "sourceBytes": 27110,
+          "trimStart": 0.020771,
+          "seconds": 0.67,
+          "gain": 0.7,
+          "speed": 0.78,
+          "at": 0.06,
+          "high": 55,
+          "low": 6500
+        },
+        {
+          "file": "battle/battle_sound_effects/swish_3.wav",
+          "sourceSha256": "7767c7b6ba063d8d5de6e05ba29c037af5c4a19d02b00b6b5ff398f72732e1c9",
+          "sourceBytes": 102130,
+          "trimStart": 0.003463,
+          "seconds": 0.62,
+          "gain": 0.8,
+          "speed": 0.82,
+          "at": 0,
+          "high": 55,
+          "low": 5000
+        }
+      ],
+      "filename": "catapult.mp3",
+      "sha256": "0314c9e5a1b4b6c00e0f77f297b884b0d5a725fd5af736b4fa199e4633b59f1b",
+      "bytes": 6720,
+      "duration": 0.84,
+      "sourceDuration": 0.78,
+      "referenceStereoWavBytes": 149804,
+      "decodedPeak": 0.749553,
+      "decodedRms": 0.139592
+    },
+    "lightning": {
+      "description": "연결된 전격의 지직거림과 방전",
+      "sources": [
+        "buzz",
+        "electric"
+      ],
+      "layers": [
+        {
+          "file": "buzz.ogg",
+          "sourceSha256": "4427905b12e7dbd35613a45ab3cf6b74b10816888db3446b3acbadbe36829dd8",
+          "sourceBytes": 23644,
+          "trimStart": 0.18,
+          "seconds": 0.245,
+          "gain": 1,
+          "speed": 1,
+          "at": 0,
+          "high": 180,
+          "low": 11000
+        },
+        {
+          "file": "electricspell2.ogg",
+          "sourceSha256": "5fcb8824064d9dba2e3880d439a44b798ecdc2a58041cd028f094d774302a9a1",
+          "sourceBytes": 215995,
+          "trimStart": 3.259902,
+          "seconds": 0.26,
+          "gain": 0.45,
+          "speed": 2.2,
+          "at": 0,
+          "high": 500,
+          "low": 11000
+        }
+      ],
+      "filename": "lightning.mp3",
+      "sha256": "15491f9af4afb2d758a533b54d35740ea5df94415e8a5b8d73ea85c2fc2f8230",
+      "bytes": 2880,
+      "duration": 0.36,
+      "sourceDuration": 0.31,
+      "referenceStereoWavBytes": 59564,
+      "decodedPeak": 0.794384,
+      "decodedRms": 0.162071
+    },
+    "crystal": {
+      "description": "회전 수정의 유리 울림과 마법",
+      "sources": [
+        "rpg",
+        "electric",
+        "magic"
+      ],
+      "layers": [
+        {
+          "file": "rpg/item_gem_04.ogg",
+          "sourceSha256": "e12eb95d0458675c2692831454ed09c7a680de966e7c705ce67a7e12560aa73a",
+          "sourceBytes": 28423,
+          "trimStart": 0.013688,
+          "seconds": 0.44,
+          "gain": 0.85,
+          "speed": 1.25,
+          "at": 0,
+          "high": 550,
+          "low": 11000
+        },
+        {
+          "file": "electricspell2.ogg",
+          "sourceSha256": "5fcb8824064d9dba2e3880d439a44b798ecdc2a58041cd028f094d774302a9a1",
+          "sourceBytes": 215995,
+          "trimStart": 3.259902,
+          "seconds": 0.57,
+          "gain": 0.45,
+          "speed": 1.6,
+          "at": 0,
+          "high": 850,
+          "low": 11000
+        },
+        {
+          "file": "magical7.ogg",
+          "sourceSha256": "2817da4f5df69ff993baffd6594a2f2a069f85ee2a02019f97db2246e350a76b",
+          "sourceBytes": 76383,
+          "trimStart": 0,
+          "seconds": 0.58,
+          "gain": 0.35,
+          "speed": 1.7,
+          "at": 0.045,
+          "high": 900,
+          "low": 11000
+        }
+      ],
+      "filename": "crystal.mp3",
+      "sha256": "883aa7e9425edc257038dcc5c0d81ca41146ef728cc6f6f57269864a4b56f242",
+      "bytes": 5952,
+      "duration": 0.744,
+      "sourceDuration": 0.68,
+      "referenceStereoWavBytes": 130604,
+      "decodedPeak": 0.709761,
+      "decodedRms": 0.172075
+    },
+    "sniper": {
+      "description": "날카로운 장거리 발사와 탄도",
+      "sources": [
+        "bangs",
+        "battle",
+        "rpg"
+      ],
+      "layers": [
+        {
+          "file": "bangs/shot_03.ogg",
+          "sourceSha256": "f3cfbf0af36a717ff9c8f58640f181db7b73266e8263591014d453c4e77c6418",
+          "sourceBytes": 17081,
+          "trimStart": 0,
+          "seconds": 0.22,
+          "gain": 1,
+          "speed": 1.1,
+          "at": 0,
+          "high": 200,
+          "low": 11000
+        },
+        {
+          "file": "battle/battle_sound_effects/swish_4.wav",
+          "sourceSha256": "a53382f21d9c7e4d7a1d6e8cddc9ce9779740f9ad2ba4d9012ee20318c04f24c",
+          "sourceBytes": 66850,
+          "trimStart": 0.054075,
+          "seconds": 0.24,
+          "gain": 0.4,
+          "speed": 1.6,
+          "at": 0,
+          "high": 900,
+          "low": 11000
+        },
+        {
+          "file": "rpg/blade_03.ogg",
+          "sourceSha256": "2cd9e6926f4602a4350e703eeae4df520053e290f358ab692632d651ad368a7c",
+          "sourceBytes": 15184,
+          "trimStart": 0.005104,
+          "seconds": 0.28,
+          "gain": 0.3,
+          "speed": 1.35,
+          "at": 0.025,
+          "high": 1000,
+          "low": 11000
+        }
+      ],
+      "filename": "sniper.mp3",
+      "sha256": "5d231d603e329412aab9ed66879680e4405dae6cc8cc24a186ca746dce4f8a26",
+      "bytes": 3456,
+      "duration": 0.432,
+      "sourceDuration": 0.38,
+      "referenceStereoWavBytes": 73004,
+      "decodedPeak": 0.761382,
+      "decodedRms": 0.104113
+    },
+    "siege": {
+      "description": "대포 폭발과 묵직한 저역 충격",
+      "sources": [
+        "bangs",
+        "cannon"
+      ],
+      "layers": [
+        {
+          "file": "bangs/cannon_02.ogg",
+          "sourceSha256": "716392af61b29dabe637c2616091207f390d25357aae3d4c625df5dfea7e961d",
+          "sourceBytes": 69097,
+          "trimStart": 0.002021,
+          "seconds": 0.88,
+          "gain": 1,
+          "speed": 0.95,
+          "at": 0,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "cannon-hit.ogg",
+          "sourceSha256": "fd116464dda58e5c94436d17f0e76437b475b5f773603d4aaf8fa21c5f2d3b9e",
+          "sourceBytes": 327787,
+          "trimStart": 0.007688,
+          "seconds": 0.86,
+          "gain": 0.55,
+          "speed": 0.85,
+          "at": 0.025,
+          "high": 55,
+          "low": 3500
+        }
+      ],
+      "filename": "siege.mp3",
+      "sha256": "816f8f62cbf2b1262e1f2438980a4dd5b08660073d1fd29788abcf583a93e148",
+      "bytes": 8064,
+      "duration": 1.008,
+      "sourceDuration": 0.94,
+      "referenceStereoWavBytes": 180524,
+      "decodedPeak": 0.753933,
+      "decodedRms": 0.271403
+    },
+    "rune": {
+      "description": "쇠뇌 장력과 룬 마법 잔향",
+      "sources": [
+        "battle",
+        "rpg",
+        "magic"
+      ],
+      "layers": [
+        {
+          "file": "battle/battle_sound_effects/Bow.wav",
+          "sourceSha256": "0dc8cf132cf583563936ac3a4d776e196210d5f6703b4ebdd7c68e8f35b9f3e3",
+          "sourceBytes": 96814,
+          "trimStart": 0.101127,
+          "seconds": 0.33,
+          "gain": 0.9,
+          "speed": 1,
+          "at": 0,
+          "high": 55,
+          "low": 11000
+        },
+        {
+          "file": "rpg/spell_01.ogg",
+          "sourceSha256": "09821a53c418c5eeeac4fa25bada9d245e822fed302eeeae9ae4151522a45ae5",
+          "sourceBytes": 29121,
+          "trimStart": 0.008062,
+          "seconds": 0.6,
+          "gain": 0.6,
+          "speed": 0.9,
+          "at": 0.025,
+          "high": 250,
+          "low": 11000
+        },
+        {
+          "file": "magical7.ogg",
+          "sourceSha256": "2817da4f5df69ff993baffd6594a2f2a069f85ee2a02019f97db2246e350a76b",
+          "sourceBytes": 76383,
+          "trimStart": 0,
+          "seconds": 0.64,
+          "gain": 0.5,
+          "speed": 0.8,
+          "at": 0.06,
+          "high": 350,
+          "low": 11000
+        }
+      ],
+      "filename": "rune.mp3",
+      "sha256": "98452e8153138ac02e489a7763bc5fb2f500df9c096b9de9377ec46d337b49d5",
+      "bytes": 6528,
+      "duration": 0.816,
+      "sourceDuration": 0.76,
+      "referenceStereoWavBytes": 145964,
+      "decodedPeak": 0.77004,
+      "decodedRms": 0.197649
+    }
+  },
+  "tools": {
+    "ffmpeg": "ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers",
+    "numpy": "2.3.0",
+    "scipy": "1.17.0",
+    "soundfile": "0.14.0",
+    "libsndfile": "1.2.2"
+  },
+  "totalBytes": 60864,
+  "referenceStereoWavBytes": 1319568,
+  "reductionPercent": 95.39
+}

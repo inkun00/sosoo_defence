@@ -1,11 +1,12 @@
 import {scoreStep,TRACKS,MusicTrack,Voice} from './music';
 import {towerShotScore,towerShotDuration,SoundVoice,EffectNote} from './tower-sounds';
+import {TowerAudioSamples,towerShotSampleGain} from './tower-audio-samples';
 export {TRACKS} from './music';
 export type {MusicTrack} from './music';
 
-// Original procedural audio; the live player and offline previews share instruments.
+// The live player and offline previews share sample gain, envelopes and fallback instruments.
 type Bus='music'|'sfx';
-interface Playing {source:AudioScheduledSourceNode;gain:GainNode;bus:Bus;}
+interface Playing {source:AudioScheduledSourceNode;gain:GainNode;bus:Bus;start:number;}
 const midi=(n:number)=>440*2**((n-69)/12);
 const noiseCache=new WeakMap<BaseAudioContext,AudioBuffer>();
 function noise(context:BaseAudioContext){
@@ -32,9 +33,16 @@ function instrument(c:BaseAudioContext,out:AudioNode,v:SoundVoice,time:number,bu
  if(v.instrument==='pad'||v.instrument==='strings')g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume*.65),time+duration*.65);
  g.gain.exponentialRampToValueAtTime(.0001,time+duration);
  source.connect(filter);filter.connect(g);g.connect(out);
- const playing={source,gain:g,bus};active?.add(playing);
+ const playing={source,gain:g,bus,start:time};active?.add(playing);
  source.onended=()=>{active?.delete(playing);source.disconnect();filter.disconnect();g.disconnect();};
  source.start(time);source.stop(time+duration+.015);
+}
+function sample(c:BaseAudioContext,out:AudioNode,buffer:AudioBuffer,typeId:string|undefined,time:number,active?:Set<Playing>){
+ const source=c.createBufferSource(),g=c.createGain(),duration=Math.max(.01,buffer.duration),gain=towerShotSampleGain(typeId);
+ source.buffer=buffer;g.gain.setValueAtTime(.0001,time);g.gain.exponentialRampToValueAtTime(gain,time+Math.min(.003,duration/4));
+ g.gain.setValueAtTime(gain,time+Math.max(.003,duration-.04));g.gain.exponentialRampToValueAtTime(.0001,time+duration);
+ source.connect(g);g.connect(out);const playing={source,gain:g,bus:'sfx' as const,start:time};active?.add(playing);
+ source.onended=()=>{active?.delete(playing);source.disconnect();g.disconnect();};source.start(time);source.stop(time+duration+.005);
 }
 function mixer(c:BaseAudioContext){
  const music=c.createGain(),sfx=c.createGain(),master=c.createGain(),compressor=c.createDynamicsCompressor();
@@ -49,8 +57,8 @@ export class Sound{
  context?:AudioContext;music=false;private effects=true;private track:MusicTrack='title';private timer?:ReturnType<typeof setInterval>;
  private buses?:ReturnType<typeof mixer>;private active=new Set<Playing>();private step=0;private next=0;private paused=false;private ducked=false;private disposed=false;private last=new Map<string,number>();
  private unlock=()=>this.resume();
- private visibility=()=>{if(document.hidden){this.stopMusic();this.stopVoices('sfx');void this.context?.suspend().catch(()=>{});}else if(this.context)this.resume();};
- constructor(){if(typeof document!=='undefined'){document.addEventListener('pointerdown',this.unlock,{capture:true});document.addEventListener('keydown',this.unlock,{capture:true});document.addEventListener('visibilitychange',this.visibility);}}
+ private visibility=()=>{if(document.hidden){this.stopMusic();this.stopVoices('sfx',true);void this.context?.suspend().catch(()=>{});}else if(this.context)this.resume();};
+ constructor(private samples=new TowerAudioSamples()){if(typeof document!=='undefined'){document.addEventListener('pointerdown',this.unlock,{capture:true});document.addEventListener('keydown',this.unlock,{capture:true});document.addEventListener('visibilitychange',this.visibility);}}
  get sfx(){return this.effects;}
  set sfx(enabled:boolean){this.effects=enabled;if(this.buses&&this.context)this.buses.sfx.gain.setTargetAtTime(enabled?.85:0,this.context.currentTime,.015);if(!enabled)this.stopVoices('sfx');}
  resume(){
@@ -74,15 +82,22 @@ export class Sound{
   while(this.next<c.currentTime+.16){for(const v of scoreStep(this.track,this.step))instrument(c,this.buses.music,v,this.next,'music',this.active);this.step=(this.step+1)%128;this.next+=interval;}
  }
  private stopMusic(){if(this.timer!==undefined)clearInterval(this.timer);this.timer=undefined;this.stopVoices('music');if(this.buses&&this.context)this.buses.wet.gain.setTargetAtTime(0,this.context.currentTime,.015);}
- private stopVoices(bus:Bus){const c=this.context;if(!c)return;for(const v of this.active){if(v.bus!==bus)continue;v.gain.gain.cancelScheduledValues(c.currentTime);v.gain.gain.setTargetAtTime(.0001,c.currentTime,.012);try{v.source.stop(c.currentTime+.05);}catch{}this.active.delete(v);}}
- tone(freq:number,duration=.12,volume=.025){if(!this.sfx||!this.context||!this.buses)return;instrument(this.context,this.buses.sfx,{instrument:'bell',note:69+12*Math.log2(freq/440),duration,volume},this.context.currentTime+.005,'sfx',this.active);}
+ private stopVoices(bus:Bus,immediate=false){const c=this.context;if(!c)return;for(const v of this.active){if(v.bus!==bus)continue;const cancel=immediate||v.start>c.currentTime;v.gain.gain.cancelScheduledValues(c.currentTime);if(cancel)v.gain.gain.setValueAtTime(.0001,c.currentTime);else v.gain.gain.setTargetAtTime(.0001,c.currentTime,.012);try{v.source.stop(c.currentTime+(cancel?0:.05));}catch{}if(cancel)this.active.delete(v);}}
+ towerAudioStatus(typeId:string){return this.samples.status(typeId);}
+ async preloadTowerShots(typeIds:readonly string[]){const c=this.context;if(this.disposed||!c)return;await this.samples.preload(typeIds,c);}
+ async waitForTowerAudio(){await this.samples.wait();}
+ tone(freq:number,duration=.12,volume=.025){if(this.disposed||!this.sfx||!this.context||!this.buses||this.context.state!=='running'||(typeof document!=='undefined'&&document.hidden)||[...this.active].filter(v=>v.bus==='sfx').length>=32)return;instrument(this.context,this.buses.sfx,{instrument:'bell',note:69+12*Math.log2(freq/440),duration,volume},this.context.currentTime+.005,'sfx',this.active);}
  play(type:string,towerTypeId?:string){
-  const c=this.context;if(!this.effects||!c||!this.buses||c.state!=='running'||(typeof document!=='undefined'&&document.hidden))return;
+  const c=this.context;if(this.disposed||!this.effects||!c||!this.buses||c.state!=='running'||(typeof document!=='undefined'&&document.hidden))return;
   const score=type==='shot'?towerShotScore(towerTypeId):effects(type);if(!score.length)return;const minGap=type==='shot'?.085:type==='hit'?.07:type==='invalid'?.35:.12,key=type==='shot'?`shot:${towerTypeId??'basic'}`:type;
-  if(c.currentTime-(this.last.get(key)??-10)<minGap||[...this.active].filter(v=>v.bus==='sfx').length+score.length>32)return;this.last.set(key,c.currentTime);
+  if(c.currentTime-(this.last.get(key)??-10)<minGap)return;
+  const buffer=type==='shot'?this.samples.get(towerTypeId):undefined,voices=buffer?1:score.length;
+  if([...this.active].filter(v=>v.bus==='sfx').length+voices>32)return;this.last.set(key,c.currentTime);
+  if(buffer){sample(c,this.buses.sfx,buffer,towerTypeId,c.currentTime+.005,this.active);return;}
+  if(type==='shot')void this.samples.load(towerTypeId,c);
   for(const [delay,v] of score)instrument(c,this.buses.sfx,v,c.currentTime+.005+delay,'sfx',this.active);
  }
- dispose(){if(this.disposed)return;this.disposed=true;this.stopMusic();this.stopVoices('sfx');if(typeof document!=='undefined'){document.removeEventListener('pointerdown',this.unlock,true);document.removeEventListener('keydown',this.unlock,true);document.removeEventListener('visibilitychange',this.visibility);}void this.context?.close().catch(()=>{});}
+ dispose(){if(this.disposed)return;this.disposed=true;this.samples.dispose();this.stopMusic();this.stopVoices('sfx');if(typeof document!=='undefined'){document.removeEventListener('pointerdown',this.unlock,true);document.removeEventListener('keydown',this.unlock,true);document.removeEventListener('visibilitychange',this.visibility);}void this.context?.close().catch(()=>{});}
 }
 function effects(type:string):EffectNote[]{
  const tone=(note:number,duration:number,volume:number,instrument:Voice['instrument']='bell',at=0):EffectNote=>[at,{note,duration,volume,instrument}];
@@ -111,9 +126,11 @@ export async function renderSoundtrack(track:MusicTrack,seconds=12){
  for(let step=0;step*interval<seconds-.08;step++)for(const v of scoreStep(track,step%128))instrument(c,buses.music,v,.02+step*interval,'music');
  return c.startRendering();
 }
-// Audition/export uses exactly the same voices, filters and mix as live combat.
+const renderSamples=new TowerAudioSamples();
+// Audition/export loads actual samples and uses the live mix and fallback on failure.
 export async function renderTowerShots(typeIds:readonly string[],spacing=1){
- const seconds=Math.max(1,...typeIds.map((id,i)=>.02+i*spacing+towerShotDuration(id))),c=new OfflineAudioContext(2,Math.ceil(seconds*44100),44100),buses=mixer(c);
- typeIds.forEach((id,i)=>{for(const [delay,v]of towerShotScore(id))instrument(c,buses.sfx,v,.02+i*spacing+delay,'sfx');});
+ const seconds=Math.max(1,...typeIds.map((id,i)=>.02+i*spacing+Math.max(towerShotDuration(id),renderSamples.metadata(id)?.duration??0)+.04)),c=new OfflineAudioContext(2,Math.ceil(seconds*44100),44100),buses=mixer(c);
+ await renderSamples.preload(typeIds,c);
+ typeIds.forEach((id,i)=>{const buffer=renderSamples.get(id);if(buffer)sample(c,buses.sfx,buffer,id,.02+i*spacing);else for(const [delay,v]of towerShotScore(id))instrument(c,buses.sfx,v,.02+i*spacing+delay,'sfx');});
  return c.startRendering();
 }

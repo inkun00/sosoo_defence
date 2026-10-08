@@ -134,7 +134,7 @@ function action(key:string){
   case 'cancel':field.mode.kind='inspect';break;
   case 'purchase-help':purchaseHelp=!purchaseHelp;if(purchaseHelp)purchaseLearning('help');break;
   case 'purchase-cancel':closePanel();break;
-  case 'purchase-confirm':if(panel==='purchase'){const q=model.pendingPurchase;if(q&&parseMoney(purchaseInput)!==q.before-q.cost)purchaseLearning('wrong',q);if(model.answerPurchase(purchaseInput)){purchaseLearning('correct',q);const t=model.towers.at(-1)!;closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}}break;
+  case 'purchase-confirm':if(panel==='purchase'){const q=model.pendingPurchase;if(q&&parseMoney(purchaseInput)!==q.before-q.cost)purchaseLearning('wrong',q);if(model.answerPurchase(purchaseInput)){purchaseLearning('correct',q);const t=model.towers.at(-1)!;if(sound.sfx)void sound.preloadTowerShots([t.typeId]);closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}}break;
   case 'forge':slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);setPanel('forge');break;
   case 'fuse':{const ids=slots.filter((s):s is number=>s!==null),values=ids.map(id=>model.bricks.find(b=>b.id===id)?.value);if(values.length===3&&new Set(ids).size===3&&values.every(v=>v!==undefined)){const [a,b,c]=values as number[];recordLearning({a,b,operation:fusionOperation,digits:model.level.digits,context:'wall'},(fusionOperation==='+'?a+b:a-b)===c?'correct':'wrong');}if(model.fuse(ids,fusionOperation))slots=[null,null,null];break;}
   case 'wall':if(model.wallStock)beginWallPlacement();break;

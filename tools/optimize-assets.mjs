@@ -24,8 +24,26 @@ for(const file of (await readdir(join(source,'assets','dungeon'))).sort()){
 }
 const keep=new Set(Object.values(manifest).map(v=>basename(v.url)));
 for(const file of await readdir(join(out,'assets','dungeon')))if(/\.[a-f0-9]{12}\.webp$/.test(file)&&!keep.has(file))await unlink(join(out,'assets','dungeon',file));
+// Audio is prepared once locally, not encoded or downloaded on every deploy.
+// Only the twelve trimmed mono MP3s are published; original packs stay private.
+const audioReport=JSON.parse(await readFile(join(source,'licenses','tower-audio-v1.json'),'utf8'));
+const audioDirectory=join(out,'assets','audio','towers'),audioManifest={};
+await mkdir(audioDirectory,{recursive:true});
+for(const [id,sample] of Object.entries(audioReport.towers)){
+ if(!/^[a-z]+\.mp3$/.test(sample.filename))throw Error('Invalid tower audio filename');
+ const buffer=await readFile(join(source,'assets','audio','towers',sample.filename));
+ if(hash(buffer)!==sample.sha256||buffer.length!==sample.bytes)throw Error(`Tower audio metadata mismatch: ${id}`);
+ const url=`/assets/audio/towers/${id}.${hash(buffer).slice(0,12)}.mp3`,firstSource=audioReport.sources[sample.sources[0]];
+ await writeFile(join(out,url),buffer);
+ audioManifest[id]={url,bytes:buffer.length,duration:sample.duration,source:sample.description,sourceUrl:firstSource.url,license:audioReport.license,licenseUrl:audioReport.licenseUrl};
+}
+const audioKeep=new Set(Object.values(audioManifest).map(v=>basename(v.url)));
+for(const file of await readdir(audioDirectory))if(/\.[a-f0-9]{12}\.mp3$/.test(file)&&!audioKeep.has(file))await unlink(join(audioDirectory,file));
+async function writeChanged(path,data){if(await readFile(path,'utf8').catch(()=>null)!==data)await writeFile(path,data);}
+await writeChanged(join(root,'src','tower-audio-manifest.json'),JSON.stringify(audioManifest,null,2)+'\n');
 for(const file of await readdir(join(source,'licenses')))await copyFile(join(source,'licenses',file),join(out,'licenses',file));
 await copyFile(join(source,'CREDITS.txt'),join(out,'CREDITS.txt'));
-await writeFile(manifestPath,JSON.stringify(manifest,null,2)+'\n');
-await writeFile(join(root,'src','art-urls.json'),JSON.stringify(Object.fromEntries(Object.entries(manifest).map(([name,art])=>[name,art.url])),null,2)+'\n');
+await writeChanged(manifestPath,JSON.stringify(manifest,null,2)+'\n');
+await writeChanged(join(root,'src','art-urls.json'),JSON.stringify(Object.fromEntries(Object.entries(manifest).map(([name,art])=>[name,art.url])),null,2)+'\n');
 console.log(`Images: ${(original/1048576).toFixed(2)} MiB → ${(optimized/1048576).toFixed(2)} MiB (${(100-optimized/original*100).toFixed(1)}% less), ${converted} regenerated. Source PNGs preserved.`);
+console.log(`Tower audio: ${Object.keys(audioManifest).length} mono MP3s, ${(audioReport.totalBytes/1024).toFixed(1)} KiB; ${audioReport.reductionPercent}% smaller than equivalent stereo 48kHz WAVs.`);

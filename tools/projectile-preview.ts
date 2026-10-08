@@ -18,7 +18,7 @@ class Preview extends Phaser.Scene {
  this.add.image(x+43,y+154,'dungeon-turret-parts-v1','base').setDisplaySize(60,60);
  this.add.image(x+43,y+148,'dungeon-tower-heads-'+type.sheet+'-v1',type.id).setDisplaySize(55,55).setOrigin(.5,.64).setRotation(Math.PI/2);
  this.add.sprite(x+260,y+151,'dungeon-slime','slime-0').setDisplaySize(58,58);
- const button=document.createElement('button');button.textContent=type.name;button.onclick=()=>{this.unpause();sound.resume();this.fire(i,true);};document.querySelector('#weapons')!.append(button);
+ const button=document.createElement('button');button.textContent=type.name;button.onclick=async()=>{this.unpause();sound.resume();button.disabled=true;try{await sound.preloadTowerShots([type.id]);if(!document.hidden)this.fire(i,true);}finally{button.disabled=false;}};document.querySelector('#weapons')!.append(button);
  });
  document.querySelectorAll('button').forEach(b=>b.disabled=false);
  status.textContent='12종 · 72프레임 준비됨';

@@ -52,7 +52,8 @@ Exact prompts and generation source paths: assets/dungeon/fx-prompts.json.
 Korean labels, mathematical values, health bars, range indicators and light
 halos are engine text or dynamic geometry. They are kept separate from image
 pixels so arithmetic and gameplay state remain exact and readable.
-Music and effects are original procedural Web Audio tones.
+Music, UI/collision effects and emergency launch fallbacks use original local
+Web Audio tones. Tower launch samples use the CC0 sounds credited below.
 
 VISUAL REFERENCE
 User-supplied YouTube gameplay reference was viewed at multiple timestamps:
@@ -120,10 +121,11 @@ Story captions are displayed in Korean. There is no voice narration.
 Cinematic tones are synthesized locally with Web Audio.
 
 ORIGINAL PROCEDURAL SOUNDTRACK AND EFFECTS
-Seven original score arrangements and fifteen synthesized effects are defined
+Seven original score arrangements and local UI/collision effects are defined
 in src/music.ts and src/audio.ts. Web Audio oscillators, deterministic noise,
-filters, envelopes, an echo bus and a compressor generate all audio at runtime.
-No third-party music, samples, audio files or audio service are used.
+filters, envelopes, an echo bus and a compressor generate those sounds locally.
+Tower launches now use the twelve CC0-derived samples credited below, with
+procedural fallbacks when a sample is unavailable. No remote audio service.
 
 CURSED WORLD OPENING v2
 Original sorcerer and invasion backgrounds generated with built-in OpenAI image_gen.
@@ -160,5 +162,36 @@ assets/dungeon/fx-flight-element-v1.png (frost, ice, catapult, siege)
 assets/dungeon/fx-flight-magic-v1.png (lightning, crystal, sniper, rune)
 Each atlas is 6 columns by 4 rows. Prompts: licenses/tower-projectiles-v1-prompts.json
 Source PNGs retained; alpha WebP served in adventure and peer-to-peer duels.
-Original local procedural sounds match each weapon. Flight paths, trails,
-connected lightning, gravity arcs and effects run locally without media requests.
+Each weapon has distinct launch audio. Flight paths, trails, connected lightning,
+gravity arcs and visual effects run locally.
+
+TWELVE CC0 TOWER LAUNCH SAMPLES v1 (2026-10-08)
+Source sound packs and creators:
+rubberduck — 25 CC0 bang / firework SFX (recorded fireworks, bangs and cannons)
+https://opengameart.org/content/25-cc0-bang-firework-sfx
+rubberduck — 80 CC0 RPG SFX (stone, wood, blades, gems, spells)
+https://opengameart.org/content/80-cc0-rpg-sfx
+artisticdude — Battle Sound Effects (bow and swishes)
+https://opengameart.org/content/battle-sound-effects
+bart — Ice spells
+https://opengameart.org/content/ice-spells
+IgnasD — Ice breaking/shattering
+https://opengameart.org/content/ice-breakingshattering
+themightyglider / soundtracvkradio — Electric Buzz
+https://opengameart.org/content/electric-buzz
+https://freesound.org/people/soundtracvkradio/sounds/394679/
+Augmentality / Brandon Morris, submitted by HaelDB — Spell sounds
+https://opengameart.org/content/spell-sounds
+JaggedStone — Magic Spell SFX
+https://opengameart.org/content/magic-spell-sfx
+Thimras — Cannon hit
+https://opengameart.org/content/cannon-hit
+All sources offer CC0; this project selects CC0 where multiple licenses appear.
+Modified: silence trimming, EQ, rate/pitch shifts, layering, compression,
+normalization, short fades, mono downmix, metadata removal and MP3 encoding.
+Twelve derived clips: assets/audio/towers/; 24kHz mono, 64kbps MP3.
+Exact source filenames, hashes and recipes: licenses/tower-audio-v1.json.
+CC0 notice: licenses/tower-audio-CC0.txt. Derivative clips also offered under CC0.
+Preparation script: tools/prepare-tower-audio.py (local only, not web build).
+Source packs are excluded from deployment. Only installed tower types are
+preloaded in gameplay, with one request/decode per URL and immutable caching.

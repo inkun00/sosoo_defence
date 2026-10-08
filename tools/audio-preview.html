@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>12종 타워 실제 효과음 청취</title>
+  <style>
+    :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090d16;color:#f5dfb4;font:16px system-ui,sans-serif}main{max-width:1180px;margin:24px auto;padding:0 18px 32px}h1{font-size:28px;margin:0 0 8px}h2{font-size:20px;margin:0 0 10px}p{color:#bab5ae;line-height:1.6;margin:6px 0 16px}button,a{touch-action:manipulation}button{background:#242839;color:#ffe3a4;border:1px solid #997347;border-radius:7px;padding:11px 15px;font:inherit;cursor:pointer}button:hover{background:#33364a}button:focus-visible,a:focus-visible{outline:2px solid #a4e8d1;outline-offset:3px}button:disabled{opacity:.45;cursor:default}a{color:#f5dcaa}nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0}nav a{margin-left:6px}#status{min-height:28px;margin:10px 0;color:#a4e8d1}#summary{padding:14px 18px;border:1px solid #514739;border-radius:8px;background:#141c29;color:#d4cdbd;font-size:14px;line-height:1.65}#weapons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0 26px}.weapon{background:#141c29;border:1px solid #514739;border-radius:9px;padding:15px;min-width:0;transition:border-color .15s}.weapon.active{border-color:#a4e8d1}.weapon h2{font-size:19px;margin-bottom:6px}.weapon .state{font:12px ui-monospace,monospace;color:#bab5ae;display:inline-block;margin-bottom:10px}.weapon[data-status=ready] .state{color:#a4e8d1}.weapon[data-status=failed] .state{color:#ffb5a4}.weapon .details{font-size:13px;min-height:24px;line-height:1.5;margin:0 0 12px;color:#bab5ae}.weapon button{width:100%}.weapon .source{display:block;font-size:12px;margin-top:10px;overflow-wrap:anywhere}.export{padding:18px;background:#141c29;border:1px solid #514739;border-radius:9px}.export p{font-size:14px;margin-bottom:12px}.export-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}audio{display:block;width:100%;margin-top:16px}#export-status{color:#a4e8d1;margin-top:12px}#sources{font-size:14px;margin-top:24px}#sources ul{padding-left:20px;line-height:1.8}footer{color:#92928f;font-size:13px;margin-top:24px;line-height:1.7}[hidden]{display:none!important}@media(max-width:860px){#weapons{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:620px){main{margin-top:18px;padding:0 12px 24px}h1{font-size:24px}#weapons{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.weapon{padding:12px}.weapon h2{font-size:17px}nav button{font-size:14px;padding:10px 12px}}@media(prefers-reduced-motion:reduce){.weapon{transition:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>타워 12종 실제 효과음 청취</h1>
+    <p>실제 게임의 발사 샘플을 같은 음량과 믹서로 재생합니다. 첫 버튼 클릭 후 파일을 불러오며, BGM은 꺼져 있습니다.</p>
+    <nav aria-label="청취 제어">
+      <button id="load" type="button">샘플 불러오기</button>
+      <button id="compare" type="button">12종 순서 비교</button>
+      <button id="stop" type="button">재생 중단</button>
+      <button id="sound" type="button" aria-pressed="true">효과음 ON</button>
+      <a href="./projectile-preview.html">발사체 비교</a>
+      <a href="/?mode=adventure">모험 화면</a>
+    </nav>
+    <div id="status" role="status" aria-live="polite">샘플 준비 전 · 버튼을 눌러 소리를 활성화하세요.</div>
+    <div id="summary"></div>
+    <section id="weapons" aria-label="타워별 발사 효과음"></section>
+    <section class="export" aria-labelledby="export-heading">
+      <h2 id="export-heading">실제 믹서의 WAV 비교 파일</h2>
+      <p>12종을 1.2초 간격으로 오프라인 렌더링합니다. 아래 플레이어로 청취하거나 WAV를 다운로드할 수 있습니다.</p>
+      <div class="export-actions">
+        <button id="render" type="button">비교 WAV 만들기</button>
+        <a id="download" download="tower-shots-cc0.wav" hidden>WAV 다운로드</a>
+      </div>
+      <div id="export-status" role="status" aria-live="polite"></div>
+      <audio id="rendered" controls preload="metadata" hidden aria-label="12종 타워 발사 효과음 WAV 비교"></audio>
+    </section>
+    <section id="sources" aria-labelledby="sources-heading">
+      <h2 id="sources-heading">CC0 원본과 라이선스</h2>
+      <div id="source-links"></div>
+    </section>
+    <footer>ready는 실제 파일 다운로드와 디코딩 완료 상태입니다. 파일 준비에 실패하면 이 청취 페이지에서 재생하지 않습니다. 중단·효과음 OFF·탭 숨김 시 예약된 비교 재생이 취소됩니다.</footer>
+  </main>
+  <script type="module" src="./audio-preview.ts"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+{
+  "basic": {
+    "url": "/assets/audio/towers/basic.8b51afeb8cfc.mp3",
+    "bytes": 4800,
+    "duration": 0.6,
+    "source": "중형 철포탄 폭발",
+    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "double": {
+    "url": "/assets/audio/towers/double.f68ae51d71dd.mp3",
+    "bytes": 4416,
+    "duration": 0.552,
+    "source": "65ms 간격 쌍석포",
+    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "needle": {
+    "url": "/assets/audio/towers/needle.c68df64c2a06.mp3",
+    "bytes": 2880,
+    "duration": 0.36,
+    "source": "금속 바늘과 빠른 바람",
+    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "pebble": {
+    "url": "/assets/audio/towers/pebble.336de34f50cb.mp3",
+    "bytes": 4224,
+    "duration": 0.528,
+    "source": "작은 돌이 흩어지는 자갈포",
+    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "frost": {
+    "url": "/assets/audio/towers/frost.612dd02b3ad9.mp3",
+    "bytes": 5760,
+    "duration": 0.72,
+    "source": "냉기 구체와 얼음 울림",
+    "sourceUrl": "https://opengameart.org/content/ice-spells",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "ice": {
+    "url": "/assets/audio/towers/ice.b28764266201.mp3",
+    "bytes": 5184,
+    "duration": 0.648,
+    "source": "날카로운 얼음창 파열",
+    "sourceUrl": "https://opengameart.org/content/ice-breakingshattering",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "catapult": {
+    "url": "/assets/audio/towers/catapult.0314c9e5a1b4.mp3",
+    "bytes": 6720,
+    "duration": 0.84,
+    "source": "나무 장력과 무거운 바위 비행",
+    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "lightning": {
+    "url": "/assets/audio/towers/lightning.15491f9af4af.mp3",
+    "bytes": 2880,
+    "duration": 0.36,
+    "source": "연결된 전격의 지직거림과 방전",
+    "sourceUrl": "https://opengameart.org/content/electric-buzz",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "crystal": {
+    "url": "/assets/audio/towers/crystal.883aa7e9425e.mp3",
+    "bytes": 5952,
+    "duration": 0.744,
+    "source": "회전 수정의 유리 울림과 마법",
+    "sourceUrl": "https://opengameart.org/content/80-cc0-rpg-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "sniper": {
+    "url": "/assets/audio/towers/sniper.5d231d603e32.mp3",
+    "bytes": 3456,
+    "duration": 0.432,
+    "source": "날카로운 장거리 발사와 탄도",
+    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "siege": {
+    "url": "/assets/audio/towers/siege.816f8f62cbf2.mp3",
+    "bytes": 8064,
+    "duration": 1.008,
+    "source": "대포 폭발과 묵직한 저역 충격",
+    "sourceUrl": "https://opengameart.org/content/25-cc0-bang-firework-sfx",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  },
+  "rune": {
+    "url": "/assets/audio/towers/rune.98452e815313.mp3",
+    "bytes": 6528,
+    "duration": 0.816,
+    "source": "쇠뇌 장력과 룬 마법 잔향",
+    "sourceUrl": "https://opengameart.org/content/battle-sound-effects",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+  }
+}
