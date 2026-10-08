@@ -1,0 +1,17 @@
+.duel-purchase-panel{position:absolute;z-index:20;width:982px;height:332px;transform-origin:top left;padding:18px 24px;background:linear-gradient(135deg,#28282bfa,#111722fc);border:3px ridge #ad8951;border-radius:12px;box-shadow:0 3px 14px #0009;color:#ffedc9}
+.duel-purchase-panel[hidden]{display:none!important}
+.duel-purchase-form{height:100%;display:grid;grid-template-columns:1fr 332px;gap:28px}
+.duel-purchase-copy{display:flex;flex-direction:column;min-width:0}
+.duel-purchase-heading{margin:0;color:#e9bb70;font-size:21px;font-weight:bold}
+.duel-purchase-equation{margin:18px 0 14px;color:#ffe09e;font: bold 39px Consolas,'Malgun Gothic',monospace;white-space:nowrap}
+.duel-purchase-note,.duel-purchase-wallet{margin:4px 0;font-size:16px;line-height:1.5;color:#ddd0b8}
+.duel-purchase-panel [data-feedback]{margin:9px 0;font-size:18px;color:#ffd284;min-height:27px}
+.duel-purchase-actions{display:flex;gap:12px;margin-top:auto}
+.duel-purchase-panel button{border:2px ridge #ad8951;border-radius:7px;background:linear-gradient(#444449,#22242b);color:#fff0d0;font-weight:bold;font-size:20px;min-height:45px;padding:6px 14px}
+.duel-purchase-panel button:disabled,.duel-purchase-panel input:disabled{opacity:.55}
+.duel-purchase-panel .duel-purchase-confirm{background:linear-gradient(#97622b,#4d321b);flex:1}
+.duel-purchase-answer label{display:block;font-size:18px;font-weight:bold}
+.duel-purchase-answer input{display:block;width:100%;height:47px;margin:5px 0 10px;padding:5px 12px;background:#10141c;color:#fff0d0;border:2px solid #b99256;border-radius:6px;font-size:25px}
+.duel-purchase-answer input::placeholder{font-size:16px;color:#c1b59f}
+.duel-purchase-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.duel-purchase-keypad button{font-size:25px;height:46px;padding:0}
