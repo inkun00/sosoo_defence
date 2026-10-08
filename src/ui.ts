@@ -110,7 +110,7 @@ export class GameUI extends Phaser.Scene{
   group.add(this.add.image(x,y-size*.08,'dungeon-tower-heads-'+t.sheet+'-v1',id).setDisplaySize(size,size));
  }
  private drawDock(){
-  this.clear(this.dock,['calculation','toggle','sell','forge','wall','wall-recover','start','speed']);const s=this.getState(),m=s.model,t=m.towers.find(t=>t.id===s.selected);
+  this.clear(this.dock,['calculation','sell','forge','wall','wall-recover','start','speed']);const s=this.getState(),m=s.model,t=m.towers.find(t=>t.id===s.selected);
   this.frame(this.dock,509,736,988,112,'panel_brown_dark');
   const board=this.button(this.dock,'calculation',221,736,392,104,'',s.mode.kind!=='wall','button_brown');
   if(s.mode.kind==='wall'){
@@ -128,16 +128,16 @@ export class GameUI extends Phaser.Scene{
   }else if(t){
    this.towerIcon(this.dock,472,729,t.typeId,68);
    this.fitText(this.text(this.dock,520,710,`${towerType(t.typeId)!.name} · ${numberText(t.unit)} · 재장전 ${m.reloadTime(t).toFixed(1)}초${m.reloadFactor(t)>1?' (열 간섭)':''}`,21,C.cream).setOrigin(0,.5),446);
-   this.button(this.dock,'toggle',643,750,248,58,t.enabled?'▶ 발사 ON':'Ⅱ 발사 OFF',!['won','review','lost'].includes(m.phase),t.enabled?'button_brown':'button_red',25);
+   this.text(this.dock,520,750,'전투 중 자동 공격',19,C.muted).setOrigin(0,.5);
    this.button(this.dock,'sell',870,750,184,58,'회수 '+numberText(t.cost),!['won','review','lost'].includes(m.phase),'button_brown',18);
   }else if(s.selectedWall){
    const w=m.walls.find(w=>w.x===s.selectedWall!.x&&w.y===s.selectedWall!.y);
    this.text(this.dock,450,710,`성벽 · 내구도 ${w?.durability??0}/${WALL_DURABILITY} · 충돌하면 반동`,21,C.cream).setOrigin(0,.5);
    this.button(this.dock,'wall-recover',640,750,310,58,'성벽 회수 · 다시 배치',!['won','review','lost'].includes(m.phase),'button_brown',23);
   }else{
-   const placing=s.mode.kind==='tower';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 조종할 수 있어요',21,C.cream,520).setOrigin(0,.5);
+   const placing=s.mode.kind==='tower';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 정보와 회수를 확인해요',21,C.cream,520).setOrigin(0,.5);
    const max=m.level.boss?.hp??Math.max(...m.level.hp),i=m.level.hp.indexOf(max),strongest=MONSTERS[m.level.boss?.kind??monsterKind(m.level.id,i,max)];
-   this.text(this.dock,450,750,s.mode.kind==='tower'?`공격 ${numberText(s.unit)} · 붙이면 재장전이 느려져요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${numberText(max,m.level.boss?1:m.level.digits)}`:'전투 중 설치 불가 · 발사 ON/OFF로 마무리!',18,C.muted,520).setOrigin(0,.5);
+   this.text(this.dock,450,750,s.mode.kind==='tower'?`공격 ${numberText(s.unit)} · 붙이면 재장전이 느려져요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${numberText(max,m.level.boss?1:m.level.digits)}`:'타워가 자동으로 공격해요 · 작은 포탄으로 마무리!',18,C.muted,520).setOrigin(0,.5);
   }
   this.button(this.dock,'forge',1135,705,244,58,s.mode.kind==='wall'?'성벽 더 합성하기':`성벽 제작  ${m.bricks.length} / 성벽 ${m.wallStock}`,!['won','review','lost'].includes(m.phase),'button_brown',20);
   if(m.phase==='ready')this.button(this.dock,'start',1135,770,244,58,'방어 시작 ▶',s.mode.kind!=='wall','button_red',26);

@@ -81,8 +81,8 @@ export class DuelScene extends Phaser.Scene{
   const eggLevel=p?.egg??0;const egg=this.add.image(551,684,'duel-eggs','egg-'+Math.max(1,eggLevel)).setDisplaySize(62,98).setAlpha(eggLevel?1:.3);this.ui.add(egg);this.text(this.ui,639,648,eggLevel?`돌 알 Lv.${eggLevel}`:'합성 정답으로 알 획득',19,'#ffca7e');
   this.text(this.ui,730,692,eggLevel?'지금 부화하거나 정답을 더 맞혀요':'정답 1회당 1레벨 · 최고 10레벨',17,'#c1b7aa');this.button('hatch',863,737,229,56,'영웅 부화 ▶',eggLevel>0&&s?.status==='playing'&&!v.busy,true,22);
   const selected=p?.towers.find(t=>t.id===v.selectedTower);
-  if(selected){this.button('toggle',1085,696,137,57,selected.enabled?'발사 끄기':'발사 켜기',!v.busy);this.button('sell',1220,696,105,57,'회수',!v.busy);}
-  else this.text(this.ui,1130,697,v.selectedType?'내 쪽 빈 바닥에 설치':'타워를 누르면 발사 조절',16,'#c1b7aa');
+  if(selected){this.text(this.ui,1085,696,'타워 자동 공격',16,'#c1b7aa');this.button('sell',1220,696,105,57,'회수',!v.busy);}
+  else this.text(this.ui,1130,697,v.selectedType?'내 쪽 빈 바닥에 설치':'타워는 자동으로 공격해요',16,'#c1b7aa');
   const reserve=p?.rewardHero?heroSpec(p.rewardHero):null;
   this.text(this.ui,1130,657,reserve?`학습지 · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
   this.button('heroes',1069,756,113,57,'영웅 도감',true,false,16);

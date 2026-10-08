@@ -195,7 +195,6 @@ scene.onAction=async key=>{sound.resume();sound.play('ui');
   case 'page:prev':shopPage=0;refresh();break;case 'page:next':shopPage=1;refresh();break;
   case 'ready':await send({type:'ready'});break;
   case 'fuse':await send({type:'fuse',round:state!.players[side]!.round,slots:[...slots],operation});break;
-  case 'toggle':await send({type:'toggle',towerId:selectedTower});break;
   case 'sell':await send({type:'sell',towerId:selectedTower});selectedTower=0;refresh();break;
   case 'hatch':heroBook();break;case 'heroes':heroBook(true);break;
   case 'reserve':if(state?.status==='waiting')rewardCollection(false);else {const reply=await send({type:'summon-reward'});if(reply?.ok)sound.play('kill');}break;

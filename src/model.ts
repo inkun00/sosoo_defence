@@ -40,7 +40,7 @@ export class Defense{
  emit(e:Event){this.events.push(e);if(this.events.length>80)this.events.shift();}
  notice(message:string){this.emit({type:'notice',message});return false;}
  random(){this.randomState=(Math.imul(this.randomState,1664525)+1013904223)>>>0;return this.randomState/4294967296;}
- start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');if(this.pendingPurchase)return this.notice('열린 설치 문제를 풀거나 취소한 뒤 방어를 시작해요.');this.phase='playing';this.emit({type:'notice',message:'타워 준비 완료! 전투 중에는 설치할 수 없어요. 체력을 보고 발사를 조절해요.'});return true;}return false;}
+ start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');if(this.pendingPurchase)return this.notice('열린 설치 문제를 풀거나 취소한 뒤 방어를 시작해요.');this.phase='playing';this.emit({type:'notice',message:'타워 준비 완료! 전투 중에는 자동으로 공격해요. 몬스터의 체력 변화를 살펴보세요.'});return true;}return false;}
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
  get canBuild(){return this.phase==='ready';}
  // Adjacent towers are legal. Shared heat slows reload, leaving damage exact.
@@ -57,7 +57,7 @@ export class Defense{
   return this.path()?.some(p=>key(p)===key(c))?new Set(this.blocks):null;
  }
  private canPurchase(c:Cell,type:TowerType):boolean{
-  if(!this.canBuild)return this.notice('타워는 방어 시작 전에만 설치할 수 있어요. 전투 중에는 발사를 조절해요.');
+  if(!this.canBuild)return this.notice('타워는 방어 시작 전에만 설치할 수 있어요. 전투 중에는 자동으로 공격해요.');
   if(type.unlock>this.level.id)return this.notice('아직 해금되지 않은 타워예요.');
   if(this.towers.length>=this.balance.towerLimit)return this.notice(`타워는 ${this.balance.towerLimit}개까지 설치할 수 있어요. 타워를 회수해 위치나 종류를 바꿔 보세요.`);
   if(type.unit===10&&this.towers.filter(t=>t.unit===10).length>=this.balance.precisionLimit)return this.notice(`바늘탑은 ${this.balance.precisionLimit}개까지 설치해요. 다른 타워로 먼저 체력을 줄여요.`);
