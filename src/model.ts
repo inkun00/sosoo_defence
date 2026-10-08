@@ -5,6 +5,8 @@ import {decimal,numberText,hit,recipe,reward,regroupMessage,minimumHits,FusionOp
 import {MonsterKind,MONSTERS,monsterKind} from './monsters';
 import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation} from './towers';
+import {drawWallRecipe} from './wall-recipe-store';
+import type {WallRecipe} from './wall-recipes';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;recoil?:{vx:number;vy:number;remaining:number};wallCooldown?:number;}
@@ -20,7 +22,7 @@ export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERV
 export class Defense{
  level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
  towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Wall[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
- private nextId=1;private randomState=17;private droppedRecipe=0;
+ private nextId=1;private randomState=17;private droppedRecipe=0;private brickRecipe:WallRecipe|null=null;
  private carriedWalls=0;
  private storedWallHealth:number[]=[];wallPlacements=0;
  bossDefeated=false;bossSpawned=false;
@@ -158,9 +160,9 @@ export class Defense{
   if(this.level.id===10&&e.kind==='warden'){this.bossDefeated=true;this.emit({type:'notice',message:'균열의 돌왕의 힘이 정확히 0이 되었어요! 이제 저주 마법사에게 맞서요.'});}
   if(this.level.boss?.kind===e.kind){this.bossDefeated=true;this.emit({type:'notice',message:'저주 마법사의 힘이 정확히 0이 되었어요! 남은 몬스터를 막아 세상을 구해요.'});}
   this.kills++;const earn=reward(e.max,e.hits,this.level.units,this.level.id);
-  // One recipe per three drops: one guaranteed initial set, then additional sets.
+  // Each three-drop group has a new, correct addition/subtraction recipe.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);
-  if(brickDrop){const values=this.droppedRecipe>=3?(this.level.extraBricks??this.level.bricks):this.level.bricks;const value=values[this.droppedRecipe%3];this.droppedRecipe++;this.bricks.push({id:this.nextId++,value});this.emit({type:'brick',message:`${MONSTERS[e.kind].name}이 ${decimal(value,this.level.digits)} 벽돌을 남겼어요!`,x:e.x,y:e.y});}
+  if(brickDrop){const slot=this.droppedRecipe%3;if(slot===0)this.brickRecipe=drawWallRecipe(this.level.id,Math.floor(this.droppedRecipe/3));const value=this.brickRecipe![slot];this.droppedRecipe++;this.bricks.push({id:this.nextId++,value});this.emit({type:'brick',message:`${MONSTERS[e.kind].name}이 ${decimal(value,this.level.digits)} 벽돌을 남겼어요!`,x:e.x,y:e.y});}
   else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.id>=4?3:1),x:e.x,y:e.y});}
   this.emit({type:'kill',message:`정확히 0! ${e.hits}번 타격`,x:e.x,y:e.y,data:{hits:e.hits,best:minimumHits(e.max,this.level.units),brick:brickDrop}});
  }
