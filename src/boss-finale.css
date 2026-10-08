@@ -1,0 +1,14 @@
+.boss-finale{position:fixed;inset:0;z-index:400;isolation:isolate;color:#ffedc3;font-family:'HahmletEnding','Batang',serif;overflow:hidden}
+.boss-finale canvas{display:block;width:100%;height:100%;pointer-events:none}
+.boss-finale-controls{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));display:flex;gap:8px}
+.boss-finale-controls button{min-height:44px;padding:9px 15px;border:1px solid #bc9b5969;border-radius:3px;background:#080a13b8;color:#e8d8b4;font:500 clamp(12px,1.1vw,16px) 'Malgun Gothic',sans-serif;cursor:pointer;box-shadow:0 2px 12px #0006}
+.boss-finale-controls button:hover{background:#26202dcc;border-color:#f0cc81;color:#fff1c9}
+.boss-finale-controls button:focus-visible{outline:3px solid #ffe6a6;outline-offset:3px}
+.boss-finale-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.boss-finale-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;background:radial-gradient(ellipse at 50% 40%,#684b2999,#080914f5 72%);text-align:center}
+.boss-finale-fallback[hidden]{display:none}
+.boss-finale-fallback strong{font-size:clamp(28px,5vw,72px);color:#ffedb6;text-shadow:0 0 30px #e8b96199;letter-spacing:.07em}
+.boss-finale-fallback span{font-size:clamp(15px,2vw,28px);color:#ebdec3}
+.boss-finale-fallback{z-index:-1}
+@media(max-width:650px){.boss-finale-controls{gap:6px;top:9px;right:9px}.boss-finale-controls button{padding:8px 10px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){.boss-finale *{scroll-behavior:auto}}

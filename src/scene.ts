@@ -18,6 +18,9 @@ interface ShotData{towerId:number;typeId:string;targetId:number;toX:number;toY:n
 export class Field extends Phaser.Scene{
  model:Defense;mode:Mode={kind:'inspect',unit:100,effect:'basic'};onChange:()=>void=()=>{};onEvent:(event:GameEvent)=>void=()=>{};onSelect:(id:number)=>void=()=>{};
  onImpactAudio:(type:'hit'|'kill'|'invalid')=>void=()=>{};
+ onFinalBossImpact:(x:number,y:number)=>void=()=>{};
+ // Freeze combat during the farewell, while the killing projectile still flies.
+ presentationHeld=false;
  private floor!:Phaser.GameObjects.Container;private overlay!:Phaser.GameObjects.Graphics;private visuals=new Map<number,{kind:MonsterKind;sprite:Phaser.GameObjects.Sprite;text:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;bar:Phaser.GameObjects.Graphics}>();
  private towersView?:Phaser.GameObjects.Container;private layoutSignature='';private heartbeat=0;private readyFlag=false;selected?:number;
  private towerArt=new Map<number,TowerVisual>();private knownTowerIds=new Set<number>();private cursor:Cell={x:1,y:3};
@@ -63,7 +66,7 @@ export class Field extends Phaser.Scene{
    else {this.selected=undefined;this.onSelect(0);}
    this.flush();this.onChange();
  }
- setModel(model:Defense){this.model=model;this.selected=undefined;this.selectedWall=undefined;if(this.readyFlag)this.clearBattleEffects();this.mode.kind='inspect';this.knownTowerIds.clear();if(!this.readyFlag)return;for(const v of this.towerArt.values())this.tweens.killTweensOf(v.root);this.towerArt.clear();for(const v of this.visuals.values()){v.sprite.destroy();v.text.destroy();v.name.destroy();v.bar.destroy();}this.visuals.clear();this.layoutSignature='';this.overlay.clear();this.drawTerrain();}
+ setModel(model:Defense){this.model=model;this.presentationHeld=false;this.selected=undefined;this.selectedWall=undefined;if(this.readyFlag)this.clearBattleEffects();this.mode.kind='inspect';this.knownTowerIds.clear();if(!this.readyFlag)return;for(const v of this.towerArt.values())this.tweens.killTweensOf(v.root);this.towerArt.clear();for(const v of this.visuals.values()){v.sprite.destroy();v.text.destroy();v.name.destroy();v.bar.destroy();}this.visuals.clear();this.layoutSignature='';this.overlay.clear();this.drawTerrain();}
  private label(x:number,y:number,text:string,size=16,color='#f7e8cd'){
   return this.add.text(x,y,text,{fontFamily:'Malgun Gothic, system-ui, sans-serif',fontSize:size,fontStyle:'bold',color,align:'center',padding:{x:5,y:3}}).setOrigin(.5);
  }
@@ -238,6 +241,7 @@ export class Field extends Phaser.Scene{
  }
  private impact(d:ShotData,x:number,y:number,sequence:number){
   this.onImpactAudio(!d.valid?'invalid':d.killed?'kill':'hit');
+  if(d.valid&&d.killed&&d.kind==='wizard'&&this.model.level.boss?.kind==='wizard')this.onFinalBossImpact(x,y);
   const size=d.unit>=1000?108:d.unit>=100?72:46,color=EFFECTS[d.effect].color;
   if(d.valid)this.hitEquations?.show(d.targetId,d.before,d.unit,d.after,()=>{
    const target=this.visuals.get(d.targetId),bodySize=monsterSize(d.kind,this.model.level.id);
@@ -287,7 +291,7 @@ export class Field extends Phaser.Scene{
   const paused=this.model.phase==='paused';this.tweens.timeScale=paused?0:1;if(paused)this.cameras.main.shakeEffect.reset();
   this.ambient?.setPaused(paused);
   for(const object of this.battleEffects)if(object instanceof Phaser.GameObjects.Sprite){if(paused)object.anims.pause();else if(object.anims.isPaused)object.anims.resume();}
-  this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
+  if(!this.presentationHeld)this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
   for(const v of this.visuals.values()){if(paused)v.sprite.anims.pause();else if(v.sprite.anims.isPaused)v.sprite.anims.resume();}
   const live=new Set(this.model.enemies.map(e=>e.id));for(const [id,v]of this.visuals){if(live.has(id))continue;v.text.destroy();v.name.destroy();v.bar.destroy();this.trackEffect(v.sprite);v.sprite.play((this.anims.exists(v.kind+'-fall')?v.kind:'slime')+'-fall');this.tweens.add({targets:v.sprite,alpha:0,duration:550,onComplete:()=>v.sprite.destroy()});this.visuals.delete(id);}
   if(this.layoutSignature!==this.signature())this.drawTerrain();this.animateWalls();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(this.heartbeat>=120){this.heartbeat=0;this.onChange();}

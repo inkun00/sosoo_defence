@@ -117,6 +117,9 @@ function effects(type:string):EffectNote[]{
   case 'victory':return [65,69,72,77,84].map((n,i)=>tone(n,.7,.075,'bell',i*.13));
   case 'defeat':return [62,60,57,50].map((n,i)=>tone(n,.55,.06,'strings',i*.2));
   case 'portal':return [tone(45,1.2,.07,'sweep'),tone(74,1.5,.045,'pad',.15),tone(75,1.3,.03,'pad',.2)];
+  case 'boss-charge':return [[0,{instrument:'sweep',note:36,endNote:67,duration:1.15,volume:.07,cutoff:1400}],[.08,{instrument:'pad',note:48,endNote:60,duration:1.1,volume:.045}],[.28,{instrument:'noise',note:62,endNote:82,duration:.85,volume:.035}]];
+  case 'boss-shatter':return [tone(28,.72,.15,'kick'),tone(40,.82,.085,'noise'),[.04,{instrument:'sweep',note:90,endNote:33,duration:.9,volume:.055,cutoff:4500}],...[81,88,93].map((n,i)=>tone(n,.55,.025,'bell',.13+i*.12))];
+  case 'boss-release':return [tone(43,1.4,.045,'pad'),...[67,74,79,86,91].map((n,i)=>tone(n,1.15,.04,'bell',i*.12))];
   case 'dawn':return [65,72,77,81,84].map((n,i)=>tone(n,1.2,.045,'bell',i*.18));
   default:return [];
  }

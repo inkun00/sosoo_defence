@@ -37,6 +37,20 @@ test('hidden tabs suspend audio; disposal removes unlock handlers and prevents r
 test('combat effect storms are bounded and narration lowers only the music bus',t=>{
  const {sound,context}=fixture(t);sound.resume();const c=context();for(let i=0;i<100;i++)sound.play('hit');assert.equal(c.sources.length,2);sound.setDucking(true);assert.equal(c.gains[0].gain.value,.25);assert.equal(c.gains[1].gain.value,.85);sound.setDucking(false);assert.equal(c.gains[0].gain.value,.72);
 });
+
+test('boss finale cues are distinct, remain within the voice budget, and obey effects mute',t=>{
+ const {sound,context}=fixture(t);sound.resume();const c=context(),signatures:string[]=[];
+ for(const cue of ['boss-charge','boss-shatter','boss-release','victory']){
+  const before=c.sources.length;sound.play(cue);const voices=c.sources.slice(before);
+  assert.ok(voices.length>=3&&voices.length<=8,cue);
+  signatures.push(JSON.stringify(voices.map(v=>({pitch:v.frequency.value,noise:!!v.buffer,start:v.started[0]-c.currentTime,duration:v.stopped[0]-v.started[0]}))));
+  c.currentTime+=1.5;
+ }
+ assert.equal(new Set(signatures).size,4);assert.ok(c.sources.length<=32);
+ const old=c.sources.length;sound.sfx=false;
+ for(const cue of ['boss-charge','boss-shatter','boss-release','victory'])sound.play(cue);
+ assert.equal(c.sources.length,old);assert.ok(c.sources.every(v=>v.stopped.at(-1)!<=c.currentTime+.05));
+});
 test('every full arrangement contains playable, finite notes and distinct instrumentation',()=>{
  for(const track of Object.keys(TRACKS) as MusicTrack[]){const notes=Array.from({length:128},(_,i)=>scoreStep(track,i)).flat();assert.ok(notes.length>32);assert.ok(notes.every(v=>Number.isFinite(v.note)&&v.note>=20&&v.note<=110&&v.volume>0&&v.volume<=.2&&v.duration>0));}
  assert.notDeepEqual(scoreStep('title',0),scoreStep('battle',0));assert.notDeepEqual(scoreStep('opening',0),scoreStep('ending',0));

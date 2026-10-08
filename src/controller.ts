@@ -8,11 +8,13 @@ import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
 import {mountAudioControls} from './audio-controls';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
-import {GAME_WIDTH,GAME_HEIGHT} from './layout';
+import {GAME_WIDTH,GAME_HEIGHT,FIELD_X,FIELD_Y} from './layout';
 import type {Cell} from './path';
 import {isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,TOWERS,parseMoney} from './towers';
 import {playCinematic} from './cinematic';
+import {playBossFinale} from './boss-finale';
+import {BossFinaleFlow} from './boss-finale-flow';
 import {recordLearning} from './learning';
 import './game.css';
 
@@ -33,6 +35,7 @@ let slots:(number|null)[]=[null,null,null],panel:Panel=null,equation='',hint='',
 let fusionOperation:FusionOperation='+';
 let resumeAfterPanel=false,resumeAfterHTML=false,resumeAfterWall=false,controlsSignature='';
 const field=new Field(model);const learningSession=crypto.randomUUID();let learningQuestion=0;
+let bossFinale=new BossFinaleFlow();
 function purchaseLearning(outcome:'wrong'|'help'|'correct',q=model.pendingPurchase){if(q)recordLearning({a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'},outcome,learningSession+':purchase:'+learningQuestion);}
 const state=():UIState=>({model,save,unit,effect,selected,selectedWall,brickPage,speed,mode:field.mode,panel,slots,fusionOperation,equation,hint,message,towerTypeId,shopPage,purchaseInput,purchaseMessage,purchaseHelp});
 const ui=new GameUI(state);
@@ -43,10 +46,14 @@ function persistInventory(){
 }
 function update(){
  if(selectedWall&&!model.walls.some(w=>w.x===selectedWall!.x&&w.y===selectedWall!.y)){selectedWall=null;field.selectedWall=undefined;field.clearWallPreview();}
- sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'||model.phase==='review'?'title':model.level.id>=10?'boss':'battle');
+ // The model can win before its last projectile lands. Hold the result until
+ // that impact and the boss's farewell have both been shown.
+ const finaleHeld=bossFinale.hold(model.level.id,model.bossDefeated);
+ if(finaleHeld){movie=true;field.presentationHeld=true;field.input.enabled=false;}
  sound.setPaused(movie||model.phase==='paused');
+ sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'||model.phase==='review'?'title':model.level.id>=10?'boss':'battle');
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
- if(['won','review','lost'].includes(model.phase)&&!resultShown){
+ if(!finaleHeld&&['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
   if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
@@ -55,6 +62,14 @@ function update(){
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
  $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/${model.enemyCount}, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
+}
+function finalBossImpact(x:number,y:number){
+ if(!bossFinale.begin())return;
+ const owner=bossFinale,canvas=document.querySelector('#field canvas') as HTMLCanvasElement|null,rect=canvas?.getBoundingClientRect();
+ const origin=rect?{x:(rect.left+(FIELD_X+x)/GAME_WIDTH*rect.width)/window.innerWidth,y:(rect.top+(FIELD_Y+y)/GAME_HEIGHT*rect.height)/window.innerHeight}:{x:.5,y:.45};
+ let completed=false;
+ const finish=()=>{if(completed)return;completed=true;if(owner!==bossFinale)return;owner.finish();movie=false;field.presentationHeld=false;field.input.enabled=!panel&&$('modal').classList.contains('hidden');ui.refresh(true);update();};
+ void playBossFinale(save,origin,finish).catch(finish);
 }
 function notify(text:string){message=text;$('accessible-notice').textContent=text;ui.notify(text);}
 function nextWallCell(){return model.path()?.find(c=>model.previewWall(c).valid);}
@@ -90,11 +105,11 @@ function stage(n:number){
  if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
  save.resumeStage=n;save.started=true;writeSave(save);
- model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
+ bossFinale=new BossFinaleFlow();model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
 }
 function event(ev:BattleEvent){
  // Damage and learning state update immediately; impact audio follows the flight.
- if(!['hit','kill','invalid'].includes(ev.type))sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
+ if(!movie&&!['hit','kill','invalid'].includes(ev.type))sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
  if(ev.type==='hit'){lastHit=ev;if(model.level.id<=4){equation=ev.message;hint=(ev.data as {hint:string}).hint;}}
  if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=`${ev.message} · 전체 잔액 ${numberText(model.money,model.level.id>=4?3:model.level.digits)} 코인`;}}
  if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';if(field.mode.kind==='wall')notify(`${equation} · 합성 성공! 초록 길을 눌러 놓아요.`);}
@@ -117,6 +132,7 @@ function settings(){
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
+ if(movie)return;
  sound.resume();sound.play('ui');
  if(field.mode.kind==='wall'&&!['wall-cancel','wall','forge','pause'].includes(key))leaveWallPlacement();
  if(key.startsWith('type:')||key==='wall'){selectedWall=null;field.selectedWall=undefined;}
@@ -167,7 +183,7 @@ ui.onControls=(controls:Map<string,Control>)=>{
  const focus=(document.activeElement as HTMLElement)?.dataset.action;
  $('accessible-controls').replaceChildren();for(const [id,c]of active){const b=document.createElement('button');b.type='button';b.textContent=c.label||id;b.dataset.action=id;b.disabled=!c.enabled;b.onclick=c.run;$('accessible-controls').append(b);if(id===focus)b.focus();}
 };
-field.onChange=update;field.onEvent=event;field.onImpactAudio=type=>sound.play(type);field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
+field.onChange=update;field.onEvent=event;field.onImpactAudio=type=>{if(!movie)sound.play(type);};field.onFinalBossImpact=finalBossImpact;field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
 field.onWallPlace=c=>{
  model.cancelWall();const placed=model.placeWall(c);field.flush();
  if(!placed){field.focusCell(c);update();return;}
@@ -182,12 +198,13 @@ const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,hei
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');});
 $('modal-close').onclick=closeHTML;$('modal').onclick=e=>{if(e.target===$('modal'))closeHTML();};
 document.addEventListener('keydown',e=>{
+ if(movie)return;
  if(panel==='purchase'&&!(e.target as HTMLElement)?.closest('button,input')){if(/^\d$/.test(e.key)){e.preventDefault();action('purchase-key:'+e.key);return;}if(e.key==='.'||e.key==='Decimal'){e.preventDefault();action('purchase-key:dot');return;}if(e.key==='Backspace'){e.preventDefault();action('purchase-key:backspace');return;}if(e.key==='Enter'){e.preventDefault();action('purchase-confirm');return;}}
  if(e.key==='Escape'){if(!$('modal').classList.contains('hidden'))closeHTML();else if(panel)closePanel();else if(field.mode.kind==='wall')action('wall-cancel');else{field.mode.kind='inspect';field.clearWallPreview();update();}}
  const input=(e.target as HTMLElement)?.closest('button,input,select,textarea');if(input||!$('modal').classList.contains('hidden'))return;
  if(e.code==='Space'&&!panel){e.preventDefault();action('pause');}else if(e.key.toLowerCase()==='f'&&!panel)action('forge');
 });
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&model.phase==='playing'){model.togglePause();update();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
 window.addEventListener('pagehide',()=>sound.dispose());
 if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();}}});
 
