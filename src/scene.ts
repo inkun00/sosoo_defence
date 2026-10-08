@@ -22,7 +22,7 @@ export class Field extends Phaser.Scene{
  private towerArt=new Map<number,TowerVisual>();private knownTowerIds=new Set<number>();private cursor:Cell={x:1,y:3};
  private wallArt=new Map<number,{image:Phaser.GameObjects.Image;health:Phaser.GameObjects.Text}>();
  selectedWall?:Cell;onWallSelect:(c:Cell)=>void=()=>{};
- onWallPreview:(c:Cell)=>void=()=>{};
+ onWallPlace:(c:Cell)=>void=()=>{};
  private wallGhost?:Phaser.GameObjects.Image;private wallGhostLabel?:Phaser.GameObjects.Text;
  onPurchase:(c:Cell,typeId:string)=>void=()=>{};
  private reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -40,7 +40,7 @@ export class Field extends Phaser.Scene{
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat','shockwave'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
   this.anims.create({key:'wall-collapse',frames:Array.from({length:9},(_,i)=>({key:'dungeon-wall-collapse-v1',frame:'break-'+i})),frameRate:15,repeat:0});
-  this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>{if(!this.inField(pointer)){if(this.mode.kind==='wall'&&this.model.pendingWall)return;this.clearWallPreview();return;}const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.hover(cellAt(p.x,p.y));});
+  this.input.on('pointermove',(pointer:Phaser.Input.Pointer)=>{if(!this.inField(pointer)){if(this.mode.kind==='wall')return;this.clearWallPreview();return;}const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.hover(cellAt(p.x,p.y));});
   this.input.on('pointerdown',(pointer:Phaser.Input.Pointer)=>{
    if(!this.inField(pointer))return;const p=this.cameras.main.getWorldPoint(pointer.x,pointer.y);this.actCell(cellAt(p.x,p.y));
   });
@@ -48,13 +48,13 @@ export class Field extends Phaser.Scene{
    if(!this.input.enabled||(e.target as HTMLElement)?.closest('button,input,textarea,select'))return;
    const directions:Record<string,[number,number]>={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};const d=directions[e.key];
    if(d){e.preventDefault();this.cursor={x:Phaser.Math.Clamp(this.cursor.x+d[0],0,COLS-1),y:Phaser.Math.Clamp(this.cursor.y+d[1],0,ROWS-1)};this.hover(this.cursor);const p=world(this.cursor);this.overlay.lineStyle(3,0xffe7a2).strokeRect(p.x-27,p.y-27,54,54);}
-   else if(e.key==='Enter'){e.preventDefault();this.actCell(this.cursor);}
+   else if(e.key==='Enter'&&!e.repeat){e.preventDefault();this.actCell(this.cursor);}
   });this.drawTerrain();this.scene.launch('game-ui');this.onChange();
  }
  private inField(p:Phaser.Input.Pointer){return p.x>=FIELD_X&&p.x<FIELD_X+FIELD_WIDTH&&p.y>=FIELD_Y&&p.y<FIELD_Y+FIELD_HEIGHT;}
  actCell(c:Cell){
    if(!this.input.enabled||c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
-   if(this.mode.kind==='wall'){this.onWallPreview(c);this.flush();this.onChange();return;}
+   if(this.mode.kind==='wall'){this.onWallPlace(c);this.flush();this.onChange();return;}
    const t=this.model.towers.find(t=>t.x===c.x&&t.y===c.y);
    if(this.model.walls.some(w=>key(w)===key(c))){this.mode.kind='inspect';this.selected=undefined;this.onSelect(0);this.selectedWall={...c};this.onWallSelect(this.selectedWall);this.hover(c);}
    else if(t){this.mode.kind='inspect';this.selected=t.id;this.onSelect(t.id);this.hover(c);}
@@ -101,10 +101,11 @@ export class Field extends Phaser.Scene{
   this.layoutSignature=this.signature();if(this.mode.kind==='wall'&&this.model.pendingWall)this.hover(this.model.pendingWall);else if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
  }
  private signature(){return this.model.towers.map(t=>`${t.id}${t.enabled}`).join(',')+'w'+this.model.walls.map(w=>w.id).join(';');}
+ focusCell(c:Cell){this.cursor={...c};this.hover(c);}
  hover(c:Cell){
   this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);
   // Show range and optional heat while choosing a legal location.
-  this.overlay.clear();if(this.mode.kind!=='inspect'){this.overlay.lineStyle(1,0xe1d1aa,.15);for(let x=0;x<=COLS;x++)this.overlay.lineBetween(OX+x*TILE,OY,OX+x*TILE,OY+ROWS*TILE);for(let y=0;y<=ROWS;y++)this.overlay.lineBetween(OX,OY+y*TILE,OX+COLS*TILE,OY+y*TILE);}if(c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
+  this.overlay.clear();if(this.mode.kind!=='inspect'){this.overlay.lineStyle(1,0xe1d1aa,.15);for(let x=0;x<=COLS;x++)this.overlay.lineBetween(OX+x*TILE,OY,OX+x*TILE,OY+ROWS*TILE);for(let y=0;y<=ROWS;y++)this.overlay.lineBetween(OX,OY+y*TILE,OX+COLS*TILE,OY+y*TILE);}if(c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;this.cursor={...c};
   if(this.mode.kind==='wall'){this.drawWallPreview(this.model.pendingWall??this.model.previewWall(c));return;}
   const selected=this.model.towers.find(t=>t.id===this.selected),xy=world(selected??this.selectedWall??c);
   if(this.selectedWall&&this.mode.kind==='inspect')this.overlay.lineStyle(3,0xffe7a2).strokeRoundedRect(xy.x-26,xy.y-26,52,52,8);
@@ -119,7 +120,7 @@ export class Field extends Phaser.Scene{
   this.wallGhost??=this.add.image(0,0,'dungeon-wall-collapse-v1','wall-0').setDisplaySize(94,88).setDepth(9);
   this.wallGhost.setPosition(p.x,p.y-8).setAlpha(.65).setTint(preview.valid?0xb8ffd0:0xff7777).setVisible(true);
   this.wallGhostLabel??=this.label(0,0,'',14).setBackgroundColor('#11141de8').setDepth(10);
-  this.wallGhostLabel.setPosition(p.x,Math.max(30,p.y-47)).setText(preview.valid?'예상 성벽':'설치 불가').setVisible(true);
+  this.wallGhostLabel.setPosition(p.x,Math.max(30,p.y-47)).setText(preview.valid?'눌러서 설치':'설치 불가').setVisible(true);
  }
  private monsterAnimations(kind:MonsterKind){
   if(!this.textures.exists('dungeon-'+MONSTERS[kind].atlas))return;registerMonster(this,kind);

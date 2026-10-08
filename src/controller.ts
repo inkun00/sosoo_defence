@@ -57,18 +57,23 @@ function update(){
  $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.id>=4?3:model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/${model.enemyCount}, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
 }
 function notify(text:string){message=text;$('accessible-notice').textContent=text;ui.notify(text);}
+function nextWallCell(){return model.path()?.find(c=>model.previewWall(c).valid);}
 function beginWallPlacement(){
- closePanel();if(field.mode.kind!=='wall'){resumeAfterWall=model.phase==='playing';if(resumeAfterWall)model.togglePause();}
+ // Transfer the forge's pause ownership without briefly restarting combat.
+ const resumeBattle=resumeAfterPanel||model.phase==='playing';panel=null;resumeAfterPanel=false;field.input.enabled=true;
+ if(field.mode.kind!=='wall'){resumeAfterWall=resumeBattle;if(model.phase==='playing')model.togglePause();}
  model.cancelWall();selected=0;selectedWall=null;field.selected=undefined;field.selectedWall=undefined;field.mode={kind:'wall',unit,effect};field.clearWallPreview();
- const first=model.path()?.find(c=>model.candidate(c,true));if(first)field.hover(first);
- notify('성벽은 길 위에만 놓을 수 있어요. 초록색 칸을 고르고 설치를 확정해요.');
+ const first=nextWallCell();
+ if(!first){leaveWallPlacement();notify(model.walls.length>=model.balance.wallLimit?`성벽 ${model.balance.wallLimit}개를 모두 설치했어요. 남은 성벽은 보관해요.`:'지금은 설치할 수 있는 길 칸이 없어요. 성벽은 보관해요.');return;}
+ field.focusCell(first);document.querySelector('canvas')?.focus();
+ notify(`초록색 길을 한 번 누르면 바로 설치해요. 남은 성벽 ${model.wallStock}개 · Esc로 보관`);
 }
-function leaveWallPlacement(){
- model.cancelWall();field.mode.kind='inspect';field.clearWallPreview();if(resumeAfterWall&&model.phase==='paused')model.togglePause();resumeAfterWall=false;
+function leaveWallPlacement(resume=true){
+ model.cancelWall();field.mode.kind='inspect';field.clearWallPreview();if(resume&&resumeAfterWall&&model.phase==='paused')model.togglePause();resumeAfterWall=false;
 }
-function setPanel(next:Panel){
+function setPanel(next:Panel,resumeBattle=false){
  ui.clearNotification();
- if(!panel){resumeAfterPanel=model.phase==='playing';if(resumeAfterPanel)model.togglePause();}
+ if(!panel){resumeAfterPanel=resumeBattle||model.phase==='playing';if(model.phase==='playing')model.togglePause();}
  panel=next;field.input.enabled=false;message='';update();
 }
 function closePanel(){if(panel==='purchase')model.cancelPurchase();panel=null;field.input.enabled=true;if(resumeAfterPanel&&model.phase==='paused')model.togglePause();resumeAfterPanel=false;update();}
@@ -91,13 +96,13 @@ function event(ev:BattleEvent){
  sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
  if(ev.type==='hit'){lastHit=ev;if(model.level.id<=4){equation=ev.message;hint=(ev.data as {hint:string}).hint;}}
  if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=ev.message;}}
- if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';}
+ if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';if(field.mode.kind==='wall')notify(`${equation} · 합성 성공! 초록 길을 눌러 놓아요.`);}
  else if(panel==='purchase'&&ev.type==='notice'){purchaseMessage=ev.message;$('accessible-notice').textContent=ev.message;}
  else if(ev.type==='wall-impact')$('accessible-notice').textContent=ev.message;
  else if(['notice','invalid','wall','wall-break','brick','leak'].includes(ev.type))notify(ev.message);
  update();
 }
-function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 간격 제한은 없지만 바로 이웃한 타워끼리는 열 간섭으로 재장전이 느려져요. 높은 단계일수록 영향이 커져요. 한 칸 이상 비우면 간섭이 없어요. 단계가 올라갈 때마다 모든 타워의 가격 범위가 조금씩 올라가며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 혼자 모험에서는 방어 시작 전에만 설치할 수 있어요. 전투 중 회수한 타워도 다시 설치할 수 없으니 시작 전에 배치를 확인해요. 오답·취소에는 돈을 쓰지 않아요. 후반에는 길이 짧아져 입구의 큰 공격, 중간의 감속, 출구의 작은 공격을 조합해야 유리해요. 1:1 대전에서는 설치 문제를 풀 때도 전투가 계속돼요.</li><li><b>발사 켜기·끄기</b> 설치한 타워를 누르면 하단에 큰 발사 ON/OFF 버튼이 나타나요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 큰 타워를 끄고 0.1 포탄으로 마무리해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 덧셈 또는 뺄셈을 고르고 벽돌 세 개를 □ + □ = □ 또는 □ − □ = □에 넣어요. 식이 맞으면 합성해 성벽을 설치하세요. 성벽은 몬스터가 없는 길 위에만 설치할 수 있어요. 입구와 불꽃에는 놓을 수 없어요. 새 성벽의 내구도는 3이고, 몬스터가 부딪힐 때마다 1씩 줄어요. 몬스터는 뒤로 튕기고 성벽에는 균열이 생겨요. 세 번째 충돌에 성벽이 부서져 길이 열려요. 성벽 충돌은 몬스터의 소수 체력을 깎지 않아요. ‘성벽 설치 확정’을 눌러야 설치되며 취소·Esc에는 성벽을 쓰지 않아요. 설치할 칸을 고르는 동안 전투가 멈춰요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 회수해도 남은 내구도는 그대로예요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 0.001은 4단계부터 돈과 가격에만 써요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 부서지지 않은 성벽만 재고에 보관해요.</li><li><b>진급과 저장</b> 성 체력은 5개이며 몬스터가 통과할 때 1개씩 줄고, 5개가 모두 소진돼야 패배해요. 2분이 지나도 남은 몬스터는 추가로 방어해요. 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 성을 지켜도 목표가 남으면 패배 대신 학습 목표 연습을 안내해요. 레벨·해금·별점은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 돈·타워 배치는 단계마다 새로 시작하고 부서지지 않은 성벽은 남은 내구도 그대로 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
+function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 간격 제한은 없지만 바로 이웃한 타워끼리는 열 간섭으로 재장전이 느려져요. 높은 단계일수록 영향이 커져요. 한 칸 이상 비우면 간섭이 없어요. 단계가 올라갈 때마다 모든 타워의 가격 범위가 조금씩 올라가며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 혼자 모험에서는 방어 시작 전에만 설치할 수 있어요. 전투 중 회수한 타워도 다시 설치할 수 없으니 시작 전에 배치를 확인해요. 오답·취소에는 돈을 쓰지 않아요. 후반에는 길이 짧아져 입구의 큰 공격, 중간의 감속, 출구의 작은 공격을 조합해야 유리해요. 1:1 대전에서는 설치 문제를 풀 때도 전투가 계속돼요.</li><li><b>발사 켜기·끄기</b> 설치한 타워를 누르면 하단에 큰 발사 ON/OFF 버튼이 나타나요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 큰 타워를 끄고 0.1 포탄으로 마무리해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 덧셈 또는 뺄셈을 고르고 벽돌 세 개를 □ + □ = □ 또는 □ − □ = □에 넣어요. 식이 맞으면 제작창이 닫히고 길에 바로 설치할 수 있어요. 성벽은 몬스터가 없는 길 위에만 설치할 수 있어요. 입구와 불꽃에는 놓을 수 없어요. 새 성벽의 내구도는 3이고, 몬스터가 부딪힐 때마다 1씩 줄어요. 몬스터는 뒤로 튕기고 성벽에는 균열이 생겨요. 세 번째 충돌에 성벽이 부서져 길이 열려요. 성벽 충돌은 몬스터의 소수 체력을 깎지 않아요. 초록색 길을 한 번 누르면 바로 설치돼요. 재고가 남으면 계속 놓을 수 있고, ‘완료 · 남은 성벽 보관’이나 Esc로 배치를 끝내요. 잘못된 칸은 성벽을 쓰지 않아요. 설치할 칸을 고르는 동안 전투가 멈춰요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 회수해도 남은 내구도는 그대로예요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 0.001은 4단계부터 돈과 가격에만 써요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 부서지지 않은 성벽만 재고에 보관해요.</li><li><b>진급과 저장</b> 성 체력은 5개이며 몬스터가 통과할 때 1개씩 줄고, 5개가 모두 소진돼야 패배해요. 2분이 지나도 남은 몬스터는 추가로 방어해요. 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 성을 지켜도 목표가 남으면 패배 대신 학습 목표 연습을 안내해요. 레벨·해금·별점은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 돈·타워 배치는 단계마다 새로 시작하고 부서지지 않은 성벽은 남은 내구도 그대로 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
 function calculation(){
  const learned=lastHit?.data as {before:number;damage:number}|undefined;if(learned)recordLearning({a:learned.before,b:learned.damage,operation:'-',digits:model.level.digits,context:'battle'},'help',learningSession+':hit:'+lastHit!.message);
  const d=lastHit?.data as {before:number;damage:number;after:number;hint:string}|undefined;
@@ -112,7 +117,7 @@ function settings(){
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
  sound.resume();sound.play('ui');
- if(field.mode.kind==='wall'&&!['wall-confirm','wall-cancel','wall','pause'].includes(key))leaveWallPlacement();
+ if(field.mode.kind==='wall'&&!['wall-cancel','wall','forge','pause'].includes(key))leaveWallPlacement();
  if(key.startsWith('type:')||key==='wall'){selectedWall=null;field.selectedWall=undefined;}
  if(key.startsWith('type:')){const type=towerType(key.slice(5));if(!type||type.unlock>model.level.id)return;if(!model.canBuild){notify('타워는 방어 시작 전에만 설치해요.');return;}towerTypeId=type.id;unit=type.unit;effect=type.effect;field.mode={kind:'tower',typeId:type.id,unit,effect};selected=0;field.selected=undefined;field.hover({x:1,y:3});notify(`${type.name} · 공격력 ${numberText(unit)} · 빈 칸에 설치해요. 붙이면 열 간섭으로 재장전이 느려져요.`);}
  else if(key.startsWith('shop-page:'))shopPage=Math.max(0,Math.min(1,shopPage+(key.endsWith('next')?1:-1)));
@@ -125,7 +130,7 @@ function action(key:string){
  else if(key.startsWith('stage:')){const n=+key.split(':')[1];if(n<=save.level)stage(n);}
  else switch(key){
   case 'start':if(model.start()){field.mode.kind='inspect';field.clearWallPreview();sound.play('start');}break;
-  case 'pause':if(field.mode.kind==='wall')notify('성벽 설치를 확정하거나 취소한 뒤 전투를 진행해요.');else model.togglePause();break;
+  case 'pause':if(field.mode.kind==='wall')notify('성벽을 놓거나 ‘완료 · 남은 성벽 보관’을 누르면 전투가 이어져요.');else model.togglePause();break;
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{const url=new URL(location.href);url.searchParams.set('mode','duel');location.assign(url.href);break;}
   case 'home':{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.delete('mode');location.assign(url.href);break;}
@@ -135,12 +140,11 @@ function action(key:string){
   case 'purchase-help':purchaseHelp=!purchaseHelp;if(purchaseHelp)purchaseLearning('help');break;
   case 'purchase-cancel':closePanel();break;
   case 'purchase-confirm':if(panel==='purchase'){const q=model.pendingPurchase;if(q&&parseMoney(purchaseInput)!==q.before-q.cost)purchaseLearning('wrong',q);if(model.answerPurchase(purchaseInput)){purchaseLearning('correct',q);const t=model.towers.at(-1)!;if(sound.sfx)void sound.preloadTowerShots([t.typeId]);closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}}break;
-  case 'forge':slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);setPanel('forge');break;
-  case 'fuse':{const ids=slots.filter((s):s is number=>s!==null),values=ids.map(id=>model.bricks.find(b=>b.id===id)?.value);if(values.length===3&&new Set(ids).size===3&&values.every(v=>v!==undefined)){const [a,b,c]=values as number[];recordLearning({a,b,operation:fusionOperation,digits:model.level.digits,context:'wall'},(fusionOperation==='+'?a+b:a-b)===c?'correct':'wrong');}if(model.fuse(ids,fusionOperation))slots=[null,null,null];break;}
+  case 'forge':{const resume=field.mode.kind==='wall'&&resumeAfterWall;if(field.mode.kind==='wall')leaveWallPlacement(false);slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);setPanel('forge',resume);break;}
+  case 'fuse':{const ids=slots.filter((s):s is number=>s!==null),values=ids.map(id=>model.bricks.find(b=>b.id===id)?.value);if(values.length===3&&new Set(ids).size===3&&values.every(v=>v!==undefined)){const [a,b,c]=values as number[];recordLearning({a,b,operation:fusionOperation,digits:model.level.digits,context:'wall'},(fusionOperation==='+'?a+b:a-b)===c?'correct':'wrong');}if(model.fuse(ids,fusionOperation)){slots=[null,null,null];beginWallPlacement();}break;}
   case 'wall':if(model.wallStock)beginWallPlacement();break;
   case 'wall-recover':if(selectedWall&&model.recoverWall(selectedWall)){beginWallPlacement();field.drawTerrain();notify('회수한 성벽을 다시 놓을 칸을 골라요. 취소하면 재고에 보관해요.');}break;
-  case 'wall-confirm':{const c=model.pendingWall;if(model.confirmWall()){leaveWallPlacement();selectedWall=c?{x:c.x,y:c.y}:null;field.selectedWall=selectedWall??undefined;field.drawTerrain();if(c)field.hover(c);}else if(model.pendingWall)field.hover(model.pendingWall);break;}
-  case 'wall-cancel':leaveWallPlacement();notify('설치를 취소했어요. 성벽은 재고에 그대로 보관돼요.');break;
+  case 'wall-cancel':leaveWallPlacement();notify(`배치를 마쳤어요. 남은 성벽 ${model.wallStock}개는 보관돼요.`);break;
   case 'goals':setPanel('goals');break;
   case 'menu':setPanel('menu');break;
   case 'difficulty':setPanel('difficulty');break;
@@ -164,7 +168,14 @@ ui.onControls=(controls:Map<string,Control>)=>{
  $('accessible-controls').replaceChildren();for(const [id,c]of active){const b=document.createElement('button');b.type='button';b.textContent=c.label||id;b.dataset.action=id;b.disabled=!c.enabled;b.onclick=c.run;$('accessible-controls').append(b);if(id===focus)b.focus();}
 };
 field.onChange=update;field.onEvent=event;field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
-field.onWallPreview=c=>{model.requestWall(c);field.hover(c);$('accessible-notice').textContent=`${c.x+1}열 ${c.y+1}행. ${model.pendingWall!.message}`;update();};
+field.onWallPlace=c=>{
+ model.cancelWall();const placed=model.placeWall(c);field.flush();
+ if(!placed){field.focusCell(c);update();return;}
+ field.drawTerrain();const next=nextWallCell();
+ if(next){field.focusCell(next);notify(`성벽 설치 완료! 남은 ${model.wallStock}개도 길을 눌러 놓아요.`);}
+ else{leaveWallPlacement();selectedWall={...c};field.selectedWall=selectedWall;field.focusCell(c);notify(model.wallStock?`설치를 마쳤어요. 남은 성벽 ${model.wallStock}개는 보관해요.`:'성벽 설치 완료! 준비한 성벽을 모두 놓았어요.');}
+ update();
+};
 field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
 const originalUpdate=field.update.bind(field);field.update=(time:number,delta:number)=>originalUpdate(time,delta*speed);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,height:GAME_HEIGHT,backgroundColor:'#111216',scene:[field,ui],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});

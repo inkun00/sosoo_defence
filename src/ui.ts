@@ -123,9 +123,8 @@ export class GameUI extends Phaser.Scene{
   const value=s.equation||m.level.hint;this.fitText(this.text(board.container,-171,11,value,s.equation?24:16,C.ink,344).setOrigin(0,.5),344,54);
   }
   if(s.mode.kind==='wall'){
-   this.fitText(this.text(this.dock,450,707,m.pendingWall?.message||'초록색으로 표시된 길 위의 칸을 골라요.',19,C.cream,524).setOrigin(0,.5),524,38);
-   this.button(this.dock,'wall-cancel',553,760,190,56,'취소',true,'button_brown',23);
-   this.button(this.dock,'wall-confirm',815,760,292,56,'성벽 설치 확정',!!m.pendingWall?.valid,'button_red',23);
+   this.fitText(this.text(this.dock,450,707,`초록 길을 누르면 바로 설치 · 남은 성벽 ${m.wallStock}개`,20,C.cream,524).setOrigin(0,.5),524,38);
+   this.button(this.dock,'wall-cancel',710,760,468,56,'완료 · 남은 성벽 보관',true,'button_brown',23);
   }else if(t){
    this.towerIcon(this.dock,472,729,t.typeId,68);
    this.fitText(this.text(this.dock,520,710,`${towerType(t.typeId)!.name} · ${numberText(t.unit)} · 재장전 ${m.reloadTime(t).toFixed(1)}초${m.reloadFactor(t)>1?' (열 간섭)':''}`,21,C.cream).setOrigin(0,.5),446);
@@ -140,7 +139,7 @@ export class GameUI extends Phaser.Scene{
    const max=m.level.boss?.hp??Math.max(...m.level.hp),i=m.level.hp.indexOf(max),strongest=MONSTERS[m.level.boss?.kind??monsterKind(m.level.id,i,max)];
    this.text(this.dock,450,750,s.mode.kind==='tower'?`공격 ${numberText(s.unit)} · 붙이면 재장전이 느려져요.`:m.phase==='ready'?`최강 ${strongest.name} · 체력 ${numberText(max,m.level.boss?1:m.level.digits)}`:'전투 중 설치 불가 · 발사 ON/OFF로 마무리!',18,C.muted,520).setOrigin(0,.5);
   }
-  this.button(this.dock,'forge',1135,705,244,58,`성벽 제작  ${m.bricks.length} / 성벽 ${m.wallStock}`,s.mode.kind!=='wall'&&!['won','review','lost'].includes(m.phase),'button_brown',20);
+  this.button(this.dock,'forge',1135,705,244,58,s.mode.kind==='wall'?'성벽 더 합성하기':`성벽 제작  ${m.bricks.length} / 성벽 ${m.wallStock}`,!['won','review','lost'].includes(m.phase),'button_brown',20);
   if(m.phase==='ready')this.button(this.dock,'start',1135,770,244,58,'방어 시작 ▶',s.mode.kind!=='wall','button_red',26);
   else this.button(this.dock,'speed',1135,770,244,58,`진행 속도 ×${s.speed}`,s.mode.kind!=='wall'&&!['won','review','lost'].includes(m.phase),'button_brown',22);
  }
@@ -159,11 +158,11 @@ export class GameUI extends Phaser.Scene{
  }
  private drawForge(){
   const s=this.getState(),m=s.model;this.modalFrame('벽돌을 합쳐 성벽으로',920,530);
-  this.text(this.popup,640,208,(m.phase==='ready'?'방어 시작 전이에요.':'전투가 멈췄어요.')+' 계산 방법을 고르고 벽돌 세 개를 놓아요.',18,'#c2b7a4').setOrigin(.5);
+  this.text(this.popup,640,208,'식이 맞으면 바로 길에 성벽을 놓을 수 있어요.',18,'#c2b7a4').setOrigin(.5);
   (['+','-'] as FusionOperation[]).forEach((op,i)=>this.button(this.popup,`fusion:${op}`,530+i*220,252,194,56,op==='+'?'덧셈 +':'뺄셈 −',true,s.fusionOperation===op?'button_red':'button_brown',22));
   [350,540,730].forEach((x,i)=>{const brick=m.bricks.find(b=>b.id===s.slots[i]);const slot=this.button(this.popup,`slot:${i}`,x,330,140,86,brick?numberText(brick.value):'?',true,'button_brown',32);if(brick){const stone=this.add.image(0,2,'dungeon-props','brick').setDisplaySize(156,92);slot.container.addAt(stone,1);slot.label.setStroke('#14151d',4);}});
   this.text(this.popup,445,328,s.fusionOperation==='-'?'−':'+',34).setOrigin(.5);this.text(this.popup,635,328,'=',34).setOrigin(.5);
-  this.button(this.popup,'fuse',917,330,158,84,'합성 ✦',s.slots.every(v=>v!==null),'button_red',27);
+  this.button(this.popup,'fuse',917,330,158,84,'합성·설치',s.slots.every(v=>v!==null),'button_red',23);
   this.text(this.popup,243,378,`보관 중인 벽돌 ${m.bricks.length}개  ·  누르면 빈 슬롯에 들어가요`,19);
   m.bricks.slice(s.brickPage*6,s.brickPage*6+6).forEach((b,i)=>{const tile=this.button(this.popup,`brick:${b.id}`,295+i*137,442,118,64,numberText(b.value),!s.slots.includes(b.id),'button_brown',26);const stone=this.add.image(0,3,'dungeon-props','brick').setDisplaySize(126,77);tile.container.addAt(stone,1);tile.label.setStroke('#14151d',4);});
   const pages=Math.ceil(m.bricks.length/6);if(pages>1){this.button(this.popup,'brick-page:prev',403,508,134,56,'◀ 이전',s.brickPage>0,'button_brown',18);this.text(this.popup,640,508,`${s.brickPage+1} / ${pages}`,18,C.muted).setOrigin(.5);this.button(this.popup,'brick-page:next',877,508,134,56,'다음 ▶',s.brickPage<pages-1,'button_brown',18);}
