@@ -2,6 +2,8 @@ import test, {TestContext} from 'node:test';
 import assert from 'node:assert/strict';
 import {Sound} from '../src/audio';
 import {TRACKS,scoreStep,MusicTrack} from '../src/music';
+import {TOWERS} from '../src/towers';
+import {towerShotScore,towerShotDuration} from '../src/tower-sounds';
 
 class Param{value=0;events:number[]=[];setValueAtTime(v:number){this.value=v;}exponentialRampToValueAtTime(v:number){this.events.push(v);}setTargetAtTime(v:number){this.value=v;}cancelScheduledValues(){}}
 class Node{gain=new Param();frequency=new Param();Q=new Param();threshold=new Param();knee=new Param();ratio=new Param();attack=new Param();release=new Param();delayTime=new Param();type='';buffer:unknown;onended?:()=>void;started:number[]=[];stopped:number[]=[];connect(n:unknown){return n;}disconnect(){}start(t:number){this.started.push(t);}stop(t:number){this.stopped.push(t);}}
@@ -36,4 +38,24 @@ test('combat effect storms are bounded and narration lowers only the music bus',
 test('every full arrangement contains playable, finite notes and distinct instrumentation',()=>{
  for(const track of Object.keys(TRACKS) as MusicTrack[]){const notes=Array.from({length:128},(_,i)=>scoreStep(track,i)).flat();assert.ok(notes.length>32);assert.ok(notes.every(v=>Number.isFinite(v.note)&&v.note>=20&&v.note<=110&&v.volume>0&&v.volume<=.2&&v.duration>0));}
  assert.notDeepEqual(scoreStep('title',0),scoreStep('battle',0));assert.notDeepEqual(scoreStep('opening',0),scoreStep('ending',0));
+});
+
+test('all twelve weapons have distinct, bounded sound signatures and richer higher grades',()=>{
+ const signatures=new Set<string>();
+ for(const t of TOWERS){const score=towerShotScore(t.id);signatures.add(JSON.stringify(score));assert.ok(score.every(([delay,v])=>Number.isFinite(delay)&&delay>=0&&v.note>=25&&v.note<=110&&v.duration>0&&v.duration<=.6&&v.volume>0&&v.volume<=.12&&(v.endNote===undefined||v.endNote>=25&&v.endNote<=110)));assert.ok(score.reduce((sum,[,v])=>sum+v.volume,0)<.32);}
+ assert.equal(signatures.size,TOWERS.length);
+ for(let grade=2;grade<=4;grade++){const lower=TOWERS.filter(t=>t.grade===grade-1),higher=TOWERS.filter(t=>t.grade===grade);assert.ok(Math.min(...higher.map(t=>towerShotScore(t.id).length))>Math.max(...lower.map(t=>towerShotScore(t.id).length)));assert.ok(higher.reduce((n,t)=>n+towerShotDuration(t.id),0)/higher.length>lower.reduce((n,t)=>n+towerShotDuration(t.id),0)/lower.length);}
+ assert.deepEqual(towerShotScore('old-unknown-tower'),towerShotScore('basic'));
+});
+
+test('simultaneous different weapons remain audible while duplicate shots are throttled',t=>{
+ const {sound,context}=fixture(t);sound.resume();const c=context();sound.play('shot','basic');sound.play('shot','frost');const count=towerShotScore('basic').length+towerShotScore('frost').length;assert.equal(c.sources.length,count);sound.play('shot','basic');assert.equal(c.sources.length,count);c.currentTime+=.09;sound.play('shot','basic');assert.equal(c.sources.length,count+towerShotScore('basic').length);
+});
+
+test('muting cancels magical tails and resumes the chosen weapon independently of music',t=>{
+ const {sound,context}=fixture(t);sound.resume();const c=context();sound.play('shot','rune');assert.ok(c.sources.some(n=>n.started[0]>c.currentTime+.3));const old=c.sources.slice();sound.sfx=false;assert.ok(old.every(n=>n.stopped.at(-1)===c.currentTime+.05));c.currentTime+=1;sound.play('shot','siege');assert.equal(c.sources.length,old.length);sound.sfx=true;sound.play('shot','siege');assert.equal(c.sources.length,old.length+towerShotScore('siege').length);assert.equal(sound.music,false);
+});
+
+test('a storm of layered tower sounds never exceeds the active voice budget',t=>{
+ const {sound,context}=fixture(t);sound.resume();const c=context();for(let i=0;i<100;i++){sound.play('shot',TOWERS[i%TOWERS.length].id);c.currentTime+=.1;}assert.ok(c.sources.length<=32);assert.ok(c.sources.length>=24);const old=c.sources.length;sound.sfx=false;sound.sfx=true;sound.play('shot','rune');assert.equal(c.sources.length,old+towerShotScore('rune').length);
 });

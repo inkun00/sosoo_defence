@@ -14,7 +14,7 @@ export interface DuelView{state:DuelState|null;side:Side;room:string;selectedTyp
 export class DuelScene extends Phaser.Scene{
  ready=false;controls=new Map<string,{x:number;y:number;w:number;h:number;enabled:boolean;label:string;run:()=>void}>();
  onAction:(key:string)=>void=()=>{};onCell:(x:number,y:number)=>void=()=>{};onControls:()=>void=()=>{};
- onSound:(type:string)=>void=()=>{};
+ onSound:(type:string,towerTypeId?:string)=>void=()=>{};
  private terrain!:Phaser.GameObjects.Container;private units!:Phaser.GameObjects.Container;private ui!:Phaser.GameObjects.Container;private guides!:Phaser.GameObjects.Graphics;
  private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;last:number}>();
  private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower}>();private signature='';private uiSignature='';private seenShots=new Set<number>();private revision=-1;private receivedAt=0;
@@ -124,8 +124,8 @@ export class DuelScene extends Phaser.Scene{
  private syncShots(){
   const s=this.view().state;if(!s){this.seenShots.clear();this.hitEquations?.clear();return;}const shots=s.shots??[],fresh=shots.filter(e=>!this.seenShots.has(e.id));this.seenShots=new Set(shots.map(e=>e.id));
   fresh.slice(-12).forEach((hit,i)=>this.time.delayedCall(this.reduced?0:i*70,()=>{
-   this.onSound('shot');
    const t=s.players[hit.owner]?.towers.find(t=>t.id===hit.towerId),x=X+(hit.x+.5)*T,y=Y+3.5*T-4,bodySize=this.enemies.get(hit.enemyId)?.sprite.displayHeight??53;
+   this.onSound('shot',hit.typeId??t?.typeId);
    const impact=()=>{
     this.onSound(hit.before===hit.after?'invalid':hit.after===0?'kill':'hit');
     if(!this.reduced){const fx=this.add.sprite(x,y,'dungeon-fx-impact-v1',hit.effect+'-0').setDisplaySize(70,70).setDepth(6);fx.play('impact-'+hit.effect).once('animationcomplete',()=>fx.destroy());if(hit.after===0){const fall=this.add.sprite(x,y,'dungeon-fx-utility-v1','defeat-0').setDisplaySize(76,76).setDepth(6);fall.play('fx-defeat').once('animationcomplete',()=>fall.destroy());}}

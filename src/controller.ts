@@ -88,7 +88,7 @@ function stage(n:number){
  model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
 }
 function event(ev:BattleEvent){
- sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type);ui.animate(ev);
+ sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
  if(ev.type==='hit'){lastHit=ev;if(model.level.id<=4){equation=ev.message;hint=(ev.data as {hint:string}).hint;}}
  if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=ev.message;}}
  if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';}

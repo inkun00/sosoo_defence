@@ -1,4 +1,5 @@
 import {scoreStep,TRACKS,MusicTrack,Voice} from './music';
+import {towerShotScore,towerShotDuration,SoundVoice,EffectNote} from './tower-sounds';
 export {TRACKS} from './music';
 export type {MusicTrack} from './music';
 
@@ -13,19 +14,20 @@ function noise(context:BaseAudioContext){
  for(let i=0;i<data.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;data[i]=seed/2147483648-1;}
  noiseCache.set(context,buffer);return buffer;
 }
-function instrument(c:BaseAudioContext,out:AudioNode,v:Voice,time:number,bus:Bus,active?:Set<Playing>){
+function instrument(c:BaseAudioContext,out:AudioNode,v:SoundVoice,time:number,bus:Bus,active?:Set<Playing>){
  const g=c.createGain(),filter=c.createBiquadFilter();let source:AudioScheduledSourceNode;
  const pitch=midi(v.note),duration=Math.max(.04,v.duration),volume=v.volume;
  const percussive=['kick','snare','hat','noise'].includes(v.instrument);
  if(v.instrument==='snare'||v.instrument==='hat'||v.instrument==='noise'){
   const n=c.createBufferSource();n.buffer=noise(c);source=n;filter.type=v.instrument==='hat'?'highpass':'bandpass';filter.frequency.value=v.instrument==='hat'?7000:v.instrument==='snare'?1700:pitch;filter.Q.value=.7;
  }else{
-  const o=c.createOscillator();source=o;o.type=v.instrument==='strings'?'sawtooth':v.instrument==='bass'?'triangle':'sine';o.frequency.setValueAtTime(pitch,time);
-  if(v.instrument==='kick'){o.frequency.setValueAtTime(140,time);o.frequency.exponentialRampToValueAtTime(38,time+.16);}
-  if(v.instrument==='sweep')o.frequency.exponentialRampToValueAtTime(Math.max(35,pitch*.18),time+duration);
-  filter.type='lowpass';filter.frequency.value=v.instrument==='strings'?950:v.instrument==='bass'?480:9000;
+  const o=c.createOscillator();source=o;o.type=v.wave??(v.instrument==='strings'?'sawtooth':v.instrument==='bass'?'triangle':'sine');o.frequency.setValueAtTime(pitch,time);
+  if(v.endNote!==undefined)o.frequency.exponentialRampToValueAtTime(midi(v.endNote),time+duration);
+  else if(v.instrument==='kick'){o.frequency.setValueAtTime(140,time);o.frequency.exponentialRampToValueAtTime(38,time+.16);}
+  else if(v.instrument==='sweep')o.frequency.exponentialRampToValueAtTime(Math.max(35,pitch*.18),time+duration);
+  filter.type='lowpass';filter.frequency.value=v.cutoff??(v.instrument==='strings'?950:v.instrument==='bass'?480:9000);
  }
- const attack=v.instrument==='pad'?.25:v.instrument==='strings'?.055:percussive?.003:.009;
+ const attack=v.attack??(v.instrument==='pad'?.25:v.instrument==='strings'?.055:percussive?.003:.009);
  g.gain.setValueAtTime(.0001,time);g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),time+Math.min(attack,duration/3));
  if(v.instrument==='pad'||v.instrument==='strings')g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume*.65),time+duration*.65);
  g.gain.exponentialRampToValueAtTime(.0001,time+duration);
@@ -74,20 +76,18 @@ export class Sound{
  private stopMusic(){if(this.timer!==undefined)clearInterval(this.timer);this.timer=undefined;this.stopVoices('music');if(this.buses&&this.context)this.buses.wet.gain.setTargetAtTime(0,this.context.currentTime,.015);}
  private stopVoices(bus:Bus){const c=this.context;if(!c)return;for(const v of this.active){if(v.bus!==bus)continue;v.gain.gain.cancelScheduledValues(c.currentTime);v.gain.gain.setTargetAtTime(.0001,c.currentTime,.012);try{v.source.stop(c.currentTime+.05);}catch{}this.active.delete(v);}}
  tone(freq:number,duration=.12,volume=.025){if(!this.sfx||!this.context||!this.buses)return;instrument(this.context,this.buses.sfx,{instrument:'bell',note:69+12*Math.log2(freq/440),duration,volume},this.context.currentTime+.005,'sfx',this.active);}
- play(type:string){
+ play(type:string,towerTypeId?:string){
   const c=this.context;if(!this.effects||!c||!this.buses||c.state!=='running'||(typeof document!=='undefined'&&document.hidden))return;
-  const score=effects(type);if(!score.length)return;const minGap=type==='shot'?.085:type==='hit'?.07:type==='invalid'?.35:.12;
-  if(c.currentTime-(this.last.get(type)??-10)<minGap||[...this.active].filter(v=>v.bus==='sfx').length>32)return;this.last.set(type,c.currentTime);
+  const score=type==='shot'?towerShotScore(towerTypeId):effects(type);if(!score.length)return;const minGap=type==='shot'?.085:type==='hit'?.07:type==='invalid'?.35:.12,key=type==='shot'?`shot:${towerTypeId??'basic'}`:type;
+  if(c.currentTime-(this.last.get(key)??-10)<minGap||[...this.active].filter(v=>v.bus==='sfx').length+score.length>32)return;this.last.set(key,c.currentTime);
   for(const [delay,v] of score)instrument(c,this.buses.sfx,v,c.currentTime+.005+delay,'sfx',this.active);
  }
  dispose(){if(this.disposed)return;this.disposed=true;this.stopMusic();this.stopVoices('sfx');if(typeof document!=='undefined'){document.removeEventListener('pointerdown',this.unlock,true);document.removeEventListener('keydown',this.unlock,true);document.removeEventListener('visibilitychange',this.visibility);}void this.context?.close().catch(()=>{});}
 }
-type EffectNote=[number,Voice];
 function effects(type:string):EffectNote[]{
  const tone=(note:number,duration:number,volume:number,instrument:Voice['instrument']='bell',at=0):EffectNote=>[at,{note,duration,volume,instrument}];
  switch(type){
   case 'ui':return [tone(79,.09,.055,'pluck'),tone(86,.12,.025,'bell',.035)];
-  case 'shot':return [tone(57,.1,.12,'sweep'),tone(55,.045,.065,'noise')];
   case 'hit':return [tone(42,.12,.11,'kick'),tone(69,.09,.065,'noise'),tone(88,.13,.025)];
   case 'kill':return [tone(50,.22,.07,'noise'),...[74,81,86].map((n,i)=>tone(n,.28,.05,'bell',i*.055))];
   case 'money':return [tone(86,.18,.055),tone(93,.28,.04,'bell',.09)];
@@ -109,5 +109,11 @@ function effects(type:string):EffectNote[]{
 export async function renderSoundtrack(track:MusicTrack,seconds=12){
  const c=new OfflineAudioContext(2,Math.ceil(seconds*44100),44100),buses=mixer(c),interval=30/TRACKS[track].bpm;
  for(let step=0;step*interval<seconds-.08;step++)for(const v of scoreStep(track,step%128))instrument(c,buses.music,v,.02+step*interval,'music');
+ return c.startRendering();
+}
+// Audition/export uses exactly the same voices, filters and mix as live combat.
+export async function renderTowerShots(typeIds:readonly string[],spacing=1){
+ const seconds=Math.max(1,...typeIds.map((id,i)=>.02+i*spacing+towerShotDuration(id))),c=new OfflineAudioContext(2,Math.ceil(seconds*44100),44100),buses=mixer(c);
+ typeIds.forEach((id,i)=>{for(const [delay,v]of towerShotScore(id))instrument(c,buses.sfx,v,.02+i*spacing+delay,'sfx');});
  return c.startRendering();
 }

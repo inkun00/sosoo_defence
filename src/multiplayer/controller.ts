@@ -38,7 +38,7 @@ const audioControls=mountAudioControls(sound,persistAudio);
 document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))sound.play('ui');});
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,operation,selectedTower,message,busy,connected});
 const scene=new DuelScene(view);
-scene.onSound=type=>sound.play(type);
+scene.onSound=(type,towerTypeId)=>sound.play(type,towerTypeId);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:800,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성 1:1: 양쪽 불꽃, 타워, 소수 블럭과 영웅 알');game.canvas.tabIndex=0;});
 let messageTimer:ReturnType<typeof setTimeout>|undefined;

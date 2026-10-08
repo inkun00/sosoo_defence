@@ -214,7 +214,7 @@ export class Defense{
   for(const t of this.towers){
    t.cooldown=Math.max(0,t.cooldown-dt);if(!t.enabled||t.cooldown)continue;const xy=world(t),e=this.targetFor(t);
    if(!e)continue;t.cooldown=this.reloadTime(t);
-   this.emit({type:'shot',message:'',x:xy.x,y:xy.y,data:{towerId:t.id,targetId:e.id,toX:e.x,toY:e.y,kind:e.kind,effect:t.effect,unit:t.unit,before:e.hp,after:e.hp>=t.unit?e.hp-t.unit:e.hp,valid:e.hp>=t.unit,killed:e.hp===t.unit}});this.damage(e,t);
+   this.emit({type:'shot',message:'',x:xy.x,y:xy.y,data:{towerId:t.id,typeId:t.typeId,targetId:e.id,toX:e.x,toY:e.y,kind:e.kind,effect:t.effect,unit:t.unit,before:e.hp,after:e.hp>=t.unit?e.hp-t.unit:e.hp,valid:e.hp>=t.unit,killed:e.hp===t.unit}});this.damage(e,t);
   }
   this.enemies=this.enemies.filter(e=>e.hp>0);
   // The timer ends the wave schedule, not the castle's remaining lives.

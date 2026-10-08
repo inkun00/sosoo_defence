@@ -13,7 +13,7 @@ import {hitEquationsEnabled} from './combat-preferences';
 import {AmbientProps} from './ambient-props';
 export interface Mode{kind:'tower'|'wall'|'inspect';unit:number;effect:Effect;typeId?:string;}
 interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.Image;pivot:Phaser.GameObjects.Container;head:Phaser.GameObjects.Image;angle:number;recoilTime:number;}
-interface ShotData{towerId:number;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
+interface ShotData{towerId:number;typeId:string;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
 export class Field extends Phaser.Scene{
  model:Defense;mode:Mode={kind:'inspect',unit:100,effect:'basic'};onChange:()=>void=()=>{};onEvent:(event:GameEvent)=>void=()=>{};onSelect:(id:number)=>void=()=>{};
  private floor!:Phaser.GameObjects.Container;private overlay!:Phaser.GameObjects.Graphics;private visuals=new Map<number,{kind:MonsterKind;sprite:Phaser.GameObjects.Sprite;text:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;bar:Phaser.GameObjects.Graphics}>();

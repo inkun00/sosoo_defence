@@ -10,7 +10,7 @@ export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;lev
 export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;}
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
 export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
-export interface DuelShot{id:number;time:number;towerId:number;owner:Side;enemyId:number;x:number;before:number;unit:number;after:number;effect:string;}
+export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;owner:Side;enemyId:number;x:number;before:number;unit:number;after:number;effect:string;}
 export interface DuelState{version:1;seed:number;learningLevel:number;createdAt:number;startedAt:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'playing'|'finished';players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready'}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'|'-'}|{type:'hatch';heroId:string}|{type:'surrender'};
 export const DUEL_SECONDS=300,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
@@ -72,7 +72,7 @@ export function advanceDuel(s:DuelState,now:number){
      const spec=towerType(t.typeId)!,radius=spec.effect==='range'?4:3;
      const e=s.enemies.filter(e=>e.hp>0&&e.target===side&&Math.hypot(t.x-e.x,t.y-DUEL_ROAD)<=radius).sort((a,b)=>Number(b.hp>=t.unit)-Number(a.hp>=t.unit)||(side===0?a.x-b.x:b.x-a.x)||a.id-b.id)[0];
      if(!e)continue;t.cooldown=spec.cooldown;const result=hit(e.hp,t.unit);if(!result.valid){note(s,`${p.name}: 공격력이 남은 체력보다 커요`);continue;}
-     const before=e.hp;e.hp=result.hp;e.hits++;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,owner:side,enemyId:e.id,x:e.x,before,unit:t.unit,after:e.hp,effect:spec.effect});note(s,`${p.name}: ${numberText(before)} − ${numberText(t.unit)} = ${numberText(e.hp)}`);
+     const before=e.hp;e.hp=result.hp;e.hits++;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,typeId:t.typeId,owner:side,enemyId:e.id,x:e.x,before,unit:t.unit,after:e.hp,effect:spec.effect});note(s,`${p.name}: ${numberText(before)} − ${numberText(t.unit)} = ${numberText(e.hp)}`);
      if(spec.effect==='slow')e.slow=3;
      if(spec.effect==='stun'&&((Math.imul(e.id+e.hits,1103515245)+s.seed)>>>0)%100<25)e.stun=1.5;
      if(e.hp===0)income(p,reward(e.max,e.hits,TOWERS.filter(t=>t.unlock<=lv).map(t=>t.unit),lv));
