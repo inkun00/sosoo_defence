@@ -7,6 +7,30 @@
     "sourceBytes": 1138403,
     "bytes": 274376
   },
+  "fx-flight-element-v1": {
+    "url": "/assets/dungeon/fx-flight-element-v1.35911d3db7f1.webp",
+    "sourceHash": "2c727dfbdbed7eaa4fdc6178f97ab70e42fce86326d5be4d3982b9ac808ba80e",
+    "width": 1152,
+    "height": 768,
+    "sourceBytes": 2286729,
+    "bytes": 391972
+  },
+  "fx-flight-magic-v1": {
+    "url": "/assets/dungeon/fx-flight-magic-v1.a9e34318cee8.webp",
+    "sourceHash": "853526a99792ac8f1520b9f40377ba01c4da8b45d99f276e7c7ef1b1d1dd6c83",
+    "width": 1152,
+    "height": 768,
+    "sourceBytes": 1911574,
+    "bytes": 343294
+  },
+  "fx-flight-stone-v1": {
+    "url": "/assets/dungeon/fx-flight-stone-v1.88101f1a6f3d.webp",
+    "sourceHash": "3f7ba5a94d7f3d7e12b4f5ebff2dff4c05c507b1bae0474d04e68e726ab6d58e",
+    "width": 1152,
+    "height": 768,
+    "sourceBytes": 1842099,
+    "bytes": 257502
+  },
   "fx-impact-v1": {
     "url": "/assets/dungeon/fx-impact-v1.2ee2b79926ce.webp",
     "sourceHash": "cbd9ded50434b8f787e01014de1e5a5aba6348b809b8f901ac3066dd23385b13",

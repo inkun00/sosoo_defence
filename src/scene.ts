@@ -11,6 +11,7 @@ import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
 import {HitEquationPopups} from './hit-equations';
 import {hitEquationsEnabled} from './combat-preferences';
 import {AmbientProps} from './ambient-props';
+import {playTowerProjectile,clearTowerProjectiles} from './tower-projectiles';
 export interface Mode{kind:'tower'|'wall'|'inspect';unit:number;effect:Effect;typeId?:string;}
 interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.Image;pivot:Phaser.GameObjects.Container;head:Phaser.GameObjects.Image;angle:number;recoilTime:number;}
 interface ShotData{towerId:number;typeId:string;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
@@ -212,6 +213,7 @@ export class Field extends Phaser.Scene{
   this.battleEffects.add(object);object.once('destroy',()=>this.battleEffects.delete(object));return object;
  }
  private clearBattleEffects(){
+  clearTowerProjectiles(this);
   this.hitEquations?.clear();
   for(const object of [...this.battleEffects]){this.tweens.killTweensOf(object);object.destroy();}
   this.battleEffects.clear();this.tweens.timeScale=1;this.cameras.main.shakeEffect.reset();this.lastShakeTime=0;
@@ -265,18 +267,12 @@ export class Field extends Phaser.Scene{
    v.angle=this.aimAngle(v,point.x,point.y);v.pivot.setRotation(v.angle);v.recoilTime=this.reducedMotion?0:.22;
    const length={basic:29,slow:33,stun:33,range:38}[d.effect];origin=v.pivot.getWorldTransformMatrix().transformPoint(0,-length+v.head.y);
   }
-  const bearing=Math.atan2(point.y-origin.y,point.x-origin.x),size=d.unit>=1000?27:d.unit>=100?21:16;
-  const shot=this.trackEffect(this.add.image(origin.x,origin.y,'dungeon-fx-utility-v1','projectile-'+d.effect).setName('battle-projectile').setDisplaySize(size,size).setRotation(bearing+Math.PI/2).setDepth(5));
+  const bearing=Math.atan2(point.y-origin.y,point.x-origin.x);
   if(!this.reducedMotion){
    this.effect('dungeon-fx-utility-v1','fx-muzzle',origin.x,origin.y,d.unit>=1000?72:d.unit>=100?52:36,bearing+Math.PI/2,EFFECTS[d.effect].color)?.setOrigin(.5,.85);
-   if(d.effect==='range'){const streak=this.trackEffect(this.add.graphics().lineStyle(2,0xffe49e,.45).lineBetween(origin.x,origin.y,point.x,point.y).setDepth(3.8));this.tweens.add({targets:streak,alpha:0,duration:180,onComplete:()=>streak.destroy()});}
   }
-  let lastTrail=0;
-  this.tweens.add({targets:shot,x:point.x,y:point.y,duration:d.effect==='range'?120:180,onUpdate:()=>{
-   if(this.reducedMotion||this.battleEffects.size>=160||this.time.now-lastTrail<35)return;lastTrail=this.time.now;
-   const trail=this.trackEffect(this.add.image(shot.x,shot.y,'dungeon-fx-utility-v1',d.effect==='slow'?'projectile-slow':'particle-spark').setDisplaySize(size*.6,size*.6).setTint(EFFECTS[d.effect].color).setRotation(bearing+Math.PI/2).setAlpha(.5).setDepth(4.8));
-   this.tweens.add({targets:trail,alpha:0,duration:160,onComplete:()=>trail.destroy()});
-  },onComplete:()=>{shot.destroy();this.impact(d,point.x,point.y,sequence);}});
+  playTowerProjectile(this,{typeId:d.typeId,from:origin,to:point,reducedMotion:this.reducedMotion,
+   track:object=>{this.trackEffect(object);},onImpact:()=>this.impact(d,point.x,point.y,sequence)});
  }
  flush(){
   const events=this.model.events.splice(0);for(const ev of events){this.onEvent(ev);if(ev.type==='shot')this.fireShot(ev);else if(ev.type==='wall-impact')this.wallImpact(ev);else if(ev.type==='wall-break')this.breakWall(ev);

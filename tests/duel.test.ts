@@ -62,6 +62,13 @@ test('처치된 몬스터의 마지막 체력 뺄셈도 발사 기록에 남고 
  const before=a.players[0].money;advanceDuel(a,NOW+100);advanceDuel(b,NOW+100);assert.equal(a.enemies.length,0);assert.equal(a.shots.length,1);assert.equal(a.shots[0].before,100);assert.equal(a.shots[0].unit,100);assert.equal(a.shots[0].after,0);assert.ok(a.players[0].money>b.players[0].money);assert.ok(a.players[0].money-before<=9000);assert.equal(a.players[0].money%100,0);
  advanceDuel(a,NOW+3000);assert.equal(a.shots.length,0);
 });
+test('타워가 회수되어도 발사 기록은 고유 발사체 종류와 출발 칸을 유지한다',()=>{
+ const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'double'},NOW,'origin');answer(s,0);
+ s.enemies=[enemy({hp:500,max:500})];advanceDuel(s,NOW+100);
+ const shot=s.shots[0];assert.ok(shot);assert.equal(shot.typeId,'double');assert.equal(shot.fromX,3);assert.equal(shot.fromY,2);
+ assert.ok(applyDuel(s,0,{type:'sell',towerId:shot.towerId},s.updatedAt,'sold').ok);
+ assert.equal(s.players[0].towers.length,0);assert.equal(s.shots[0],shot);assert.equal(shot.fromX,3);
+});
 test('호스트 판정은 초과 피해를 거부하고 상대 불꽃 파괴·시간제한·연결 종료를 처리한다',()=>{
  const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'double'},NOW,'t');answer(s,0);s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);assert.equal(s.enemies[0].hp,100);assert.ok(s.log.some(l=>l.includes('공격력이')));
  const win=match();win.players[1]!.flame=1000;win.enemies=[enemy({owner:0,target:1,x:22.99,hero:'hero-1-0'})];advanceDuel(win,NOW+1000);assert.equal(win.status,'finished');assert.equal(win.winner,0);

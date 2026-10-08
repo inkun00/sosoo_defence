@@ -9,6 +9,8 @@ import {HEROES,heroSpec,heroesAtLevel} from './heroes';
 import {HitEquationPopups} from '../hit-equations';
 import {learningDescription} from './decimal-boards';
 import {AmbientProps} from '../ambient-props';
+import {playTowerProjectile,clearTowerProjectiles} from '../tower-projectiles';
+import {DuelShotStream} from './shot-stream';
 const X=37,Y=132,T=38;
 export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];operation:'+'|'-';selectedTower:number;message:string;busy:boolean;connected:boolean;}
 export class DuelScene extends Phaser.Scene{
@@ -17,7 +19,8 @@ export class DuelScene extends Phaser.Scene{
  onSound:(type:string,towerTypeId?:string)=>void=()=>{};
  private terrain!:Phaser.GameObjects.Container;private units!:Phaser.GameObjects.Container;private ui!:Phaser.GameObjects.Container;private guides!:Phaser.GameObjects.Graphics;
  private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;last:number}>();
- private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower}>();private signature='';private uiSignature='';private seenShots=new Set<number>();private revision=-1;private receivedAt=0;
+ private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower}>();private signature='';private uiSignature='';private revision=-1;private receivedAt=0;
+ private shotStream=new DuelShotStream();private shotTimers=new Set<Phaser.Time.TimerEvent>();private shotEffects=new Set<Phaser.GameObjects.GameObject>();
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private hitEquations?:HitEquationPopups;
  private ambient?:AmbientProps;
@@ -26,6 +29,7 @@ export class DuelScene extends Phaser.Scene{
  preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));}
  create(){
   registerDungeon(this);
+  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.ready=false;});
   this.ambient=new AmbientProps(this,this.reduced);
   for(const kind of MONSTER_KINDS.filter(k=>this.textures.exists('dungeon-'+MONSTERS[k].atlas)))for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
@@ -121,20 +125,39 @@ export class DuelScene extends Phaser.Scene{
    v.hp.setText(numberText(e.hp));v.sprite.setData('x',x);v.sprite.setData('y',y);v.sprite.setData('vx',e.stun>0?0:(e.target===0?-1:1)*(.24+e.level*.009)*aura*(e.slow>0?.6+.4*resistance:1)*T);v.hp.setData('y',y-size*.5-11);v.name.setData('y',y-size*.5-31);
   }
  }
+ private trackShotEffect<T extends Phaser.GameObjects.GameObject>(object:T):T{
+  this.shotEffects.add(object);object.once('destroy',()=>this.shotEffects.delete(object));return object;
+ }
+ private clearShotEffects(){
+  for(const timer of this.shotTimers)timer.remove(false);this.shotTimers.clear();clearTowerProjectiles(this);
+  for(const object of [...this.shotEffects]){this.tweens.killTweensOf(object);object.destroy();}this.shotEffects.clear();this.hitEquations?.clear();
+ }
  private syncShots(){
-  const s=this.view().state;if(!s){this.seenShots.clear();this.hitEquations?.clear();return;}const shots=s.shots??[],fresh=shots.filter(e=>!this.seenShots.has(e.id));this.seenShots=new Set(shots.map(e=>e.id));
-  fresh.slice(-12).forEach((hit,i)=>this.time.delayedCall(this.reduced?0:i*70,()=>{
-   const t=s.players[hit.owner]?.towers.find(t=>t.id===hit.towerId),x=X+(hit.x+.5)*T,y=Y+3.5*T-4,bodySize=this.enemies.get(hit.enemyId)?.sprite.displayHeight??53;
-   this.onSound('shot',hit.typeId??t?.typeId);
-   const impact=()=>{
-    this.onSound(hit.before===hit.after?'invalid':hit.after===0?'kill':'hit');
-    if(!this.reduced){const fx=this.add.sprite(x,y,'dungeon-fx-impact-v1',hit.effect+'-0').setDisplaySize(70,70).setDepth(6);fx.play('impact-'+hit.effect).once('animationcomplete',()=>fx.destroy());if(hit.after===0){const fall=this.add.sprite(x,y,'dungeon-fx-utility-v1','defeat-0').setDisplaySize(76,76).setDepth(6);fall.play('fx-defeat').once('animationcomplete',()=>fall.destroy());}}
-    this.hitEquations?.show(hit.enemyId,hit.before,hit.unit,hit.after,()=>{const v=this.enemies.get(hit.enemyId);return{x:v?.sprite.x??x,y:v?(v.name.text?v.name.y-40:v.hp.y-42):y-bodySize*.5-63};},1,hit.owner===0?'#b5f4ff':'#ffe1a0',hit.id);
-   };
-   if(!t||this.reduced){impact();return;}const fromX=X+(t.x+.5)*T,fromY=Y+(t.y+.5)*T-8,angle=Math.atan2(y-fromY,x-fromX)+Math.PI/2;
-   const muzzle=this.add.sprite(fromX,fromY,'dungeon-fx-utility-v1','muzzle-0').setDisplaySize(45,45).setRotation(angle).setDepth(6);muzzle.play('fx-muzzle').once('animationcomplete',()=>muzzle.destroy());
-   const shot=this.add.image(fromX,fromY,'dungeon-fx-utility-v1','projectile-'+hit.effect).setDisplaySize(18,25).setRotation(angle).setDepth(6);this.tweens.add({targets:shot,x,y,duration:220,onComplete:()=>{shot.destroy();impact();}});
-  }));
+  const view=this.view(),s=view.state,previous=this.shotStream.identity,fresh=this.shotStream.take(view.room,s),identity=this.shotStream.identity;
+  if(identity!==previous)this.clearShotEffects();if(!s)return;
+  fresh.forEach((hit,i)=>{
+   const timer=this.time.delayedCall(this.reduced?0:i*70,()=>{
+    this.shotTimers.delete(timer);if(!this.ready||this.shotStream.identity!==identity)return;
+    const t=s.players[hit.owner]?.towers.find(t=>t.id===hit.towerId),typeId=hit.typeId??t?.typeId??'basic';
+    const x=X+(hit.x+.5)*T,y=Y+3.5*T-4,bodySize=this.enemies.get(hit.enemyId)?.sprite.displayHeight??53;
+    this.onSound('shot',typeId);
+    const impact=()=>{
+     if(!this.ready||this.shotStream.identity!==identity)return;
+     this.onSound(hit.before===hit.after?'invalid':hit.after===0?'kill':'hit');
+     if(!this.reduced&&this.shotEffects.size<160){const fx=this.trackShotEffect(this.add.sprite(x,y,'dungeon-fx-impact-v1',hit.effect+'-0').setDisplaySize(70,70).setDepth(6));fx.play('impact-'+hit.effect).once('animationcomplete',()=>fx.destroy());if(hit.after===0){const fall=this.trackShotEffect(this.add.sprite(x,y,'dungeon-fx-utility-v1','defeat-0').setDisplaySize(76,76).setDepth(6));fall.play('fx-defeat').once('animationcomplete',()=>fall.destroy());}}
+     this.hitEquations?.show(hit.enemyId,hit.before,hit.unit,hit.after,()=>{const v=this.enemies.get(hit.enemyId);return{x:v?.sprite.x??x,y:v?(v.name.text?v.name.y-40:v.hp.y-42):y-bodySize*.5-63};},1,hit.owner===0?'#b5f4ff':'#ffe1a0',hit.id);
+    };
+    // The recorded launch cell survives a tower sale between host snapshots.
+    // Older peers can still supply their live tower, or display the impact alone.
+    const cellX=hit.fromX??t?.x,cellY=hit.fromY??t?.y;
+    if(cellX===undefined||cellY===undefined){impact();return;}
+    const centerX=X+(cellX+.5)*T,centerY=Y+(cellY+.5)*T-8,bearing=Math.atan2(y-centerY,x-centerX);
+    const from={x:centerX+Math.cos(bearing)*20,y:centerY+Math.sin(bearing)*20};
+    if(!this.reduced&&this.shotEffects.size<160){const muzzle=this.trackShotEffect(this.add.sprite(from.x,from.y,'dungeon-fx-utility-v1','muzzle-0').setDisplaySize(45,45).setRotation(bearing+Math.PI/2).setDepth(6));muzzle.play('fx-muzzle').once('animationcomplete',()=>muzzle.destroy());}
+    playTowerProjectile(this,{typeId,from,to:{x,y},scale:T/58,reducedMotion:this.reduced,
+     track:object=>{this.trackShotEffect(object);},onImpact:impact});
+   });this.shotTimers.add(timer);
+  });
  }
  preview(x:number,y:number){this.guides.clear();const v=this.view(),s=v.state;if(!s||!v.selectedType)return;
   if(x>=0&&x<24&&y>=0&&y<7)this.guides.lineStyle(3,validDuelCell(s,v.side,x,y)?0xffdf94:0xdd6c50).strokeRect(X+x*T+2,Y+y*T+2,T-4,T-4);

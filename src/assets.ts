@@ -3,11 +3,13 @@ import Phaser from 'phaser';
 import {MonsterKind,MONSTER_KINDS,MONSTERS} from './monsters';
 import {TOWERS} from './towers';
 import {AMBIENT_TEXTURES,registerAmbientFrames} from './ambient-props';
+import {PROJECTILE_SHEETS} from './projectile-profiles';
 
 // Every illustrated texture in this skin is an original built-in imagegen output.
 // Atlas cells are registered at runtime; the atlas dimensions and alpha are preserved in compressed WebP.
 export function loadDungeon(scene:Phaser.Scene,kinds:MonsterKind[]=MONSTER_KINDS){
  for(const name of ['terrain','ui','props','icons','slime','turret-parts-v1','fx-impact-v1','fx-utility-v1','tower-heads-a-v1','tower-heads-b-v1',...AMBIENT_TEXTURES])scene.load.image('dungeon-'+name,artURL(name));
+ for(const sheet of PROJECTILE_SHEETS)scene.load.image(sheet.key,artURL(sheet.atlas));
  for(const kind of kinds.filter(k=>k!=='slime')){const atlas=MONSTERS[kind].atlas;scene.load.image('dungeon-'+atlas,artURL(atlas));}
 }
 export function registerMonster(scene:Phaser.Scene,kind:MonsterKind){
@@ -33,6 +35,7 @@ export function registerDungeon(scene:Phaser.Scene){
  for(const sheet of ['a','b'])cells(scene,'tower-heads-'+sheet+'-v1',3,2,TOWERS.filter(t=>t.sheet===sheet).sort((a,b)=>a.frame-b.frame).map(t=>t.id));
  cells(scene,'fx-impact-v1',6,4,['basic','slow','stun','range'].flatMap(effect=>Array.from({length:6},(_,i)=>effect+'-'+i)));
  cells(scene,'fx-utility-v1',6,4,[...['muzzle','defeat','shockwave'].flatMap(effect=>Array.from({length:6},(_,i)=>effect+'-'+i)),'projectile-basic','projectile-slow','projectile-stun','projectile-range','particle-stone','particle-spark']);
+ for(const sheet of PROJECTILE_SHEETS)cells(scene,sheet.atlas,6,4,sheet.rows.flatMap(id=>Array.from({length:6},(_,i)=>id+'-'+i)));
  for(const kind of MONSTER_KINDS)registerMonster(scene,kind);
  // Align every skin to its visible opaque frame, rather than the atlas cell's
  // uneven transparent margins. Original source images remain untouched.

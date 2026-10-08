@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>1:1 발사체 실제 장면 검증</title>
+ <style>
+  *{box-sizing:border-box}body{margin:0;background:#090d16;color:#f5dfb4;font:15px system-ui,sans-serif}main{max-width:1310px;margin:16px auto;padding:0 15px}h1{font-size:25px;margin:0 0 6px}p{margin:6px 0 12px;color:#bfc0c5}nav{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}button{font:inherit;background:#232b3b;color:#ffe3a4;border:1px solid #997347;border-radius:6px;padding:10px 13px;cursor:pointer}button:disabled{opacity:.4;cursor:default}a{color:#f5dcaa}#status{color:#a5ead4;min-height:24px}#stats{display:flex;gap:9px 20px;flex-wrap:wrap;padding:10px 12px;background:#17202e;border:1px solid #3d4b5e;border-radius:7px}#stats output{color:#fff3ce;font-weight:700}#operation{padding:8px 0;color:#b5dbff}#canvas{width:100%;aspect-ratio:1280/800;overflow:hidden;background:#111216}#canvas canvas{display:block}#weapons{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:10px 0}#weapons button{text-align:left;font-size:13px}#errors{color:#ffaf9d;white-space:pre-wrap}small{color:#a8b4c6}@media(max-width:800px){#weapons{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ </style>
+</head>
+<body><main>
+ <h1>1:1 발사체 · 실제 DuelScene</h1>
+ <p>두 로컬 플레이어와 12종 타워를 사용하는 검증 화면입니다. 각 버튼은 실제 장면의 redraw 경로로 발사 기록을 전달합니다.</p>
+ <nav aria-label="발사 기록 검증">
+  <button id="all" disabled>12종 전체 발사</button>
+  <button id="resend" disabled>같은 snapshot 재전송</button>
+  <button id="stale" disabled>과거 revision 재전송</button>
+  <button id="sold" disabled>기록 생성 후 타워 회수</button>
+  <button id="new-room" disabled>신규 방으로 이동</button>
+  <button id="empty" disabled>방 비우기</button>
+  <button id="reset-counts" disabled>카운터 초기화</button>
+  <a href="./projectile-preview.html">12종 동작 비교</a>
+ </nav>
+ <div id="status" role="status">이미지 로딩 중</div>
+ <div id="stats" aria-label="공개 검증 카운터">
+  <span>방 <output id="room">LOCAL-01</output></span><span>상태 <output id="state">loading</output></span>
+  <span>revision <output id="revision">0</output></span><span>타워 <output id="towers">12</output></span>
+  <span>발사 sound <output id="launches">0</output></span><span>impact sound <output id="impacts">0</output></span>
+  <span>현재 발사체 효과 <output id="effects">0</output></span><span>몬스터 <output id="enemies">12</output></span>
+ </div>
+ <div id="operation">준비 중</div><small id="identity"></small>
+ <div id="weapons" aria-label="종류별 발사"></div>
+ <div id="canvas" aria-label="실제 1:1 게임 장면"></div>
+ <p id="errors" role="alert"></p>
+</main><script type="module" src="./duel-projectile-preview.ts"></script></body>
+</html>

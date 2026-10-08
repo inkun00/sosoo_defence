@@ -152,3 +152,13 @@ Original sixteen-frame atlas generated with built-in OpenAI imagegen.
 assets/dungeon/monster-wizard-v1.png
 Reference: story-sorcerer-v2.png. Prompt: licenses/monster-wizard-v1-prompt.txt
 Transparent source preserved; compressed WebP loaded only for the final stage.
+
+TWELVE TOWER PROJECTILE ANIMATIONS v1 (2026-10-08)
+Original transparent 72-frame artwork generated with built-in OpenAI imagegen.
+assets/dungeon/fx-flight-stone-v1.png (basic, double, needle, pebble)
+assets/dungeon/fx-flight-element-v1.png (frost, ice, catapult, siege)
+assets/dungeon/fx-flight-magic-v1.png (lightning, crystal, sniper, rune)
+Each atlas is 6 columns by 4 rows. Prompts: licenses/tower-projectiles-v1-prompts.json
+Source PNGs retained; alpha WebP served in adventure and peer-to-peer duels.
+Original local procedural sounds match each weapon. Flight paths, trails,
+connected lightning, gravity arcs and effects run locally without media requests.

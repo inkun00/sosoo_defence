@@ -13,7 +13,7 @@ for(const file of (await readdir(join(source,'assets','dungeon'))).sort()){
  // These four source sheets have been replaced by the rotating-head atlases.
  if(/^tower-(basic|slow|stun|range)\.png$/.test(file))continue;
  const name=file.slice(0,-4),input=await readFile(join(source,'assets','dungeon',file)),quality=name.startsWith('story-')||name==='title-castle-v1'?86:90;
- const width=name.startsWith('heroes-level-')?768:name==='menu-button-v1'||name==='title-wordmark-v1'?1200:undefined;
+ const width=name.startsWith('heroes-level-')?768:name.startsWith('fx-flight-')?1152:name==='menu-button-v1'||name==='title-wordmark-v1'?1200:undefined;
  const fingerprint=hash(Buffer.concat([input,Buffer.from(`webp-${quality}-width${width??'original'}-alpha100-effort5${name==='title-wordmark-v1'?'-trim1':''}-${sharp.versions.webp}`)]));const old=prior[name];
  if(old?.sourceHash===fingerprint&&await stat(join(out,old.url)).catch(()=>null)){manifest[name]=old;original+=input.length;optimized+=old.bytes;continue;}
  const pipeline=sharp(input);if(name==='title-wordmark-v1')pipeline.trim({threshold:1});
