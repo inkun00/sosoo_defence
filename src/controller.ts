@@ -3,7 +3,7 @@ import {LEVELS,EFFECTS,Effect,FINAL_STAGE} from './levels';
 import {Defense,Event as BattleEvent} from './model';
 import {Field} from './scene';
 import {GameUI,Panel,UIState,Control} from './ui';
-import {decimal,numberText,FusionOperation} from './math';
+import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
 import {mountAudioControls} from './audio-controls';
@@ -95,7 +95,7 @@ function stage(n:number){
 function event(ev:BattleEvent){
  sound.play(ev.type==='money'&&(ev.data as {reason?:string}|undefined)?.reason==='purchase'?'build':ev.type,ev.type==='shot'?(ev.data as {typeId?:string}|undefined)?.typeId:undefined);ui.animate(ev);
  if(ev.type==='hit'){lastHit=ev;if(model.level.id<=4){equation=ev.message;hint=(ev.data as {hint:string}).hint;}}
- if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=ev.message;}}
+ if(ev.type==='money'){equation=ev.message.split(' · ')[0];hint=ev.message.split(' · ')[1]||'';if((ev.data as {reason?:string}|undefined)?.reason==='purchase'){ui.showPurchaseEquation(equation);$('accessible-notice').textContent=`${ev.message} · 전체 잔액 ${numberText(model.money,model.level.id>=4?3:model.level.digits)} 코인`;}}
  if(ev.type==='wall'&&ev.message.includes(' = ')){equation=ev.message.split(' · ')[0];hint=ev.message.includes(' − ')?'소수점을 맞추어 같은 자리끼리 뺐어요.':'소수점을 맞추어 같은 자리끼리 더했어요.';message='합성 성공! 성벽 한 개를 얻었어요.';if(field.mode.kind==='wall')notify(`${equation} · 합성 성공! 초록 길을 눌러 놓아요.`);}
  else if(panel==='purchase'&&ev.type==='notice'){purchaseMessage=ev.message;$('accessible-notice').textContent=ev.message;}
  else if(ev.type==='wall-impact')$('accessible-notice').textContent=ev.message;
@@ -176,7 +176,7 @@ field.onWallPlace=c=>{
  else{leaveWallPlacement();selectedWall={...c};field.selectedWall=selectedWall;field.focusCell(c);notify(model.wallStock?`설치를 마쳤어요. 남은 성벽 ${model.wallStock}개는 보관해요.`:'성벽 설치 완료! 준비한 성벽을 모두 놓았어요.');}
  update();
 };
-field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
+field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${purchaseBalanceText(q.wallet,q.before,q.digits)}. ${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
 const originalUpdate=field.update.bind(field);field.update=(time:number,delta:number)=>originalUpdate(time,delta*speed);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,height:GAME_HEIGHT,backgroundColor:'#111216',scene:[field,ui],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');});

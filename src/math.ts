@@ -6,6 +6,10 @@ export function learningValue(value:number){return Number.isSafeInteger(value)&&
 // Keep the full wallet unlimited, but use an actual affordable portion for a
 // purchase exercise when accumulated rewards exceed the learning range.
 export function purchaseCoins(wallet:number){return wallet<LEARNING_LIMIT?wallet:9000+wallet%SCALE;}
+export function purchaseBalanceText(wallet:number,before:number,digits:number){
+ const total=`전체 보유 ${numberText(wallet,digits)} 코인`;
+ return wallet===before?total:`${total} · 계산 ${numberText(before,digits)} · 보관 ${numberText(wallet-before,digits)}`;
+}
 export function creditMessage(before:number,amount:number,label:string,digits=1){
  return learningValue(before)&&learningValue(amount)&&learningValue(before+amount)
   ?`${numberText(before,digits)} + ${numberText(amount,digits)} = ${numberText(before+amount,digits)} · ${label}`

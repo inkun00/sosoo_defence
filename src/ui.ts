@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {Defense,Event as BattleEvent,WALL_DURABILITY} from './model';
 import {Effect,EFFECTS,LEVELS,FINAL_STAGE} from './levels';
-import {decimal,numberText,FusionOperation} from './math';
+import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {Save} from './save';
 import {Mode} from './scene';
 import {FIELD_X,FIELD_Y,GAME_WIDTH,GAME_HEIGHT} from './layout';
@@ -200,11 +200,12 @@ export class GameUI extends Phaser.Scene{
  private drawPurchase(){
   const s=this.getState(),q=s.model.pendingPurchase;if(!q)return;const t=towerType(q.typeId)!;
   this.modalFrame('소수 뺄셈으로 타워 설치',960,650);
-  this.text(this.popup,640,184,`${GRADE_NAMES[t.grade]} · ${t.name} · 공격력 ${numberText(t.unit)}`,23,C.cream).setOrigin(.5);
+  this.text(this.popup,640,170,`${GRADE_NAMES[t.grade]} · ${t.name} · 공격력 ${numberText(t.unit)}`,23,C.cream).setOrigin(.5);
+  this.centerLabel(this.fitText(this.text(this.popup,640,202,purchaseBalanceText(q.wallet,q.before,q.digits),20,C.ink).setName('purchase-wallet').setOrigin(.5),850,27));
   const before=numberText(q.before,q.digits),cost=numberText(q.cost,q.digits);
   this.centerLabel(this.fitText(this.text(this.popup,640,242,`${before} − ${cost} = ?`,39,'#ffe1a0').setOrigin(.5),850,50));
   this.frame(this.popup,640,306,500,64,'button_brown');
-  this.centerLabel(this.fitText(this.text(this.popup,640,306,s.purchaseInput||'남는 코인을 입력해요',s.purchaseInput?34:22,C.cream).setOrigin(.5),458,44));
+  this.centerLabel(this.fitText(this.text(this.popup,640,306,s.purchaseInput||(q.wallet!==q.before?'계산용 코인의 잔액을 입력해요':'남는 코인을 입력해요'),s.purchaseInput?34:22,C.cream).setOrigin(.5),458,44));
   this.text(this.popup,348,372,'소수점 위치를 맞춰요',20,C.ink).setOrigin(.5);
   this.frame(this.popup,348,452,286,130,'panel_brown_dark');
   this.text(this.popup,348,444,`  ${before.padStart(8)}\n− ${cost.padStart(8)}\n──────────`,25,'#ffe1a0').setFontFamily('Consolas, monospace').setOrigin(.5);
@@ -212,7 +213,7 @@ export class GameUI extends Phaser.Scene{
   keys.forEach((key,i)=>{const id=key==='⌫'?'backspace':key==='.'?'dot':key;this.button(this.popup,'purchase-key:'+id,650+i%3*110,382+Math.floor(i/3)*60,100,56,key,true,'button_brown',27);});
   this.button(this.popup,'purchase-help',348,550,240,56,s.purchaseHelp?'도움말 닫기':'계산 도움말',true,'button_brown',20);
   if(s.purchaseHelp){const needed=q.borrowing.filter(p=>p<1000);this.text(this.popup,211,584,needed.length?'작은 자리가 모자라면 왼쪽 자리에서 1을 가져와 작은 단위 10개로 바꿔요.':'같은 자리끼리 빼고 바뀌지 않는 자리는 그대로 써요.',15,'#edc88d',280);}
-  this.centerLabel(this.fitText(this.text(this.popup,640,638,s.purchaseMessage||(q.wallet!==q.before?'전체 보유금 중 위 코인만 사용해 계산해요. 나머지 코인은 그대로 보관돼요.':'정답일 때만 코인을 내고 선택한 칸에 설치해요.'),20,s.purchaseMessage?'#ffc296':C.muted).setOrigin(.5),860,30));
+  this.centerLabel(this.fitText(this.text(this.popup,640,638,s.purchaseMessage||(q.wallet!==q.before?`정답을 맞혀도 보관한 ${numberText(q.wallet-q.before,q.digits)} 코인은 그대로 남아요.`:'정답일 때만 코인을 내고 선택한 칸에 설치해요.'),20,s.purchaseMessage?'#ffc296':C.muted).setOrigin(.5),860,30));
   this.button(this.popup,'purchase-cancel',458,692,238,64,'취소 · 돈 유지',true,'button_brown',23);
   this.button(this.popup,'purchase-confirm',805,692,310,64,'정답 확인 · 설치 ▶',!!s.purchaseInput,'button_red',23);
  }
@@ -243,7 +244,8 @@ export class GameUI extends Phaser.Scene{
   if(!this.ready)return;this.purchaseView?.destroy(true);this.purchaseTimer?.remove();
   const view=this.add.container(504,111).setName('purchase-calculation').setDepth(71);this.purchaseView=view;
   this.frame(view,0,0,950,82,'panel_brown_dark');
-  this.centerLabel(this.text(view,0,-21,'타워 구매 · 코인 계산',15,'#c7baa6').setOrigin(.5));
+  const m=this.getState().model;
+  this.centerLabel(this.fitText(this.text(view,0,-21,`타워 구매 · 계산용 코인 · 전체 잔액 ${numberText(m.money,m.level.id>=4?3:m.level.digits)} 코인`,15,'#c7baa6').setOrigin(.5),886,22));
   this.centerLabel(this.fitText(this.text(view,0,11,equation,34,'#ffe1a0').setName('purchase-equation').setOrigin(.5),886,42));
   this.toastView?.setY(179);
   this.purchaseTimer=this.time.delayedCall(8000,()=>{view.destroy(true);this.purchaseView=undefined;this.purchaseTimer=undefined;});

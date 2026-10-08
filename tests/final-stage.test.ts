@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Defense,Tower,Inventory,FIRST_SPAWN_DELAY,SPAWN_INTERVAL} from '../src/model';
 import {LEVELS,FINAL_STAGE} from '../src/levels';
 import {loadSave,writeSave} from '../src/save';
-import {numberText,purchaseCoins} from '../src/math';
+import {numberText,purchaseCoins,purchaseBalanceText} from '../src/math';
 import {stageMonsterKinds} from '../src/monsters';
 import {playLevel} from '../tools/simulate';
 
@@ -50,6 +50,27 @@ test('최종 준비금은 19.978이지만 구매 문항과 정답은 한 자리 
  assert.ok([q.before,q.cost,q.before-q.cost].every(n=>n>=0&&n<10000));assert.equal(m.answerPurchase('99.9'),false);
  assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,19978-q.cost);
  m.sellTower(m.towers[0].id);assert.equal(m.money,19978);
+});
+
+test('11단계는 반복 실패 후 재도전해도 19.978을 복원하고 계산·보관 코인을 구분한다',()=>{
+ let m=new Defense(LEVELS[FINAL_STAGE-1]);
+ for(let attempt=0;attempt<3;attempt++){
+  assert.equal(m.money,19978);assert.equal(m.phase,'ready');assert.equal(m.towers.length,0);
+  assert.ok(m.requestPurchase({x:1,y:3},'rune'));const q=m.pendingPurchase!;
+  assert.equal(q.wallet,19978);assert.equal(q.before,9978);assert.equal(q.wallet-q.before,10000);
+  assert.equal(purchaseBalanceText(q.wallet,q.before,q.digits),'전체 보유 19.978 코인 · 계산 9.978 · 보관 10.000');
+  assert.equal(m.answerPurchase('0'),false);assert.equal(m.money,19978);
+  m.cancelPurchase();assert.equal(m.money,19978);
+  assert.ok(m.requestPurchase({x:1,y:3},'rune'));const next=m.pendingPurchase!;
+  assert.ok(m.answerPurchase(numberText(next.before-next.cost)));assert.equal(m.money,19978-next.cost);
+  assert.equal(m.money-(next.before-next.cost),10000,'보관한 10코인은 구매 후에도 보존한다');
+  assert.ok(m.start());for(let i=0;i<5;i++)m.spawn();for(const enemy of m.enemies)enemy.next=enemy.path.length;
+  m.step(.1);assert.equal(m.phase,'lost');assert.equal(m.castle,0);
+  // The retry controller rebuilds Defense with the same level and inventory.
+  m=new Defense(m.level,m.inventory,m.difficulty);
+ }
+ assert.equal(m.money,19978);
+ assert.equal(purchaseBalanceText(8420,8420,3),'전체 보유 8.420 코인');
 });
 
 test('기존 10단계 완료 기록은 별·벽돌·내구도를 유지하며 11단계를 해금하고 새 엔딩은 미완료로 둔다',()=>{
