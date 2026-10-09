@@ -1,18 +1,21 @@
 import {artURL} from './art';
 import {Worksheet,WorksheetQuestion} from './worksheet';
-import {decimal,numberText} from './math';
+import {decimal,numberText,precision} from './math';
 import {kindLabel} from './learning';
 const shortId=(s:Worksheet)=>s.id.slice(0,8).toUpperCase();
 const answer='<span class="ws-answer"></span>';
 const text=(value:number)=>value%1000===0?String(value/1000):numberText(value);
 function header(s:Worksheet){return '<header class="ws-header"><div><p class="ws-eyebrow">소수 디펜스 · 수호자의 훈련소</p><h1>오답 풀이 연습 학습지</h1><p class="ws-meta">이름 ______________  4학년 ___반 ___번 · '+new Date(s.createdAt).toLocaleDateString('ko-KR')+'</p></div><div class="ws-emblem"><span class="ws-guide" aria-hidden="true" style="background-image:url('+artURL('heroes-level-4-v1')+')"></span><span class="ws-egg" aria-hidden="true"></span><b>1 / 1</b></div></header><div class="ws-mission">훈련서 '+shortId(s)+' · 20개의 정답으로 봉인된 돌 알을 깨워라!</div>';}
 function hundredGrid(n:number){return '<svg class="ws-grid-art" viewBox="0 0 100 100" role="img" aria-label="전체가 1인 모눈, 100칸 중 '+n+'칸 색칠">'+Array.from({length:100},(_,i)=>'<rect x="'+i%10*10+'" y="'+Math.floor(i/10)*10+'" width="10" height="10" fill="'+(i<n?'#b3a078':'#ffffff')+'" stroke="#605b50" stroke-width=".65"/>').join('')+'</svg>';}
-function numberline(d:number[]){const [start,step,index]=d;return '<svg class="ws-numberline" viewBox="0 0 160 40" role="img" aria-label="'+text(start)+'부터 '+text(start+step*10)+'까지 열 등분한 수직선의 '+index+'번째 눈금"><path d="M9 18H151" fill="none" stroke="#30363d" stroke-width="1.3"/>'+Array.from({length:11},(_,i)=>'<path d="M'+(10+i*14)+' 13v10" stroke="#30363d"/>').join('')+'<path d="M'+(10+index*14)+' 1v10m-3-4 3 4 3-4" fill="none" stroke="#956829" stroke-width="1.5"/><text x="2" y="37" font-size="10">'+text(start)+'</text><text x="136" y="37" text-anchor="middle" font-size="10">'+text(start+step*10)+'</text></svg>';}
+function numberline(d:number[]){
+ const [start,step,index]=d,left=20,right=160,divisions=10,tickX=(i:number)=>left+(right-left)*i/divisions;
+ return '<svg class="ws-numberline" viewBox="0 0 180 40" role="img" aria-label="'+text(start)+'부터 '+text(start+step*divisions)+'까지 열 등분한 수직선의 왼쪽 끝에서 '+index+'칸 오른쪽 눈금"><path d="M'+(left-2)+' 18H'+(right+2)+'" fill="none" stroke="#30363d" stroke-width="1.3"/>'+Array.from({length:divisions+1},(_,i)=>'<path data-numberline-tick="'+i+'" d="M'+tickX(i)+' 13v10" stroke="#30363d"/>').join('')+'<path data-numberline-arrow="'+index+'" d="M'+tickX(index)+' 1v12m-3-4 3 4 3-4" fill="none" stroke="#956829" stroke-width="1.5"/><text data-numberline-endpoint="start" x="'+left+'" y="37" text-anchor="middle" font-size="10">'+text(start)+'</text><text data-numberline-endpoint="end" x="'+right+'" y="37" text-anchor="middle" font-size="10">'+text(start+step*divisions)+'</text></svg>';
+}
 const koreanDigits=['영','일','이','삼','사','오','육','칠','팔','구'];
 function readDecimal(value:number){return numberText(value).split('').map(c=>c==='.'?'점':koreanDigits[Number(c)]).join(' ');}
 function placeText(value:number,place:number){const parts=decimal(value,2).split(''),position=place===1000?0:place===100?2:3;parts[position]='<u>'+parts[position]+'</u>';return parts.join('');}
 export function worksheetQuestionHTML(q:WorksheetQuestion){
- if(!q.type)return '<div class="ws-equation">'+decimal(q.a,q.digits)+' '+(q.operation==='+'?'+':'−')+' '+decimal(q.b,q.digits)+' = '+answer+'</div>';
+ if(!q.type){const digits=Math.max(q.digits,precision(q.a),precision(q.b));return '<div class="ws-equation">'+decimal(q.a,digits)+' '+(q.operation==='+'?'+':'−')+' '+decimal(q.b,digits)+' = '+answer+'</div>';}
  const d=q.data!,body=(prompt:string,detail:string)=>'<div class="ws-concept-text"><span>'+prompt+'</span><div>'+detail+'</div></div>';
  switch(q.type){
   case 'concept-compose':return body('1이 '+d[0]+'개, 0.1이 '+d[1]+'개'+(d[2]?', 0.01이 '+d[2]+'개':''),'이 수는 '+answer);

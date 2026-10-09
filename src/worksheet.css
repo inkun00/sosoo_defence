@@ -24,7 +24,7 @@ html:has(.workbook),body:has(.workbook),#app:has(.workbook){height:auto;min-heig
 .ws-rune{font-size:8px;gap:3px}
 .ws-rune i{width:15px;height:21px}
 .ws-grid-art{width:32px;height:32px;flex:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.ws-numberline{width:108px;height:32px;flex:none}
+.ws-numberline{width:120px;height:32px;flex:none}
 .ws-numberline+div{font-size:10px}
 .ws-numberline+div>div{font-size:12px}
 .ws-fraction{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;font:700 11px Consolas,monospace}

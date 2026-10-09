@@ -28,7 +28,7 @@ export function questionAnswer(q:WorksheetQuestion):number{
 }
 export function validQuestion(q:WorksheetQuestion){
  if(!q||!['+','-'].includes(q.operation)||![1,2].includes(q.digits)||!validLearningKind(q.kind))return false;
- if(!q.type)return !!kindParts(q.kind)&&['money','wall','battle'].includes(q.context)&&[q.a,q.b,questionAnswer(q)].every(n=>learningValue(n)&&n%10===0)&&questionAnswer(q)>0&&classify(q)===q.kind;
+ if(!q.type){const parts=kindParts(q.kind);return !!parts&&q.digits===parts.digits&&precision(q.a)<=q.digits&&precision(q.b)<=q.digits&&['money','wall','battle'].includes(q.context)&&[q.a,q.b,questionAnswer(q)].every(n=>learningValue(n)&&n%10===0)&&questionAnswer(q)>0&&classify(q)===q.kind;}
  if(!isConceptKind(q.type)||q.kind!==q.type||q.context!=='concept'||q.b!==0||q.operation!=='+'||!Array.isArray(q.data)||!q.data.every(n=>Number.isSafeInteger(n)&&n>=0))return false;
  const d=q.data,decimalValue=(n:number)=>learningValue(n)&&n%10===0;
  let valid=false;
