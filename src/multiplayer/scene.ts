@@ -4,7 +4,7 @@ import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
-import {DuelState,Side,DuelTower,DUEL_ROAD,duelLevel,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance} from './duel';
+import {DuelState,Side,DuelTower,DUEL_ROAD,FLAME_MAX,duelLevel,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance} from './duel';
 import {duelMap,duelRoadCell} from './duel-maps';
 import {HEROES,heroSpec,heroesAtLevel} from './heroes';
 import {HitEquationPopups} from '../hit-equations';
@@ -70,6 +70,7 @@ export class DuelScene extends Phaser.Scene{
   if(terrainSig!==this.signature){this.signature=terrainSig;this.drawTerrain();}
   this.text(this.ui,265,104,(s?.players[0]?.name||'왼쪽 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??9000),21,'#9adbea');
   this.text(this.ui,734,104,(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??9000),21,'#f7bd85');
+  this.drawCastleHealth(s);
   this.panel(this.ui,1130,370,266,572);this.text(this.ui,1130,113,'타워 제작소',23);this.text(this.ui,1130,144,s?.buildAfterStart&&s.status==='waiting'?'게임 시작 후 타워를 설치해요':`내 타워 ${p?.towers.length??0}/14 · 코인 뺄셈으로 설치`,13,'#c3b8a8');
   TOWERS.slice(v.shopPage*6,v.shopPage*6+6).forEach((type,i)=>{
    const cost=towerPrice(type,p?.money??8800,s?duelLevel(s):1,p?.purchaseVariation),open=!!p&&type.unlock<=duelLevel(s!)&&p.money>=cost&&!v.busy&&canPurchaseDuelTower(s!);
@@ -102,6 +103,26 @@ export class DuelScene extends Phaser.Scene{
   if(s?.status==='waiting')this.button('ready',485,424,240,57,p?.ready?'상대 준비 기다리는 중':v.computer?'게임 시작':'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
   else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'굽이치는 길을 지켜요 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,424,message,18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
   this.syncShots();this.syncEnemies();this.syncHeroSummons();this.onControls();
+ }
+ private drawCastleHealth(s:DuelState|null){
+  const map=duelMap(s?.mapId),width=60,height=22;
+  for(const side of [0,1] as Side[]){
+   // Keep the gauge above its castle without covering adjacent build cells.
+   const end=map.points[side===0?0:map.points.length-1],x=X+(end.x+.5)*T+(side===0?-18:18),y=Y+(end.y+.5)*T-74;
+   const player=s?.players[side],hp=Math.max(0,Math.min(FLAME_MAX,player?.flame??0)),ratio=hp/FLAME_MAX;
+   const color=!player?0x77716b:ratio<=1/3?0xf06b5f:side===0?0x68cde7:0xf0b767;
+   const bar=this.add.graphics().setName('castle-health-'+side);this.ui.add(bar);
+   bar.fillStyle(0x090d16,.97).fillRoundedRect(x-width/2-2,y-height/2-2,width+4,height+4,5);
+   bar.fillStyle(0x202733).fillRoundedRect(x-width/2,y-height/2,width,height,3);
+   if(hp>0){
+    const filled=(width-4)*ratio;
+    bar.fillStyle(color,.9).fillRect(x-width/2+2,y-height/2+2,filled,height-4);
+    bar.fillStyle(0xffffff,.2).fillRect(x-width/2+2,y-height/2+2,filled,3);
+   }
+   bar.lineStyle(1.5,color,.95).strokeRoundedRect(x-width/2,y-height/2,width,height,3);
+   this.text(this.ui,x,y,player?`${numberText(hp)}/${numberText(FLAME_MAX)}`:'대기 중',12,'#fff6df')
+    .setStroke('#080b12',3).setName('castle-health-label-'+side);
+  }
  }
  private drawTerrain(){this.ambient?.prepareRedraw();this.terrain.removeAll(true);this.units.removeAll(true);this.towerViews.clear();const s=this.view().state,map=duelMap(s?.mapId);
   const floorScale=terrainTileScale(this,.35);
