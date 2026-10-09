@@ -5,7 +5,7 @@ import {onAuthStateChanged,User} from 'firebase/auth';
 import {auth,firebaseEmulator} from './firebase';
 import {mountAccountForm} from '../account-form';
 import {DuelScene,DuelView} from './scene';
-import {DuelState,DuelAction,Side,validDuelCell} from './duel';
+import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower} from './duel';
 import {HostPeer} from './peer';
 import {ComputerPeer} from './computer-peer';
 import {COMPUTER_OPPONENTS,loadComputerProgress,recordComputerResult} from './computer-opponents';
@@ -46,7 +46,7 @@ game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 �
 const purchasePanel=mountPurchasePanel(document.getElementById('field')!,action=>send(action));
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;purchasePanel.feedback(text);const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
-function refresh(){purchasePanel.sync(state?.status==='finished'?null:state?.players[side]?.quote,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=240?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
+function refresh(){purchasePanel.sync(state&&canPurchaseDuelTower(state)?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=240?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
 function show(kind:string,html:string){dialogKind=kind;dialog.dataset.screen=kind;content.innerHTML=html;const heading=content.querySelector('h2');if(heading){heading.id||='duel-dialog-title';dialog.setAttribute('aria-labelledby',heading.id);}app.dataset.duelView=!state||['auth','lobby','computer-levels','create-room','room-password','connection','profile','history'].includes(kind)?'hall':'battle';dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
 function close(){dialogKind='';app.dataset.duelView='battle';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
 function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const labels:Record<string,string>={'auth/email-already-in-use':'이미 가입한 이메일이에요. 로그인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/weak-password':'비밀번호는 6글자 이상 적어 주세요.','auth/invalid-email':'이메일 주소를 확인해 주세요.','auth/too-many-requests':'잠시 기다렸다가 다시 로그인해 주세요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.','functions/unauthenticated':'다시 로그인해 주세요.','functions/resource-exhausted':'잠시 뒤 다시 눌러 주세요.'};return labels[code]||(e as Error)?.message||'연결을 확인하고 다시 시도해 주세요.';}
@@ -80,7 +80,7 @@ function startComputer(level:number){
  if(!user||auth?.currentUser?.uid!==user.uid){disposeRoom();authScreen();return;}
  if(peer instanceof HostPeer&&state?.status==='playing')return;
  disposeRoom();sound.resume();const local=new ComputerPeer({uid:user.uid,name:(user.displayName||'나의 수호자').slice(0,16),rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},level);
- peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='준비하기 전에 타워를 설치해 불꽃을 지킬 전략을 세워요.';lastRound=0;
+ peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='게임 시작을 누른 뒤 타워를 설치해요. 계산 중에도 전투는 계속 진행돼요.';lastRound=0;
  local.onState=(s,c)=>{if(peer!==local)return;state=s;connected=c;const p=s.players[0];if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();if(s.status==='finished'&&recorded!==local.id){void saveFinished();result();}};
  close();
 }
@@ -198,9 +198,10 @@ function result(){
  const root=document.getElementById('result-wrong')!;for(const q of record?.wrongQuestions??[]){const p=document.createElement('p');p.textContent=wrongText(q);root.append(p);}bind('retry-save',saveFinished);bind('result-lobby',()=>{disposeRoom();lobby();});}
 scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;if(p.quote){status('하단의 설치 계산을 먼저 마쳐 주세요.');return;}
  const tower=p.towers.find(t=>t.x===x&&t.y===y);if(tower){selectedTower=tower.id;selectedType='';refresh();return;}
- if(selectedType){if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'quote',x,y,typeId:selectedType});}
+ if(selectedType){if(!canPurchaseDuelTower(state)){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'quote',x,y,typeId:selectedType});}
 };
 scene.onAction=async key=>{sound.resume();sound.play('ui');
+ if(key.startsWith('type:')&&(!state||!canPurchaseDuelTower(state))){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}
  if(key.startsWith('type:')&&state?.players[side]?.quote){status('하단의 설치 계산을 먼저 마쳐 주세요.');return;}
  if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;status('내 쪽 빈 바닥을 골라요. 계산 중에도 전투는 계속돼요.');scene.preview(-1,-1);return;}
  if(key.startsWith('block:')){const i=Number(key.slice(6));if(!slots.includes(i)&&slots.length<3)slots.push(i);refresh();return;}

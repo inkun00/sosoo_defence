@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ComputerPeer,additionSlots} from '../src/multiplayer/computer-peer';
 import {COMPUTER_OPPONENTS,computerOpponent} from '../src/multiplayer/computer-opponents';
-import {DUEL_START_MONEY,FLAME_MAX,duelLevel} from '../src/multiplayer/duel';
+import {DUEL_START_MONEY,FLAME_MAX,duelLevel,applyDuel,createDuel,canPurchaseDuelTower} from '../src/multiplayer/duel';
 import {numberText,recipe} from '../src/math';
 import {towerType} from '../src/towers';
 import {simulateComputerDuel} from '../tools/computer-duel-simulation';
@@ -18,6 +18,40 @@ test('컴퓨터 상대 10명은 동일한 시작 코인·불꽃·문제 순서�
   assert.ok(s.players[0].board.every(n=>n%10===0));peer.dispose();
  }
  assert.equal(computerOpponent(-10).level,1);assert.equal(computerOpponent(99).level,10);
+});
+test('컴퓨터 대전은 10레벨 모두 시작 전 타워 구매와 AI의 선행 설치를 막는다',async()=>{
+ for(let level=1;level<=10;level++){
+  const f=local(level),s=f.peer.state,boards=s.players.map(p=>[...p!.board]);
+  assert.equal(canPurchaseDuelTower(s),false);
+  assert.equal((await f.peer.send({type:'quote',x:4,y:2,typeId:'basic'})).ok,false);
+  assert.equal(applyDuel(s,1,{type:'quote',x:14,y:2,typeId:'basic'},f.now,'cpu-early').ok,false);
+  for(const ms of [1800,60000,60000])f.advance(ms);
+  assert.equal(s.status,'waiting');assert.equal(s.elapsed,0);assert.equal(s.wave,0);assert.deepEqual(s.players.map(p=>p!.board),boards);
+  for(const p of s.players){assert.equal(p!.money,DUEL_START_MONEY);assert.equal(p!.escrow,0);assert.equal(p!.egg,0);assert.equal(p!.purchases,0);assert.equal(p!.purchaseVariation,undefined);assert.equal(p!.quote,null);assert.deepEqual(p!.towers,[]);}
+  f.peer.dispose();
+ }
+});
+test('시작 전 위조된 구매 정답도 거부하고 시작 직후에는 정상 설치한다',async()=>{
+ const f=local(),s=f.peer.state,p=s.players[0];
+ p.quote={x:4,y:2,typeId:'basic',before:8800,wallet:8800,cost:100,digits:1,nonce:'stale',expires:f.now+60000};
+ const before=JSON.stringify(p);
+ assert.equal((await f.peer.send({type:'answer',nonce:'stale',answer:'8.7'})).ok,false);
+ assert.equal(JSON.stringify(p),before);assert.equal(p.towers.length,0);
+ await f.peer.send({type:'cancel'});await f.peer.send({type:'ready'});assert.equal(canPurchaseDuelTower(s),true);
+ assert.ok((await f.peer.send({type:'quote',x:4,y:2,typeId:'basic'})).ok);const q=p.quote!;
+ assert.ok((await f.peer.send({type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)})).ok);assert.equal(p.towers.length,1);f.peer.dispose();
+});
+test('오래 준비해도 컴퓨터의 첫 설치와 합성은 게임 시작 시점부터 기다린다',async()=>{
+ const f=local(10),s=f.peer.state,p=s.players[1]!;f.advance(120000);await f.peer.send({type:'ready'});
+ f.advance(1799);assert.equal(p.quote,null);assert.equal(p.solved,0);assert.equal(p.egg,0);
+ f.advance(1);assert.ok(p.quote);assert.equal(f.peer.opponent.mood,'thinking');
+ f.advance(f.peer.definition.thinkMs-1);assert.equal(p.towers.length,0);
+ f.advance(1);assert.equal(p.towers.length,1);assert.equal(f.peer.opponent.mood,'cast');f.peer.dispose();
+});
+test('온라인 대전은 기존 준비 중 구매 규칙을 유지한다',()=>{
+ const s=createDuel('online','수호자',17,100000),p=s.players[0];assert.equal(canPurchaseDuelTower(s),true);
+ assert.ok(applyDuel(s,0,{type:'quote',x:4,y:2,typeId:'basic'},100000,'online-quote').ok);const q=p.quote!;
+ assert.ok(applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},100000,'online-answer').ok);assert.equal(p.towers.length,1);
 });
 test('10명 모두 같은 규칙으로 구매·합성·부화하고 자동 웨이브와 대전을 끝까지 진행한다',async()=>{
  const reports:{level:number;solved:number;purchases:number;wave:number}[]=[];
@@ -44,8 +78,8 @@ test('플레이어가 하단 구매 문제를 푸는 동안 전장과 컴퓨터�
  await assert.rejects(()=>peer.send({type:'ready'}));
 });
 test('컴퓨터 표정은 계산·시전·불꽃 피격·승패에 맞춰 바뀐다',async()=>{
- const f=local(10),peer=f.peer,s=peer.state;assert.equal(peer.opponent.mood,'idle');f.advance(1800);assert.equal(peer.opponent.mood,'thinking');f.advance(peer.definition.thinkMs);assert.equal(peer.opponent.mood,'cast');
- await peer.send({type:'ready'});s.enemies.push({id:9999,owner:0,target:1,hero:null,level:1,hp:500,max:500,x:22.99,slow:0,stun:0,hits:0});f.advance(100);assert.equal(peer.opponent.mood,'hurt');
+ const f=local(10),peer=f.peer,s=peer.state;assert.equal(peer.opponent.mood,'idle');await peer.send({type:'ready'});f.advance(1800);assert.equal(peer.opponent.mood,'thinking');f.advance(peer.definition.thinkMs);assert.equal(peer.opponent.mood,'cast');
+ s.enemies.push({id:9999,owner:0,target:1,hero:null,level:1,hp:500,max:500,x:22.99,slow:0,stun:0,hits:0});f.advance(100);assert.equal(peer.opponent.mood,'hurt');
  await peer.send({type:'surrender'});assert.equal(s.status,'finished');assert.equal(peer.opponent.mood,'victory');peer.dispose();
 });
 test('무작위 판의 덧셈 해답 탐색은 같은 값을 가진 서로 다른 블럭을 사용한다',()=>{

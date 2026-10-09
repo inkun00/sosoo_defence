@@ -4,7 +4,7 @@ import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
-import {DuelState,Side,DuelTower,DUEL_ROAD,duelLevel,validDuelCell} from './duel';
+import {DuelState,Side,DuelTower,DUEL_ROAD,duelLevel,validDuelCell,canPurchaseDuelTower} from './duel';
 import {HEROES,heroSpec,heroesAtLevel} from './heroes';
 import {HitEquationPopups} from '../hit-equations';
 import {learningDescription} from './decimal-boards';
@@ -69,9 +69,9 @@ export class DuelScene extends Phaser.Scene{
   if(terrainSig!==this.signature){this.signature=terrainSig;this.drawTerrain();}
   this.text(this.ui,265,104,(s?.players[0]?.name||'왼쪽 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??9000),21,'#9adbea');
   this.text(this.ui,734,104,(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??9000),21,'#f7bd85');
-  this.panel(this.ui,1130,370,266,572);this.text(this.ui,1130,113,'타워 제작소',23);this.text(this.ui,1130,144,`내 타워 ${p?.towers.length??0}/14 · 코인 뺄셈으로 설치`,13,'#c3b8a8');
+  this.panel(this.ui,1130,370,266,572);this.text(this.ui,1130,113,'타워 제작소',23);this.text(this.ui,1130,144,s?.buildAfterStart&&s.status==='waiting'?'게임 시작 후 타워를 설치해요':`내 타워 ${p?.towers.length??0}/14 · 코인 뺄셈으로 설치`,13,'#c3b8a8');
   TOWERS.slice(v.shopPage*6,v.shopPage*6+6).forEach((type,i)=>{
-   const cost=towerPrice(type,p?.money??8800,s?duelLevel(s):1,p?.purchaseVariation),open=!!p&&type.unlock<=duelLevel(s!)&&p.money>=cost&&!v.busy&&s?.status!=='finished';
+   const cost=towerPrice(type,p?.money??8800,s?duelLevel(s):1,p?.purchaseVariation),open=!!p&&type.unlock<=duelLevel(s!)&&p.money>=cost&&!v.busy&&canPurchaseDuelTower(s!);
    const c=this.button('type:'+type.id,1130,195+i*70,228,66,'',open,v.selectedType===type.id);this.towerIcon(c,-83,0,type.id,53);
    this.text(c,-49,-20,type.name+' · '+GRADE_NAMES[type.grade],15,'#f6ecdf',false).setOrigin(0,.5);this.text(c,-49,1,'공격 '+numberText(type.unit),14,'#c9bbaa',false).setOrigin(0,.5);this.text(c,-49,21,type.unlock<=duelLevel(s??({elapsed:0} as DuelState))?numberText(cost)+' 코인':`대전 Lv.${type.unlock} 해금`,16,'#ffca7e',false).setOrigin(0,.5);
    this.controls.get('type:'+type.id)!.label=type.name+' 공격 '+numberText(type.unit)+' 가격 '+numberText(cost);
@@ -98,7 +98,7 @@ export class DuelScene extends Phaser.Scene{
   else this.button('heroes',1069,756,113,57,'영웅 도감',true,false,16);
   this.button('reserve',v.computer?1165:1192,v.computer?779:756,v.computer?175:113,v.computer?32:57,s?.status==='waiting'?'영웅 선택':p?.rewardUsed?'사용 완료':reserve?`Lv.${reserve.level} 소환`:'영웅 없음',!!p&&!v.busy&&(s?.status==='waiting'&&!p.ready||s?.status==='playing'&&!!reserve&&!p.rewardUsed),!!reserve&&!p?.rewardUsed,v.computer?13:16);
   this.controls.get('reserve')!.label=s?.status==='waiting'?'학습지 영웅 선택':p?.rewardUsed?'학습지 영웅 사용 완료':reserve?`학습지 영웅 ${reserve.name} 레벨 ${reserve.level} 한 번 소환`:'학습지 영웅 없음';
-  if(s?.status==='waiting')this.button('ready',485,424,240,57,p?.ready?'상대 준비 기다리는 중':'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
+  if(s?.status==='waiting')this.button('ready',485,424,240,57,p?.ready?'상대 준비 기다리는 중':v.computer?'게임 시작':'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
   else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'성벽 없이 곧은 길 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,424,message,18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
   this.syncShots();this.syncEnemies();this.syncHeroSummons();this.onControls();
  }
@@ -175,7 +175,7 @@ export class DuelScene extends Phaser.Scene{
    });this.shotTimers.add(timer);
   });
  }
- preview(x:number,y:number){this.guides.clear();const v=this.view(),s=v.state;if(!s||!v.selectedType)return;
+ preview(x:number,y:number){this.guides.clear();const v=this.view(),s=v.state;if(!s||!v.selectedType||!canPurchaseDuelTower(s))return;
   if(x>=0&&x<24&&y>=0&&y<7)this.guides.lineStyle(3,validDuelCell(s,v.side,x,y)?0xffdf94:0xdd6c50).strokeRect(X+x*T+2,Y+y*T+2,T-4,T-4);
  }
  update(_time:number,delta:number){const view=this.view(),s=view.state;this.opponentPortrait?.sync(view.computer);this.heroSummonEffects?.update();if(!s)return;const smooth=1-Math.exp(-delta/100);

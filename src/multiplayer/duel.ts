@@ -11,10 +11,11 @@ export interface Quote{x:number;y:number;typeId:string;before:number;wallet:numb
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
 export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
 export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fromX?:number;fromY?:number;owner:Side;enemyId:number;x:number;before:number;unit:number;after:number;effect:string;}
-export interface DuelState{version:1;seed:number;learningLevel:number;createdAt:number;startedAt:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'playing'|'finished';players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
+export interface DuelState{version:1;seed:number;learningLevel:number;createdAt:number;startedAt:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready'}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
 export const DUEL_SECONDS=300,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor(s.elapsed/30));}
+export function canPurchaseDuelTower(s:DuelState){return s.status==='playing'||s.status==='waiting'&&!s.buildAfterStart;}
 // The room freezes one shared learning level when the second player joins.
 function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!heroSpec(id)).slice(0,30);return {uid,name,accountLevel:normalizedAccountLevel(accountLevel),rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,accountLevel),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[]};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1,loadout:RewardLoadout={}):DuelState{return {version:1,seed,learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel,loadout),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
@@ -115,6 +116,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  }
  if(!['playing','waiting'].includes(s.status))return bad('대전을 시작해 주세요.');
  if(action.type==='cancel'){release(p);return ok('구매를 취소했어요.');}
+ if((action.type==='quote'||action.type==='answer')&&!canPurchaseDuelTower(s))return bad('게임을 시작한 뒤 타워를 설치할 수 있어요.');
  if(action.type==='quote'){
   if(p.quote)return bad('열린 구매 문제를 먼저 풀거나 취소해요.');
   const type=towerType(action.typeId),lv=duelLevel(s);if(!type||type.unlock>lv)return bad('아직 해금되지 않은 타워예요.');

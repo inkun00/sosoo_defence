@@ -16,6 +16,7 @@ export class ComputerPeer{
  readonly side=0 as const;readonly id:string;readonly connected=true;readonly definition:ComputerOpponent;readonly state:DuelState;
  onState:(state:DuelState,connected:boolean)=>void=()=>{};onStatus:(message:string)=>void=()=>{};
  private timer:ReturnType<typeof setInterval>|undefined;private disposed=false;private clock:()=>number;private nonce=0;
+ private strategyStarted=false;
  private nextBuild=0;private nextFusion=0;private nextHatch=0;private answeringAt=0;private seenFlame=9000;
  private portrait:ComputerPortrait;private moodUntil=0;
  constructor(readonly identity:PeerIdentity,level:number,options:ComputerOptions={}){
@@ -24,10 +25,10 @@ export class ComputerPeer{
   const seed=options.seed??Math.floor(Math.random()*0xffffffff);this.id=`computer-${now}-${seed}`;
   const loadout:RewardLoadout={rewardHeroes:identity.rewardHeroes,rewardHero:identity.rewardHero};
   this.state=createDuel(identity.uid,identity.name,seed,now,this.definition.level,loadout);
+  this.state.buildAfterStart=true;
   joinDuel(this.state,'computer-'+this.definition.id,this.definition.name,now,this.definition.level);
   this.portrait={level:this.definition.level,id:this.definition.id,name:this.definition.name,mood:'idle',phrase:'준비되면 불꽃을 지켜 볼까요?',moodSince:now};
   this.act({type:'ready'},now);
-  this.nextBuild=now+1800;this.nextFusion=now+this.definition.fusionMs;this.nextHatch=now+this.definition.hatchMs;
   if(options.autoTick!==false)this.timer=setInterval(()=>this.step(),100);
  }
  get opponent():ComputerPortrait{return {...this.portrait};}
@@ -69,8 +70,12 @@ export class ComputerPeer{
    this.mood(s.winner===1?'victory':s.winner===0?'defeat':'idle',s.winner===1?'내 불꽃을 지켜 냈어요!':s.winner===0?'멋진 전략이에요. 다시 겨뤄요!':'두 불꽃 모두 잘 지켰어요.',now,Infinity);
    clearInterval(this.timer);this.timer=undefined;this.onState(s,true);return;
   }
+  if(s.status!=='playing'){this.onState(s,true);return;}
+  if(!this.strategyStarted){
+   this.strategyStarted=true;this.nextBuild=s.startedAt+1800;this.nextFusion=s.startedAt+this.definition.fusionMs;this.nextHatch=s.startedAt+this.definition.hatchMs;
+  }
   if(p.flame<this.seenFlame){this.mood('hurt','앗! 내 불꽃까지 도착했어요.',now);this.seenFlame=p.flame;}
-  else if(now>=this.moodUntil)this.mood('idle',s.status==='waiting'?'준비되면 불꽃을 지켜 볼까요?':'불꽃과 몬스터를 살피고 있어요.',now);
+  else if(now>=this.moodUntil)this.mood('idle','불꽃과 몬스터를 살피고 있어요.',now);
   if(p.quote){if(now>=this.answeringAt){const q=p.quote,r=this.act({type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now);this.nextBuild=now+this.definition.buildMs;if(r.ok)this.mood('cast','새 타워로 불꽃을 지킬게요!',now);else this.act({type:'cancel'},now);}}
   else if(now>=this.nextBuild){this.nextBuild=now+this.definition.buildMs;this.build(now);}
   if(s.status==='playing'){
