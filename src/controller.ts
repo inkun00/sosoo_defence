@@ -6,6 +6,7 @@ import {GameUI,Panel,UIState,Control} from './ui';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
+import {mountGameAudioControls} from './game-audio-controls';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {GAME_WIDTH,GAME_HEIGHT} from './layout';
 import type {Cell} from './path';
@@ -26,6 +27,15 @@ app.innerHTML=`<main id="game-shell" aria-label="소수의 성 디펜스 게임"
 <p class="portrait-note">태블릿을 가로로 돌리면 더 크게 플레이할 수 있어요.</p>`;
 const $=(id:string)=>document.getElementById(id)!;
 const save=loadSave(),sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);let movie=false;
+const gameAudioControls=mountGameAudioControls($('game-shell'),{
+ getState:()=>({sfx:save.sfx,music:save.music}),
+ change:(kind,enabled)=>{
+  sound.resume();save[kind]=enabled;
+  if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);
+  if(!writeSave(save))notify('이 브라우저에서는 소리 설정을 저장할 수 없어요.');
+  sound.play('ui');
+ },
+});
 save.started=true;
 let model=new Defense(LEVELS[save.resumeStage-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
 let selectedWall:Cell|null=null,brickPage=0,inventorySignature='';
@@ -206,6 +216,8 @@ document.addEventListener('keydown',e=>{
  if(e.code==='Space'&&!panel){e.preventDefault();action('pause');}else if(e.key.toLowerCase()==='f'&&!panel)action('forge');
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
-window.addEventListener('pagehide',()=>sound.dispose());
+window.addEventListener('pagehide',()=>{gameAudioControls.dispose();sound.dispose();});
+// A cached page has already disposed its audio and controls; restore a fresh game.
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();}}});
 

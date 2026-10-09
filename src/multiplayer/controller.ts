@@ -9,6 +9,7 @@ import {DuelScene,DuelView} from './scene';
 import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,duelScore,duelHeroLearningLevel} from './duel';
 import {HostPeer} from './peer';
 import {loadPeerConfiguration} from './relay-store';
+import {mountGameAudioControls} from '../game-audio-controls';
 import {ComputerPeer} from './computer-peer';
 import {DEFAULT_DUEL_MAP_ID,duelMap,isDuelMapId} from './duel-maps';
 import {duelMapSummaryHTML,duelMapPickerHTML} from './map-picker';
@@ -22,7 +23,7 @@ import {HEROES,heroesAtLevel} from './heroes';
 import {numberText,precision} from '../math';
 import {towerType} from '../towers';
 import {Sound} from '../audio';
-import {loadSave} from '../save';
+import {loadSave,writeSave} from '../save';
 import {hitEquationsEnabled,setHitEquationsEnabled} from '../combat-preferences';
 import {recordLearning,importLearningRecords,LearningSample} from '../learning';
 import {loadWorkbook,ownedHeroIds,selectedWorksheetHero,selectWorksheetHero} from '../worksheet-store';
@@ -44,6 +45,15 @@ let audioStatus='',audioFlame=9000;
 function loadDuelMap(){try{const id=localStorage.getItem('sosoo-duel-map');return isDuelMapId(id)?id:DEFAULT_DUEL_MAP_ID;}catch{return DEFAULT_DUEL_MAP_ID;}}
 let selectedMapId=loadDuelMap();
 const sound=new Sound();sound.sfx=loadSave().sfx;sound.setMusic(loadSave().music);
+const gameAudioControls=mountGameAudioControls(document.getElementById('game-shell')!,{
+ getState:()=>({sfx:sound.sfx,music:sound.music}),
+ change:(kind,enabled)=>{
+  sound.resume();if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);
+  const preferences=loadSave();preferences[kind]=enabled;
+  if(!writeSave(preferences))status('이 브라우저에서는 소리 설정을 저장할 수 없어요.');
+  sound.play('ui');
+ },
+});
 document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))sound.play('ui');});
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,selectedTower,message,busy,connected,computer:peer instanceof ComputerPeer?peer.opponent:undefined});
 const scene=new DuelScene(view);
@@ -285,6 +295,8 @@ async function accountChanged(value:User|null){const previousUid=user?.uid;user=
 if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitting==='true')return;void accountChanged(value);});else authScreen();
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
-window.addEventListener('pagehide',()=>{peer?.dispose();sound.dispose();});
+window.addEventListener('pagehide',()=>{peer?.dispose();gameAudioControls.dispose();sound.dispose();});
+// A cached page has already closed its peer/audio; rebuild it on back navigation.
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave','collection'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});
