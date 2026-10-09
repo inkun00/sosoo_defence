@@ -22,3 +22,4 @@ export const duelSaveResult=onCall({region:'asia-northeast3',maxInstances:10,min
 
 export {duelRoom,duelPruneRooms} from "./rooms";
 export {duelIce} from './relay';
+export {duelLeaderboard} from './leaderboard';

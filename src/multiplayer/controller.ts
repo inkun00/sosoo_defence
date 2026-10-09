@@ -19,6 +19,8 @@ import {ListedRoom} from './rooms';
 import {listRooms,roomRequest} from './room-store';
 import {Progress,WrongQuestion,emptyProgress,finishedRecord,matchExperience} from './records';
 import {loadProgress,loadHistory,loadLearningHistory,queueResult,flushResults,pendingCount} from './record-store';
+import {loadDuelLeaderboard} from './leaderboard-store';
+import {leaderboardHTML} from './leaderboard-ui';
 import {HEROES,heroesAtLevel} from './heroes';
 import {numberText,precision} from '../math';
 import {towerType} from '../towers';
@@ -66,7 +68,7 @@ observeGameScreen(game,field,layout=>{scene.setScreenLayout(layout);shopPage=Mat
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;purchasePanel.feedback(text);const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
 function refresh(){purchasePanel.sync(state?.status==='preparing'?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=DUEL_SECONDS-60?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
-function show(kind:string,html:string){dialogKind=kind;dialog.dataset.screen=kind;content.innerHTML=html;const heading=content.querySelector('h2');if(heading){heading.id||='duel-dialog-title';dialog.setAttribute('aria-labelledby',heading.id);}app.dataset.duelView=!state||['auth','lobby','computer-levels','map-select','create-room','room-password','connection','profile','history'].includes(kind)?'hall':'battle';dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
+function show(kind:string,html:string){dialogKind=kind;dialog.dataset.screen=kind;content.innerHTML=html;const heading=content.querySelector('h2');if(heading){heading.id||='duel-dialog-title';dialog.setAttribute('aria-labelledby',heading.id);}app.dataset.duelView=!state||['auth','lobby','computer-levels','map-select','create-room','room-password','connection','profile','history','leaderboard'].includes(kind)?'hall':'battle';dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
 function close(){dialogKind='';app.dataset.duelView='battle';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
 function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const labels:Record<string,string>={'auth/email-already-in-use':'이미 가입한 이메일이에요. 로그인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/weak-password':'비밀번호는 6글자 이상 적어 주세요.','auth/invalid-email':'이메일 주소를 확인해 주세요.','auth/too-many-requests':'잠시 기다렸다가 다시 로그인해 주세요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.','functions/unauthenticated':'다시 로그인해 주세요.','functions/resource-exhausted':'잠시 뒤 다시 눌러 주세요.'};return labels[code]||(e as Error)?.message||'연결을 확인하고 다시 시도해 주세요.';}
 async function send(action:DuelAction){
@@ -119,6 +121,9 @@ function lobby(){
  document.getElementById('profile-name')!.textContent=progressLoading?'계정 레벨을 불러오는 중이에요…':profileText();
  (document.getElementById('create-room') as HTMLButtonElement).disabled=progressLoading;
  document.getElementById('pending-records')!.textContent=pendingCount(user.uid)?`저장 대기 경기 ${pendingCount(user.uid)}개 · 연결되면 자동 저장해요.`:'';
+ const hallButton=document.createElement('button');hallButton.id='hall-of-fame';hallButton.textContent='명예의 전당';
+ document.getElementById('worksheet-heroes')!.insertAdjacentElement('afterend',hallButton);hallButton.parentElement!.classList.add('duel-lobby-tools');
+ bind('hall-of-fame',()=>void leaderboardScreen());
  bind('computer-mode',computerScreen);bind('worksheet-heroes',()=>rewardCollection(true));bind('duel-settings',()=>settings(true));bind('refresh-rooms',()=>loadRooms());
  bind('create-room',()=>{if(canEnterRoom())createRoomScreen();});
  bind('return-room',()=>peer?(state?.players[1]?close():connectionScreen()):status('먼저 방을 만들거나 참가해 주세요.'));
@@ -212,6 +217,21 @@ async function saveFinished(){
  const uid=user.uid,saved=await flushResults(uid);if(user?.uid!==uid)return;saveMessage=saved.message;if(saved.progress)progress=saved.progress;const e=document.getElementById('result-save');if(e)e.textContent=saveMessage;const profile=document.getElementById('profile-name');if(profile)profile.textContent=profileText();
 }
 function wrongText(q:WrongQuestion){if(![q.a,q.b,q.correct].every(n=>Number.isSafeInteger(n)&&n>=0&&n<10000&&n%10===0))return '이전 학습 범위의 오답 기록 · 새 연습 문항은 소수점 두 자리까지, 자연수 부분은 한 자리로 나와요.';const digits=Math.max(precision(q.a),precision(q.b),precision(q.correct));return `${q.kind==='tower'?'타워 구매':'돌 알 합성'}: ${numberText(q.a,digits)} ${q.operation==='-'?'−':'+'} ${numberText(q.b,digits)} = ${numberText(q.correct,digits)} · 내 답 ${q.submitted||'(비어 있음)'} · ${q.attempts}회 틀림`;}
+let leaderboardRequest=0;
+async function leaderboardScreen(){
+ const uid=user?.uid;if(!uid||auth?.currentUser?.uid!==uid){authScreen();return;}
+ const request=++leaderboardRequest;
+ const render=(html:string)=>{show('leaderboard',html);const heading=content.querySelector('h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}bind('leaderboard-back',()=>{lobby();document.getElementById('hall-of-fame')?.focus();});bind('leaderboard-refresh',()=>void leaderboardScreen());};
+ render(leaderboardHTML(undefined,'loading'));
+ try{
+  const data=await loadDuelLeaderboard(uid);
+  if(request!==leaderboardRequest||dialogKind!=='leaderboard'||user?.uid!==uid||auth?.currentUser?.uid!==uid)return;
+  render(leaderboardHTML(data,'ready'));
+ }catch(e){
+  if(request!==leaderboardRequest||dialogKind!=='leaderboard'||user?.uid!==uid)return;
+  render(leaderboardHTML(undefined,'error',errorText(e)));
+ }
+}
 async function history(){
  show('history','<h2>전적 · 오답 복습 · 최근 20경기</h2><p id="history-summary"></p><div id="history-list">경기 기록을 불러오고 있어요.</div><p data-feedback></p><button id="history-back">대기실</button>');bind('history-back',lobby);
  document.getElementById('history-summary')!.textContent=profileText();
@@ -296,5 +316,5 @@ if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitt
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pagehide',()=>{peer?.dispose();gameAudioControls.dispose();sound.dispose();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave','collection'].includes(dialogKind))close();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&dialogKind==='leaderboard')lobby();else if(e.key==='Escape'&&['heroes','leave','collection'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});
