@@ -9,7 +9,7 @@ import {onAuthStateChanged} from 'firebase/auth';
 import {auth,requestAccountLogin} from './account-gate';
 import {runAccountAction} from './page-access';
 import './game.css';
-import './collection.css';
+import './collection-styles';
 import './worksheet.css';
 const app=document.getElementById('app')!,params=new URLSearchParams(location.search);let sheet:Worksheet|null=null,busy=false;
 const accountUid=auth?.currentUser?.uid??null;let accessRevoked=false;

@@ -25,7 +25,7 @@ import {hitEquationsEnabled,setHitEquationsEnabled} from '../combat-preferences'
 import {recordLearning,importLearningRecords,LearningSample} from '../learning';
 import {loadWorkbook,ownedHeroIds,selectedWorksheetHero,selectWorksheetHero} from '../worksheet-store';
 import {collectionHTML} from '../collection-ui';
-import '../collection.css';
+import '../collection-styles';
 import '../game.css';
 import './multiplayer.css';
 import './duel-theme.css';
