@@ -1,0 +1,5 @@
+#app[data-account-gate] .duel-hall-header{top:24px}
+#app[data-account-gate] #duel-dialog{padding-top:74px}
+.duel-card .account-nav{display:block;text-align:center;text-decoration:none;padding:16px 28px;background:transparent var(--menu-art) center 40%/100% 163% no-repeat;color:#fff0d2;font-weight:700;text-shadow:0 2px 3px #000}
+.duel-card .account-home{display:block;margin-top:10px;text-align:center;font-size:13px;color:#cdbb9d}
+@media print{#app[data-account-gate]{display:none!important}}

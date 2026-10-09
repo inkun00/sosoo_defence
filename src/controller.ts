@@ -6,7 +6,6 @@ import {GameUI,Panel,UIState,Control} from './ui';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
-import {mountAudioControls} from './audio-controls';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {GAME_WIDTH,GAME_HEIGHT,FIELD_X,FIELD_Y} from './layout';
 import type {Cell} from './path';
@@ -26,7 +25,6 @@ app.innerHTML=`<main id="game-shell" aria-label="소수의 성 디펜스 게임"
 <p class="portrait-note">태블릿을 가로로 돌리면 더 크게 플레이할 수 있어요.</p>`;
 const $=(id:string)=>document.getElementById(id)!;
 const save=loadSave(),sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);let movie=false;
-const audioControls=mountAudioControls(sound,(key,enabled)=>{save[key]=enabled;writeSave(save);});
 save.started=true;
 let model=new Defense(LEVELS[save.resumeStage-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
 let selectedWall:Cell|null=null,brickPage=0,inventorySignature='';
@@ -125,10 +123,8 @@ function calculation(){
  openHTML(`<p class="eyebrow">전투 속 계산 기록</p><h2>같은 자리끼리 계산해요</h2><p>${model.level.hint}</p>${d?`<div class="help-equation">${lastHit!.message}</div><pre class="vertical-math">  ${decimal(d.before,model.level.digits).padStart(6)}\n− ${decimal(d.damage,model.level.digits).padStart(6)}\n─────────\n  ${decimal(d.after,model.level.digits).padStart(6)}</pre><p>${d.hint}</p>`:'<p>타워가 실제로 공격한 뒤 최근 공격의 계산을 이곳에서 확인할 수 있어요.</p>'}${equation?`<p class="math-record">최근 기록: ${equation}</p>`:''}<p>0.1은 0.01 열 개, 1은 0.1 열 개와 같아요.<br>0.7 = 0.70처럼 끝에 0을 붙여 생각할 수 있어요.<br>모든 소수 계산은 소수 두 자리까지만 사용해요.</p>`);
 }
 function settings(){
- openHTML(`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}/></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${save.sfx?'checked':''}/></label><label class="setting"><span>배경음</span><input id="setting-music" type="checkbox" ${save.music?'checked':''}/></label><p>설정은 같은 브라우저에 자동 저장돼요.</p>`);
+ openHTML(`<p class="eyebrow">게임 설정</p><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}/></label><p>설정은 같은 브라우저에 자동 저장돼요.</p>`);
  $('setting-hit-equations').onchange=()=>{const enabled=($('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);$('setting-equations-state').textContent=enabled?'ON':'OFF';};
- $('setting-sfx').onchange=()=>{save.sfx=($('setting-sfx') as HTMLInputElement).checked;sound.sfx=save.sfx;writeSave(save);audioControls.refresh();};
- $('setting-music').onchange=()=>{save.music=($('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(save.music);writeSave(save);audioControls.refresh();};
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){

@@ -1,8 +1,9 @@
 import {mountPurchasePanel} from './purchase-panel';
 import {artURL} from '../art';
 import Phaser from 'phaser';
-import {createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,sendPasswordResetEmail,onAuthStateChanged,User} from 'firebase/auth';
-import {auth,firebaseConfigured,firebaseEmulator} from './firebase';
+import {onAuthStateChanged,User} from 'firebase/auth';
+import {auth,firebaseEmulator} from './firebase';
+import {mountAccountForm} from '../account-form';
 import {DuelScene,DuelView} from './scene';
 import {DuelState,DuelAction,Side,validDuelCell} from './duel';
 import {HostPeer} from './peer';
@@ -17,8 +18,7 @@ import {HEROES,heroesAtLevel} from './heroes';
 import {numberText,precision} from '../math';
 import {towerType} from '../towers';
 import {Sound} from '../audio';
-import {mountAudioControls} from '../audio-controls';
-import {loadSave,writeSave} from '../save';
+import {loadSave} from '../save';
 import {hitEquationsEnabled,setHitEquationsEnabled} from '../combat-preferences';
 import {recordLearning,importLearningRecords,LearningSample} from '../learning';
 import {ownedHeroIds,selectedWorksheetHero,selectWorksheetHero} from '../worksheet-store';
@@ -32,13 +32,11 @@ const app=document.getElementById('app')!;
 app.innerHTML='<div class="duel-world" aria-hidden="true"><div class="duel-world-art"></div><div class="duel-world-shade"></div><div class="duel-world-glow"></div><div class="duel-world-embers"></div></div><header class="duel-hall-header"><a href="/?mode=title" aria-label="소수의 성 시작 화면으로">소수의 성 <span>마지막 불꽃</span></a><span class="duel-hall-tag">수호자의 결투장 · 1:1 온라인 대전</span></header><main id="game-shell"><div id="field"></div></main><div id="duel-controls" class="sr-only"></div><p id="duel-state" class="sr-only"></p><p id="duel-notice" class="sr-only" role="status" aria-live="polite"></p><div id="duel-dialog" class="modal hidden" role="dialog" aria-modal="true"><div class="duel-card"><div id="duel-content"></div></div></div>';
 const dialog=document.getElementById('duel-dialog')!,content=document.getElementById('duel-content')!,notice=document.getElementById('duel-notice')!;
 let user:User|null=null,state:DuelState|null=null,side:Side=0,room='',selectedType='',shopPage=0,slots:number[]=[],selectedTower=0,message='',busy=false,connected=true,dialogKind='',lastRound=-1;
-let peer:HostPeer|ComputerPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyProgress(),recorded='',saveMessage='',internetMode=false,progressLoading=false;
+let peer:HostPeer|ComputerPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyProgress(),recorded='',saveMessage='',progressLoading=false;
 let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRetryAt=0,roomPoll:ReturnType<typeof setTimeout>|undefined;
 let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,roomListLoaded=false,loadingRoomList=false;
 let audioStatus='',audioFlame=9000;
 const sound=new Sound();sound.sfx=loadSave().sfx;sound.setMusic(loadSave().music);
-function persistAudio(key:'music'|'sfx',enabled:boolean){const save=loadSave();save[key]=enabled;writeSave(save);}
-const audioControls=mountAudioControls(sound,persistAudio);
 document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))sound.play('ui');});
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,selectedTower,message,busy,connected,computer:peer instanceof ComputerPeer?peer.opponent:undefined});
 const scene=new DuelScene(view);
@@ -53,48 +51,41 @@ function show(kind:string,html:string){dialogKind=kind;dialog.dataset.screen=kin
 function close(){dialogKind='';app.dataset.duelView='battle';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
 function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const labels:Record<string,string>={'auth/email-already-in-use':'이미 가입한 이메일이에요. 로그인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/weak-password':'비밀번호는 6글자 이상 적어 주세요.','auth/invalid-email':'이메일 주소를 확인해 주세요.','auth/too-many-requests':'잠시 기다렸다가 다시 로그인해 주세요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.','functions/unauthenticated':'다시 로그인해 주세요.','functions/resource-exhausted':'잠시 뒤 다시 눌러 주세요.'};return labels[code]||(e as Error)?.message||'연결을 확인하고 다시 시도해 주세요.';}
 async function send(action:DuelAction){
- if(busy||!peer)return;const local=peer,p=state?.players[side],q=p?.quote;let sample:LearningSample|undefined,evidence='';
+ if(!user||auth?.currentUser?.uid!==user.uid||busy||!peer)return;const local=peer,p=state?.players[side],q=p?.quote;let sample:LearningSample|undefined,evidence='';
  if(action.type==='answer'&&q&&q.nonce===action.nonce){sample={a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'};evidence=q.nonce;}
  if(action.type==='fuse'&&p&&action.round===p.round&&action.slots.length===3&&new Set(action.slots).size===3){const [a,b]=action.slots.map(i=>p.board[i]);sample={a,b,operation:action.operation,context:'wall'};evidence=`fusion-${p.round}-${action.operation}-${a}-${b}`;}
- busy=true;refresh();try{const r=await local.send(action);if(r.ok&&sample)recordLearning(sample,'correct',local.id+':'+local.identity.uid+':'+evidence);const s=local.state,owner=s?.players[local.side];if(s&&owner)importLearningRecords([{matchId:local.id,hostUid:s.players[0].uid,guestUid:s.players[1]?.uid??'',side:local.side,wrongQuestions:owner.wrongQuestions}]);if(r.message)status(r.message);if(r.ok&&action.type==='fuse'){slots=[];sound.play('wall');}if(r.ok&&action.type==='answer')sound.play('money');return r;}catch(e){connected=false;status(errorText(e));}finally{busy=false;refresh();}
+ busy=true;refresh();try{const r=await local.send(action);if(peer!==local||auth?.currentUser?.uid!==local.identity.uid)return;if(r.ok&&sample)recordLearning(sample,'correct',local.id+':'+local.identity.uid+':'+evidence);const s=local.state,owner=s?.players[local.side];if(s&&owner)importLearningRecords([{matchId:local.id,hostUid:s.players[0].uid,guestUid:s.players[1]?.uid??'',side:local.side,wrongQuestions:owner.wrongQuestions}]);if(r.message)status(r.message);if(r.ok&&action.type==='fuse'){slots=[];sound.play('wall');}if(r.ok&&action.type==='answer')sound.play('money');return r;}catch(e){connected=false;status(errorText(e));}finally{busy=false;refresh();}
 }
 function back(){const url=new URL(location.href);url.searchParams.set('mode','adventure');url.searchParams.delete('emulator');location.assign(url.href);}
 function bind(id:string,fn:()=>unknown){document.getElementById(id)?.addEventListener('click',fn);}
 function settings(fromLobby=false,fromComputer=false){
- show('settings',`<p class="eyebrow">게임 설정</p><h2>내가 편한 화면과 소리로</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>효과음</span><input id="setting-sfx" type="checkbox" ${sound.sfx?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
+ show('settings',`<h2>게임 설정</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
  document.getElementById('setting-hit-equations')!.onchange=()=>{const enabled=(document.getElementById('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);document.getElementById('setting-equations-state')!.textContent=enabled?'ON':'OFF';};
- document.getElementById('setting-sfx')!.onchange=()=>{sound.sfx=(document.getElementById('setting-sfx') as HTMLInputElement).checked;persistAudio('sfx',sound.sfx);audioControls.refresh();};
- const musicLabel=document.createElement('label');musicLabel.className='setting';musicLabel.innerHTML=`<span>배경음</span><input id="setting-music" type="checkbox" role="switch" ${sound.music?'checked':''}>`;document.getElementById('setting-sfx')!.closest('label')!.after(musicLabel);
- document.getElementById('setting-music')!.onchange=()=>{const enabled=(document.getElementById('setting-music') as HTMLInputElement).checked;sound.resume();sound.setMusic(enabled);persistAudio('music',enabled);audioControls.refresh();};
  bind('settings-back',()=>fromComputer?computerScreen():fromLobby?lobby():close());
 }
 function authScreen(mode:'login'|'register'='login'){
- const enabled=firebaseConfigured;show('auth',`<section class="duel-auth-form"><p class="eyebrow">수호자의 결투장${firebaseEmulator?' · 로컬 테스트':''}</p><h2>${mode==='register'?'나만의 수호자 계정':'수호자 로그인'}</h2><p class="duel-intro">${mode==='register'?'이름을 정하고 새로운 여정을 시작하세요.':'계정으로 접속해 친구의 결투장에 입장하세요.'}</p>${enabled?'':'<p class="duel-warning">온라인 대전은 준비 중이에요.<br>혼자 모험과 컴퓨터 대결을 즐길 수 있어요.</p>'}<form id="auth-form">${mode==='register'?'<label>수호자 이름<input name="nickname" minlength="2" maxlength="16" required autocomplete="nickname" placeholder="게임에서 사용할 이름"></label>':''}<label>이메일<input type="email" name="email" required autocomplete="email" placeholder="이메일 주소"></label><label>비밀번호<input type="password" name="password" minlength="6" required autocomplete="${mode==='register'?'new-password':'current-password'}" placeholder="6글자 이상"></label><p data-feedback role="status"></p><button class="duel-primary" ${enabled?'':'disabled'}>${mode==='register'?'회원가입':'결투장 입장'}</button></form><div class="duel-auth-links"><button id="switch-auth">${mode==='register'?'이미 계정이 있어요':'회원가입'}</button><button id="reset-password" ${enabled?'':'disabled'}>비밀번호 찾기</button></div><button class="duel-primary duel-computer-entry" id="computer-mode">컴퓨터와 대결</button><p class="duel-computer-hint">로그인 없이 10명의 상대와 연습할 수 있어요.</p><button class="duel-adventure" id="single">혼자 모험하기</button></section>`);
- bind('switch-auth',()=>authScreen(mode==='login'?'register':'login'));bind('single',back);bind('computer-mode',computerScreen);
- content.querySelector<HTMLFormElement>('#auth-form')!.onsubmit=async e=>{e.preventDefault();if(!auth)return;const form=new FormData(e.target as HTMLFormElement),button=content.querySelector<HTMLButtonElement>('form button')!;button.disabled=true;try{
-  const credential=mode==='register'?await createUserWithEmailAndPassword(auth,String(form.get('email')),String(form.get('password'))):await signInWithEmailAndPassword(auth,String(form.get('email')),String(form.get('password')));
-  if(mode==='register'){await updateProfile(credential.user,{displayName:String(form.get('nickname')).trim()});await credential.user.getIdToken(true);}user=credential.user;lobby();
- }catch(e){status(errorText(e));button.disabled=false;}};
- bind('reset-password',async()=>{const email=content.querySelector<HTMLInputElement>('[name=email]')!.value;if(!email||!auth){status('이메일을 먼저 적어 주세요.');return;}try{await sendPasswordResetEmail(auth,email);status('비밀번호 재설정 안내를 요청했어요. 이메일을 확인해 주세요.');}catch(e){status(errorText(e));}});
+ show('auth','');mountAccountForm(content,'duel',value=>void accountChanged(value),mode);dialog.setAttribute('aria-labelledby','account-heading');
 }
 function disposeRoom(){clearTimeout(roomPoll);roomPoll=undefined;const id=listingId,claim=listingClaim,hosting=peer?.side===0;if(id)void roomRequest({action:hosting?'close':'release',id,claim}).catch(()=>{});listingId='';listingClaim='';listingExpires=0;listingClosing=false;listingRetryAt=0;peer?.dispose();peer=null;state=null;room='';offerCode='';answerCode='';recorded='';lastRound=-1;}
 function profileText(){return `${user?.displayName||'수호자'} · 계정 Lv.${progress.level} · ${progress.wins}승 ${progress.losses}패 · 경험치 ${progress.experience}${firebaseEmulator?' · 테스트 계정':''}`;}
 function computerScreen(){
+ if(!user||auth?.currentUser?.uid!==user.uid){disposeRoom();authScreen();return;}
  if(peer instanceof HostPeer&&state?.status==='playing'){status('온라인 대전을 마친 뒤 컴퓨터와 대결할 수 있어요.');return;}
  const saved=loadComputerProgress(),current=peer instanceof ComputerPeer&&state?.status!=='finished';
- show('computer-levels',`<p class="eyebrow">컴퓨터와 대결 · 로그인 없이 플레이</p><h2>겨룰 상대를 선택하세요</h2><p class="duel-intro">상대 레벨이 높을수록 계산과 전략이 어려워져요. 두 사람에게 같은 코인과 규칙이 적용돼요.</p><div class="computer-opponent-grid">${COMPUTER_OPPONENTS.map(o=>`<button class="computer-opponent-card" data-computer-level="${o.level}"><span class="computer-opponent-portrait" style="background-image:url('${artURL('cpu-opponent-'+o.level+'-v1')}')" aria-hidden="true"></span><span class="computer-opponent-level">Lv.${o.level} · ${saved.wins[o.level-1]?'승리 '+saved.wins[o.level-1]+'회':'도전하기'}</span><strong>${o.name}</strong><span class="computer-opponent-title">${o.title}</span><small>${o.description}</small></button>`).join('')}</div><p class="computer-progress-note">컴퓨터 대전 결과는 이 브라우저에만 저장돼요. 온라인 계정의 승패와 경험치에는 포함되지 않아요.${current?' 새 상대를 고르면 현재 연습 대전은 끝나요.':''}</p><p data-feedback role="status"></p><div class="duel-row">${current?'<button class="duel-primary" id="computer-continue">현재 대전 계속하기</button>':''}<button id="computer-back">${user?'온라인 대기실':'로그인 화면'}</button><button id="computer-settings">게임 설정</button></div>`);
+ show('computer-levels',`<p class="eyebrow">컴퓨터와 대결 · 수호자 연습</p><h2>겨룰 상대를 선택하세요</h2><p class="duel-intro">상대 레벨이 높을수록 계산과 전략이 어려워져요. 두 사람에게 같은 코인과 규칙이 적용돼요.</p><div class="computer-opponent-grid">${COMPUTER_OPPONENTS.map(o=>`<button class="computer-opponent-card" data-computer-level="${o.level}"><span class="computer-opponent-portrait" style="background-image:url('${artURL('cpu-opponent-'+o.level+'-v1')}')" aria-hidden="true"></span><span class="computer-opponent-level">Lv.${o.level} · ${saved.wins[o.level-1]?'승리 '+saved.wins[o.level-1]+'회':'도전하기'}</span><strong>${o.name}</strong><span class="computer-opponent-title">${o.title}</span><small>${o.description}</small></button>`).join('')}</div><p class="computer-progress-note">컴퓨터 대전 결과는 이 브라우저에만 저장돼요. 온라인 계정의 승패와 경험치에는 포함되지 않아요.${current?' 새 상대를 고르면 현재 연습 대전은 끝나요.':''}</p><p data-feedback role="status"></p><div class="duel-row">${current?'<button class="duel-primary" id="computer-continue">현재 대전 계속하기</button>':''}<button id="computer-back">온라인 대기실</button><button id="computer-settings">게임 설정</button></div>`);
  content.querySelectorAll<HTMLButtonElement>('[data-computer-level]').forEach(button=>button.onclick=()=>startComputer(Number(button.dataset.computerLevel)));
  bind('computer-continue',close);bind('computer-back',async()=>{if(current&&state?.status==='playing'){await send({type:'surrender'});await saveFinished();}disposeRoom();lobby();});bind('computer-settings',()=>settings(true,true));
 }
 function startComputer(level:number){
+ if(!user||auth?.currentUser?.uid!==user.uid){disposeRoom();authScreen();return;}
  if(peer instanceof HostPeer&&state?.status==='playing')return;
- disposeRoom();sound.resume();const local=new ComputerPeer({uid:user?.uid??'local-guardian',name:(user?.displayName||'나의 수호자').slice(0,16),rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},level);
+ disposeRoom();sound.resume();const local=new ComputerPeer({uid:user.uid,name:(user.displayName||'나의 수호자').slice(0,16),rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},level);
  peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='준비하기 전에 타워를 설치해 불꽃을 지킬 전략을 세워요.';lastRound=0;
  local.onState=(s,c)=>{if(peer!==local)return;state=s;connected=c;const p=s.players[0];if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();if(s.status==='finished'&&recorded!==local.id){void saveFinished();result();}};
  close();
 }
 function lobby(){
- if(!user){authScreen();return;}
+ if(!user||auth?.currentUser?.uid!==user.uid){authScreen();return;}
  show('lobby',`<p class="eyebrow">소수로 겨루는 1:1 · 방 목록</p><h2>수호자의 대기실</h2><p id="profile-name"></p><p>두 사람 중 낮은 계정 레벨로 같은 문제를 풀어요. 방 목록에서 친구를 찾아 참가해요!</p><div class="duel-row"><button class="duel-primary" id="create-room">방 만들기</button><button class="duel-primary" id="computer-mode">컴퓨터와 대결</button><button id="return-room">현재 방 돌아가기</button><button id="close-current-room">현재 방 닫기</button></div><section class="room-directory"><div class="duel-row"><h3>입장할 수 있는 방</h3><button id="refresh-rooms">목록 새로고침</button></div><div id="room-list" role="region" aria-label="생성된 방 목록">방 목록을 불러오는 중이에요.</div><p class="room-note">새 방은 목록 새로고침을 눌러 확인해요. 만든 뒤 5분이 지난 방은 화면에서도 사라져요.</p></section><p data-feedback role="status"></p><p>방 목록과 비밀번호 확인은 중앙 서버가 맡고, 전투는 방을 만든 친구의 컴퓨터에서 진행돼요. 호스트는 창을 열어 두세요.</p><div class="duel-row"><button id="duel-settings">게임 설정</button><button id="heroes-book">영웅 30종 도감</button><button id="worksheet-heroes">학습지 영웅 선택</button></div><p id="pending-records"></p>`);
  document.getElementById('profile-name')!.textContent=progressLoading?'계정 레벨을 불러오는 중이에요…':profileText();
  (document.getElementById('create-room') as HTMLButtonElement).disabled=progressLoading;
@@ -122,18 +113,18 @@ function renderRooms(){
 }
 setInterval(()=>{if(dialogKind==='lobby'&&user)renderRooms();},1000);
 function createRoomScreen(){
- show('create-room',`<p class="eyebrow">친구와 함께 지키는 불꽃</p><h2>방 만들기</h2><form id="create-room-form"><label>방 이름<input name="title" minlength="2" maxlength="24" required autocomplete="off"></label><label>입장 방식<select id="room-access" name="access"><option value="public">공개방 · 누구나 입장</option><option value="password">비밀번호 방 · 아는 친구만 입장</option></select></label><label id="room-password-label" hidden>방 비밀번호<input name="password" type="password" minlength="4" maxlength="32" autocomplete="new-password" placeholder="4~32글자"></label><label class="setting"><span>서로 다른 인터넷 · 주소 찾기 보조(STUN)<small>같은 Wi-Fi/LAN에서 기본으로 직접 연결해요.</small></span><input id="internet-mode" type="checkbox" ${internetMode?'checked':''}></label><p>게임 시작 또는 생성 후 5분이 지나면 목록에서 사라져요.</p><p data-feedback role="status"></p><div class="duel-row"><button type="button" id="create-back">대기실로</button><button class="duel-primary" id="publish-room">방 생성</button></div></form>`);
+ show('create-room',`<p class="eyebrow">친구와 함께 지키는 불꽃</p><h2>방 만들기</h2><form id="create-room-form"><label>방 이름<input name="title" minlength="2" maxlength="24" required autocomplete="off"></label><label>입장 방식<select id="room-access" name="access"><option value="public">공개방 · 누구나 입장</option><option value="password">비밀번호 방 · 아는 친구만 입장</option></select></label><label id="room-password-label" hidden>방 비밀번호<input name="password" type="password" minlength="4" maxlength="32" autocomplete="new-password" placeholder="4~32글자"></label><p>게임 시작 또는 생성 후 5분이 지나면 목록에서 사라져요.</p><p data-feedback role="status"></p><div class="duel-row"><button type="button" id="create-back">대기실로</button><button class="duel-primary" id="publish-room">방 생성</button></div></form>`);
  (content.querySelector('[name=title]') as HTMLInputElement).value=(user?.displayName||'수호자')+'의 방';
  const password=content.querySelector<HTMLInputElement>('[name=password]')!;document.getElementById('room-access')!.onchange=()=>{const locked=(document.getElementById('room-access') as HTMLSelectElement).value==='password';document.getElementById('room-password-label')!.hidden=!locked;password.required=locked;if(!locked)password.value='';};bind('create-back',()=>{if(!busy)lobby();});
  content.querySelector<HTMLFormElement>('#create-room-form')!.onsubmit=async e=>{e.preventDefault();if(!canEnterRoom())return;const data=new FormData(e.target as HTMLFormElement);busy=true;(document.getElementById('publish-room') as HTMLButtonElement).disabled=true;
- try{internetMode=(document.getElementById('internet-mode') as HTMLInputElement).checked;const local=startPeer();offerCode=await local.create();const result=await roomRequest<{room:ListedRoom;now:number}>({action:'create',id:local.id,offer:offerCode,title:String(data.get('title')),access:String(data.get('access')),password:String(data.get('password')||''),internet:internetMode});if(peer!==local)return;serverOffset=result.now-Date.now();listingId=local.id;listingExpires=result.room.expiresAt;connectionScreen();watchRoom(local);}
+ try{const local=startPeer();offerCode=await local.create();const result=await roomRequest<{room:ListedRoom;now:number}>({action:'create',id:local.id,offer:offerCode,title:String(data.get('title')),access:String(data.get('access')),password:String(data.get('password')||''),internet:true});if(peer!==local)return;serverOffset=result.now-Date.now();listingId=local.id;listingExpires=result.room.expiresAt;connectionScreen();watchRoom(local);}
  catch(e){disposeRoom();status(errorText(e));}finally{busy=false;const button=document.getElementById('publish-room') as HTMLButtonElement|null;if(button)button.disabled=false;refresh();}};
 }
 function passwordRoomScreen(row:ListedRoom){
  show('room-password','<p class="eyebrow">비밀번호 방</p><h2 id="password-room-name"></h2><form id="room-password-form"><label>방 비밀번호<input name="room-password" type="password" required maxlength="32" autocomplete="off"></label><p data-feedback role="status"></p><div class="duel-row"><button type="button" id="password-back">방 목록으로</button><button class="duel-primary">입장하기</button></div></form>');document.getElementById('password-room-name')!.textContent=row.title;bind('password-back',()=>{if(!busy)lobby();});content.querySelector<HTMLFormElement>('form')!.onsubmit=e=>{e.preventDefault();void joinListedRoom(row,String(new FormData(e.target as HTMLFormElement).get('room-password')));};
 }
 async function joinListedRoom(row:ListedRoom,password:string){
- if(!canEnterRoom())return;busy=true;try{const joined=await roomRequest<{offer:string;claim:string;internet:boolean;expiresAt:number}>({action:'join',id:row.id,password});internetMode=joined.internet;const local=startPeer();listingId=row.id;listingClaim=joined.claim;listingExpires=joined.expiresAt;answerCode=await local.join(joined.offer);side=1;room=local.id.slice(0,8).toUpperCase();await roomRequest({action:'answer',id:row.id,claim:listingClaim,answer:answerCode});if(peer!==local)return;connectionScreen();watchRoom(local);}
+ if(!canEnterRoom())return;busy=true;try{const joined=await roomRequest<{offer:string;claim:string;internet:boolean;expiresAt:number}>({action:'join',id:row.id,password});const local=startPeer();listingId=row.id;listingClaim=joined.claim;listingExpires=joined.expiresAt;answerCode=await local.join(joined.offer);side=1;room=local.id.slice(0,8).toUpperCase();await roomRequest({action:'answer',id:row.id,claim:listingClaim,answer:answerCode});if(peer!==local)return;connectionScreen();watchRoom(local);}
  catch(e){if(listingId)disposeRoom();status(errorText(e));}finally{busy=false;refresh();}
 }
 function connectionScreen(){
@@ -155,12 +146,12 @@ function watchRoom(local:HostPeer){
   if(connected){if(local.side===0&&!connectedAck&&listingId){await roomRequest({action:'connected',id:listingId});connectedAck=true;}watching=false;clearTimeout(roomPoll);roomPoll=undefined;return;}
   if(Date.now()+serverOffset>=listingExpires)throw Error('방을 만든 뒤 5분이 지나 목록에서 사라졌어요. 새 방을 만들어 주세요.');
   if(local.side===0&&!accepted){const result=await roomRequest<{answer:string;guestUid:string}>({action:'poll',id:listingId});if(result.answer){local.allowedGuestUid=result.guestUid;accepted=true;acceptedAt=Date.now();await local.accept(result.answer);}}
-  if(local.side===1&&Date.now()-enteredAt>25000||accepted&&Date.now()-acceptedAt>20000)throw Error('호스트에 직접 연결하지 못했어요. 같은 Wi-Fi인지 확인하고 새 방을 만들어 주세요.');
+  if(local.side===1&&Date.now()-enteredAt>25000||accepted&&Date.now()-acceptedAt>20000)throw Error('호스트에 연결하지 못했어요. 두 사람의 인터넷 연결을 확인하고 새 방으로 다시 시도해 주세요.');
  }catch(e){if(peer===local){if(local.connected&&local.state?.players[1]){watching=false;clearTimeout(roomPoll);roomPoll=undefined;return;}watching=false;disposeRoom();lobby();status(errorText(e));}}finally{polling=false;if(watching&&peer===local)roomPoll=setTimeout(()=>void poll(),Date.now()-enteredAt<60000?5000:10000);}};
  void poll();
 }
 function startPeer(){
- disposeRoom();const local=new HostPeer({uid:user!.uid,name:(user!.displayName||'수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},internetMode);peer=local;slots=[];selectedType='';selectedTower=0;
+ disposeRoom();const local=new HostPeer({uid:user!.uid,name:(user!.displayName||'수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()});peer=local;slots=[];selectedType='';selectedTower=0;
  local.onStatus=status;local.onState=(s,c)=>{if(peer!==local)return;state=s;side=local.side;room=local.id.slice(0,8).toUpperCase();connected=c;const p=s.players[side]!;if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();
   if(s.status==='playing'||s.status==='finished'){if(local.side===0&&listingId)void closeListing();}
   if(s.status==='finished'){if(recorded!==local.id){void saveFinished();result();}return;}
@@ -169,6 +160,7 @@ function startPeer(){
  return local;
 }
 async function saveFinished(){
+ if(!user||auth?.currentUser?.uid!==user.uid)return;
  if(state?.status==='finished'&&peer instanceof ComputerPeer){
   const local=peer;if(recorded!==local.id){recorded=local.id;recordComputerResult(local.definition.level,state.winner===side);importLearningRecords([{matchId:local.id,hostUid:state.players[0].uid,guestUid:state.players[1]!.uid,side,wrongQuestions:state.players[side]!.wrongQuestions}]);}
   saveMessage='컴퓨터 대전 결과를 이 브라우저에 보관했어요. 온라인 전적은 바뀌지 않아요.';return;
@@ -227,7 +219,8 @@ scene.onAction=async key=>{sound.resume();sound.play('ui');
 };
 let controlsSignature='';
 scene.onControls=()=>{if(scene.input)scene.input.enabled=dialog.classList.contains('hidden');const p=state?.players[side];document.getElementById('duel-state')!.textContent=state&&p?`방 ${room} · ${state.status} · 내 불꽃 ${numberText(p.flame)} · 코인 ${numberText(p.money)} · 학습 Lv.${state.learningLevel??1} ${learningDescription(state.learningLevel??1)} · 영웅 알 Lv.${p.egg} · 영웅 ${state.enemies.filter(e=>e.hero).length}마리 · ${state.log.at(-1)||''}`:'대전 대기실';const container=document.getElementById('duel-controls')!;const signature=JSON.stringify([dialog.classList.contains('hidden'),[...scene.controls].map(([key,c])=>[key,c.label,c.enabled])]);if(signature===controlsSignature)return;controlsSignature=signature;container.replaceChildren();if(!dialog.classList.contains('hidden'))return;for(const [key,c]of scene.controls){const b=document.createElement('button');b.type='button';b.dataset.duelAction=key;b.textContent=c.label;b.disabled=!c.enabled;b.onclick=c.run;container.append(b);}};
-if(auth)onAuthStateChanged(auth,async value=>{user=value;progressLoading=!!value;if(!value){progress=emptyProgress();if(peer instanceof ComputerPeer)return;disposeRoom();authScreen();return;}if(!(peer instanceof ComputerPeer))lobby();try{const loaded=await loadProgress(value.uid);if(user?.uid!==value.uid)return;progress=loaded;const saved=await flushResults(value.uid);if(user?.uid!==value.uid)return;if(saved.progress)progress=saved.progress;const oldMatches=await loadLearningHistory(value.uid);if(user?.uid===value.uid)importLearningRecords(oldMatches);}catch(e){status(errorText(e));}finally{if(user?.uid===value.uid){progressLoading=false;if(dialogKind==='lobby')lobby();}}});else authScreen();
+async function accountChanged(value:User|null){const previousUid=user?.uid;user=value;progressLoading=!!value;if(!value){progress=emptyProgress();disposeRoom();authScreen();return;}if(previousUid&&previousUid!==value.uid)disposeRoom();if(!(peer instanceof ComputerPeer))lobby();try{const loaded=await loadProgress(value.uid);if(user?.uid!==value.uid)return;progress=loaded;const saved=await flushResults(value.uid);if(user?.uid!==value.uid)return;if(saved.progress)progress=saved.progress;const oldMatches=await loadLearningHistory(value.uid);if(user?.uid===value.uid)importLearningRecords(oldMatches);}catch(e){status(errorText(e));}finally{if(user?.uid===value.uid){progressLoading=false;if(dialogKind==='lobby')lobby();}}}
+if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitting==='true')return;void accountChanged(value);});else authScreen();
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state?.status==='playing'){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pagehide',()=>{peer?.dispose();sound.dispose();});

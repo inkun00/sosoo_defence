@@ -1,5 +1,6 @@
 import {createDuel,joinDuel,applyDuel,advanceDuel,DuelState,DuelAction,Side} from './duel';
 import {heroSpec} from './heroes';
+import {peerConfiguration,gatherPeerCandidates} from './peer-network';
 export interface PeerIdentity{uid:string;name:string;accountLevel?:number;rewardHeroes?:string[];rewardHero?:string|null;}
 export interface Reply{ok:boolean;message:string;}
 interface Invitation{v:1;kind:'offer'|'answer';id:string;host:PeerIdentity;sdp:RTCSessionDescriptionInit;}
@@ -12,29 +13,22 @@ function decode(code:string,kind:Invitation['kind']){
  if(v.v!==1||v.kind!==kind||!/^[a-f0-9-]{36}$/.test(v.id)||!validIdentity(v.host)||v.sdp?.type!==kind||typeof v.sdp.sdp!=='string'||v.sdp.sdp.length>16000)throw Error('다른 종류의 접속 코드예요.');return v;
 }
 export function validIdentity(i:PeerIdentity){return !!i&&typeof i.uid==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(i.uid)&&typeof i.name==='string'&&i.name.length>0&&i.name.length<=16&&(i.accountLevel===undefined||Number.isSafeInteger(i.accountLevel)&&i.accountLevel>=1&&i.accountLevel<=1000000)&&(i.rewardHeroes===undefined||Array.isArray(i.rewardHeroes)&&i.rewardHeroes.length<=30&&new Set(i.rewardHeroes).size===i.rewardHeroes.length&&i.rewardHeroes.every(id=>typeof id==='string'&&!!heroSpec(id)))&&(i.rewardHero===undefined||i.rewardHero===null||typeof i.rewardHero==='string'&&!!heroSpec(i.rewardHero)&&!!i.rewardHeroes?.includes(i.rewardHero));}
-function iceComplete(pc:RTCPeerConnection):Promise<void>{return new Promise((resolve,reject)=>{
- if(pc.iceGatheringState==='complete'){resolve();return;}
- const timer=setTimeout(()=>{clean();reject(Error('접속 주소 수집 시간이 지났어요. 같은 네트워크인지 확인하고 새 코드를 만드세요.'));},15000);
- const change=()=>{if(pc.iceGatheringState==='complete'){clean();resolve();}};
- const clean=()=>{clearTimeout(timer);pc.removeEventListener('icegatheringstatechange',change);};pc.addEventListener('icegatheringstatechange',change);
- });}
 export class HostPeer {
  readonly pc:RTCPeerConnection;channel:RTCDataChannel|null=null;state:DuelState|null=null;side:Side=0;id='';host:PeerIdentity;connected=false;
  // Directory connections accept only the account reserved by the server.
  allowedGuestUid:string|null=null;
  onState:(s:DuelState,connected:boolean)=>void=()=>{};onStatus:(m:string)=>void=()=>{};
  private tick:ReturnType<typeof setInterval>;private disposed=false;private started=Date.now();private monotonic=performance.now();private guest:PeerIdentity|null=null;private disconnectedAt=0;private lastPing=0;private lastSnapshot=0;private pending=new Map<string,{resolve:(r:Reply)=>void;timer:ReturnType<typeof setTimeout>}>();private replies=new Map<string,Reply>();private accepted=false;private announced=false;
- constructor(readonly identity:PeerIdentity,internet=false){
+ constructor(readonly identity:PeerIdentity){
   this.host=identity;
-  // Optional STUN discovers an address; no TURN or relay is configured.
-  this.pc=new RTCPeerConnection({iceServers:internet?[{urls:'stun:stun.l.google.com:19302'}]:[]});
+  this.pc=new RTCPeerConnection(peerConfiguration());
   this.pc.ondatachannel=e=>{if(this.channel){e.channel.close();return;}this.attach(e.channel);};
   this.pc.onconnectionstatechange=()=>{if(['failed','disconnected','closed'].includes(this.pc.connectionState))this.lost();};
   this.tick=setInterval(()=>this.step(),100);
  }
  private now(){return this.started+performance.now()-this.monotonic;}
- async create(){this.side=0;this.id=randomId();this.state=createDuel(this.identity.uid,this.identity.name,crypto.getRandomValues(new Uint32Array(1))[0],this.now(),this.identity.accountLevel??1,this.identity);this.attach(this.pc.createDataChannel('decimal-duel',{ordered:true}));await this.pc.setLocalDescription(await this.pc.createOffer());await iceComplete(this.pc);this.emit();return encode({v:1,kind:'offer',id:this.id,host:this.identity,sdp:this.pc.localDescription!.toJSON()});}
- async join(code:string){const v=decode(code,'offer');if(v.host.uid===this.identity.uid)throw Error('서로 다른 계정으로 참가해 주세요.');this.side=1;this.id=v.id;this.host=v.host;await this.pc.setRemoteDescription(v.sdp);await this.pc.setLocalDescription(await this.pc.createAnswer());await iceComplete(this.pc);return encode({v:1,kind:'answer',id:this.id,host:v.host,sdp:this.pc.localDescription!.toJSON()});}
+ async create(){this.side=0;this.id=randomId();this.state=createDuel(this.identity.uid,this.identity.name,crypto.getRandomValues(new Uint32Array(1))[0],this.now(),this.identity.accountLevel??1,this.identity);this.attach(this.pc.createDataChannel('decimal-duel',{ordered:true}));await this.pc.setLocalDescription(await this.pc.createOffer());await gatherPeerCandidates(this.pc);this.emit();return encode({v:1,kind:'offer',id:this.id,host:this.identity,sdp:this.pc.localDescription!.toJSON()});}
+ async join(code:string){const v=decode(code,'offer');if(v.host.uid===this.identity.uid)throw Error('서로 다른 계정으로 참가해 주세요.');this.side=1;this.id=v.id;this.host=v.host;await this.pc.setRemoteDescription(v.sdp);await this.pc.setLocalDescription(await this.pc.createAnswer());await gatherPeerCandidates(this.pc);return encode({v:1,kind:'answer',id:this.id,host:v.host,sdp:this.pc.localDescription!.toJSON()});}
  async accept(code:string){if(this.side!==0||this.accepted)throw Error('이미 참가자를 연결했어요. 두 명까지만 대전할 수 있어요.');const v=decode(code,'answer');if(v.id!==this.id||v.host.uid!==this.identity.uid)throw Error('이 방의 응답 코드가 아니에요.');await this.pc.setRemoteDescription(v.sdp);this.accepted=true;}
  private attach(channel:RTCDataChannel){this.channel=channel;channel.onopen=()=>{this.connected=true;this.disconnectedAt=0;this.lastSnapshot=this.now();if(this.side===1)this.write({kind:'hello',id:this.id,identity:this.identity});this.emit();};channel.onclose=()=>this.lost();channel.onerror=()=>this.lost();channel.onmessage=e=>{
   if(typeof e.data!=='string'||e.data.length>(this.side===0?4096:800000)){channel.close();return;}

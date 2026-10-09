@@ -195,7 +195,7 @@ export class GameUI extends Phaser.Scene{
  }
  private drawMenu(){
   this.modalFrame('소수의 성 메뉴',540,660);
-  [['home','시작 화면'],['levels','모험 지도'],['help','게임 방법'],['settings','화면 · 효과음 · 배경음'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,640,218+i*68,390,62,label,true,id==='online'?'button_red':'button_brown',23));
+  [['home','시작 화면'],['levels','모험 지도'],['help','게임 방법'],['settings','게임 설정'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,640,218+i*68,390,62,label,true,id==='online'?'button_red':'button_brown',23));
  }
  private drawPurchase(){
   const s=this.getState(),q=s.model.pendingPurchase;if(!q)return;const t=towerType(q.typeId)!;
