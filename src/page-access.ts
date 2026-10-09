@@ -1,10 +1,10 @@
-export type PageMode='title'|'adventure'|'duel'|'worksheet';
+export type PageMode='title'|'adventure'|'tutorial'|'duel'|'worksheet';
 export type ProtectedPageMode=Extract<PageMode,'duel'|'worksheet'>;
 export interface PageRequest{mode:PageMode;search:string;}
 export interface AccountSession{currentUser:unknown|null;authStateReady():Promise<void>;}
 export function pageRequest(search:string):PageRequest{
  const mode=new URLSearchParams(search).get('mode');
- return {mode:mode==='adventure'||mode==='duel'||mode==='worksheet'?mode:'title',search};
+ return {mode:mode==='adventure'||mode==='tutorial'||mode==='duel'||mode==='worksheet'?mode:'title',search};
 }
 export function requiresAccount(mode:PageMode):mode is ProtectedPageMode{return mode==='duel'||mode==='worksheet';}
 // Keep the request in memory while login is displayed. There is no URL or

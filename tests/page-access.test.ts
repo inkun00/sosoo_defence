@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {AccountSession,PageRequest,pageRequest,openAuthorizedPage,requiresAccount,runAccountAction} from '../src/page-access';
 function pending<T=void>(){let resolve!:(value:T|PromiseLike<T>)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve};}
 test('title and adventure load without initializing Firebase or showing login',async()=>{
- for(const search of ['', '?mode=title','?mode=adventure','?mode=https://example.com']){
+ for(const search of ['', '?mode=title','?mode=adventure','?mode=tutorial','?mode=https://example.com']){
   const request=pageRequest(search),loaded:PageRequest[]=[];
   assert.equal(await openAuthorizedPage(request,{session:async()=>{throw Error('public route must not initialize auth');},login:async()=>{throw Error('public route must not show login');},load:async value=>loaded.push(value)}),true);
   assert.deepEqual(loaded,[request]);assert.equal(requiresAccount(request.mode),false);

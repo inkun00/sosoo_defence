@@ -30,6 +30,7 @@ export class Field extends Phaser.Scene{
  onWallPlace:(c:Cell)=>void=()=>{};
  private wallGhost?:Phaser.GameObjects.Image;private wallGhostLabel?:Phaser.GameObjects.Text;
  onPurchase:(c:Cell,typeId:string)=>void=()=>{};
+ beforeCellAction:(c:Cell)=>boolean=()=>true;
  private reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private battleEffects=new Set<Phaser.GameObjects.GameObject>();private lastShakeTime=0;
  private hitEquations?:HitEquationPopups;private shotSequence=0;
@@ -66,6 +67,7 @@ export class Field extends Phaser.Scene{
  worldToScreen(x:number,y:number){const c=this.cameras.main;return {x:c.x+c.width/2+(x-FIELD_WIDTH/2)*c.zoom,y:c.y+c.height/2+(y-FIELD_HEIGHT/2)*c.zoom};}
  private inField(p:Phaser.Input.Pointer){const c=this.cameras.main;return p.x>=c.x&&p.x<c.x+c.width&&p.y>=c.y&&p.y<c.y+c.height;}
  actCell(c:Cell){
+  if(!this.beforeCellAction(c))return;
    if(!this.input.enabled||c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
    if(this.mode.kind==='wall'){this.onWallPlace(c);this.flush();this.onChange();return;}
    const t=this.model.towers.find(t=>t.x===c.x&&t.y===c.y);

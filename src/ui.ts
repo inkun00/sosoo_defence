@@ -71,7 +71,10 @@ export class GameUI extends Phaser.Scene{
   const c=this.add.container(x,y);group.add(c);const f=this.frame(c,0,0,w,h,tone);const labelText=this.centerLabel(this.fitText(this.text(c,0,0,label,size,tone==='button_red'?'#fff4d4':C.ink).setOrigin(.5),w-24,h-20));
   const zone=this.add.zone(0,0,w,h).setInteractive({useHandCursor:true});c.add(zone);if(!enabled){c.setAlpha(.55);zone.disableInteractive();}
   const run=()=>{if(enabled)this.onAction(key);};
-  zone.on('pointerover',()=>{if(enabled)f.setTint(0xffdf91);}).on('pointerout',()=>{f.clearTint();c.setScale(1);}).on('pointerdown',()=>{if(enabled)c.setScale(.96);}).on('pointerup',()=>{c.setScale(1);run();});
+  // A popup can appear between a field press and release. Only the button
+  // that received the press may act on that release.
+  let pressed=false;
+  zone.on('pointerover',()=>{if(enabled)f.setTint(0xffdf91);}).on('pointerout',()=>{pressed=false;f.clearTint();c.setScale(1);}).on('pointerdown',()=>{if(enabled){pressed=true;c.setScale(.96);}}).on('pointerup',()=>{const activate=pressed;pressed=false;c.setScale(1);if(activate)run();});
   this.controls.set(key,{label,x,y,w,h,enabled,run});this.controlViews.set(key,c);return {container:c,label:labelText,frame:f};
  }
  private clear(group:Phaser.GameObjects.Container){
@@ -328,10 +331,10 @@ export class GameUI extends Phaser.Scene{
  private drawMenu(){
   if(this.screenLayout?.compact){
    this.compactModalFrame('소수의 성 메뉴');
-   [['home','시작 화면'],['levels','모험 지도'],['help','게임 방법'],['popup-calculation','계산 도움말'],['settings','게임 설정'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,i%2?920:360,145+Math.floor(i/2)*108,460,84,label,true,id==='online'?'button_red':'button_brown',25));return;
+   [['home','시작 화면'],['levels','모험 지도'],['tutorial','튜토리얼'],['popup-calculation','계산 도움말'],['settings','게임 설정'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,i%2?920:360,145+Math.floor(i/2)*108,460,84,label,true,id==='online'?'button_red':'button_brown',25));return;
   }
   this.modalFrame('소수의 성 메뉴',540,660);
-  [['home','시작 화면'],['levels','모험 지도'],['help','게임 방법'],['settings','게임 설정'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,640,218+i*68,390,62,label,true,id==='online'?'button_red':'button_brown',23));
+  [['home','시작 화면'],['levels','모험 지도'],['tutorial','튜토리얼'],['settings','게임 설정'],['difficulty','난이도 선택'],['online','회원가입 · 1:1 대전'],['credits','게임 정보 · 출처']].forEach(([id,label],i)=>this.button(this.popup,id,640,218+i*68,390,62,label,true,id==='online'?'button_red':'button_brown',23));
  }
  private drawPurchase(){
   if(this.screenLayout?.compact){this.drawCompactPurchase();return;}

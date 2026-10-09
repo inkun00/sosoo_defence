@@ -26,3 +26,4 @@
  .title-card-actions{gap:10px;margin-top:14px}
  .title-card-actions .title-button{min-height:48px;height:48px;font-size:16px}
 }
+@media(orientation:landscape) and (max-height:500px){.title-copy h1{margin-bottom:12px}.title-menu{gap:2px}.title-button{height:clamp(38px,9.5vh,46px);min-height:38px;font-size:17px}.title-replays{margin-top:3px}.title-replays button{min-height:28px}.title-footer{bottom:1.2%}}

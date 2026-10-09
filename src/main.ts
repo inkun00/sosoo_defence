@@ -12,6 +12,7 @@ async function withWorkbook(load:()=>Promise<unknown>){
 const pages=new Map<string,()=>Promise<unknown>>([
  ['duel',()=>withWorkbook(()=>import('./multiplayer/controller'))],
  ['adventure',()=>import('./controller')],
+ ['tutorial',()=>import('./controller')],
  ['worksheet',()=>withWorkbook(()=>import('./worksheet-controller'))],
  ['title',()=>import('./title')],
 ]);
