@@ -6,7 +6,7 @@ import {decimalBoard,normalizedAccountLevel} from './decimal-boards';
 export {decimalBoard} from './decimal-boards';
 export type Side=0|1;
 export interface DuelTower{id:number;typeId:string;x:number;y:number;unit:number;cost:number;enabled:boolean;cooldown:number;}
-export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;slow:number;stun:number;hits:number;}
+export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;slow:number;stun:number;hits:number;rewardSummon?:boolean;}
 export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;}
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
 export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
@@ -40,9 +40,9 @@ function wrong(s:DuelState,p:DuelPlayer,q:Omit<WrongQuestion,'level'|'elapsed'|'
  if(old){old.submitted=q.submitted;old.attempts++;return;}
  p.wrongQuestions.push({...q,level,elapsed:s.elapsed,attempts:1});
 }
-function spawn(s:DuelState,owner:Side,target:Side,level:number,hp:number,hero:string|null,x:number){
+function spawn(s:DuelState,owner:Side,target:Side,level:number,hp:number,hero:string|null,x:number,rewardSummon=false){
  if(s.enemies.length>=100)return false;
- s.enemies.push({id:s.nextId++,owner,target,hero,level,hp,max:hp,x,slow:0,stun:0,hits:0});return true;
+ s.enemies.push({id:s.nextId++,owner,target,hero,level,hp,max:hp,x,slow:0,stun:0,hits:0,...(rewardSummon?{rewardSummon:true}:{})});return true;
 }
 export function advanceDuel(s:DuelState,now:number){
  if(!Number.isFinite(now)||now<s.updatedAt)return;
@@ -94,18 +94,18 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  if(action.type==='tick')return ok('');
  if(action.type==='surrender'){end(s,(1-side) as Side,'상대가 대전을 나갔어요.');release(p);return ok('대전을 마쳤어요.');}
  if(action.type==='select-reward'){
-  if(s.status!=='waiting'||p.ready)return bad('준비하기 전에 학습지 몬스터를 선택해요.');
-  if(action.heroId!==null&&(!(p.rewardRoster??[]).includes(action.heroId)||!heroSpec(action.heroId)))return bad('이 방을 만들거나 참가할 때 보유한 몬스터만 선택할 수 있어요.');
-  p.rewardHero=action.heroId;return ok('학습지 몬스터를 선택했어요.');
+  if(s.status!=='waiting'||p.ready)return bad('준비하기 전에 학습지 영웅을 선택해요.');
+  if(action.heroId!==null&&(!(p.rewardRoster??[]).includes(action.heroId)||!heroSpec(action.heroId)))return bad('이 방을 만들거나 참가할 때 보유한 영웅만 선택할 수 있어요.');
+  p.rewardHero=action.heroId;return ok('학습지 영웅을 선택했어요.');
  }
  if(action.type==='summon-reward'){
   if(s.status!=='playing')return bad('대전이 시작된 뒤 원하는 때에 소환해요.');
-  if(p.rewardUsed)return bad('학습지 몬스터는 대전마다 한 번만 소환할 수 있어요.');
+  if(p.rewardUsed)return bad('학습지 영웅은 대전마다 한 번만 소환할 수 있어요.');
   const hero=p.rewardHero?heroSpec(p.rewardHero):null;
-  if(!hero||!(p.rewardRoster??[]).includes(hero.id))return bad('준비하기 전에 획득한 학습지 몬스터를 선택해요.');
+  if(!hero||!(p.rewardRoster??[]).includes(hero.id))return bad('준비하기 전에 획득한 학습지 영웅을 선택해요.');
   const escorts=hero.effect==='brood'?1+Math.floor(hero.level/3):0;
   if(s.enemies.length+1+escorts>100)return bad('길이 붐벼요. 잠시 뒤 소환해 주세요.');
-  spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:22);
+  spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:22,true);
   for(let i=0;i<escorts;i++)spawn(s,side,(1-side) as Side,hero.level,200+hero.level*100,null,side===0?1+(i+1)*1.25:22-(i+1)*1.25);
   p.rewardUsed=true;note(s,`${p.name} · 학습지 영웅 ${hero.name} Lv.${hero.level} 소환!`);return ok(`${hero.name} 출발! 다음 대전에서도 선택할 수 있어요.`);
  }

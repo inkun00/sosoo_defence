@@ -223,6 +223,34 @@
       "width": 1152
     }
   },
+  "hero-collection-card-v1": {
+    "url": "/assets/dungeon/hero-collection-card-v1.1c3e258d5bc6.webp",
+    "sourceHash": "b2e4a38168f29fe3c8e803143d5b1f09def594e8da6b1b5bcfc8346263b44e9f",
+    "width": 384,
+    "height": 512,
+    "sourceBytes": 2291632,
+    "bytes": 39732,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 384
+    }
+  },
+  "hero-collection-panel-v1": {
+    "url": "/assets/dungeon/hero-collection-panel-v1.2d8b4a1cf676.webp",
+    "sourceHash": "9241e4d1d06e833c59fce32d8fc348828a81a3a5fb01edf6d40534032788db73",
+    "width": 1152,
+    "height": 768,
+    "sourceBytes": 2111405,
+    "bytes": 110324,
+    "encoding": {
+      "quality": 82,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1152
+    }
+  },
   "hero-eggs-v1": {
     "url": "/assets/dungeon/hero-eggs-v1.09ceb06deb48.webp",
     "sourceHash": "3db54dba4050a545923683582011eb786bc3cba6648a41be168d1e7cefa21a9c",

@@ -1,5 +1,24 @@
 import {artURL} from './art';
-import {loadWorkbook,HERO_LEVEL_CHANCES} from './worksheet-store';
+import {loadWorkbook,HERO_LEVEL_CHANCES,Workbook} from './worksheet-store';
 import {heroSpec,HeroSpec} from './multiplayer/heroes';
-export function heroArt(h:HeroSpec){return '<span class="collection-art" aria-hidden="true" style="background-image:url('+artURL(h.sheet)+');background-position:0% '+h.row*50+'%"></span>';}
-export function collectionHTML(selected=loadWorkbook().selectedHero,disabled=false){const book=loadWorkbook();return '<div class="collection-intro"><p>출력한 학습지의 암호를 풀어 획득한 영웅이에요. 하나를 골라 대전마다 원하는 때에 한 번 소환해요. 영웅은 사용해도 사라지지 않아요.</p><p class="collection-note">학습 기록과 수집 영웅은 이 브라우저에 저장됩니다.</p></div><div class="collection-grid">'+(book.collection.length?book.collection.slice().sort((a,b)=>heroSpec(b.heroId)!.level-heroSpec(a.heroId)!.level).map(c=>{const h=heroSpec(c.heroId)!;return '<button type="button" class="collection-card '+(h.id===selected?'selected':'')+'" data-collection-hero="'+h.id+'" aria-pressed="'+(h.id===selected)+'" '+(disabled?'disabled':'')+'>'+heroArt(h)+'<strong>Lv.'+h.level+' · '+h.name+'</strong><small>'+h.description+'</small><span>'+(h.id===selected?'대전 영웅으로 선택됨':'이 영웅 선택')+' · 획득 '+c.copies+'회</span></button>';}).join(''):'<p class="collection-empty">아직 영웅이 없어요. 학습지 20문항의 암호를 풀어 첫 돌 알을 깨워 보세요.</p>')+'</div><details class="collection-chances"><summary>레벨별 등장 확률</summary><div>'+HERO_LEVEL_CHANCES.map((n,i)=>'<span>Lv.'+(i+1)+' · '+n+'%</span>').join('')+'</div><p>같은 레벨의 영웅 3종은 같은 확률이에요. 이미 가진 영웅이 나오면 획득 횟수가 쌓여요.</p></details>';}
+import {heroSummonStyle} from './hero-summon-style';
+
+export function heroArt(h:HeroSpec){return '<span class="collection-art" aria-hidden="true" style="--hero-row:'+h.row*50+'%;background-image:url('+artURL(h.sheet)+');background-position:0% '+h.row*50+'%"></span>';}
+function rankStyle(h:HeroSpec){const s=heroSummonStyle(h.level);return '--hero-color:'+s.cssColor+';--hero-accent:'+s.cssAccent+';--hero-rank:'+s.rank;}
+
+export function collectionHTML(selected=loadWorkbook().selectedHero,disabled=false,book:Workbook=loadWorkbook()){
+ const cards=book.collection.slice().sort((a,b)=>heroSpec(b.heroId)!.level-heroSpec(a.heroId)!.level).map(c=>{
+  const h=heroSpec(c.heroId)!,rank=heroSummonStyle(h.level),active=h.id===selected;
+  return '<button type="button" class="collection-card '+(active?'selected':'')+'" data-rank="'+rank.rank+'" style="'+rankStyle(h)+'" data-collection-hero="'+h.id+'" aria-pressed="'+active+'" '+(disabled?'disabled':'')+'><span class="collection-rank">'+rank.label+' · Lv.'+h.level+'</span><span class="collection-portrait">'+heroArt(h)+'</span><strong>'+h.name+'</strong><small>'+h.description+'</small><span class="collection-equip">'+(active?'◆ 대전 동료로 선택됨':'이 영웅 선택')+' · '+c.copies+'회 획득</span></button>';
+ }).join('');
+ return '<section class="hero-collection"><div class="collection-intro"><p>학습지의 암호를 풀어 만난 영웅들이에요. 동료 하나를 골라 대전마다 원하는 때에 한 번 소환해요.</p><div class="collection-meta"><span>수집 '+book.collection.length+' / 30</span><span>소환 후에도 영구 보관</span><span>이 브라우저에 저장</span></div></div><div class="collection-grid">'+(cards||'<div class="collection-empty"><span class="collection-empty-rune" aria-hidden="true">✦</span><strong>새로운 동료를 기다리는 중</strong><p>학습지 20문항의 암호를 풀어 첫 영웅을 깨워 보세요.</p></div>')+'</div><details class="collection-chances"><summary>레벨별 영웅 등장 확률</summary><div>'+HERO_LEVEL_CHANCES.map((n,i)=>'<span>Lv.'+(i+1)+' · '+n+'%</span>').join('')+'</div><p>같은 레벨의 영웅 3종은 같은 확률이에요. 이미 가진 영웅을 얻으면 획득 횟수가 쌓여요.</p></details></section>';
+}
+
+/** Acquisition reveal shares the exact rank palette and strength with battle. */
+export function heroRevealHTML(h:HeroSpec,copies:number){
+ const rank=heroSummonStyle(h.level),sparks=Array.from({length:rank.particles},(_,i)=>{
+  const angle=i/rank.particles*Math.PI*2,radius=48+(i%3)*16;
+  return '<i style="--spark-x:'+Math.round(Math.cos(angle)*radius)+'px;--spark-y:'+Math.round(Math.sin(angle)*radius)+'px;--spark-delay:'+(i%7)*35+'ms"></i>';
+ }).join('');
+ return '<div class="hero-reveal" data-rank="'+rank.rank+'" style="'+rankStyle(h)+'"><span class="hero-reveal-rank">'+rank.label+' 영웅 · Lv.'+h.level+'</span><div class="hero-reveal-stage" aria-hidden="true"><span class="hero-reveal-column"></span><span class="hero-reveal-ring"></span>'+(rank.rank>2?'<span class="hero-reveal-ring hero-reveal-ring-outer"></span>':'')+'<span class="hero-reveal-sparks">'+sparks+'</span><span class="hero-reveal-figure">'+heroArt(h)+'</span></div><h2>'+h.name+'</h2><p>'+h.description+'</p><p class="collection-note">'+copies+'번째 획득 · 영구 보관</p><button id="ws-equip">이 영웅을 대전 동료로 선택</button></div>';
+}

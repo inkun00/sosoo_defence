@@ -12,6 +12,8 @@ import {AmbientProps} from '../ambient-props';
 import {playTowerProjectile,clearTowerProjectiles} from '../tower-projectiles';
 import {DuelShotStream} from './shot-stream';
 import {OpponentPortrait,ComputerView} from './opponent-portrait';
+import {HeroSummonStream} from './hero-summon-stream';
+import {HeroSummonEffects} from './hero-summon-effects';
 const X=37,Y=132,T=38;
 export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];operation:'+'|'-';selectedTower:number;message:string;busy:boolean;connected:boolean;computer?:ComputerView;}
 export class DuelScene extends Phaser.Scene{
@@ -19,26 +21,27 @@ export class DuelScene extends Phaser.Scene{
  onAction:(key:string)=>void=()=>{};onCell:(x:number,y:number)=>void=()=>{};onControls:()=>void=()=>{};
  onSound:(type:string,towerTypeId?:string)=>void=()=>{};
  private terrain!:Phaser.GameObjects.Container;private units!:Phaser.GameObjects.Container;private ui!:Phaser.GameObjects.Container;private guides!:Phaser.GameObjects.Graphics;
- private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;last:number}>();
+ private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;last:number;size:number}>();
  private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower}>();private signature='';private uiSignature='';private revision=-1;private receivedAt=0;
  private shotStream=new DuelShotStream();private shotTimers=new Set<Phaser.Time.TimerEvent>();private shotEffects=new Set<Phaser.GameObjects.GameObject>();
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private hitEquations?:HitEquationPopups;
  private ambient?:AmbientProps;
  private opponentPortrait?:OpponentPortrait;
+ private heroSummonStream=new HeroSummonStream();private heroSummonEffects?:HeroSummonEffects;
  private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
  constructor(public view:()=>DuelView){super('duel');}
  preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));}
  create(){
   registerDungeon(this);
-  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.opponentPortrait?.destroy();this.ready=false;});
+  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.opponentPortrait?.destroy();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();this.enemies.clear();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
   this.opponentPortrait=new OpponentPortrait(this,this.reduced);
   this.ambient=new AmbientProps(this,this.reduced);
   for(const kind of MONSTER_KINDS.filter(k=>this.textures.exists('dungeon-'+MONSTERS[k].atlas)))for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
   const egg=this.textures.get('duel-eggs'),source=egg.getSourceImage();for(let i=0;i<10;i++){const x=Math.round(i%5*source.width/5),y=Math.round(Math.floor(i/5)*source.height/2);egg.add('egg-'+(i+1),0,x,y,Math.round((i%5+1)*source.width/5)-x,Math.round(source.height/2));}
-  this.terrain=this.add.container(0,0);this.units=this.add.container(0,0);this.guides=this.add.graphics().setDepth(8);this.ui=this.add.container(0,0).setDepth(10);this.hitEquations=new HitEquationPopups(this,{left:X+4,right:X+24*T-4,top:Y+4,bottom:Y+7*T-4});this.ready=true;this.redraw();
+  this.terrain=this.add.container(0,0);this.units=this.add.container(0,0);this.guides=this.add.graphics().setDepth(8);this.ui=this.add.container(0,0).setDepth(10);this.hitEquations=new HitEquationPopups(this,{left:X+4,right:X+24*T-4,top:Y+4,bottom:Y+7*T-4});this.heroSummonEffects=new HeroSummonEffects(this,{left:X,right:X+24*T,top:Y,bottom:Y+7*T},this.reduced);this.ready=true;this.redraw();
   this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.x>=X&&p.x<X+24*T&&p.y>=Y&&p.y<Y+7*T)this.onCell(Math.floor((p.x-X)/T),Math.floor((p.y-Y)/T));});
   this.input.on('pointermove',(p:Phaser.Input.Pointer)=>this.preview(Math.floor((p.x-X)/T),Math.floor((p.y-Y)/T)));
  }
@@ -58,7 +61,7 @@ export class DuelScene extends Phaser.Scene{
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}
  redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];this.opponentPortrait?.sync(v.computer);if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
   const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.operation,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.flame,p.money,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
-  if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
+  if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.syncHeroSummons();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,44,1264,76);this.text(this.ui,136,40,'소수의 성 · 1:1',24);this.text(this.ui,359,25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,359,56,`대전 Lv.${s?duelLevel(s):1}`,18,'#ffca7e');
   const seconds=Math.max(0,Math.ceil(300-(s?.elapsed??0)));this.text(this.ui,615,41,p?numberText(p.money)+' 코인':'돌 알을 깨워 상대 불꽃을 공격해요',p?28:19,'#ffcb7b');this.text(this.ui,879,41,`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`,26);this.button('settings',963,42,76,55,'설정',true,false,18);
   this.button('lobby',1070,42,115,55,'대기실',!v.busy);this.button('leave',1200,42,115,55,'나가기',!v.busy);
@@ -87,14 +90,17 @@ export class DuelScene extends Phaser.Scene{
   if(selected){this.text(this.ui,1085,696,'타워 자동 공격',16,'#c1b7aa');this.button('sell',1220,696,105,57,'회수',!v.busy);}
   else this.text(this.ui,1130,697,v.selectedType?'내 쪽 빈 바닥에 설치':'타워는 자동으로 공격해요',16,'#c1b7aa');
   const reserve=p?.rewardHero?heroSpec(p.rewardHero):null;
+  // Load only the two selected companions before combat so their entrance
+  // does not wait for an atlas or briefly show a generic enemy placeholder.
+  for(const player of s?.players??[]){const companion=player?.rewardHero?heroSpec(player.rewardHero):null;if(companion)this.ensureHero(companion.level);}
   this.text(this.ui,1130,657,reserve?`학습지 · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
   if(v.computer){this.panel(this.ui,1130,748,266,100);const phrase=this.text(this.ui,1159,733,v.computer.phrase,13,'#f2d7a2');phrase.setWordWrapWidth(138).setOrigin(.5,.5);}
   else this.button('heroes',1069,756,113,57,'영웅 도감',true,false,16);
   this.button('reserve',v.computer?1165:1192,v.computer?779:756,v.computer?175:113,v.computer?32:57,s?.status==='waiting'?'영웅 선택':p?.rewardUsed?'사용 완료':reserve?`Lv.${reserve.level} 소환`:'영웅 없음',!!p&&!v.busy&&(s?.status==='waiting'&&!p.ready||s?.status==='playing'&&!!reserve&&!p.rewardUsed),!!reserve&&!p?.rewardUsed,v.computer?13:16);
-  this.controls.get('reserve')!.label=s?.status==='waiting'?'학습지 몬스터 선택':p?.rewardUsed?'학습지 몬스터 사용 완료':reserve?`학습지 ${reserve.name} 레벨 ${reserve.level} 한 번 소환`:'학습지 몬스터 없음';
+  this.controls.get('reserve')!.label=s?.status==='waiting'?'학습지 영웅 선택':p?.rewardUsed?'학습지 영웅 사용 완료':reserve?`학습지 영웅 ${reserve.name} 레벨 ${reserve.level} 한 번 소환`:'학습지 영웅 없음';
   if(s?.status==='waiting')this.button('ready',485,424,240,57,p?.ready?'상대 준비 기다리는 중':'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
   else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'성벽 없이 곧은 길 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,424,message,18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
-  this.syncShots();this.syncEnemies();this.onControls();
+  this.syncShots();this.syncEnemies();this.syncHeroSummons();this.onControls();
  }
  private drawTerrain(){this.ambient?.prepareRedraw();this.terrain.removeAll(true);this.units.removeAll(true);this.towerViews.clear();const s=this.view().state;
   const floorScale=terrainTileScale(this,.35);
@@ -122,13 +128,18 @@ export class DuelScene extends Phaser.Scene{
    if(hero)this.ensureHero(hero.level);const heroReady=hero&&this.textures.exists('heroes-'+hero.level),texture=heroReady?'heroes-'+hero.level:'dungeon-'+MONSTERS[kind].atlas,frame=heroReady?hero.id+'-0':kind+'-0';
    if(!v){const sprite=this.add.sprite(x,y,texture,frame);sprite.setDisplaySize(size,size).setDepth(4).setFlipX(e.target===0);if(!this.reduced)sprite.play(heroReady?hero.id:kind+'-walk');
     const hp=this.add.text(x,y-size*.5-11,'',{fontFamily:'Malgun Gothic',fontSize:18,fontStyle:'bold',color:'#fff2d6',backgroundColor:'#11131dea',padding:{x:3,y:1}}).setOrigin(.5).setDepth(7);
-    const name=this.add.text(x,y-size*.5-31,hero?`★ ${hero.name}`:'',{fontFamily:'Malgun Gothic',fontSize:11,color:e.owner===0?'#9fe8ff':'#ffcc8a',backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name,last:e.hp};this.enemies.set(e.id,v);
+    const name=this.add.text(x,y-size*.5-31,hero?`★ ${hero.name}`:'',{fontFamily:'Malgun Gothic',fontSize:11,color:e.owner===0?'#9fe8ff':'#ffcc8a',backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name,last:e.hp,size};this.enemies.set(e.id,v);
    }else if(v.last!==e.hp){if(!this.reduced)this.tweens.add({targets:v.sprite,alpha:.4,yoyo:true,duration:90,repeat:1});v.last=e.hp;}
    if(v.sprite.texture.key!==texture){v.sprite.stop().setTexture(texture,frame).setDisplaySize(size,size);}
    if(!this.reduced){const anim=heroReady?hero.id:kind+'-'+(e.slow>0||e.stun>0?'frozen':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);}
    const aura=(s?.enemies??[]).filter(o=>o.owner===e.owner&&o.hp>0&&o.hero&&heroSpec(o.hero)?.effect==='haste'&&Math.abs(o.x-e.x)<=3).reduce((a,o)=>Math.max(a,1.12+o.level*.025),1),resistance=hero?.effect==='steadfast'?Math.min(.8,.2+hero.level*.06):0;
    v.hp.setText(numberText(e.hp));v.sprite.setData('x',x);v.sprite.setData('y',y);v.sprite.setData('vx',e.stun>0?0:(e.target===0?-1:1)*(.24+e.level*.009)*aura*(e.slow>0?.6+.4*resistance:1)*T);v.hp.setData('y',y-size*.5-11);v.name.setData('y',y-size*.5-31);
   }
+ }
+ private syncHeroSummons(){
+  const view=this.view(),identity=this.heroSummonStream.identity,events=this.heroSummonStream.take(view.room,view.state);
+  if(identity!==this.heroSummonStream.identity){for(const [id,view]of this.enemies)if(this.heroSummonEffects?.pose(id))view.sprite.setDisplaySize(view.size,view.size).setAlpha(1);this.heroSummonEffects?.clear();}
+  for(const event of events)this.heroSummonEffects?.play(event,X+(event.x+.5)*T,Y+3.5*T-4);
  }
  private trackShotEffect<T extends Phaser.GameObjects.GameObject>(object:T):T{
   this.shotEffects.add(object);object.once('destroy',()=>this.shotEffects.delete(object));return object;
@@ -167,11 +178,11 @@ export class DuelScene extends Phaser.Scene{
  preview(x:number,y:number){this.guides.clear();const v=this.view(),s=v.state;if(!s||!v.selectedType)return;
   if(x>=0&&x<24&&y>=0&&y<7)this.guides.lineStyle(3,validDuelCell(s,v.side,x,y)?0xffdf94:0xdd6c50).strokeRect(X+x*T+2,Y+y*T+2,T-4,T-4);
  }
- update(_time:number,delta:number){const view=this.view(),s=view.state;this.opponentPortrait?.sync(view.computer);if(!s)return;const smooth=1-Math.exp(-delta/100);
+ update(_time:number,delta:number){const view=this.view(),s=view.state;this.opponentPortrait?.sync(view.computer);this.heroSummonEffects?.update();if(!s)return;const smooth=1-Math.exp(-delta/100);
   // Predict movement between host snapshots for smooth art; HP and outcomes
   // always come from the host. Prediction stops during a connection outage.
   const age=s.status==='playing'?Math.min(1.5,(performance.now()-this.receivedAt)/1000):0;
-  for(const e of s.enemies){const v=this.enemies.get(e.id);if(!v)continue;const targetX=Phaser.Math.Clamp(Number(v.sprite.getData('x'))+Number(v.sprite.getData('vx'))*age,X+T*.5,X+23.5*T),targetY=Number(v.sprite.getData('y'));v.sprite.x+= (targetX-v.sprite.x)*smooth;v.sprite.y+=(targetY-v.sprite.y)*smooth;v.hp.setPosition(v.sprite.x,Number(v.hp.getData('y')));v.name.setPosition(v.sprite.x,Number(v.name.getData('y')));}
+  for(const e of s.enemies){const v=this.enemies.get(e.id);if(!v)continue;const entrance=this.heroSummonEffects?.pose(e.id),targetX=Phaser.Math.Clamp(Number(v.sprite.getData('x'))+Number(v.sprite.getData('vx'))*age,X+T*.5,X+23.5*T),targetY=Number(v.sprite.getData('y'))-(entrance?.lift??0);v.sprite.x+= (targetX-v.sprite.x)*smooth;v.sprite.y+=(targetY-v.sprite.y)*smooth;if(entrance)v.sprite.setDisplaySize(v.size*entrance.scale,v.size*entrance.scale).setAlpha(entrance.alpha);v.hp.setPosition(v.sprite.x,Number(v.hp.getData('y')));v.name.setPosition(v.sprite.x,Number(v.name.getData('y')));}
   for(const {head,tower:t}of this.towerViews.values()){if(!t.enabled)continue;const p=s.players.findIndex(p=>p?.towers.some(o=>o.id===t.id)),radius=towerType(t.typeId)!.effect==='range'?4:3,e=s.enemies.filter(e=>e.target===p&&Math.hypot(e.x-t.x,DUEL_ROAD-t.y)<=radius).sort((a,b)=>Number(b.hp>=t.unit)-Number(a.hp>=t.unit))[0];if(e){const angle=Math.atan2(DUEL_ROAD-t.y,e.x-t.x)+Math.PI/2;head.rotation+=Phaser.Math.Angle.Wrap(angle-head.rotation)*Math.min(1,delta/90);}}
  }
 }

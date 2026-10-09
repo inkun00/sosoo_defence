@@ -211,3 +211,11 @@ frames: idle, thinking, casting, recoil, victory and defeat (two per state).
 Source PNGs are kept locally; optimized WebP sheets load on demand in battle.
 Generation prompts and frame mapping: licenses/cpu-opponents-v1-prompts.json
 (source material excluded from the deployed download).
+
+COLLECTED HERO UI (2026-10-09)
+Original stone-and-gold inventory panel and summoning pedestal card generated
+with the built-in OpenAI image_gen tool for this game. Editable source PNGs
+are preserved; optimized WebP backgrounds are loaded only when displayed.
+Generation prompts: licenses/hero-collection-v1-prompts.json (source-only).
+Rarity-scaled summoning rings, columns, particles and entrance motion are
+rendered in code and require no extra animation downloads.

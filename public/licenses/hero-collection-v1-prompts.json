@@ -1,0 +1,13 @@
+{
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "path": "public/assets/dungeon/hero-collection-panel-v1.png",
+      "prompt": "Use case: ui-mockup. Asset type: production background image for the collected-hero popup in a cute dark fantasy tower-defense game. Primary request: create one finished illustrated UI panel, straight-on, landscape 3:2 proportions. A thick beveled dark basalt stone rectangular frame with engraved warm antique-gold trim, faceted amber corner gems, a small flame crest at the top center, delicate cyan and violet magical glimmers. Inside the frame is a nearly flat midnight slate-blue surface with extremely faint mist and runes ONLY near the edges, leaving the whole central 82% clean empty space for live HTML headings and hero cards. Edges are hand-painted 2.5D game art, sharp clear silhouette, highly polished mobile RPG inventory feel, cohesive with gold-framed charcoal game menu buttons. Soft amber highlights, magical welcoming mood suitable for children. Frame fills almost the entire canvas, symmetric and NOT perspective. Transparent pixels outside the frame only; the center remains opaque dark slate. Constraints: no text, no letters, no numbers, no characters, no buttons, no card divisions, no watermarks. Single panel background asset, not a screenshot or montage."
+    },
+    {
+      "path": "public/assets/dungeon/hero-collection-card-v1.png",
+      "prompt": "Use case: ui-mockup. Asset type: single collectible hero card background for a cute dark-fantasy tower-defense RPG inventory, portrait 3:4 proportions. Primary request: a hand-painted beveled charcoal basalt rectangular card frame with antique gold narrow rim and small amber flame crest centered at its top. Four clean ornamental corner gems, faint violet and cyan rune glimmers along the edges, dark midnight slate-blue opaque central surface. At the upper-middle inside, a softly glowing violet circular magical summoning pedestal drawn as an elliptical ring near the bottom of an empty portrait area, ready for a transparent animated hero sprite to be overlaid. Lower 38 percent of the card must remain quiet empty dark space for HTML name, effect and selection text. Sharp refined 2.5D hand-painted fantasy UI matching gold-framed stone game buttons. Straight-on flat UI, no perspective to the frame. True alpha outside the card silhouette, all interior opaque. Constraints: no text, no letters, no numbers, no character, no sample hero, no selection checkmark, no other UI elements, no watermark, no montage; exactly one full card background."
+    }
+  ]
+}
