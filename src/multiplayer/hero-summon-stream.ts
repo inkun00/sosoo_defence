@@ -1,7 +1,7 @@
-import type {DuelState,Side} from './duel';
+import {duelEnemyPosition,type DuelState,type Side} from './duel';
 import {heroSpec} from './heroes';
 
-export interface HeroSummonEvent{enemyId:number;owner:Side;heroId:string;level:number;name:string;x:number;}
+export interface HeroSummonEvent{enemyId:number;owner:Side;heroId:string;level:number;name:string;x:number;y?:number;}
 
 /** A reserve hero is a one-time transition, rather than a live enemy count. */
 export class HeroSummonStream{
@@ -27,7 +27,7 @@ export class HeroSummonStream{
     // New hosts explicitly identify the reserve; a compatibility fallback is
     // only needed for hosts that predate the optional wire marker.
     const enemy=candidates.find(e=>e.rewardSummon)??candidates[0];
-    if(hero&&enemy)fresh.push({enemyId:enemy.id,owner,heroId:hero.id,level:hero.level,name:hero.name,x:enemy.x});
+    if(hero&&enemy){const point=duelEnemyPosition(state,enemy);fresh.push({enemyId:enemy.id,owner,heroId:hero.id,level:hero.level,name:hero.name,x:point.x,y:point.y});}
    }
    // A stale flag in an equal/older snapshot must not re-arm a used reserve.
    this.used[owner]=this.used[owner]||used;

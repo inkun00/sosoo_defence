@@ -1,0 +1,17 @@
+.duel-card .duel-map-summary{display:flex;align-items:center;gap:22px;width:100%;min-height:100px;margin:0 0 20px;padding:12px 20px;border:1px solid #9d7b48;border-radius:8px;background:linear-gradient(120deg,#212b31,#141b28);box-shadow:inset 0 0 0 3px #131923;filter:none;text-align:left}
+.duel-map-summary .duel-map-preview{width:42%;max-width:320px;flex:none}
+.duel-map-summary>span{display:flex;flex-direction:column;gap:5px}
+.duel-map-summary small{font-size:11px;color:#c2ac8c;letter-spacing:.06em}
+.duel-map-summary strong{font-size:21px;color:#ffdeb0}
+.duel-map-summary span span{font-size:12px;color:#dab777}
+.duel-map-preview{display:block;width:100%;height:auto}
+.duel-map-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.duel-card .duel-map-card{min-width:0;padding:10px 9px 11px;background:linear-gradient(150deg,#263038,#111a25);border:1px solid #665b48;border-radius:8px;filter:none;box-shadow:inset 0 0 0 3px #101720;display:flex;flex-direction:column;align-items:center;gap:4px}
+.duel-card .duel-map-card.selected{border-color:#f1c575;box-shadow:inset 0 0 0 3px #705432,0 0 17px #dfab4729;background:linear-gradient(150deg,#39332d,#161e28)}
+.duel-map-card small{font-size:10px;font-weight:normal;color:#bcab92;letter-spacing:.08em}
+.duel-map-card strong{font-size:15px;color:#ffe1ad}
+.duel-map-card>span{font-size:10px;color:#bcaf9a;line-height:1.5;font-weight:normal;min-height:30px}
+.duel-map-card em{font-size:10px;font-style:normal;color:#d9b26f;min-height:15px}
+#duel-dialog[data-screen="map-select"] .duel-card{width:min(1080px,100%)}
+@media(max-width:850px){.duel-map-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:520px){.duel-map-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.duel-card .duel-map-summary{gap:12px;padding:10px 12px}.duel-map-summary strong{font-size:17px}}

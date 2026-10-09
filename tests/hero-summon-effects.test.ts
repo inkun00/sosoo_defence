@@ -5,6 +5,7 @@ import {createDuel,joinDuel,applyDuel,type DuelState,type Side} from '../src/mul
 import {HeroSummonStream,type HeroSummonEvent} from '../src/multiplayer/hero-summon-stream';
 import {HeroSummonEffects,heroSummonPose} from '../src/multiplayer/hero-summon-effects';
 import {heroSummonStyle} from '../src/hero-summon-style';
+import {duelPathDistance} from '../src/multiplayer/duel-maps';
 
 const now=100000;
 function state():DuelState{
@@ -54,6 +55,12 @@ test('baseline, reconnect, stale revisions, expired gaps and room reset do not r
 test('old host snapshots without the marker still emit one valid reserve transition',()=>{
  const s=state(),stream=new HeroSummonStream();stream.take('legacy',s);summon(s);for(const enemy of s.enemies)delete enemy.rewardSummon;
  assert.equal(stream.take('legacy',s).length,1);assert.deepEqual(stream.take('legacy',s),[]);
+});
+
+test('reserve entrance uses the curved road position for both host and guest snapshots',()=>{
+ const s=state();s.mapId='storm-step';const host=new HeroSummonStream(),guest=new HeroSummonStream();host.take('curve',s);guest.take('curve',structuredClone(s));
+ summon(s);const enemy=s.enemies.find(e=>e.rewardSummon)!;enemy.pathDistance=duelPathDistance(s.mapId,2,1);enemy.x=2;enemy.y=1;
+ const events=host.take('curve',s);assert.equal(events.length,1);assert.equal(events[0].x,2);assert.equal(events[0].y,1);assert.deepEqual(guest.take('curve',structuredClone(s)),events);
 });
 
 test('visual entrance settles with no changes to the authoritative position or reduced motion',()=>{

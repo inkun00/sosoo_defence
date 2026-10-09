@@ -1,8 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {ComputerPeer,additionSlots} from '../src/multiplayer/computer-peer';
+import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/computer-peer';
 import {COMPUTER_OPPONENTS,computerOpponent} from '../src/multiplayer/computer-opponents';
-import {DUEL_START_MONEY,FLAME_MAX,duelLevel,applyDuel,createDuel,canPurchaseDuelTower} from '../src/multiplayer/duel';
+import {DUEL_START_MONEY,FLAME_MAX,duelLevel,applyDuel,createDuel,canPurchaseDuelTower,validDuelCell} from '../src/multiplayer/duel';
+import {DUEL_MAPS,duelRoadCell} from '../src/multiplayer/duel-maps';
 import {numberText,recipe} from '../src/math';
 import {towerType} from '../src/towers';
 import {simulateComputerDuel} from '../tools/computer-duel-simulation';
@@ -84,6 +85,29 @@ test('컴퓨터 표정은 계산·시전·불꽃 피격·승패에 맞춰 바뀐
 });
 test('무작위 판의 덧셈 해답 탐색은 같은 값을 가진 서로 다른 블럭을 사용한다',()=>{
  assert.deepEqual(additionSlots([100,100,200]),[0,1,2]);assert.equal(additionSlots([100,200,400]),null);assert.equal(additionSlots([100,200]),null);
+});
+test('선택한 10종 맵에서 컴퓨터도 같은 길과 설치 규칙을 사용하고 좌우 배치 전략이 대칭이다',()=>{
+ for(const map of DUEL_MAPS){
+  const peer=new ComputerPeer({uid:'student',name:'수호자'},6,{seed:912,clock:()=>100000,autoTick:false,mapId:map.id}),s=peer.state;
+  assert.equal(s.mapId,map.id);assert.equal(s.status,'waiting');assert.equal(s.players[1]!.towers.length,0);assert.equal(s.players[1]!.quote,null);
+  for(const unit of [10,200,2000]){
+   const left=strategicDuelCells(s,0,unit),right=strategicDuelCells(s,1,unit);
+   assert.ok(left.length>=6,`${map.id}에는 타워 설치 공간이 충분해야 한다`);
+   assert.deepEqual(left.map(c=>({x:23-c.x,y:c.y})),right,`${map.id}: 양쪽은 동일한 경로 배치 전략`);
+   for(const [side,cells]of [[0,left],[1,right]]as const)for(const c of cells){assert.ok(validDuelCell(s,side,c.x,c.y));assert.equal(duelRoadCell(map.id,c.x,c.y),false);}
+  }
+  peer.dispose();
+ }
+});
+test('10종 맵 × 컴퓨터 10레벨의 100대전이 합법적 타워 구매·합성·자동 웨이브를 거쳐 끝난다',()=>{
+ const reports=DUEL_MAPS.flatMap(map=>Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id)));
+ assert.equal(reports.length,100);
+ for(const r of reports){
+  assert.equal(r.status,'finished',`${r.mapId} / Lv.${r.level}`);assert.ok(r.seconds>0&&r.seconds<=300);
+  assert.ok(r.playerPurchased>=1&&r.computerPurchased>=1,`${r.mapId} / Lv.${r.level}: 양쪽 모두 타워 설치`);
+  assert.ok(r.computerSolved>=1);assert.ok(r.computerHatched);assert.ok(r.traversedBend);assert.ok(r.waves>=3);
+  assert.ok(r.playerFlame>=0&&r.playerFlame<=FLAME_MAX);assert.ok(r.computerFlame>=0&&r.computerFlame<=FLAME_MAX);
+ }
 });
 test('입문 상대는 기준 전략으로 이길 수 있고 최고 상대는 압박하지만 성장·군집 전략으로 이길 수 있다',()=>{
  for(const seed of [17,91,912]){

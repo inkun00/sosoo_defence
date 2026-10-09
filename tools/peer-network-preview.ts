@@ -1,4 +1,7 @@
 import {HostPeer} from '../src/multiplayer/peer';
+import {DUEL_MAPS,duelMap} from '../src/multiplayer/duel-maps';
+const mapChoice=document.getElementById('map') as HTMLSelectElement;
+for(const map of DUEL_MAPS){const option=document.createElement('option');option.value=map.id;option.textContent=map.name;mapChoice.append(option);}
 const button=document.getElementById('connect') as HTMLButtonElement;
 const result=document.getElementById('result')!;
 let host:HostPeer|undefined,guest:HostPeer|undefined;
@@ -15,7 +18,7 @@ button.onclick=async()=>{
   host=new HostPeer({uid:'network-test-host',name:'연결 호스트'});
   guest=new HostPeer({uid:'network-test-guest',name:'연결 참가자'});
   note(`자동 연결 설정: 양쪽 STUN ${host.pc.getConfiguration().iceServers?.length}개 · 경로 정책 ${host.pc.getConfiguration().iceTransportPolicy}`);
-  const offer=await host.create();note('호스트 접속 주소 유형: '+candidates(offer));
+  const offer=await host.create(mapChoice.value);note('호스트 접속 주소 유형: '+candidates(offer));
   const answer=await guest.join(offer);note('참가자 접속 주소 유형: '+candidates(answer));
   await host.accept(answer);
   await new Promise<void>((resolve,reject)=>{
@@ -24,6 +27,8 @@ button.onclick=async()=>{
    host!.onState=check;guest!.onState=check;check();
   });
   const pair=await host.connectionInfo();note(`선택된 실제 경로: ${pair?.local} ↔ ${pair?.remote} · ${pair?.protocol}`);
+  if(host.state?.mapId!==mapChoice.value||guest.state?.mapId!==mapChoice.value)throw Error('양쪽 맵이 일치하지 않아요.');
+  note('PASS · 양쪽 같은 맵 · '+duelMap(mapChoice.value).name);
   await host.send({type:'ready'});const ready=await guest.send({type:'ready'});
   if(!ready.ok||host.state?.status!=='playing')throw Error('준비 메시지를 교환하지 못했어요.');
   note('PASS · 실제 데이터 채널에서 양쪽 준비 완료 · 대전 시작');
