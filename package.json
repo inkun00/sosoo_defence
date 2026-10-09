@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "firebase": "^12.19.0",
+    "html-to-image": "^1.11.13",
+    "pdf-lib": "^1.17.1",
     "phaser": "3.90.0"
   },
   "devDependencies": {

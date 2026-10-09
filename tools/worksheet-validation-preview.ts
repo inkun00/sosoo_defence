@@ -41,12 +41,35 @@ async function preview(){
   document.head.append(styles);
   const questionCard=(q:WorksheetQuestion,index:number)=>'<article class="qa-type-card" data-qa-kind="'+q.kind+'"><h3>'+String(index+1).padStart(2,'0')+' · '+kindLabel(q.kind)+'</h3><div class="ws-question'+(q.type?' ws-concept':'')+'"><div class="ws-question-body">'+worksheetQuestionHTML(q)+'</div></div><output hidden>정답 '+(questionAnswer(q)%1000===0?questionAnswer(q)/1000:numberText(questionAnswer(q)))+' · 문항 검증 '+(validQuestion(q)?'통과':'실패')+'</output></article>';
   document.getElementById('app')!.innerHTML='<main class="workbook"><div class="qa-toolbar"><h1>학습지 전체 유형 검증</h1><button id="qa-show-sheet" type="button">A4 학습지 보기</button><button id="qa-show-gallery" type="button">전체 유형 보기</button><button id="qa-show-answers" type="button">정답 및 검증 결과 보기</button><button id="qa-print" type="button">A4 한 쪽 인쇄 확인</button></div><p class="qa-status" role="status">13개 개념과 12개 계산 유형 · 20문항 A4 학습지 검증 통과 · 수직선은 02번에 배치</p><section id="qa-gallery" class="qa-panel qa-gallery"><h2>신고된 문항과 자릿수 보호 검증</h2><div class="qa-regressions"><article class="qa-check-card" id="qa-regression-numberline"><h3>수직선: 3부터 4까지 10등분, 7칸 오른쪽</h3><div class="ws-question ws-concept"><b class="ws-qnumber">02</b><div class="ws-question-body">'+worksheetQuestionHTML(regression)+'</div><label class="ws-rune">룬 <i></i></label></div><p><span class="qa-expected">확인값 3.7</span>양 끝 숫자와 실제 끝 눈금이 일치하며 화살표는 7번째 구간 끝에 있어야 해요.</p></article><article class="qa-check-card" id="qa-regression-precision"><h3>손상된 문항의 소수 자릿수 보호</h3><div class="ws-question"><div class="ws-question-body">'+worksheetQuestionHTML(malformed)+'</div></div><p><span class="qa-expected">확인식 1.25 + 1.10</span>digits: 1로 저장된 문항은 검증에서 '+(validQuestion(malformed)?'잘못 통과':'거부')+'해요. 표시도 피연산자를 잘라 내지 않아야 해요.</p></article></div><h2>전체 25개 문항 유형</h2><div class="qa-type-grid">'+gallery.map(questionCard).join('')+'</div></section><section id="qa-print-panel" class="qa-panel qa-print-panel" hidden><div id="ws-pages">'+worksheetPages(sheet)+'</div></section></main>';
-  const galleryPanel=document.getElementById('qa-gallery')!,printPanel=document.getElementById('qa-print-panel')!;
+  const saveButton=document.createElement('button');
+  saveButton.id='qa-save';saveButton.type='button';saveButton.textContent='학습지 저장';
+  document.getElementById('qa-print')!.insertAdjacentElement('afterend',saveButton);
+  const galleryPanel=document.getElementById('qa-gallery')!,printPanel=document.getElementById('qa-print-panel')!,status=document.querySelector<HTMLParagraphElement>('.qa-status')!;
   function view(print:boolean){galleryPanel.hidden=print;printPanel.hidden=!print;document.getElementById('qa-show-sheet')!.setAttribute('aria-pressed',String(print));document.getElementById('qa-show-gallery')!.setAttribute('aria-pressed',String(!print));window.scrollTo(0,0);}
   document.getElementById('qa-show-sheet')!.onclick=()=>view(true);
   document.getElementById('qa-show-gallery')!.onclick=()=>view(false);
   document.getElementById('qa-show-answers')!.onclick=()=>{view(false);for(const output of Array.from(document.querySelectorAll<HTMLOutputElement>('.qa-type-card output')))output.hidden=!output.hidden;};
   document.getElementById('qa-print')!.onclick=()=>{view(true);window.print();};
+  saveButton.onclick=async()=>{
+    if(saveButton.disabled)return;
+    view(true);saveButton.disabled=true;saveButton.textContent='PDF 만드는 중…';status.textContent='A4 학습지 PDF를 만들고 있어요.';
+    try{
+      const {worksheetPageImage,worksheetImagePdf,downloadWorksheetPdf}=await import('../src/worksheet-pdf');
+      await document.fonts.ready;
+      view(true);
+      // Capture only the A4 worksheet: QA answers and gallery stay outside the PDF.
+      const page=printPanel.querySelector<HTMLElement>('.ws-sheet');
+      if(!page)throw Error('A4 학습지 화면을 찾지 못했어요.');
+      const image=await worksheetPageImage(page);
+      const blob=await worksheetImagePdf(image,sheet);
+      downloadWorksheetPdf(blob,sheet);
+      status.textContent='학습지 PDF 저장 요청 완료 · '+blob.size.toLocaleString('ko-KR')+'바이트 ('+(blob.size/1024).toFixed(1)+' KiB) · A4 1쪽, 20문항';
+    }catch(error){
+      status.textContent='학습지 저장에 실패했어요. '+(error instanceof Error?error.message:String(error))+' 다시 저장을 눌러 주세요.';
+    }finally{
+      saveButton.disabled=false;saveButton.textContent='학습지 저장';
+    }
+  };
   view(false);
 }
 void preview().catch(error=>{document.getElementById('app')!.textContent=(error as Error).message;});
