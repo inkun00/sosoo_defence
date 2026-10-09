@@ -15,3 +15,11 @@
 #duel-dialog[data-screen="map-select"] .duel-card{width:min(1080px,100%)}
 @media(max-width:850px){.duel-map-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){.duel-map-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.duel-card .duel-map-summary{gap:12px;padding:10px 12px}.duel-map-summary strong{font-size:17px}}
+@media(orientation:landscape) and (max-height:600px){
+ .duel-card .duel-map-summary{min-height:76px;padding:8px 14px;gap:16px;margin-bottom:12px}
+ .duel-map-summary .duel-map-preview{width:32%;max-width:220px}
+ .duel-map-summary strong{font-size:18px}
+ .duel-map-grid{gap:9px}
+ .duel-card .duel-map-card{padding:8px 7px;gap:3px}
+ .duel-map-card strong{font-size:13px}
+}

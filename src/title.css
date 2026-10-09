@@ -2,3 +2,27 @@
 
 /* Five menu actions retain a clear title and comfortable landscape touch targets. */
 .title-menu{gap:5px}.title-menu .title-button{height:clamp(56px,8vh,75px);min-height:56px}.title-copy{transform:translateY(-48%)}.title-replays{gap:13px;margin-top:10px}.title-replays button{min-height:30px}@media(max-height:600px){.title-menu{grid-template-columns:1fr 1fr;gap:5px}.title-menu .title-button{height:54px;min-height:54px;padding:7px 12px;font-size:16px}.title-menu .title-worksheet{grid-column:1/-1}.title-replays{gap:8px;row-gap:0}.title-replays button{font-size:10px;min-height:25px}}
+
+/* Landscape phones keep the complete menu inside the visible browser area. */
+@media(orientation:landscape){
+ .title-dialog{padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+ .title-card{max-height:calc(100dvh - max(14px,env(safe-area-inset-top)) - max(14px,env(safe-area-inset-bottom)));overscroll-behavior:contain}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .title-screen{min-height:0}
+ .title-copy{left:max(5%,env(safe-area-inset-left));width:min(44%,480px);top:50%;transform:translateY(-50%)}
+ .title-copy h1{margin-bottom:10px}
+ .title-logo{max-height:22dvh;object-fit:contain;object-position:left center}
+ .title-menu{gap:4px;max-width:none}
+ .title-menu .title-button{min-height:44px;height:clamp(44px,12dvh,54px);padding:6px 12px;font-size:clamp(14px,2vw,18px)}
+ .title-replays{margin-top:4px;gap:8px}
+ .title-replays button{min-height:28px;padding:3px 0;font-size:11px}
+ .title-footer{left:max(3%,env(safe-area-inset-left));right:max(3%,env(safe-area-inset-right));bottom:max(6px,env(safe-area-inset-bottom));font-size:10px}
+ .title-save-warning{bottom:max(6px,env(safe-area-inset-bottom));right:max(3%,env(safe-area-inset-right));font-size:11px}
+ .title-card{padding:18px 24px}
+ .title-card h2{margin-top:10px;margin-bottom:12px;font-size:24px}
+ .title-card p{font-size:14px;line-height:1.6}
+ .title-card .setting{min-height:52px;padding:8px 2px;font-size:16px}
+ .title-card-actions{gap:10px;margin-top:14px}
+ .title-card-actions .title-button{min-height:48px;height:48px;font-size:16px}
+}

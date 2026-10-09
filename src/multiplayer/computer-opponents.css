@@ -14,3 +14,12 @@
 @media(prefers-reduced-motion:reduce){.computer-result-portrait{animation:none}}
 @media(max-width:900px){.computer-opponent-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.computer-opponent-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.duel-card .computer-opponent-card{min-height:245px}.computer-opponent-portrait{width:100px;height:96px}}
+@media(orientation:landscape) and (max-height:600px){
+ .computer-opponent-grid{gap:9px;margin:12px 0}
+ .duel-card .computer-opponent-card{min-height:200px;gap:4px;padding:9px 10px}
+ .computer-opponent-portrait{width:76px;height:73px}
+ .computer-opponent-card strong{font-size:14px}
+ .computer-opponent-title,.computer-opponent-level{font-size:11px}
+ .computer-opponent-card small{font-size:10px;line-height:1.5}
+ .computer-result-portrait{width:100px;height:100px;margin:0 0 8px 12px}
+}

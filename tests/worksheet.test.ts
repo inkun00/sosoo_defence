@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {generateWorksheet,questionAnswer,worksheetCode,codeHash,validWorksheet,validQuestion,makeQuestion,CIPHER_GROUPS,WorksheetQuestion} from '../src/worksheet';
 import {loadLearning,recordLearning,recordKindLearning,classify,importLearningRecords,practiceWeight,CONCEPT_KINDS} from '../src/learning';
 import {getOrCreateWorksheet,loadWorkbook,redeemWorksheet,drawWorksheetHero,HERO_LEVEL_CHANCES,selectWorksheetHero,ownedHeroIds} from '../src/worksheet-store';
-import {worksheetPages} from '../src/worksheet-view';
+import {worksheetPages,worksheetFocus} from '../src/worksheet-view';
 import {newAdventure,loadSave,writeSave} from '../src/save';
 import {HEROES} from '../src/multiplayer/heroes';
 const cache=new Map<string,string>();let failStorage=false;
@@ -38,6 +38,18 @@ test('이전 계산 전용 학습지가 있어도 기본 출력은 새로운 단
  const old=await getOrCreateWorksheet(2,true),answers=new Set<number>();old.questions=Array.from({length:20},()=>makeQuestion('sub-2-basic',answers,rng(answers.size+50)));
  old.decoder=old.questions.map((q,i)=>({answer:questionAnswer(q),rune:i%4}));for(let n=10;old.decoder.length<30;n+=10)if(!answers.has(n))old.decoder.push({answer:n,rune:1});old.decoder.sort((a,b)=>a.answer-b.answer);old.codeHash=await codeHash(old.id,worksheetCode(old));assert.ok(validWorksheet(old));
  cache.set('decimal-workbook-v1',JSON.stringify({version:1,sheets:[old],collection:[],selectedHero:null}));const current=await getOrCreateWorksheet(2);assert.notEqual(current.id,old.id);assert.equal(current.questions.filter(q=>q.type).length,10);assert.equal(loadWorkbook().sheets.length,2);
+});
+test('저장된 모눈 문항은 같은 정답의 글 문제로 표시하고 기존 암호와 영웅 보상을 유지한다',async()=>{
+ const generated=generateWorksheet(loadLearning(),4,'legacy-grid-sheet',1700000000000,rng(19));
+ const index=generated.questions.findIndex(q=>questionAnswer(q)>0&&questionAnswer(q)<1000);assert.ok(index>=0);
+ const answer=questionAnswer(generated.questions[index]),code=worksheetCode(generated),decoder=JSON.stringify(generated.decoder),groups=JSON.stringify(generated.groups);
+ const sheet={...generated,questions:generated.questions.map((q,i)=>i===index?{a:answer,b:0,operation:'+' as const,digits:2 as const,kind:'concept-grid' as const,type:'concept-grid' as const,context:'concept' as const,data:[answer/10]}:q),focus:['concept-grid' as const],codeHash:await codeHash(generated.id,code)};
+ assert.ok(validWorksheet(sheet));assert.equal(worksheetCode(sheet),code);assert.equal(JSON.stringify(sheet.decoder),decoder);assert.equal(JSON.stringify(sheet.groups),groups);
+ const html=worksheetPages(sheet);assert.equal((html.match(/data-question=/g)||[]).length,20);assert.ok(html.includes('0.01이 '+answer/10+'개인 수는?'));assert.ok(!/ws-grid-art|<rect\b|색칠/.test(html));assert.ok(!worksheetFocus(sheet).includes('모눈'));
+ cache.set('decimal-workbook-v1',JSON.stringify({version:1,sheets:[sheet],collection:[],selectedHero:null}));
+ assert.equal(loadWorkbook().sheets[0].id,sheet.id);assert.equal((await getOrCreateWorksheet(4)).id,sheet.id);
+ const result=await redeemWorksheet(sheet.id,code,()=>0);assert.equal(result.hero.id,'hero-1-0');assert.equal(loadWorkbook().sheets[0].claimedHero,result.hero.id);assert.equal(loadWorkbook().collection.length,1);
+ await assert.rejects(redeemWorksheet(sheet.id,code),/이미/);assert.equal(loadWorkbook().collection.length,1);
 });
 test('암호 오답에는 보상이 없고 정답·새로고침·중복 제출에 한 번만 지급한다',async()=>{
  const s=await getOrCreateWorksheet(4,true),code=worksheetCode(s),bad=(code==='AAAAAA'?'BBBBBB':'AAAAAA');await assert.rejects(redeemWorksheet(s.id,bad),/맞지/);assert.equal(loadWorkbook().collection.length,0);
@@ -104,7 +116,7 @@ test('PDF의 개념 유형 13종을 독립적으로 풀 수 있고 위조된 도
 test('예전 세 자리 오답 기록을 두 자리 유형으로 합치고 수집 목록은 보존한다',async()=>{
  cache.set('decimal-learning-v1',JSON.stringify({version:1,counts:{'sub-3-chain':{wrong:2,help:1,correct:0},'sub-2-chain':{wrong:1,help:0,correct:1}},seen:{}}));
  const profile=loadLearning();assert.deepEqual(profile.counts['sub-2-chain'],{wrong:3,help:1,correct:1});assert.ok(Object.keys(profile.counts).every(k=>!/-3-/.test(k)));
- recordKindLearning('concept-grid','wrong','grid-test');const sheet=await getOrCreateWorksheet(4,true);assert.ok(sheet.focus.includes('concept-grid'));assert.ok(sheet.questions.some(q=>q.type==='concept-grid'));
+ recordKindLearning('concept-grid','wrong','grid-test');const sheet=await getOrCreateWorksheet(4,true);assert.ok(!sheet.focus.includes('concept-grid'));assert.ok(sheet.questions.every(q=>q.type!=='concept-grid'));assert.equal(loadLearning().counts['concept-grid']!.wrong,1);
  const code=worksheetCode(sheet);await redeemWorksheet(sheet.id,code,()=>0);const book=loadWorkbook(),legacy={...sheet,id:'legacy-sheet',questions:sheet.questions.map((q,i)=>i?q:{a:4231,b:100,operation:'-',digits:3,kind:'sub-3-basic',context:'money'})};
  book.sheets.push(legacy as typeof sheet);cache.set('decimal-workbook-v1',JSON.stringify(book));assert.equal(loadWorkbook().sheets.length,1);assert.equal(loadWorkbook().collection.length,1);
 });

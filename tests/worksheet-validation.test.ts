@@ -19,7 +19,10 @@ function solve(q:WorksheetQuestion):number{
  switch(q.type){
   case 'concept-compose':return (d[0]*100+d[1]*10+d[2])*10;
   case 'concept-fraction':return (d[0]*100+d[1]*100/d[2])*10;
-  case 'concept-grid':return d[0]*10;
+  case 'concept-grid':{
+   const prompt=worksheetQuestionHTML(q).match(/0\.01이 (\d+)개인 수는\?/);assert.ok(prompt,'Legacy grid questions must use a clear text equivalent');
+   return Number(prompt[1])*10;
+  }
   case 'concept-numberline':{
    const endpoints=[cents(d[0]),cents(d[0]+10*d[1])];
    return (endpoints[0]+(endpoints[1]-endpoints[0])*d[2]/10)*10;
@@ -61,6 +64,7 @@ for(const op of ['add','sub'])for(const digits of [1,2])for(const mode of ['basi
 const empty:LearningProfile={version:1,counts:{},seen:{}};
 const allWeak:LearningProfile={version:1,counts:Object.fromEntries([...arithmeticKinds,...CONCEPT_KINDS].map((kind,i)=>[kind,{wrong:i+1,help:i%3,correct:i%5}])),seen:{}};
 const chainWeak:LearningProfile={version:1,counts:{'sub-2-chain':{wrong:90,help:10,correct:0},'concept-numberline':{wrong:10,help:0,correct:0}},seen:{}};
+const gridWeak:LearningProfile={version:1,counts:{'concept-grid':{wrong:100000,help:1000,correct:0}},seen:{}};
 
 test('all 25 arithmetic/concept categories have correct, uniquely solvable answers across 1–11 stages and 80 seeds',()=>{
  for(let level=1;level<=11;level++)for(let seed=1;seed<=80;seed++)for(const kind of [...arithmeticKinds,...CONCEPT_KINDS]){
@@ -73,13 +77,15 @@ test('all 25 arithmetic/concept categories have correct, uniquely solvable answe
  }
 });
 
-test('1,056 generated and JSON-restored sheets keep all 20 answers and six cipher letters consistent under empty and weak-learning profiles',()=>{
- for(let level=1;level<=11;level++)for(let seed=1;seed<=32;seed++)for(const [profileIndex,profile] of [empty,allWeak,chainWeak].entries()){
+test('1,408 generated and JSON-restored sheets exclude grid questions while keeping all 20 answers and six cipher letters consistent',()=>{
+ for(let level=1;level<=11;level++)for(let seed=1;seed<=32;seed++)for(const [profileIndex,profile] of [empty,allWeak,chainWeak,gridWeak].entries()){
   const generated={...generateWorksheet(profile,level,`validate-${level}-${seed}-${profileIndex}`,1700000000000,seeded(level*100000+seed*100+profileIndex)),codeHash:'a'.repeat(64)};
   const sheet=JSON.parse(JSON.stringify(generated)) as Worksheet;
   assert.ok(validWorksheet(sheet));const answers=sheet.questions.map(solve);
   assert.equal(new Set(answers).size,20);assert.equal(new Set(sheet.decoder.map(entry=>entry.answer)).size,30);
   assert.equal(sheet.questions.filter(q=>q.type).length,10);
+  assert.ok(sheet.questions.every(q=>q.type!=='concept-grid'),'New worksheets must not contain grid shading questions');
+  assert.ok(!sheet.focus.includes('concept-grid'),'Removed grid practice must not be selected even from old learning records');
   for(const answer of answers)assert.equal(sheet.decoder.filter(entry=>entry.answer===answer).length,1);
   const expected=sheet.groups.map(group=>{
    const sum=group.map(index=>sheet.decoder.find(entry=>entry.answer===answers[index])!.rune).reduce((a,b)=>a+b,0);
@@ -122,13 +128,12 @@ test('numberline labels align with their endpoint ticks and every arrow points t
  }
 });
 
-test('all hundred-grid quantities and digit place highlights display the values that are actually graded',()=>{
+test('all saved hundred-grid quantities use equivalent text and digit place highlights display the values actually graded',()=>{
  for(let n=1;n<100;n++){
   const q:WorksheetQuestion={a:n*10,b:0,operation:'+',digits:2,kind:'concept-grid',type:'concept-grid',context:'concept',data:[n]},html=worksheetQuestionHTML(q);
-  const rects=html.match(/<rect\b[^>]*>/g)!;assert.equal(rects.length,100);
-  assert.equal(new Set(rects.map(tag=>attr(tag,'x')+','+attr(tag,'y'))).size,100);
-  const filled=rects.filter(tag=>attr(tag,'fill')!=='#ffffff').length;
-  assert.equal(filled*10,questionAnswer(q));
+  assert.ok(!/<(?:svg|rect)\b/.test(html),'Legacy questions must not render the removed tiny grid');
+  assert.equal(solve(q),questionAnswer(q));
+  assert.ok(html.includes('0.01이 '+n+'개인 수는?'));
  }
  for(let amount=0;amount<10000;amount+=10)for(const place of [10,100,1000]){
   const expected=Number(String(amount/10).padStart(3,'0').at(place===10?-1:place===100?-2:-3))*place;

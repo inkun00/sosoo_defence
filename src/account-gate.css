@@ -3,3 +3,11 @@
 .duel-card .account-nav{display:block;text-align:center;text-decoration:none;padding:16px 28px;background:transparent var(--menu-art) center 40%/100% 163% no-repeat;color:#fff0d2;font-weight:700;text-shadow:0 2px 3px #000}
 .duel-card .account-home{display:block;margin-top:10px;text-align:center;font-size:13px;color:#cdbb9d}
 @media print{#app[data-account-gate]{display:none!important}}
+@media(orientation:landscape) and (max-height:900px){
+ #app[data-account-gate] .duel-hall-header{top:max(12px,env(safe-area-inset-top))}
+ #app[data-account-gate] #duel-dialog{padding-top:calc(62px + env(safe-area-inset-top))}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .duel-card .account-nav{min-height:48px;padding:12px 20px}
+ .duel-card .account-home{min-height:44px;display:flex;align-items:center;justify-content:center;margin-top:4px}
+}

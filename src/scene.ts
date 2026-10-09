@@ -11,6 +11,7 @@ import {towerType,TOWER_RANGE,LONG_TOWER_RANGE} from './towers';
 import {HitEquationPopups} from './hit-equations';
 import {hitEquationsEnabled} from './combat-preferences';
 import {AmbientProps} from './ambient-props';
+import type {GameScreenLayout} from './responsive-game';
 import {playTowerProjectile,clearTowerProjectiles} from './tower-projectiles';
 export interface Mode{kind:'tower'|'wall'|'inspect';unit:number;effect:Effect;typeId?:string;}
 interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.Image;pivot:Phaser.GameObjects.Container;head:Phaser.GameObjects.Image;angle:number;recoilTime:number;}
@@ -34,10 +35,11 @@ export class Field extends Phaser.Scene{
  private hitEquations?:HitEquationPopups;private shotSequence=0;
  private ambient?:AmbientProps;
  private loadingMonsters=new Set<MonsterKind>();private monsterRetry=new Map<MonsterKind,number>();
+ private screenLayout?:GameScreenLayout;
  constructor(model:Defense){super('field');this.model=model;}
  preload(){loadDungeon(this,stageMonsterKinds(this.model.level));this.load.image('dungeon-wall-collapse-v1',artURL('wall-collapse-v1'));}
  create(){
-  this.readyFlag=true;this.cameras.main.setViewport(FIELD_X,FIELD_Y,FIELD_WIDTH,FIELD_HEIGHT);registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
+  this.readyFlag=true;this.layoutCamera();registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
   this.ambient=new AmbientProps(this,this.reducedMotion);
   this.hitEquations=new HitEquationPopups(this,{left:16,right:FIELD_WIDTH-16,top:12,bottom:FIELD_HEIGHT-16},()=>this.model.phase==='paused');
   for(const kind of MONSTER_KINDS)this.monsterAnimations(kind);
@@ -55,7 +57,14 @@ export class Field extends Phaser.Scene{
    else if(e.key==='Enter'&&!e.repeat){e.preventDefault();this.actCell(this.cursor);}
   });this.drawTerrain();this.scene.launch('game-ui');this.onChange();
  }
- private inField(p:Phaser.Input.Pointer){return p.x>=FIELD_X&&p.x<FIELD_X+FIELD_WIDTH&&p.y>=FIELD_Y&&p.y<FIELD_Y+FIELD_HEIGHT;}
+ setScreenLayout(layout:GameScreenLayout){this.screenLayout=layout;if(this.readyFlag)this.layoutCamera();}
+ private layoutCamera(){
+  const compact=this.screenLayout?.compact,top=compact?Math.max(68,Math.ceil(44/this.screenLayout!.scale))+12:FIELD_Y,height=compact?this.screenLayout!.height-top-8:FIELD_HEIGHT;
+  this.cameras.main.setViewport(FIELD_X,top,FIELD_WIDTH,height).setZoom(Math.min(1,height/FIELD_HEIGHT)).centerOn(FIELD_WIDTH/2,FIELD_HEIGHT/2);
+ }
+ /** Canvas coordinates, shared by the finale overlay and responsive UI effects. */
+ worldToScreen(x:number,y:number){const c=this.cameras.main;return {x:c.x+c.width/2+(x-FIELD_WIDTH/2)*c.zoom,y:c.y+c.height/2+(y-FIELD_HEIGHT/2)*c.zoom};}
+ private inField(p:Phaser.Input.Pointer){const c=this.cameras.main;return p.x>=c.x&&p.x<c.x+c.width&&p.y>=c.y&&p.y<c.y+c.height;}
  actCell(c:Cell){
    if(!this.input.enabled||c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;
    if(this.mode.kind==='wall'){this.onWallPlace(c);this.flush();this.onChange();return;}

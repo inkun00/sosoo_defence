@@ -5,6 +5,8 @@ export interface DecoderEntry{answer:number;rune:number;}
 export interface Worksheet{version:1;id:string;createdAt:number;questions:WorksheetQuestion[];decoder:DecoderEntry[];groups:number[][];codeHash:string;focus:LearningKind[];claimedHero:string|null;}
 export const CIPHER_GROUPS=[[0,1,2,3],[4,5,6],[7,8,9],[10,11,12],[13,14,15],[16,17,18,19]];
 export const random=()=>crypto.getRandomValues(new Uint32Array(1))[0]/4294967296;
+// Keep the saved grid type valid for old ciphers, but never issue new grid questions.
+const worksheetConceptKinds=CONCEPT_KINDS.filter(kind=>kind!=='concept-grid');
 const pick=(n:number,r:()=>number)=>Math.floor(r()*n);
 function shuffle<T>(items:T[],r:()=>number){for(let i=items.length-1;i>0;i--){const j=pick(i+1,r);[items[i],items[j]]=[items[j],items[i]];}return items;}
 export function questionAnswer(q:WorksheetQuestion):number{
@@ -85,11 +87,11 @@ export function makeQuestion(kind:LearningKind,answers:Set<number>,r:()=>number,
  }throw Error('새 문항을 만들지 못했어요. 다시 시도해 주세요.');
 }
 export function generateWorksheet(profile:LearningProfile,level:number,id:string,now:number,r:()=>number=random):Omit<Worksheet,'codeHash'>{
- const baseline=pool(level),weak=(Object.keys(profile.counts) as LearningKind[]).filter(k=>validLearningKind(k)&&practiceWeight(profile.counts[k]!)>0);
+ const baseline=pool(level),weak=(Object.keys(profile.counts) as LearningKind[]).filter(k=>validLearningKind(k)&&k!=='concept-grid'&&practiceWeight(profile.counts[k]!)>0);
  const arithmeticWeak=weak.filter((k):k is ArithmeticLearningKind=>!!kindParts(k)),available=[...new Set([...baseline,...arithmeticWeak])];
  const focus=weak.sort((a,b)=>practiceWeight(profile.counts[b]!)-practiceWeight(profile.counts[a]!)).slice(0,3);
  // Half of each sheet covers the unit's concepts; arithmetic still follows accumulated mistakes.
- const concepts=shuffle([...CONCEPT_KINDS],r).slice(0,10),conceptWeak=weak.filter(isConceptKind);
+ const concepts=shuffle([...worksheetConceptKinds],r).slice(0,10),conceptWeak=weak.filter((kind):kind is Exclude<ConceptKind,'concept-grid'>=>isConceptKind(kind)&&kind!=='concept-grid');
  if(conceptWeak.length){const target=weighted(conceptWeak,profile,r);if(!concepts.includes(target))concepts[0]=target;}
  const kinds:LearningKind[]=[...Array.from({length:10},(_,i)=>i<7&&arithmeticWeak.length?weighted(arithmeticWeak,profile,r):available[i%available.length]),...concepts];shuffle(kinds,r);
  const answers=new Set<number>(),questions=kinds.map(k=>makeQuestion(k,answers,r,level)),runes=Array(20).fill(0);

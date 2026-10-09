@@ -1,4 +1,5 @@
 import {mountPurchasePanel} from './purchase-panel';
+import {gameScreenLayout,observeGameScreen} from '../responsive-game';
 import {artURL} from '../art';
 import Phaser from 'phaser';
 import {onAuthStateChanged,User} from 'firebase/auth';
@@ -46,9 +47,11 @@ document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('butt
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,selectedTower,message,busy,connected,computer:peer instanceof ComputerPeer?peer.opponent:undefined});
 const scene=new DuelScene(view);
 scene.onSound=(type,towerTypeId)=>sound.play(type,towerTypeId);
-const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:800,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
+const field=document.getElementById('field')!,fieldBox=field.getBoundingClientRect(),initialLayout=gameScreenLayout(fieldBox.width,fieldBox.height);scene.setScreenLayout(initialLayout);
+const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:initialLayout.height,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수 디펜스 1:1: 전체 남은 시간, 양쪽 점수와 불꽃, 타워, 소수 블럭과 영웅 알');game.canvas.tabIndex=0;});
-const purchasePanel=mountPurchasePanel(document.getElementById('field')!,action=>send(action));
+const purchasePanel=mountPurchasePanel(field,action=>send(action));purchasePanel.setScreenLayout(initialLayout,scene.getPurchaseArea());
+observeGameScreen(game,field,layout=>{scene.setScreenLayout(layout);shopPage=Math.min(shopPage,scene.shopPageCount-1);purchasePanel.setScreenLayout(layout,scene.getPurchaseArea());});
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;purchasePanel.feedback(text);const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
 function refresh(){purchasePanel.sync(state?.status==='preparing'?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=DUEL_SECONDS-60?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
@@ -250,7 +253,8 @@ scene.onAction=async key=>{sound.resume();sound.play('ui');
  if(key.startsWith('block:')){const i=Number(key.slice(6));if(!slots.includes(i)&&slots.length<3)slots.push(i);refresh();return;}
  if(key.startsWith('slot:')){slots.splice(Number(key.slice(5)),1);refresh();return;}
  switch(key){
-  case 'page:prev':shopPage=0;refresh();break;case 'page:next':shopPage=1;refresh();break;
+  case 'page:prev':shopPage=Math.max(0,shopPage-1);refresh();break;case 'page:next':shopPage=Math.min(scene.shopPageCount-1,shopPage+1);refresh();break;
+  case 'blocks:page':scene.cycleBlockPage();break;
   case 'ready':await startWithCollectedHero();break;
   case 'fuse':await send({type:'fuse',round:state!.players[side]!.round,slots:[...slots],operation:'+'});break;
   case 'sell':await send({type:'sell',towerId:selectedTower});selectedTower=0;refresh();break;

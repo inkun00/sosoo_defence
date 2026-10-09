@@ -65,3 +65,35 @@
 @media(max-width:390px){.collection-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.hero-collection-dialog #ws-dialog-body,.hero-collection-preview .hero-collection-dialog #body{max-height:calc(90dvh - 109px)}#duel-dialog[data-screen="collection"] #duel-content{max-height:calc(100dvh - 224px)}}
 @media(prefers-reduced-motion:reduce){.collection-art,.hero-reveal-figure,.hero-reveal-column,.hero-reveal-ring,.hero-reveal-sparks i{animation:none}.hero-reveal-sparks{display:none}.hero-reveal-column{opacity:.12}.collection-card{transition:none!important}}
+
+/* Let content scroll inside the frame instead of subtracting a fixed 290px. */
+@media(orientation:landscape) and (max-height:900px){
+ .workbook .hero-collection-dialog,#duel-dialog[data-screen="collection"] .duel-card{display:flex;flex-direction:column;min-height:0;padding:58px 48px 36px}
+ .workbook .hero-collection-dialog{width:min(1080px,calc(100vw - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+ #duel-dialog[data-screen="collection"] .duel-card{max-height:calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+ #app[data-duel-view="battle"] #duel-dialog[data-screen="collection"] .duel-card{max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+ .hero-collection-dialog #ws-dialog-body,.hero-collection-preview .hero-collection-dialog #body,#duel-dialog[data-screen="collection"] #duel-content{min-height:0;max-height:none;overflow:auto;overscroll-behavior:contain}
+ .workbook .hero-collection-dialog #ws-close{top:18px;right:24px}
+ .workbook-dialog{padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .workbook .hero-collection-dialog,#duel-dialog[data-screen="collection"] .duel-card{padding:20px 28px 24px}
+ .workbook .hero-collection-dialog{padding-top:56px}
+ .hero-collection-dialog h2,#duel-dialog[data-screen="collection"] h2{font-size:23px;margin:5px 44px 10px 0}
+ .collection-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+ :is(.workbook,#duel-dialog[data-screen="collection"] .duel-card,.hero-collection-preview) .collection-card{min-height:184px;padding:12px 18px 14px;grid-template-rows:16px 60px 22px 28px 20px;gap:3px}
+ .collection-card .collection-rank{font-size:9px;padding:2px 8px}
+ .collection-card strong{font-size:13px;align-self:center}
+ .collection-card small{font-size:10px;line-height:1.4}
+ .collection-card .collection-equip{font-size:9px;padding-top:3px}
+ .collection-art{width:70px;height:63px}
+ .collection-card.selected:after{inset:8px 10px 10px}
+ .collection-intro p{font-size:12px;line-height:1.5}
+ .collection-chances{margin-top:10px}
+ .collection-empty{min-height:140px;padding:12px}
+ .hero-reveal-stage{width:240px;height:150px;margin-top:8px}
+ .hero-reveal-figure .collection-art{width:155px;height:138px}
+ .hero-reveal-rank{font-size:12px;padding:5px 12px}
+ .hero-reveal p{font-size:12px;margin:4px 0}
+ :is(.workbook,.hero-collection-preview) .hero-reveal button{min-height:48px;margin:10px 0 6px;padding:8px 28px;font-size:14px}
+}

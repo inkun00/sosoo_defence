@@ -15,3 +15,22 @@
 .duel-purchase-answer input::placeholder{font-size:16px;color:#c1b59f}
 .duel-purchase-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .duel-purchase-keypad button{font-size:25px;height:46px;padding:0}
+.duel-purchase-compact{padding:6px 8px}
+.duel-purchase-compact .duel-purchase-form{position:relative;grid-template-columns:minmax(0,1fr) var(--purchase-keypad-width);gap:12px}
+.duel-purchase-compact .duel-purchase-copy{position:relative;padding-right:calc(var(--purchase-touch) + 6px)}
+.duel-purchase-compact .duel-purchase-heading{font-size:18px;line-height:20px}
+.duel-purchase-compact .duel-purchase-equation{margin:5px 0 0;font-size:32px;line-height:1.05;white-space:normal}
+.duel-purchase-compact .duel-purchase-note,.duel-purchase-compact .duel-purchase-wallet{display:none}
+.duel-purchase-compact [data-feedback]{position:absolute;left:0;top:0;margin:0;font-size:17px;line-height:20px;height:20px;min-height:20px;width:calc(100% - var(--purchase-touch) - 6px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.duel-purchase-compact.has-feedback .duel-purchase-heading{visibility:hidden}
+.duel-purchase-compact.has-feedback .duel-purchase-equation{font-size:27px}
+.duel-purchase-compact .duel-purchase-actions{display:contents}
+.duel-purchase-compact button{min-height:var(--purchase-touch);height:var(--purchase-touch);padding:3px 6px;font-size:23px}
+.duel-purchase-compact [data-cancel]{position:absolute;right:0;top:0;width:var(--purchase-touch)}
+.duel-purchase-compact .duel-purchase-confirm{position:absolute;left:calc(var(--purchase-touch) + 18px);bottom:0;width:calc(100% - var(--purchase-touch) - 18px);font-size:22px}
+.duel-purchase-compact .duel-purchase-answer label{position:absolute;left:0;bottom:0;width:calc(var(--purchase-touch) + 12px);font-size:0}
+.duel-purchase-compact .duel-purchase-answer input{height:var(--purchase-touch);margin:0;padding:3px 5px;font-size:29px}
+.duel-purchase-compact .duel-purchase-answer input::placeholder{font-size:19px}
+.duel-purchase-compact .duel-purchase-keypad{height:100%;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(var(--purchase-touch),1fr));gap:4px}
+.duel-purchase-compact .duel-purchase-keypad button{height:100%;font-size:31px}
+.duel-purchase-tablet .duel-purchase-note,.duel-purchase-tablet .duel-purchase-wallet{display:block;font-size:17px;line-height:1.35;margin-top:8px}

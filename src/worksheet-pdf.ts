@@ -18,12 +18,13 @@ export async function worksheetImagePdf(jpeg:string,sheet:WorksheetIdentity):Pro
 }
 
 export async function worksheetPageImage(page:HTMLElement):Promise<string>{
- const {width,height}=page.getBoundingClientRect();
  const snapshot=page.cloneNode(true) as HTMLElement,holder=document.createElement('div');
- holder.className='workbook';holder.inert=true;holder.setAttribute('aria-hidden','true');
+ holder.className='workbook ws-export';holder.inert=true;holder.setAttribute('aria-hidden','true');
  holder.style.cssText='position:fixed;left:-10000px;top:0;width:210mm;padding:0;min-height:0;pointer-events:none';
  holder.append(snapshot);document.body.append(holder);
  try{
+  // The on-screen worksheet can reflow on a phone; export the original A4 layout.
+  const {width,height}=snapshot.getBoundingClientRect();
   // The renderer silently ignores failed background fetches. Embed verified
   // artwork ourselves so a failed request cannot create an incomplete PDF.
   await Promise.all(['.ws-guide','.ws-egg'].map(async selector=>{

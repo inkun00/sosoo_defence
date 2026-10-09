@@ -7,13 +7,14 @@ import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
-import {GAME_WIDTH,GAME_HEIGHT,FIELD_X,FIELD_Y} from './layout';
+import {GAME_WIDTH,GAME_HEIGHT} from './layout';
 import type {Cell} from './path';
 import {isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,TOWERS,parseMoney} from './towers';
 import {playCinematic} from './cinematic';
 import {playBossFinale} from './boss-finale';
 import {BossFinaleFlow} from './boss-finale-flow';
+import {observeGameScreen} from './responsive-game';
 import {recordLearning} from './learning';
 import './game.css';
 
@@ -37,6 +38,7 @@ let bossFinale=new BossFinaleFlow();
 function purchaseLearning(outcome:'wrong'|'help'|'correct',q=model.pendingPurchase){if(q)recordLearning({a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'},outcome,learningSession+':purchase:'+learningQuestion);}
 const state=():UIState=>({model,save,unit,effect,selected,selectedWall,brickPage,speed,mode:field.mode,panel,slots,fusionOperation,equation,hint,message,towerTypeId,shopPage,purchaseInput,purchaseMessage,purchaseHelp});
 const ui=new GameUI(state);
+ui.fieldPoint=(x,y)=>field.worldToScreen(x,y);
 function persistInventory(){
  const inventory=model.inventory,signature=JSON.stringify(inventory);if(signature===inventorySignature)return;
  save.inventory=inventory;inventorySignature=signature;
@@ -64,7 +66,7 @@ function update(){
 function finalBossImpact(x:number,y:number){
  if(!bossFinale.begin())return;
  const owner=bossFinale,canvas=document.querySelector('#field canvas') as HTMLCanvasElement|null,rect=canvas?.getBoundingClientRect();
- const origin=rect?{x:(rect.left+(FIELD_X+x)/GAME_WIDTH*rect.width)/window.innerWidth,y:(rect.top+(FIELD_Y+y)/GAME_HEIGHT*rect.height)/window.innerHeight}:{x:.5,y:.45};
+ const impact=field.worldToScreen(x,y),origin=rect?{x:(rect.left+impact.x/game.scale.width*rect.width)/window.innerWidth,y:(rect.top+impact.y/game.scale.height*rect.height)/window.innerHeight}:{x:.5,y:.45};
  let completed=false;
  const finish=()=>{if(completed)return;completed=true;if(owner!==bossFinale)return;owner.finish();movie=false;field.presentationHeld=false;field.input.enabled=!panel&&$('modal').classList.contains('hidden');ui.refresh(true);update();};
  void playBossFinale(save,origin,finish).catch(finish);
@@ -133,7 +135,7 @@ function action(key:string){
  if(field.mode.kind==='wall'&&!['wall-cancel','wall','forge','pause'].includes(key))leaveWallPlacement();
  if(key.startsWith('type:')||key==='wall'){selectedWall=null;field.selectedWall=undefined;}
  if(key.startsWith('type:')){const type=towerType(key.slice(5));if(!type||type.unlock>model.level.id)return;if(!model.canBuild){notify('타워는 방어 시작 전에만 설치해요.');return;}towerTypeId=type.id;unit=type.unit;effect=type.effect;field.mode={kind:'tower',typeId:type.id,unit,effect};selected=0;field.selected=undefined;field.hover({x:1,y:3});notify(`${type.name} · 공격력 ${numberText(unit)} · 빈 칸에 설치해요. 붙이면 열 간섭으로 재장전이 느려져요.`);}
- else if(key.startsWith('shop-page:'))shopPage=Math.max(0,Math.min(1,shopPage+(key.endsWith('next')?1:-1)));
+ else if(key.startsWith('shop-page:'))shopPage=key.endsWith('next')&&ui.cycleShopPages?(shopPage+1)%ui.shopPageCount:Math.max(0,Math.min(ui.shopPageCount-1,shopPage+(key.endsWith('next')?1:-1)));
  else if(key.startsWith('purchase-key:')){if(panel!=='purchase')return;const char=key.slice(13);if(char==='backspace')purchaseInput=purchaseInput.slice(0,-1);else if(char==='dot'){if(!purchaseInput.includes('.'))purchaseInput=(purchaseInput||'0')+'.';}else if(/^\d$/.test(char)&&purchaseInput.length<12&&(!purchaseInput.includes('.')||purchaseInput.split('.')[1].length<2))purchaseInput+=char;purchaseMessage='';}
  else if(key.startsWith('difficulty:')){const chosen=key.split(':')[1];if(isDifficulty(chosen)&&model.setDifficulty(chosen)){save.difficulty=chosen;if(!writeSave(save))notify('이 브라우저에서는 난이도 저장이 제한되어 있어요.');}}
  else if(key.startsWith('slot:')){slots[+key.split(':')[1]]=null;message='';}
@@ -149,6 +151,7 @@ function action(key:string){
   case 'home':{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.delete('mode');location.assign(url.href);break;}
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
   case 'cancel':field.mode.kind='inspect';break;
+  case 'inspect-back':selected=0;selectedWall=null;field.selected=undefined;field.selectedWall=undefined;field.mode.kind='inspect';break;
   case 'purchase-help':purchaseHelp=!purchaseHelp;if(purchaseHelp)purchaseLearning('help');break;
   case 'purchase-cancel':closePanel();break;
   case 'purchase-confirm':if(panel==='purchase'){const q=model.pendingPurchase;if(q&&parseMoney(purchaseInput)!==q.before-q.cost)purchaseLearning('wrong',q);if(model.answerPurchase(purchaseInput)){purchaseLearning('correct',q);const t=model.towers.at(-1)!;if(sound.sfx)void sound.preloadTowerShots([t.typeId]);closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}}break;
@@ -164,6 +167,7 @@ function action(key:string){
   case 'close':closePanel();break;
   case 'help':help();break;
   case 'calculation':calculation();break;
+  case 'popup-calculation':calculation();break;
   case 'settings':settings();break;
   case 'credits':credits();break;
   case 'retry':stage(model.level.id);break;
@@ -173,7 +177,7 @@ function action(key:string){
 }
 ui.onAction=action;
 ui.onControls=(controls:Map<string,Control>)=>{
- const popupKey=(id:string)=>['close','fuse','wall','levels','help','settings','credits','retry','next','difficulty','online','home'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
+ const popupKey=(id:string)=>['close','fuse','wall','levels','help','settings','credits','retry','next','difficulty','online','home','popup-calculation'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
  const active=[...controls].filter(([id])=>$('modal').classList.contains('hidden')&&(!panel||popupKey(id)));
  const signature=active.map(([id,c])=>`${id}:${c.label}:${c.enabled}`).join('|');if(signature===controlsSignature)return;controlsSignature=signature;
  const focus=(document.activeElement as HTMLElement)?.dataset.action;
@@ -191,6 +195,7 @@ field.onWallPlace=c=>{
 field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${purchaseBalanceText(q.wallet,q.before,q.digits)}. ${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
 const originalUpdate=field.update.bind(field);field.update=(time:number,delta:number)=>originalUpdate(time,delta*speed);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,height:GAME_HEIGHT,backgroundColor:'#111216',scene:[field,ui],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
+observeGameScreen(game,$('field'),layout=>{field.setScreenLayout(layout);ui.setScreenLayout(layout);shopPage=Math.min(shopPage,ui.shopPageCount-1);ui.refresh(true);});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');});
 $('modal-close').onclick=closeHTML;$('modal').onclick=e=>{if(e.target===$('modal'))closeHTML();};
 document.addEventListener('keydown',e=>{

@@ -11,7 +11,10 @@ export class OpponentPortrait {
  private loading=new Set<number>();
  private retryAt=new Map<number,number>();
  private last='';
+ private compact=false;private height=800;
  constructor(private scene:Phaser.Scene,private reduced=false){}
+ setLayout(compact:boolean,height:number){this.compact=compact;this.height=height;this.position();}
+ private position(){this.sprite?.setPosition(1045,this.compact?this.height-48:747).setDisplaySize(this.compact?65:96,this.compact?66:98);}
  sync(opponent?:ComputerView){
   if(!opponent){this.sprite?.setVisible(false);this.last='';return;}
   const level=opponent.level,key='cpu-opponent-'+level;
@@ -33,8 +36,9 @@ export class OpponentPortrait {
   if(!this.sprite)this.sprite=this.scene.add.sprite(1045,747,key,'pose-0').setDepth(15);
   const token=key+'-'+opponent.mood;
   this.sprite.setVisible(true);
+  this.position();
   if(token===this.last)return;this.last=token;
-  this.sprite.stop().setTexture(key,'pose-'+OPPONENT_FRAMES[opponent.mood][0]).setDisplaySize(96,98);
+  this.sprite.stop().setTexture(key,'pose-'+OPPONENT_FRAMES[opponent.mood][0]);this.position();
   if(!this.reduced)this.sprite.play(token);
  }
  destroy(){this.sprite?.destroy();this.sprite=undefined;}
