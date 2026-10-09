@@ -4,7 +4,7 @@ import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
-import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_PREPARATION_SECONDS,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects} from './duel';
+import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_PREPARATION_SECONDS,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects,duelHeroLearningLevel} from './duel';
 import {duelMap,duelRoadCell} from './duel-maps';
 import {HEROES,heroSpec,heroesAtLevel} from './heroes';
 import {HitEquationPopups} from '../hit-equations';
@@ -62,7 +62,7 @@ export class DuelScene extends Phaser.Scene{
  }
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}
  redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];this.opponentPortrait?.sync(v.computer);if(s?.status!=='playing')this.guides.clear();if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
-  const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.mapId,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),Math.ceil(DUEL_PREPARATION_SECONDS-(s?.preparationElapsed??0)),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.flame,p.money,p.stock,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
+  const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.mapId,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),Math.ceil(DUEL_PREPARATION_SECONDS-(s?.preparationElapsed??0)),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.accountLevel,p.flame,p.money,p.stock,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
   if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.syncTowerEffects();this.syncHeroSummons();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,44,1264,76);this.text(this.ui,136,40,'소수의 성 · 1:1',24);this.text(this.ui,359,25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,359,56,`Lv.${s?duelLevel(s):1} · ${duelMap(s?.mapId).name}`,15,'#ffca7e');
   const preparing=s?.status==='preparing',stockTotal=Object.values(p?.stock??{}).reduce((sum,count)=>sum+count,0),seconds=Math.max(0,Math.ceil(preparing?DUEL_PREPARATION_SECONDS-(s.preparationElapsed??0):300-(s?.elapsed??0)));
@@ -85,8 +85,8 @@ export class DuelScene extends Phaser.Scene{
   this.button('page:prev',1045,622,64,54,'◀',v.shopPage>0);this.text(this.ui,1130,622,`${v.shopPage+1}/2`,19);this.button('page:next',1215,622,64,54,'▶',v.shopPage<1);
   if(preparing&&p)this.drawPreparation(p,stockTotal,seconds);
   else {
-  this.panel(this.ui,240,607,467,324);this.text(this.ui,240,457,'동일한 순서의 소수 블럭 16개',20);
-  this.text(this.ui,240,479,`학습 Lv.${s?.learningLevel??1} · ${learningDescription(s?.learningLevel??1)}`,12,'#ffca7e');
+  const heroLevel=p?duelHeroLearningLevel(p):1;this.panel(this.ui,240,607,467,324);this.text(this.ui,240,457,'영웅 소환 덧셈 블럭',20);
+  this.text(this.ui,240,479,`내 학습 Lv.${heroLevel} · ${learningDescription(heroLevel)}`,12,'#ffca7e');
   (p?.board??Array(16).fill(0)).forEach((n,i)=>this.button('block:'+i,76+i%4*110,518+Math.floor(i/4)*61,99,56,p?numberText(n):'?',!!p&&s?.status==='playing'&&!v.busy&&!v.slots.includes(i),v.slots.includes(i),23));
   this.panel(this.ui,738,607,505,324);this.text(this.ui,738,468,'세 블럭으로 영웅 알 성장',23);
   this.text(this.ui,682,521,'덧셈으로 영웅 알을 깨워요',19,'#ffca7e');

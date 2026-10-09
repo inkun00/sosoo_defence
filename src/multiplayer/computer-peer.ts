@@ -42,8 +42,10 @@ export class ComputerPeer{
   this.clock=options.clock??(()=>now+performance.now()-monotonic);
   const seed=options.seed??Math.floor(Math.random()*0xffffffff);this.id=`computer-${now}-${seed}`;
   const loadout:RewardLoadout={rewardHeroes:identity.rewardHeroes,rewardHero:identity.rewardHero};
-  this.state=createDuel(identity.uid,identity.name,seed,now,this.definition.level,loadout,options.mapId);
+  this.state=createDuel(identity.uid,identity.name,seed,now,identity.accountLevel??1,loadout,options.mapId);
   joinDuel(this.state,'computer-'+this.definition.id,this.definition.name,now,this.definition.level);
+  // Tower preparation keeps the selected CPU challenge; hero additions use each account's level.
+  this.state.learningLevel=this.definition.level;
   this.portrait={level:this.definition.level,id:this.definition.id,name:this.definition.name,mood:'idle',phrase:'준비되면 불꽃을 지켜 볼까요?',moodSince:now};
   this.act({type:'ready'},now);
   if(options.autoTick!==false)this.timer=setInterval(()=>this.step(),100);

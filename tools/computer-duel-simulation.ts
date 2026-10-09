@@ -9,7 +9,7 @@ import {heroesAtLevel} from '../src/multiplayer/heroes';
 type Strategy='baseline'|'burst';
 /** Fixed legal player policies for regression checks, not claims about real children. */
 export function simulateComputerDuel(level:number,seed:number,strategy:Strategy='baseline',mapId?:string){
- let now=100000;const peer=new ComputerPeer({uid:'baseline',name:'기준 수호자'},level,{seed,mapId,clock:()=>now,autoTick:false}),s=peer.state,p=s.players[0];
+ let now=100000;const peer=new ComputerPeer({uid:'baseline',name:'기준 수호자',accountLevel:level},level,{seed,mapId,clock:()=>now,autoTick:false}),s=peer.state,p=s.players[0];
  const burst=strategy==='burst',think=burst?2000:3000,build=burst?7000:10000,fuse=burst?3000:10000,hatch=burst?30000:26000,max=burst?14:8;
  const initialNow=now,preferences=['basic','double','needle','pebble','frost','catapult','lightning','sniper'];
  let nonce=0,nextBuild=now+1800,answerAt=0,nextFuse=0,nextHatch=0,computerHatched=false,traversedBend=false,battleStarted=false,zeroCombatCoins=false,legalEconomy=true;

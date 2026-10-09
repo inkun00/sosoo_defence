@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>개인 레벨 영웅 덧셈 검증</title>
+<style>
+body.preview{margin:0;background:#111216;color:#f6e8cd;font-family:system-ui,sans-serif;overflow:hidden}
+body.preview #app{height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+#app #game-shell{position:relative;inset:auto;display:block;width:100%;min-height:0;flex:1;margin:0 auto}
+#game-shell #field{width:100%;height:100%}
+.preview-controls{width:100%;max-width:1280px;box-sizing:border-box;margin:0 auto;padding:7px 12px;background:#171d27;flex:none}
+.preview-controls nav{display:flex;flex-wrap:wrap;gap:7px}
+.preview-controls button{font-size:14px;padding:7px 12px;color:#ffe4af;background:#302b35;border:1px solid #aa8559;border-radius:5px}
+.preview-controls button:disabled{opacity:.45;cursor:wait}
+.preview-controls button[aria-pressed="true"]{background:#574528;box-shadow:inset 0 0 0 1px #ffe6af}
+#status,#equation{margin:6px 0;font-size:14px;line-height:1.4}
+#status{color:#a9edcc}#equation{color:#ffe0a1}
+#proof{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
+#proof span{padding:5px 8px;background:#212837;border-radius:4px;line-height:1.5}
+#errors:empty{display:none}#errors{color:#ffb4a9;white-space:pre-wrap;margin:4px 0}
+@media(max-width:750px){#proof{grid-template-columns:1fr}.preview-controls button{font-size:12px;padding:5px 7px}#status,#equation{font-size:12px}}
+</style>
+<body class="preview">
+<div id="app">
+<main id="game-shell"><div id="field"></div></main>
+<section class="preview-controls" aria-label="개인 레벨 영웅 덧셈 확인">
+<nav>
+<button id="host-view" disabled>호스트 Lv.1 시점</button>
+<button id="guest-view" disabled>참가자 Lv.8 시점</button>
+<button id="correct-fuse" disabled>현재 플레이어 덧셈 정답 합성</button>
+<button id="reverse-levels" disabled>호스트 Lv.8 · 참가자 Lv.1로 새 대전</button>
+</nav>
+<p id="status" role="status">실제 대전 화면을 불러오는 중입니다.</p>
+<p id="equation">각자의 계정 레벨에 맞춘 덧셈 블럭을 확인하세요.</p>
+<output id="proof" aria-label="양쪽의 현재 학습 레벨과 블럭"></output>
+<pre id="errors"></pre>
+</section>
+</div>
+<script type="module" src="./personal-hero-level-preview.ts"></script>
+</body>
+</html>

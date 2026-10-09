@@ -2,7 +2,7 @@ import {TOWERS,towerType,towerPrice,towerPriceBand,parseMoney,PurchaseVariation}
 import {heroSpec,heroEffectStats,HeroEffect,HeroSpec} from './heroes';
 import {hit,numberText,recipe,reward,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
-import {decimalBoard,normalizedAccountLevel} from './decimal-boards';
+import {decimalBoard,learningLevel,normalizedAccountLevel} from './decimal-boards';
 import {duelMap,duelMapSpeedScale,duelPathDistance,duelPathPosition,duelRoadCell} from './duel-maps';
 export {decimalBoard} from './decimal-boards';
 export type Side=0|1;
@@ -16,6 +16,7 @@ export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:num
 export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
 export const DUEL_SECONDS=300,DUEL_PREPARATION_SECONDS=60,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor(s.elapsed/30));}
+export function duelHeroLearningLevel(p:Pick<DuelPlayer,'accountLevel'>){return learningLevel(p.accountLevel??1);}
 export function duelTowerLevel(s:DuelState){return s.status==='preparing'?Math.min(10,s.learningLevel??1):duelLevel(s);}
 export function canPurchaseDuelTower(s:DuelState){return s.status==='preparing'||s.status==='playing';}
 export function canUseDuelTower(s:DuelState,side:Side,typeId:string){
@@ -27,15 +28,15 @@ export function duelBuildCost(s:DuelState,side:Side,typeId:string){
  if(s.status==='playing')return (p.stock?.[typeId]??0)>0?0:towerPriceBand(type,duelTowerLevel(s)).low;
  return towerPrice(type,p.money,duelTowerLevel(s),p.purchaseVariation);
 }
-// The room freezes one shared learning level when the second player joins.
-function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!heroSpec(id)).slice(0,30);return {uid,name,accountLevel:normalizedAccountLevel(accountLevel),rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,accountLevel),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[]};}
+// Tower preparation shares one room level; hero addition uses each player's account level.
+function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!heroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({accountLevel:personalLevel})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[]};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1,loadout:RewardLoadout={},mapId?:string):DuelState{duelMap(mapId);return {version:1,seed,...(mapId===undefined?{}:{mapId}),learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,preparationStartedAt:0,preparationElapsed:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel,loadout),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
 export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLevel=1,loadout:RewardLoadout={}){
  if(s.players.some(p=>p?.uid===uid))return;
  if(s.status!=='waiting'||s.players[1]||now-s.createdAt>600000)throw Error('참가할 수 없는 방이에요. 새 방을 만들어 주세요.');
  s.players[1]=player(uid,name,s.seed,now,accountLevel,loadout);
  s.learningLevel=Math.min(10,s.players[0].accountLevel??1,s.players[1].accountLevel);
- for(const p of s.players)p!.board=decimalBoard(s.seed,p!.round,s.learningLevel);
+ for(const p of s.players)p!.board=decimalBoard(s.seed,p!.round,duelHeroLearningLevel(p!));
  s.revision++;
 }
 export function duelSide(s:DuelState,uid:string):Side{const i=s.players.findIndex(p=>p?.uid===uid);if(i<0)throw Error('이 대전에 참가한 계정이 아니에요.');return i as Side;}
@@ -285,8 +286,8 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==3||new Set(action.slots).size!==3||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15))return bad('서로 다른 블럭 세 개를 다시 골라요.');
   const [a,b,c]=action.slots.map(i=>p.board[i]);
   if(![a,b,c,a+b].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');
-  if(!recipe(a,b,c,'+')){wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},s.learningLevel??1);return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
-  p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,s.learningLevel??1);return ok(`덧셈 정답! 영웅 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
+  if(!recipe(a,b,c,'+')){wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
+  p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
  }
  if(action.type==='hatch'){
   if(s.status!=='playing')return bad('양쪽이 준비한 뒤 부화할 수 있어요.');const hero=heroSpec(action.heroId);

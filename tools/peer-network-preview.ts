@@ -1,5 +1,6 @@
 import {HostPeer} from '../src/multiplayer/peer';
 import {DUEL_MAPS,duelMap} from '../src/multiplayer/duel-maps';
+import {decimalBoard} from '../src/multiplayer/decimal-boards';
 const mapChoice=document.getElementById('map') as HTMLSelectElement;
 for(const map of DUEL_MAPS){const option=document.createElement('option');option.value=map.id;option.textContent=map.name;mapChoice.append(option);}
 const button=document.getElementById('connect') as HTMLButtonElement;
@@ -15,8 +16,8 @@ function candidates(code:string){
 button.onclick=async()=>{
  button.disabled=true;host?.dispose();guest?.dispose();lines.length=0;
  try{
-  host=new HostPeer({uid:'network-test-host',name:'연결 호스트',rewardHeroes:['hero-1-0','hero-4-1'],rewardHero:'hero-1-0'});
-  guest=new HostPeer({uid:'network-test-guest',name:'연결 참가자',rewardHeroes:['hero-2-2','hero-10-1'],rewardHero:'hero-2-2'});
+  host=new HostPeer({uid:'network-test-host',name:'연결 호스트',accountLevel:1,rewardHeroes:['hero-1-0','hero-4-1'],rewardHero:'hero-1-0'});
+  guest=new HostPeer({uid:'network-test-guest',name:'연결 참가자',accountLevel:8,rewardHeroes:['hero-2-2','hero-10-1'],rewardHero:'hero-2-2'});
   note(`자동 연결 설정: 양쪽 STUN ${host.pc.getConfiguration().iceServers?.length}개 · 경로 정책 ${host.pc.getConfiguration().iceTransportPolicy}`);
   const offer=await host.create(mapChoice.value);note('호스트 접속 주소 유형: '+candidates(offer));
   const answer=await guest.join(offer);note('참가자 접속 주소 유형: '+candidates(answer));
@@ -29,6 +30,12 @@ button.onclick=async()=>{
   const pair=await host.connectionInfo();note(`선택된 실제 경로: ${pair?.local} ↔ ${pair?.remote} · ${pair?.protocol}`);
   if(host.state?.mapId!==mapChoice.value||guest.state?.mapId!==mapChoice.value)throw Error('양쪽 맵이 일치하지 않아요.');
   note('PASS · 양쪽 같은 맵 · '+duelMap(mapChoice.value).name);
+  for(const state of [host.state!,guest.state!]){
+   if(state.players[0].accountLevel!==1||state.players[1]!.accountLevel!==8)throw Error('개인 계정 레벨이 접속 중 바뀌었어요.');
+   for(const player of state.players)if(JSON.stringify(player!.board)!==JSON.stringify(decimalBoard(state.seed,player!.round,player!.accountLevel)))throw Error('영웅 덧셈 난이도가 개인 레벨과 다르게 전달됐어요.');
+   if(JSON.stringify(state.players[0].board)===JSON.stringify(state.players[1]!.board))throw Error('레벨이 다른 두 사람이 같은 문제판을 받았어요.');
+  }
+  note('PASS · 실제 데이터 채널에서 Lv.1/Lv.8 개인 계정 레벨과 서로 다른 영웅 덧셈 문제판 일치');
   await host.send({type:'ready',heroId:'hero-4-1'});const ready=await guest.send({type:'ready',heroId:'hero-10-1'});
   if(!ready.ok||host.state?.status!=='preparing')throw Error('준비 메시지를 교환하지 못했어요. '+ready.message);
   note('PASS · 실제 데이터 채널에서 양쪽 준비 완료 · 60초 문제풀이 시작');

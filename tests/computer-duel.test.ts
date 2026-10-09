@@ -4,26 +4,48 @@ import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/
 import {COMPUTER_OPPONENTS,computerOpponent} from '../src/multiplayer/computer-opponents';
 import {DUEL_START_MONEY,DUEL_PREPARATION_SECONDS,FLAME_MAX,duelBuildCost,applyDuel,createDuel,joinDuel,advanceDuel,canPurchaseDuelTower,validDuelCell} from '../src/multiplayer/duel';
 import {DUEL_MAPS,duelRoadCell} from '../src/multiplayer/duel-maps';
+import {decimalBoard} from '../src/multiplayer/decimal-boards';
 import {numberText,recipe} from '../src/math';
 import {simulateComputerDuel} from '../tools/computer-duel-simulation';
 
-function local(level=1){let now=100000;const peer=new ComputerPeer({uid:'student',name:'수호자'},level,{seed:912,clock:()=>now,autoTick:false});return {peer,get now(){return now;},advance(ms:number){now+=ms;peer.step(now);},run(ms:number){for(let passed=0;passed<ms;){const dt=Math.min(100,ms-passed);passed+=dt;now+=dt;peer.step(now);}}};}
+function local(level=1,accountLevel=1){let now=100000;const peer=new ComputerPeer({uid:'student',name:'수호자',accountLevel},level,{seed:912,clock:()=>now,autoTick:false});return {peer,get now(){return now;},advance(ms:number){now+=ms;peer.step(now);},run(ms:number){for(let passed=0;passed<ms;){const dt=Math.min(100,ms-passed);passed+=dt;now+=dt;peer.step(now);}}};}
 function stockTotal(stock:Record<string,number>){return Object.values(stock).reduce((n,count)=>n+count,0);}
 async function prepareTower(peer:ComputerPeer,typeId='basic'){
  assert.ok((await peer.send({type:'prepare-quote',typeId})).ok);const quote=peer.state.players[0].quote!;
  assert.ok((await peer.send({type:'answer',nonce:quote.nonce,answer:numberText(quote.before-quote.cost)})).ok);
 }
 
-test('컴퓨터 상대 10명은 동일한 시작 예산·불꽃·문제 순서와 선택 레벨을 사용한다',()=>{
+test('컴퓨터 상대 10명은 동일한 시작 예산·불꽃을 받고 자신의 레벨로 덧셈을 푼다',()=>{
  assert.equal(COMPUTER_OPPONENTS.length,10);assert.equal(new Set(COMPUTER_OPPONENTS.map(o=>o.id)).size,10);
  for(let level=1;level<=10;level++){
   const {peer}=local(level),s=peer.state;
   assert.equal(peer.definition.level,level);assert.equal(s.learningLevel,level);assert.equal(s.status,'waiting');assert.equal(s.players[1]!.ready,true);
-  assert.deepEqual(s.players[0].board,s.players[1]!.board);assert.ok(s.players.every(p=>p!.money===DUEL_START_MONEY&&p!.flame===FLAME_MAX&&stockTotal(p!.stock)===0));
+  assert.equal(s.players[0].accountLevel,1);assert.equal(s.players[1]!.accountLevel,level);
+  assert.deepEqual(s.players[0].board,decimalBoard(912,0,1));assert.deepEqual(s.players[1]!.board,decimalBoard(912,0,level));assert.ok(s.players.every(p=>p!.money===DUEL_START_MONEY&&p!.flame===FLAME_MAX&&stockTotal(p!.stock)===0));
   const slots=additionSlots(s.players[1]!.board)!;assert.ok(slots);assert.equal(new Set(slots).size,3);assert.ok(recipe(...slots.map(i=>s.players[1]!.board[i]) as [number,number,number],'+'));
   assert.ok(s.players[0].board.every(n=>n%10===0));peer.dispose();
  }
  assert.equal(computerOpponent(-10).level,1);assert.equal(computerOpponent(99).level,10);
+});
+
+test('초급 대 고급 CPU와 고급 대 초급 CPU 모두 사람 계정을 바꾸지 않고 각자의 레벨로 합성·부화한다',async()=>{
+ for(const [humanLevel,cpuLevel]of [[1,8],[8,1],[27,8]]){
+  const f=local(cpuLevel,humanLevel),peer=f.peer,s=peer.state,p=s.players[0],cpu=s.players[1]!;
+  assert.equal(peer.identity.accountLevel,humanLevel);assert.equal(p.accountLevel,humanLevel);assert.equal(cpu.accountLevel,cpuLevel);
+  assert.equal(s.learningLevel,cpuLevel,'타워 준비 난이도는 선택한 CPU 레벨을 유지한다');
+  assert.deepEqual(p.board,decimalBoard(912,0,humanLevel));assert.deepEqual(cpu.board,decimalBoard(912,0,cpuLevel));assert.notDeepEqual(p.board,cpu.board);
+  await peer.send({type:'ready'});f.run(60000);assert.equal(s.status,'playing');
+  for(let round=0;round<4;round++){
+   const cpuBefore=structuredClone(cpu),board=[...p.board],slots=additionSlots(board)!;assert.ok(slots);
+   assert.equal((await peer.send({type:'fuse',operation:'+',round:p.round,slots})).ok,true);
+   assert.equal(p.round,round+1);assert.deepEqual(p.board,decimalBoard(912,p.round,humanLevel));assert.ok(p.board.every(n=>n%10===0));assert.deepEqual(cpu,cpuBefore);
+   if(round===1){const before=[...p.board];assert.equal((await peer.send({type:'hatch',heroId:'hero-2-0'})).ok,true);assert.equal(p.egg,0);assert.deepEqual(p.board,before);}
+  }
+  assert.equal(p.accountLevel,humanLevel);f.run(peer.definition.fusionMs+100);assert.ok(cpu.solved>=1);
+  assert.deepEqual(cpu.board,decimalBoard(912,cpu.round,cpuLevel));assert.deepEqual(p.board,decimalBoard(912,p.round,humanLevel));peer.dispose();
+ }
+ const peer=new ComputerPeer({uid:'student',name:'수호자'},8,{seed:912,clock:()=>100000,autoTick:false});
+ assert.equal(peer.identity.accountLevel,undefined);assert.equal(peer.state.players[0].accountLevel,1);assert.deepEqual(peer.state.players[0].board,decimalBoard(912,0,1));peer.dispose();
 });
 
 test('컴퓨터 대전은 준비 버튼을 누르기 전 구매·문제풀이·선행 설치를 막는다',async()=>{
