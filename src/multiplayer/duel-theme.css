@@ -4,10 +4,9 @@
 .duel-world-shade{position:absolute;inset:0;background:linear-gradient(90deg,#070b16cc,#070b1673 55%,#070b1640),linear-gradient(0deg,#060914df,transparent 65%,#080b1670)}
 .duel-world-glow{position:absolute;left:63%;top:6%;width:25%;height:38%;background:radial-gradient(ellipse,#ffa83238,transparent 67%);animation:duel-fire-glow 4s ease-in-out infinite alternate}
 .duel-world-embers{position:absolute;inset:0;background:radial-gradient(circle at 12% 76%,#fbc97899 0 1px,transparent 2px),radial-gradient(circle at 80% 64%,#fbc978bb 0 1px,transparent 2px),radial-gradient(circle at 71% 30%,#fbc97899 0 1px,transparent 2px),radial-gradient(circle at 21% 43%,#fbc97899 0 1px,transparent 2px);animation:duel-embers-rise 12s ease-in-out infinite}
-.duel-hall-header{position:absolute;top:58px;left:4%;right:4%;z-index:110;display:flex;align-items:center;gap:26px;min-height:36px;padding-bottom:10px;border-bottom:1px solid #eec78926;color:#c8b69a}
-.duel-hall-header a{text-decoration:none;color:#ffedc7;font-weight:900;font-size:25px;text-shadow:0 2px 6px #000}
-.duel-hall-header a span{font-size:12px;color:#d4ad70;font-weight:400;margin-left:12px;letter-spacing:.16em}
-.duel-hall-tag{font-size:12px;letter-spacing:.08em}
+.duel-hall-header{position:absolute;top:58px;left:4%;right:4%;z-index:110;display:flex;align-items:center;padding-bottom:4px;border-bottom:1px solid #eec78926}
+.duel-hall-header a{display:inline-flex;text-decoration:none}
+.duel-hall-logo{display:block;width:180px;max-width:70vw;height:auto;filter:drop-shadow(0 3px 8px #000a)}
 #app[data-duel-view="hall"] #game-shell{visibility:hidden}
 #app[data-duel-view="battle"] .duel-world,#app[data-duel-view="battle"] .duel-hall-header{display:none}
 #duel-dialog{padding:62px 24px 18px;background:#05091463;backdrop-filter:none}
@@ -89,6 +88,6 @@
 @keyframes duel-fire-glow{from{opacity:.5}to{opacity:1;transform:scale(1.1)}}
 @keyframes duel-embers-rise{0%{opacity:.25;transform:translateY(15px)}50%{opacity:.75}100%{opacity:.25;transform:translateY(-30px)}}
 @media(max-height:700px){#duel-dialog{padding-top:60px;padding-bottom:16px}.duel-card{max-height:calc(100dvh - 134px);padding:24px 30px}#duel-dialog[data-screen="auth"] .duel-card{padding:20px 30px}.duel-card label{margin:10px 0}.duel-card .duel-intro{margin-bottom:12px}.duel-card h2{font-size:27px}.duel-auth-form .duel-warning{padding:9px 12px}.duel-card input{min-height:46px}.duel-auth-links{margin:8px 0 0}}
-@media(max-width:850px){.duel-hall-tag{display:none}.duel-card{padding:22px 26px}.duel-row>button{min-width:140px}}
-@media(max-width:650px){#duel-dialog{padding:60px 14px 16px}#duel-dialog[data-screen="auth"] .duel-card{padding:22px}.duel-card{padding:22px;max-height:calc(100dvh - 134px)}.duel-hall-header{top:59px}.duel-hall-header a{font-size:21px}.duel-hall-header a span{display:none}.duel-row{gap:8px}.duel-row>button{min-width:130px;font-size:14px;padding:12px 20px}.hero-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.room-item{flex-wrap:wrap}.room-item .duel-primary{width:100%}.room-directory{padding:14px}.room-directory .duel-row>button{flex:1}.room-directory h3{flex-basis:100%}#duel-dialog[data-screen="lobby"] .duel-row:last-of-type{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.duel-card{padding:22px 26px}.duel-row>button{min-width:140px}}
+@media(max-width:650px){#duel-dialog{padding:60px 14px 16px}#duel-dialog[data-screen="auth"] .duel-card{padding:22px}.duel-card{padding:22px;max-height:calc(100dvh - 134px)}.duel-hall-header{top:59px;padding-bottom:8px}.duel-hall-logo{width:160px}.duel-row{gap:8px}.duel-row>button{min-width:130px;font-size:14px;padding:12px 20px}.hero-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.room-item{flex-wrap:wrap}.room-item .duel-primary{width:100%}.room-directory{padding:14px}.room-directory .duel-row>button{flex:1}.room-directory h3{flex-basis:100%}#duel-dialog[data-screen="lobby"] .duel-row:last-of-type{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.duel-world-art,.duel-world-glow,.duel-world-embers{animation:none}.duel-card button{transition:none}}
