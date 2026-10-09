@@ -62,7 +62,12 @@ test('cancelled purchase and closed forge remain recoverable',()=>{
 });
 
 test('actual automatic combat breaks the wall on three impacts and kills within 25 seconds',()=>{
- const session=new TutorialSession();prepare(session);assert.ok(session.start());
+ const session=new TutorialSession();
+ assert.equal(session.model.goals.length,3);
+ assert.ok(session.model.goals.every(goal=>!goal.done));
+ prepare(session);
+ assert.deepEqual(session.model.goals.map(goal=>goal.done),[true,true,false]);
+ assert.ok(session.start());
  let impacts=0,breaks=0,shots=0;
  for(let time=0;time<25&&!session.completed;time+=1/60){
   session.model.step(1/60);
@@ -78,6 +83,7 @@ test('actual automatic combat breaks the wall on three impacts and kills within 
  assert.equal(session.model.kills,1);assert.equal(session.model.walls.length,0);
  assert.equal(session.model.leaks,0);assert.equal(session.model.castle,5);
  assert.equal(session.model.bricks.length,0,'stage one does not draw persistent wall recipes after a kill');
+ assert.ok(session.model.goals.every(goal=>goal.done),'tutorial objectives all finish after one training enemy');
 });
 
 test('sessions own disposable inventories and never change shared adventure definitions',()=>{

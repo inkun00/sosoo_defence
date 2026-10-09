@@ -41,6 +41,11 @@ export class TutorialDefense extends Defense {
   const level:Level={...LEVELS[0],name:'기본 훈련',subtitle:'타워와 성벽 설치 연습',hint:'안내에 따라 기본 포탑과 성벽을 준비해요.',units:[100],effects:['basic'],hp:[600],bricks:[200,300,500],budget:900,goal:'wall'};
   super(level,{bricks:[200,300,500],walls:0},'practice');
  }
+ override get goals(){return [
+  {label:'뺄셈으로 기본 포탑 1개 설치',done:this.purchaseAnswers>=1},
+  {label:'덧셈으로 성벽 합성하고 길 위에 설치',done:this.fusions>=1&&this.wallPlacements>=1},
+  {label:'자동 공격과 성벽 3회 충돌 확인',done:this.tutorialShots>0&&this.tutorialWallImpacts>=3&&this.tutorialWallBreaks>0&&this.kills>=1}
+ ];}
  override emit(event:Event){
   if(event.type==='shot')this.tutorialShots++;
   if(event.type==='wall-impact')this.tutorialWallImpacts++;
