@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1:1 영웅 효과 표시 검증</title>
+<style>
+body.preview{margin:0;background:#111216;color:#f6e8cd;font-family:system-ui,sans-serif;overflow:hidden}
+body.preview #app{height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+#app #game-shell{position:relative;inset:auto;display:block;width:100%;min-height:0;flex:1;margin:0 auto}
+#game-shell #field{width:100%;height:100%}
+.preview-controls{width:100%;max-width:1280px;box-sizing:border-box;margin:0 auto;padding:6px 10px;background:#171d27;flex:none}
+.preview-controls nav{display:flex;flex-wrap:wrap;gap:6px}
+.preview-controls button{font-size:14px;padding:7px 12px;color:#ffe4af;background:#302b35;border:1px solid #aa8559;border-radius:5px}
+.preview-controls button:disabled{opacity:.45;cursor:wait}
+#status{margin:8px 0;font-size:14px;color:#decbb0}
+#proof{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;font-size:12px}
+#proof span{padding:4px 7px;background:#212837;border-radius:4px;line-height:1.5}
+#proof .affected{color:#b9efb6}
+#errors:empty{display:none}
+#errors{color:#ffb4a9;white-space:pre-wrap}
+@media(max-width:750px){#proof{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<body class="preview">
+<div id="app">
+<main id="game-shell"><div id="field"></div></main>
+<section class="preview-controls" aria-label="영웅 효과 검증 도구">
+<nav>
+<button id="effects-on" disabled>효과 적용</button>
+<button id="out-of-range" disabled>범위 벗어남</button>
+<button id="hero-exit" disabled>영웅 퇴장</button>
+<button id="restore-effects" disabled>영웅 효과 복구</button>
+<button id="swap-side" disabled>참가자 시점</button>
+<button id="top-bend" disabled>상단 굽이</button>
+</nav>
+<p id="status" role="status">실제 DuelScene과 영웅 이미지를 불러오는 중입니다.</p>
+<output id="proof" aria-label="모델이 판정한 효과 목록"></output>
+<pre id="errors"></pre>
+</section>
+</div>
+<script type="module" src="./duel-hero-effect-preview.ts"></script>
+</body>
+</html>

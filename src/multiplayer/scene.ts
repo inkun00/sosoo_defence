@@ -4,7 +4,7 @@ import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
-import {DuelState,Side,DuelTower,DUEL_ROAD,FLAME_MAX,duelLevel,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance} from './duel';
+import {DuelState,Side,DuelTower,DUEL_ROAD,FLAME_MAX,duelLevel,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects} from './duel';
 import {duelMap,duelRoadCell} from './duel-maps';
 import {HEROES,heroSpec,heroesAtLevel} from './heroes';
 import {HitEquationPopups} from '../hit-equations';
@@ -15,6 +15,7 @@ import {DuelShotStream} from './shot-stream';
 import {OpponentPortrait,ComputerView} from './opponent-portrait';
 import {HeroSummonStream} from './hero-summon-stream';
 import {HeroSummonEffects} from './hero-summon-effects';
+import {DuelHeroEffectBadges,loadDuelHeroEffectBadges} from './hero-effect-badges';
 const X=37,Y=132,T=38;
 export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];selectedTower:number;message:string;busy:boolean;connected:boolean;computer?:ComputerView;}
 export class DuelScene extends Phaser.Scene{
@@ -22,7 +23,7 @@ export class DuelScene extends Phaser.Scene{
  onAction:(key:string)=>void=()=>{};onCell:(x:number,y:number)=>void=()=>{};onControls:()=>void=()=>{};
  onSound:(type:string,towerTypeId?:string)=>void=()=>{};
  private terrain!:Phaser.GameObjects.Container;private units!:Phaser.GameObjects.Container;private ui!:Phaser.GameObjects.Container;private guides!:Phaser.GameObjects.Graphics;
- private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;last:number;size:number}>();
+ private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;effects:DuelHeroEffectBadges;last:number;size:number}>();
  private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower}>();private signature='';private uiSignature='';private revision=-1;private receivedAt=0;
  private shotStream=new DuelShotStream();private shotTimers=new Set<Phaser.Time.TimerEvent>();private shotEffects=new Set<Phaser.GameObjects.GameObject>();
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -32,10 +33,10 @@ export class DuelScene extends Phaser.Scene{
  private heroSummonStream=new HeroSummonStream();private heroSummonEffects?:HeroSummonEffects;
  private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
  constructor(public view:()=>DuelView){super('duel');}
- preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));}
+ preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));loadDuelHeroEffectBadges(this);}
  create(){
   registerDungeon(this);
-  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.opponentPortrait?.destroy();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();this.enemies.clear();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
+  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.opponentPortrait?.destroy();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();for(const enemy of this.enemies.values())enemy.effects.destroy();this.enemies.clear();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
   this.opponentPortrait=new OpponentPortrait(this,this.reduced);
   this.ambient=new AmbientProps(this,this.reduced);
   for(const kind of MONSTER_KINDS.filter(k=>this.textures.exists('dungeon-'+MONSTERS[k].atlas)))for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
@@ -156,18 +157,19 @@ export class DuelScene extends Phaser.Scene{
   const failed=(file:Phaser.Loader.File)=>{if(file.key!==key)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingHeroes.delete(level);this.heroRetry.set(level,performance.now()+30000);};
   this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(key,artURL(`heroes-level-${level}-v1`));if(!this.load.isLoading())this.load.start();
  }
- private syncEnemies(){const s=this.view().state,live=new Set(s?.enemies.map(e=>e.id));for(const [id,v]of this.enemies)if(!live.has(id)){v.sprite.destroy();v.hp.destroy();v.name.destroy();this.enemies.delete(id);}
+ private syncEnemies(){const s=this.view().state,live=new Set(s?.enemies.map(e=>e.id));for(const [id,v]of this.enemies)if(!live.has(id)){v.sprite.destroy();v.hp.destroy();v.name.destroy();v.effects.destroy();this.enemies.delete(id);}
   for(const e of s?.enemies??[]){let v=this.enemies.get(e.id);const hero=e.hero?heroSpec(e.hero):null,kind:MonsterKind=e.level>=8?'king':e.level>=6?'crystal':e.level>=4?'golem':e.level>=2?'beetle':'slime',size=hero?44+hero.level*2.6:39+e.level*1.4;
    const point=duelEnemyPosition(s!,e),x=X+(point.x+.5)*T,y=Y+(point.y+.5)*T-4;
    if(hero)this.ensureHero(hero.level);const heroReady=hero&&this.textures.exists('heroes-'+hero.level),texture=heroReady?'heroes-'+hero.level:'dungeon-'+MONSTERS[kind].atlas,frame=heroReady?hero.id+'-0':kind+'-0';
    if(!v){const sprite=this.add.sprite(x,y,texture,frame);sprite.setDisplaySize(size,size).setDepth(4).setFlipX(e.target===0);if(!this.reduced)sprite.play(heroReady?hero.id:kind+'-walk');
     const hp=this.add.text(x,y-size*.5-11,'',{fontFamily:'Malgun Gothic',fontSize:18,fontStyle:'bold',color:'#fff2d6',backgroundColor:'#11131dea',padding:{x:3,y:1}}).setOrigin(.5).setDepth(7);
-    const name=this.add.text(x,y-size*.5-31,hero?`★ ${hero.name}`:'',{fontFamily:'Malgun Gothic',fontSize:11,color:e.owner===0?'#9fe8ff':'#ffcc8a',backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name,last:e.hp,size};this.enemies.set(e.id,v);
+    const name=this.add.text(x,y-size*.5-31,hero?`★ ${hero.name}`:'',{fontFamily:'Malgun Gothic',fontSize:11,color:e.owner===0?'#9fe8ff':'#ffcc8a',backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name,effects:new DuelHeroEffectBadges(this,this.reduced),last:e.hp,size};this.enemies.set(e.id,v);
    }else if(v.last!==e.hp){if(!this.reduced)this.tweens.add({targets:v.sprite,alpha:.4,yoyo:true,duration:90,repeat:1});v.last=e.hp;}
    if(v.sprite.texture.key!==texture){v.sprite.stop().setTexture(texture,frame).setDisplaySize(size,size);}
    if(!this.reduced){const anim=heroReady?hero.id:kind+'-'+(e.slow>0||e.stun>0?'frozen':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);}
    if(Math.abs(point.dx)>.01)v.sprite.setFlipX(point.dx<0);
    v.hp.setText(numberText(e.hp));
+   v.effects.sync(activeDuelHeroEffects(s!,e));
   }
  }
  private syncHeroSummons(){
@@ -220,7 +222,11 @@ export class DuelScene extends Phaser.Scene{
    // On the uppermost bends, put labels below the walking sprite so the
    // guardian names and flame counters above the board stay readable.
    const below=v.sprite.y-v.size*.5-(v.name.text?31:11)<Y+8,offset=(below?1:-1)*(v.size*.5+11);
-   v.hp.setPosition(v.sprite.x,v.sprite.y+offset);v.name.setPosition(v.sprite.x,v.sprite.y+offset+(below?20:-20));
+   const effectsY=below?v.sprite.y+v.size*.5+15:v.sprite.y+offset-(v.name.text?20:0)-24;
+   // At the top edge, use a row below the sprite so badges cannot hide its face.
+   const hpY=v.sprite.y+offset+(below&&v.effects.visible?27:0);
+   v.hp.setPosition(v.sprite.x,hpY);v.name.setPosition(v.sprite.x,hpY+(below?20:-20));
+   v.effects.position(v.sprite.x,effectsY,X+3,X+24*T-3,Y);
   }
   for(const {head,tower:t}of this.towerViews.values()){if(!t.enabled)continue;const side=s.players.findIndex(p=>p?.towers.some(o=>o.id===t.id)),radius=towerType(t.typeId)!.effect==='range'?4:3,e=s.enemies.filter(e=>{const point=duelEnemyPosition(s,e);return e.hp>0&&e.target===side&&Math.hypot(point.x-t.x,point.y-t.y)<=radius;}).sort((a,b)=>Number(b.hp>=t.unit)-Number(a.hp>=t.unit)||(side===0?duelEnemyDistance(s,a)-duelEnemyDistance(s,b):duelEnemyDistance(s,b)-duelEnemyDistance(s,a))||a.id-b.id)[0];if(e){const point=duelEnemyPosition(s,e,age),angle=Math.atan2(point.y-t.y,point.x-t.x)+Math.PI/2;head.rotation+=Phaser.Math.Angle.Wrap(angle-head.rotation)*Math.min(1,delta/90);}}
  }

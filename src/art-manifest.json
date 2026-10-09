@@ -251,6 +251,51 @@
       "width": 1152
     }
   },
+  "hero-effect-brood-v1": {
+    "url": "/assets/dungeon/hero-effect-brood-v1.274194edd239.webp",
+    "sourceHash": "982253c237bf1e710c9a7c1066156af1430868abca7fc1a4e4980c6c595f6dce",
+    "width": 96,
+    "height": 96,
+    "sourceBytes": 2023274,
+    "bytes": 7042,
+    "encoding": {
+      "quality": 88,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 96,
+      "trim": true
+    }
+  },
+  "hero-effect-haste-v1": {
+    "url": "/assets/dungeon/hero-effect-haste-v1.a1a92f3e3299.webp",
+    "sourceHash": "83ef31be8b7fb0b766816cc2b7f021e2dd2fc8f0f9c10f33bc84ae67ac22cb6f",
+    "width": 96,
+    "height": 94,
+    "sourceBytes": 1666816,
+    "bytes": 6232,
+    "encoding": {
+      "quality": 88,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 96,
+      "trim": true
+    }
+  },
+  "hero-effect-steadfast-v1": {
+    "url": "/assets/dungeon/hero-effect-steadfast-v1.817cf3e60469.webp",
+    "sourceHash": "ee3d0f014e4e7f3509ded6f92f3ba1fc479a432edee8b7c545500070c12bc11c",
+    "width": 96,
+    "height": 96,
+    "sourceBytes": 2071257,
+    "bytes": 7382,
+    "encoding": {
+      "quality": 88,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 96,
+      "trim": true
+    }
+  },
   "hero-eggs-v1": {
     "url": "/assets/dungeon/hero-eggs-v1.09ceb06deb48.webp",
     "sourceHash": "3db54dba4050a545923683582011eb786bc3cba6648a41be168d1e7cefa21a9c",
