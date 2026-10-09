@@ -229,7 +229,8 @@ async function leaderboardScreen(){
   render(leaderboardHTML(data,'ready'));
  }catch(e){
   if(request!==leaderboardRequest||dialogKind!=='leaderboard'||user?.uid!==uid)return;
-  render(leaderboardHTML(undefined,'error',errorText(e)));
+  const message=(e as {code?:string})?.code?.startsWith('functions/')?'순위 서버에 연결하지 못했어요. 잠시 뒤 다시 불러와 주세요.':errorText(e);
+  render(leaderboardHTML(undefined,'error',message));
  }
 }
 async function history(){

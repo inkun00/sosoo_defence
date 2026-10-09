@@ -47,6 +47,20 @@
       "indexes": []
     },
     {
+      "collectionGroup": "decimalUsers",
+      "fieldPath": "progress.experience",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    },
+    {
       "collectionGroup": "decimalLobby",
       "fieldPath": "*",
       "indexes": []

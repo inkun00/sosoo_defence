@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {parseDuelLeaderboard,escapeLeaderboardText,type LeaderboardEntry} from '../src/multiplayer/leaderboard';
 
 const entry=(overrides:Partial<LeaderboardEntry>={}):LeaderboardEntry=>({rank:1,name:'첫 수호자',level:5,experience:1000,isMe:false,...overrides});
@@ -67,4 +68,23 @@ test('이름과 오류 메시지의 HTML 특수문자는 텍스트로만 출력�
  assert.equal(parsed.me.name,name);assert.equal(escapeLeaderboardText(parsed.me.name),'&lt;img src=x&gt;');
  assert.equal(escapeLeaderboardText('&<script>"\'</script>'),'&amp;&lt;script&gt;&quot;&#39;&lt;/script&gt;');
  assert.equal(escapeLeaderboardText('수호자 소환'),'수호자 소환');
+});
+
+test('운영 Firestore 인덱스는 경험치 정렬과 내 순위 집계를 지원하고 다른 계정 필드는 비활성화한다',()=>{
+ const config=JSON.parse(readFileSync(new URL('../firestore.indexes.json',import.meta.url),'utf8')) as {
+  fieldOverrides:{collectionGroup:string;fieldPath:string;indexes:{order?:string;queryScope:string}[]}[];
+ };
+ const users=config.fieldOverrides.filter(field=>field.collectionGroup==='decimalUsers');
+ const experience=users.filter(field=>field.fieldPath==='progress.experience');
+ assert.equal(experience.length,1,'경험치 예외 인덱스가 배포 설정에 정확히 한 번 있어야 한다');
+ assert.deepEqual(experience[0].indexes.map(index=>({order:index.order,queryScope:index.queryScope})).sort((a,b)=>String(a.order).localeCompare(String(b.order))),[
+  {order:'ASCENDING',queryScope:'COLLECTION'},
+  {order:'DESCENDING',queryScope:'COLLECTION'},
+ ],'상위 50명 내림차순과 내 순위의 경험치 범위 집계에 필요한 두 방향을 모두 활성화한다');
+ const wildcard=users.filter(field=>field.fieldPath==='*');
+ assert.equal(wildcard.length,1);assert.deepEqual(wildcard[0].indexes,[]);
+ for(const fieldPath of ['progress.level','progress.wins','progress.losses','progress.draws','email','wrongQuestions']){
+  const effective=users.find(field=>field.fieldPath===fieldPath)||wildcard[0];
+  assert.deepEqual(effective.indexes,[],`${fieldPath}는 기존의 계정 필드 인덱스 비활성화를 유지한다`);
+ }
 });
