@@ -62,7 +62,7 @@ export class GameUI extends Phaser.Scene{
  refresh(force=false){
   if(!this.ready)return;const s=this.getState(),m=s.model;
   if(force||this.currentStage!==m.level.id){this.currentStage=m.level.id;this.header.removeAll(true);this.controls.clear();this.drawHeader();this.signatures=['','',''];}
-  this.moneyText.setText(numberText(m.money,m.level.id>=4?3:m.level.digits)).setScale(1);if(this.moneyText.width>196)this.moneyText.setScale(196/this.moneyText.width);const time=Math.max(0,Math.ceil(m.duration-m.elapsed));this.timerText.setText(time===0&&['playing','paused'].includes(m.phase)?'추가 방어':`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`).setScale(1);if(this.timerText.width>103)this.timerText.setScale(103/this.timerText.width);
+  this.moneyText.setText(numberText(m.money,m.level.digits)).setScale(1);if(this.moneyText.width>196)this.moneyText.setScale(196/this.moneyText.width);const time=Math.max(0,Math.ceil(m.duration-m.elapsed));this.timerText.setText(time===0&&['playing','paused'].includes(m.phase)?'추가 방어':`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`).setScale(1);if(this.timerText.width>103)this.timerText.setScale(103/this.timerText.width);
   this.healthIcons.forEach((heart,i)=>heart.setAlpha(i<m.castle?1:.2));
   this.waveText.setText(`방어 ${m.kills} / ${m.enemyCount} · ${DIFFICULTIES[m.difficulty].name} · ${m.phase==='ready'?'준비':m.phase==='paused'?'정지':m.phase==='won'?'성공':m.phase==='review'?'목표 연습':m.phase==='lost'?'재도전':'진행'}`);
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
@@ -159,15 +159,15 @@ export class GameUI extends Phaser.Scene{
  private drawForge(){
   const s=this.getState(),m=s.model;this.modalFrame('벽돌을 합쳐 성벽으로',920,530);
   this.text(this.popup,640,208,'식이 맞으면 바로 길에 성벽을 놓을 수 있어요.',18,'#c2b7a4').setOrigin(.5);
-  (['+','-'] as FusionOperation[]).forEach((op,i)=>this.button(this.popup,`fusion:${op}`,530+i*220,252,194,56,op==='+'?'덧셈 +':'뺄셈 −',true,s.fusionOperation===op?'button_red':'button_brown',22));
+  this.text(this.popup,640,252,m.level.id<=3?'두 벽돌의 합을 찾아요 · 한 자리 소수':m.level.id<=4?'소수점을 맞추어 더해요 · 두 자리 소수':'단계가 높아질수록 받아올림과 큰 수를 더해요',20,'#f1ce94').setOrigin(.5);
   [350,540,730].forEach((x,i)=>{const brick=m.bricks.find(b=>b.id===s.slots[i]);const slot=this.button(this.popup,`slot:${i}`,x,330,140,86,brick?numberText(brick.value):'?',true,'button_brown',32);if(brick){const stone=this.add.image(0,2,'dungeon-props','brick').setDisplaySize(156,92);slot.container.addAt(stone,1);slot.label.setStroke('#14151d',4);}});
-  this.text(this.popup,445,328,s.fusionOperation==='-'?'−':'+',34).setOrigin(.5);this.text(this.popup,635,328,'=',34).setOrigin(.5);
+  this.text(this.popup,445,328,'+',34).setOrigin(.5);this.text(this.popup,635,328,'=',34).setOrigin(.5);
   this.button(this.popup,'fuse',917,330,158,84,'합성·설치',s.slots.every(v=>v!==null),'button_red',23);
   this.text(this.popup,243,378,`보관 중인 벽돌 ${m.bricks.length}개  ·  누르면 빈 슬롯에 들어가요`,19);
   m.bricks.slice(s.brickPage*6,s.brickPage*6+6).forEach((b,i)=>{const tile=this.button(this.popup,`brick:${b.id}`,295+i*137,442,118,64,numberText(b.value),!s.slots.includes(b.id),'button_brown',26);const stone=this.add.image(0,3,'dungeon-props','brick').setDisplaySize(126,77);tile.container.addAt(stone,1);tile.label.setStroke('#14151d',4);});
   const pages=Math.ceil(m.bricks.length/6);if(pages>1){this.button(this.popup,'brick-page:prev',403,508,134,56,'◀ 이전',s.brickPage>0,'button_brown',18);this.text(this.popup,640,508,`${s.brickPage+1} / ${pages}`,18,C.muted).setOrigin(.5);this.button(this.popup,'brick-page:next',877,508,134,56,'다음 ▶',s.brickPage<pages-1,'button_brown',18);}
   if(!m.bricks.length)this.text(this.popup,640,453,'돌 몬스터를 처치하면 숫자 벽돌을 얻어요.',21,'#bdb7ae').setOrigin(.5);
-  this.text(this.popup,247,540,s.message||`□ ${s.fusionOperation==='-'?'−':'+'} □ = □가 맞으면 벽돌 세 개를 소비해요.`,19,'#dfb987',500);
+  this.text(this.popup,247,540,s.message||'□ + □ = □가 맞으면 벽돌 세 개를 소비해요.',19,'#dfb987',500);
   this.button(this.popup,'wall',914,602,220,64,`성벽 설치 (${m.wallStock})`,m.wallStock>0,'button_red',24);
  }
  private drawMap(){
@@ -245,7 +245,7 @@ export class GameUI extends Phaser.Scene{
   const view=this.add.container(504,111).setName('purchase-calculation').setDepth(71);this.purchaseView=view;
   this.frame(view,0,0,950,82,'panel_brown_dark');
   const m=this.getState().model;
-  this.centerLabel(this.fitText(this.text(view,0,-21,`타워 구매 · 계산용 코인 · 전체 잔액 ${numberText(m.money,m.level.id>=4?3:m.level.digits)} 코인`,15,'#c7baa6').setOrigin(.5),886,22));
+  this.centerLabel(this.fitText(this.text(view,0,-21,`타워 구매 · 계산용 코인 · 전체 잔액 ${numberText(m.money,m.level.digits)} 코인`,15,'#c7baa6').setOrigin(.5),886,22));
   this.centerLabel(this.fitText(this.text(view,0,11,equation,34,'#ffe1a0').setName('purchase-equation').setOrigin(.5),886,42));
   this.toastView?.setY(179);
   this.purchaseTimer=this.time.delayedCall(8000,()=>{view.destroy(true);this.purchaseView=undefined;this.purchaseTimer=undefined;});

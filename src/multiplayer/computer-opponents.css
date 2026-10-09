@@ -1,0 +1,16 @@
+#duel-dialog[data-screen="computer-levels"] .duel-card{width:min(1120px,100%)}
+.computer-opponent-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:20px 0}
+.duel-card .computer-opponent-card{display:flex;flex-direction:column;align-items:center;gap:7px;min-height:262px;padding:12px 10px;background:linear-gradient(145deg,#383027,#111b29);border:1px solid #997845;border-radius:8px;box-shadow:inset 0 0 0 3px #171b24;text-align:center}
+.computer-opponent-portrait{display:block;width:110px;height:105px;background-size:400% 300%;background-position:0 0;background-repeat:no-repeat;filter:drop-shadow(0 2px 8px #000b)}
+.computer-opponent-level{color:#ffd18b;font-size:12px}
+.computer-opponent-card strong{font-size:16px;color:#ffeac4}
+.computer-opponent-title{font-size:12px;color:#caa879}
+.computer-opponent-card small{font-weight:400;font-size:11px;line-height:1.65;color:#c5baa8}
+.duel-card .computer-progress-note{font-size:12px;color:#bcb3a2}
+.duel-card .duel-computer-entry{width:100%;margin-top:14px;color:#e7d5ff}
+.duel-card .duel-computer-hint{text-align:center;font-size:12px;margin:4px 0 6px}
+.computer-result-portrait{float:right;width:150px;height:150px;margin:0 0 12px 20px;background-size:400% 300%;background-position:var(--pose-from) var(--pose-row);background-repeat:no-repeat;animation:computer-result-pose .8s steps(1,end) infinite alternate;filter:drop-shadow(0 3px 9px #0009)}
+@keyframes computer-result-pose{from{background-position:var(--pose-from) var(--pose-row)}to{background-position:var(--pose-to) var(--pose-row)}}
+@media(prefers-reduced-motion:reduce){.computer-result-portrait{animation:none}}
+@media(max-width:900px){.computer-opponent-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.computer-opponent-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.duel-card .computer-opponent-card{min-height:245px}.computer-opponent-portrait{width:100px;height:96px}}

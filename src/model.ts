@@ -71,14 +71,14 @@ export class Defense{
   const type=towerType(typeId);if(!type||!this.canPurchase(c,type))return false;
   const cost=towerPrice(type,this.money,this.level.id,this.purchaseVariation);if(this.money<cost)return this.notice('돈이 부족해요. 다른 타워를 고르거나 보상을 모아 보세요.');
   const before=purchaseCoins(this.money);
-  this.pendingPurchase={...c,typeId,before,wallet:this.money,cost,digits:this.level.id>=4?3:this.level.digits,borrowing:borrowingPlaces(before,cost)};
+  this.pendingPurchase={...c,typeId,before,wallet:this.money,cost,digits:this.level.digits,borrowing:borrowingPlaces(before,cost)};
   this.purchaseVariation={round:this.purchaseVariation.round+1,lastBefore:before,lastCost:cost};return true;
  }
  cancelPurchase(){this.pendingPurchase=null;}
  answerPurchase(text:string):boolean{
   const q=this.pendingPurchase;if(!q)return false;const type=towerType(q.typeId)!;
   if(this.money!==q.wallet||!this.canPurchase(q,type)){this.pendingPurchase=null;return this.notice('돈이나 설치할 칸이 바뀌었어요. 타워를 다시 선택해 주세요.');}
-  const answer=parseMoney(text);if(answer===null)return this.notice('소수점을 사용해 남는 코인을 적어 주세요. 최대 소수 세 자리까지 입력해요.');
+  const answer=parseMoney(text);if(answer===null)return this.notice('소수점을 사용해 남는 코인을 적어 주세요. 최대 소수 두 자리까지 입력해요.');
   if(answer!==q.before-q.cost)return this.notice('아직 맞지 않아요. 소수점을 맞추고 같은 자리끼리 다시 빼 보세요.');
   const blocks=this.candidate(q)!;this.money=q.wallet-q.cost;this.blocks=blocks;this.purchases++;this.purchaseAnswers++;
   this.towers.push({x:q.x,y:q.y,id:this.nextId++,typeId:type.id,unit:type.unit,effect:type.effect,enabled:true,cooldown:0,cost:q.cost});this.pendingPurchase=null;
@@ -90,12 +90,13 @@ export class Defense{
  toggleTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||!['ready','playing','paused'].includes(this.phase))return;t.enabled=!t.enabled;this.switches++;this.emit({type:'notice',message:`${decimal(t.unit,this.level.digits)} 타워 · 발사 ${t.enabled?'켜짐':'멈춤'}`});}
  sellTower(id:number){const t=this.towers.find(t=>t.id===id);if(!t||!['ready','playing','paused'].includes(this.phase))return;const before=this.money;const back=t.cost;this.money+=back;this.blocks.delete(key(t));this.towers=this.towers.filter(x=>x.id!==id);this.emit({type:'money',message:creditMessage(before,back,'타워 회수')});}
  fuse(ids:number[],operation:FusionOperation='+'):boolean{
+  if(operation!=='+')return this.notice('성벽은 덧셈으로 만들어요. 두 벽돌의 합을 골라 주세요.');
   if(ids.length!==3||new Set(ids).size!==3)return this.notice('서로 다른 벽돌 세 개를 골라 주세요.');
   const b=ids.map(id=>this.bricks.find(b=>b.id===id));if(b.some(b=>!b))return this.notice('벽돌을 다시 골라 주세요.');
   const [a,c,d]=b as Brick[];
-  if(!recipe(a.value,c.value,d.value,operation))return this.notice(`왼쪽 두 벽돌의 ${operation==='-'?'차':'합'}이 오른쪽 벽돌과 같아야 해요. 소수점을 맞춰 생각해 보세요.`);
+  if(!recipe(a.value,c.value,d.value,'+'))return this.notice('왼쪽 두 벽돌의 합이 오른쪽 벽돌과 같아야 해요. 소수점을 맞춰 생각해 보세요.');
   this.bricks=this.bricks.filter(b=>!ids.includes(b.id));this.fusions++;this.storedWallHealth.push(WALL_DURABILITY);
-  this.emit({type:'wall',message:`${numberText(a.value,this.level.digits)} ${operation==='-'?'−':'+'} ${numberText(c.value,this.level.digits)} = ${numberText(d.value,this.level.digits)} · 성벽 +1`,data:{operation}});return true;
+  this.emit({type:'wall',message:`${numberText(a.value,this.level.digits)} + ${numberText(c.value,this.level.digits)} = ${numberText(d.value,this.level.digits)} · 성벽 +1`,data:{operation:'+'}});return true;
  }
  get wallStock(){return this.storedWallHealth.length;}
  previewWall(c:Cell):WallPreview{
@@ -160,10 +161,10 @@ export class Defense{
   if(this.level.id===10&&e.kind==='warden'){this.bossDefeated=true;this.emit({type:'notice',message:'균열의 돌왕의 힘이 정확히 0이 되었어요! 이제 저주 마법사에게 맞서요.'});}
   if(this.level.boss?.kind===e.kind){this.bossDefeated=true;this.emit({type:'notice',message:'저주 마법사의 힘이 정확히 0이 되었어요! 남은 몬스터를 막아 세상을 구해요.'});}
   this.kills++;const earn=reward(e.max,e.hits,this.level.units,this.level.id);
-  // Each three-drop group has a new, correct addition/subtraction recipe.
+  // Each three-drop group has a new, correct addition recipe.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);
   if(brickDrop){const slot=this.droppedRecipe%3;if(slot===0)this.brickRecipe=drawWallRecipe(this.level.id,Math.floor(this.droppedRecipe/3));const value=this.brickRecipe![slot];this.droppedRecipe++;this.bricks.push({id:this.nextId++,value});this.emit({type:'brick',message:`${MONSTERS[e.kind].name}이 ${decimal(value,this.level.digits)} 벽돌을 남겼어요!`,x:e.x,y:e.y});}
-  else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.id>=4?3:1),x:e.x,y:e.y});}
+  else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.digits),x:e.x,y:e.y});}
   this.emit({type:'kill',message:`정확히 0! ${e.hits}번 타격`,x:e.x,y:e.y,data:{hits:e.hits,best:minimumHits(e.max,this.level.units),brick:brickDrop}});
  }
  private collideWall(e:Enemy,w:Wall,dx:number,dy:number,speed:number){

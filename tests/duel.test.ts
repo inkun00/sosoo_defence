@@ -41,7 +41,7 @@ test('계산 중 전투가 계속되고 보상은 보관 후 문제 종료에 �
  applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},s.updatedAt,'expiry');s.players[0].escrow=1234;s.players[0].quote!.expires=s.updatedAt+10;advanceDuel(s,s.updatedAt+20);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].escrow,0);
 });
 test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 정답만 알 레벨을 올린다',()=>{
- const s=match(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.ok(solve(s,1,'-').ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);
+ const s=match(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.equal(solve(s,1,'-').ok,false);assert.equal(s.players[1]!.egg,0);assert.ok(solve(s,1).ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);
  const before=JSON.stringify(s.players[0]);assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},NOW,'stale').ok,false);assert.equal(JSON.stringify(s.players[0]),before);
  assert.equal(applyDuel(s,0,{type:'fuse',round:1,slots:[0,0,2],operation:'+'},NOW,'duplicate').ok,false);
 });

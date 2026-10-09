@@ -21,3 +21,4 @@ asset-sources/
 *.pem
 *.key
 __pycache__/
+tmp/pdfs/

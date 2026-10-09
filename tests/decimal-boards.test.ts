@@ -10,7 +10,7 @@ function recipes(board:number[],operation:'+'|'-'){
  for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&(operation==='+'?board[a]+board[b]:board[a]-board[b])===board[c]){involved.add(a);involved.add(b);involved.add(c);}
  return involved;
 }
-test('각 난이도·순서에서 5개의 삼중 세트를 만들고 16개 블럭 모두 덧셈·뺄셈에 참여한다',()=>{
+test('각 난이도·순서에서 5개의 삼중 세트를 만들고 16개 블럭 모두 덧셈에 참여한다',()=>{
  for(let lv=1;lv<=10;lv++)for(let seed=0;seed<30;seed++)for(let round=0;round<8;round++){
   const triples=decimalTriples(seed,round,lv),board=decimalBoard(seed,round,lv);
   assert.equal(triples.length,5);assert.equal(board.length,16);assert.deepEqual(board,decimalBoard(seed,round,lv));
@@ -21,7 +21,7 @@ test('각 난이도·순서에서 5개의 삼중 세트를 만들고 16개 블�
   assert.equal(recipes(board,'+').size,16);assert.equal(recipes(board,'-').size,16);
  }
 });
-test('낮은 레벨은 한 자리 소수, 중간은 두 자리 소수와 연속 받아내림, 높은 레벨은 0을 거치는 계산이다',()=>{
+test('낮은 레벨은 한 자리 소수, 중간은 두 자리 소수와 연속 받아올림, 높은 레벨은 0이 생기는 덧셈이다',()=>{
  for(let seed=0;seed<100;seed++)for(let round=0;round<5;round++)for(let lv=1;lv<=10;lv++)for(const [a,b,c]of decimalTriples(seed,round,lv)){
   if(lv<=2){assert.ok(c<1000);assert.ok([a,b,c].every(n=>n%100===0));if(lv===1)assert.ok(a<=400&&b<=400);}
   if(lv===3){assert.ok(c>=1000);assert.ok([a,b,c].every(n=>n%100===0));}

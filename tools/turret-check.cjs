@@ -9,7 +9,7 @@ const fs=require('node:fs');
  await page.goto('http://localhost:5173/?mode=adventure');await page.waitForFunction(()=>window.__gameTest?.ui.ready);
  await page.evaluate(()=>{
   window.__gameTest.stage(6);const {model:m,scene:s}=window.__gameTest;
-  ['siege','frost','lightning','sniper'].forEach((id,i)=>{m.requestPurchase([{x:1,y:3},{x:3,y:3},{x:1,y:5},{x:1,y:7}][i],id);const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(3));});
+  ['siege','frost','lightning','sniper'].forEach((id,i)=>{m.requestPurchase([{x:1,y:3},{x:3,y:3},{x:1,y:5},{x:1,y:7}][i],id);const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(2));});
   s.drawTerrain();m.start();m.spawn();m.towers.forEach(t=>t.cooldown=100);m.enemies[0].hp=m.enemies[0].max=100000;m.enemies[0].stun=100;
  });
  await page.waitForTimeout(400);
@@ -40,7 +40,7 @@ const fs=require('node:fs');
  assert.ok(stats.recoil>3.9);assert.equal(stats.pausedRecoil,stats.recoil);assert.equal(stats.restRecoil,0);
  await page.evaluate(()=>{
   window.__gameTest.stage(6);const {model:m,scene:s}=window.__gameTest;
-  ['siege','frost','lightning','sniper'].forEach((id,i)=>{m.requestPurchase([{x:1,y:3},{x:3,y:3},{x:1,y:5},{x:1,y:7}][i],id);const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(3));});
+  ['siege','frost','lightning','sniper'].forEach((id,i)=>{m.requestPurchase([{x:1,y:3},{x:3,y:3},{x:1,y:5},{x:1,y:7}][i],id);const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(2));});
   s.drawTerrain();m.start();m.spawn();m.towers.forEach(t=>t.cooldown=100);const e=m.enemies[0];e.hp=e.max=12680;e.x=172;e.y=334;e.stun=100;
   for(let i=0;i<36;i++)s.update(0,16);s.onChange();
  });
@@ -48,7 +48,7 @@ const fs=require('node:fs');
  const heads=await page.evaluate(()=>[...window.__gameTest.scene.towerArt.values()].map(v=>v.head.frame.name));assert.deepEqual(heads,['siege','frost','lightning','sniper']);
  await page.setViewportSize({width:1024,height:768});await page.screenshot({path:'test-results/turret-tracking-tablet.png'});
  const reduced=await browser.newPage();await reduced.emulateMedia({reducedMotion:'reduce'});await reduced.goto('http://localhost:5173/?mode=adventure');await reduced.waitForFunction(()=>window.__gameTest?.ui.ready);
- const reducedResult=await reduced.evaluate(()=>{const {model:m,scene:s}=window.__gameTest;m.requestPurchase({x:1,y:3},'basic');const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(3));s.drawTerrain();m.start();m.spawn();m.towers[0].cooldown=100;const e=m.enemies[0];e.x=175;e.y=236.8;e.stun=100;s.update(0,16);const v=s.towerArt.get(m.towers[0].id);return {angle:v.angle,headY:v.head.y};});
+ const reducedResult=await reduced.evaluate(()=>{const {model:m,scene:s}=window.__gameTest;m.requestPurchase({x:1,y:3},'basic');const q=m.pendingPurchase;m.answerPurchase(((q.before-q.cost)/1000).toFixed(2));s.drawTerrain();m.start();m.spawn();m.towers[0].cooldown=100;const e=m.enemies[0];e.x=175;e.y=236.8;e.stun=100;s.update(0,16);const v=s.towerArt.get(m.towers[0].id);return {angle:v.angle,headY:v.head.y};});
  assert.ok(Math.abs(reducedResult.angle-Math.PI/2)<1e-5);assert.equal(reducedResult.headY,0);
  assert.deepEqual(errors,[]);console.log(JSON.stringify({status:'passed',checks:['four directional aim changes','base stays fixed','OFF and pause hold position','orientation retained across redraw','killing shot aim and real muzzle origin','recoil and recovery','four generated turret heads','tablet rendering','reduced-motion aiming'],stats,errors},null,2));await browser.close();
 })().catch(e=>{console.error(e);process.exit(1);});

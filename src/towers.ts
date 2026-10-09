@@ -9,11 +9,11 @@ export const TOWERS:TowerType[]=[
  {id:'frost',name:'서리탑',unit:150,effect:'slow',grade:2,unlock:2,cost:1450,cooldown:2.5,sheet:'a',frame:4},
  {id:'ice',name:'빙창탑',unit:250,effect:'slow',grade:2,unlock:3,cost:1650,cooldown:2.9,sheet:'a',frame:5},
  {id:'catapult',name:'투석기',unit:1200,effect:'basic',grade:2,unlock:3,cost:1750,cooldown:3.1,sheet:'b',frame:0},
- {id:'lightning',name:'번개탑',unit:350,effect:'stun',grade:3,unlock:4,cost:2785,cooldown:2.3,sheet:'b',frame:1},
- {id:'crystal',name:'수정포',unit:750,effect:'stun',grade:3,unlock:5,cost:2865,cooldown:2.7,sheet:'b',frame:2},
- {id:'sniper',name:'망원포',unit:1000,effect:'range',grade:3,unlock:6,cost:2965,cooldown:2.5,sheet:'b',frame:3},
- {id:'siege',name:'수호 대포',unit:1500,effect:'basic',grade:3,unlock:6,cost:2875,cooldown:3.4,sheet:'b',frame:4},
- {id:'rune',name:'룬 쇠뇌',unit:2350,effect:'range',grade:4,unlock:8,cost:3985,cooldown:3.8,sheet:'b',frame:5}
+ {id:'lightning',name:'번개탑',unit:350,effect:'stun',grade:3,unlock:4,cost:2790,cooldown:2.3,sheet:'b',frame:1},
+ {id:'crystal',name:'수정포',unit:750,effect:'stun',grade:3,unlock:5,cost:2870,cooldown:2.7,sheet:'b',frame:2},
+ {id:'sniper',name:'망원포',unit:1000,effect:'range',grade:3,unlock:6,cost:2970,cooldown:2.5,sheet:'b',frame:3},
+ {id:'siege',name:'수호 대포',unit:1500,effect:'basic',grade:3,unlock:6,cost:2880,cooldown:3.4,sheet:'b',frame:4},
+ {id:'rune',name:'룬 쇠뇌',unit:2350,effect:'range',grade:4,unlock:8,cost:3990,cooldown:3.8,sheet:'b',frame:5}
 ];
 export const towerType=(id:string)=>TOWERS.find(t=>t.id===id);
 export const towersForStage=(stage:number)=>TOWERS.filter(t=>t.unlock<=stage);
@@ -25,13 +25,13 @@ export const TOWER_RANGE=174,LONG_TOWER_RANGE=232;
 export interface PurchaseVariation{round:number;lastBefore?:number;lastCost?:number;}
 export function towerPriceBand(type:TowerType,stage:number){
  stage=Math.max(1,Math.min(11,Math.floor(stage)));
- const step=stage===1?100:type.grade<=2?10:1;
+ const step=stage===1?100:10;
  let low:number;
  if(type.grade===1){
   const offset={basic:0,double:10,needle:0,pebble:10}[type.id]??0;
   low=stage===1?Math.ceil(type.cost/100)*100:420+offset+(stage-2)*50;
  }else {
-  const opening=({catapult:1680,crystal:2825,sniper:2850,siege:2835,rune:3885} as Record<string,number>)[type.id]??type.cost;
+  const opening=({catapult:1680,crystal:2830,sniper:2850,siege:2840,rune:3890} as Record<string,number>)[type.id]??type.cost;
   low=opening+Math.max(0,stage-type.unlock)*(type.grade===3?30:40);
   low=Math.ceil(low/step)*step;
  }
@@ -73,7 +73,7 @@ export function borrowingPlaces(before:number,cost:number):number[]{
  return result;
 }
 export function parseMoney(text:string):number|null{
- const match=/^(\d+)(?:\.(\d{0,3}))?$/.exec(text.trim());if(!match)return null;
+ const match=/^(\d+)(?:\.(\d{0,2}))?$/.exec(text.trim());if(!match)return null;
  const value=Number(match[1])*1000+Number((match[2]||'').padEnd(3,'0'));
  return Number.isSafeInteger(value)&&value>=0?value:null;
 }

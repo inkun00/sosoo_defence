@@ -34,7 +34,7 @@ test('변형 가격도 차시별 소수 자리·한 자리 자연수·등급별 
   for(let i=0;i<25;i++){
    const before=purchaseCoins(level.budget),cost=towerPrice(type,level.budget,level.id,variation),places=borrowingPlaces(before,cost).filter(p=>p<1000);
    assert.ok(cost>0&&cost<=level.budget&&cost<10000);assert.ok(before-cost>=0&&before-cost<10000);
-   assert.equal(cost%(level.id===1?100:level.id<4?10:1),0);
+   assert.equal(cost%(level.id===1?100:10),0);
    const band=towerPriceBand(type,level.id);assert.ok(cost>=band.low&&cost<=band.high);
    if(type.grade===1){assert.ok(cost<=1000);assert.ok(places.length<=1,'기본 등급은 시작 코인에서 최대 한 번만 받아내린다');}
    else assert.ok(cost>(type.grade-1)*1000);
@@ -70,13 +70,13 @@ test('타워 잠금·길 위 설치·돈 부족은 문제를 만들거나 돈을
  m.money=50;assert.equal(m.requestPurchase({x:1,y:3},'basic'),false);assert.equal(m.money,50);
 });
 test('문제를 연 뒤 돈이나 설치 조건이 바뀌면 오래된 정답으로 설치할 수 없다',()=>{
- const m=new Defense(LEVELS[3]);m.requestPurchase({x:1,y:3},'lightning');const q=m.pendingPurchase!;m.money++;
- assert.equal(m.answerPurchase(numberText(q.before-q.cost)),false);assert.equal(m.towers.length,0);assert.equal(m.money,q.before+1);assert.equal(m.pendingPurchase,null);
+ const m=new Defense(LEVELS[3]);m.requestPurchase({x:1,y:3},'lightning');const q=m.pendingPurchase!;m.money+=10;
+ assert.equal(m.answerPurchase(numberText(q.before-q.cost)),false);assert.equal(m.towers.length,0);assert.equal(m.money,q.before+10);assert.equal(m.pendingPurchase,null);
  m.requestPurchase({x:1,y:3},'basic');const next=m.pendingPurchase!;m.blocks.add('1,3');assert.equal(m.answerPurchase(numberText(next.before-next.cost)),false);assert.equal(m.money,next.before);
 });
 test('소수 입력을 반올림 없이 정수로 해석하며 잘못된 형식은 차감하지 않는다',()=>{
- assert.equal(parseMoney('10.7'),10700);assert.equal(parseMoney('027.855'),27855);assert.equal(parseMoney(' 0.010 '),10);
- for(const s of ['','-1','1e3','NaN','Infinity','2.3456','2..3','1,23','abc'])assert.equal(parseMoney(s),null);
+ assert.equal(parseMoney('10.7'),10700);assert.equal(parseMoney('027.85'),27850);assert.equal(parseMoney(' 0.01 '),10);
+ for(const s of ['','-1','1e3','NaN','Infinity','0.010','2.345','2.3456','2..3','1,23','abc'])assert.equal(parseMoney(s),null);
  const m=new Defense(LEVELS[3]);m.requestPurchase({x:1,y:3},'basic');const before=m.money;assert.equal(m.answerPurchase('abc'),false);assert.equal(m.money,before);assert.ok(m.pendingPurchase);
 });
 test('회수는 실제 지불한 가격을 반환하며 재설치에도 새 뺄셈 정답이 필요하다',()=>{

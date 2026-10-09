@@ -4,7 +4,7 @@ export type WallRecipe = readonly [number, number, number];
 const MAX_POOL_SIZE = 512;
 const pools = new Map<string, readonly WallRecipe[]>();
 
-/** Addition and its two reversed subtraction equations share one identity. */
+/** Slot order does not change the identity of a stored addition triple. */
 export function wallRecipeKey(recipe: WallRecipe): string {
   return [...recipe].sort((a, b) => a - b).join(':');
 }
@@ -15,14 +15,14 @@ function carry(a: number, b: number): { hundredths: boolean; tenths: boolean } {
   return { hundredths, tenths };
 }
 
-function borrowsThroughZero(a: number, c: number): boolean {
-  // For example, 1.02 − 0.27 must borrow through the zero in the tenths place.
+function carriesThroughZero(a: number, c: number): boolean {
+  // Two carries can leave a zero column: 0.75 + 0.27 = 1.02.
   return c % 1000 < 100 && a % 1000 >= 100 && c % 100 < a % 100;
 }
 
 /**
  * A deterministic bank of solvable triples at the stage's learning difficulty.
- * Each triple is [a, b, a + b], usable as a + b = c or c − a = b.
+ * Each triple is [a, b, a + b] for addition-only wall construction.
  * groupIndex advances the curriculum's alternating practice sets; the caller
  * chooses/shuffles entries and excludes recently used wallRecipeKey values.
  */
@@ -36,9 +36,9 @@ export function wallRecipePool(stageId: number, groupIndex = 0): readonly WallRe
   const cached = pools.get(cacheKey);
   if (cached) return cached;
 
-  const tenths = stage <= 4 || stage === 6 || stage === 8;
+  const tenths = stage <= 3;
   const step = tenths ? 100 : 10;
-  const maxOperand = stage <= 2 ? 800 : stage === 3 ? 2900 : stage <= 5 ? 3990 : 4990;
+  const maxOperand = stage <= 2 ? 800 : stage === 3 ? 2900 : stage <= 5 ? 2990 : stage === 6 ? 3990 : 4990;
   const recipes: WallRecipe[] = [];
 
   for (let a = step; a <= maxOperand; a += step) {
@@ -52,14 +52,17 @@ export function wallRecipePool(stageId: number, groupIndex = 0): readonly WallRe
       const carries = carry(a, b);
       const anyCarry = carries.hundredths || carries.tenths;
       if (stage <= 2 && c >= 1000) continue;
-      if (stage >= 3 && stage <= 5 && anyCarry) continue;
-      if ((stage === 6 || stage === 8) && !carries.tenths) continue;
-      if (stage === 7 && (variant === 0 ? anyCarry : !anyCarry)) continue;
-      if (stage === 9 && (variant === 0 ? !anyCarry : !borrowsThroughZero(a, c))) continue;
+      if (stage === 3 && !carries.tenths) continue;
+      if (stage === 4 && anyCarry) continue;
+      if (stage === 5 && (!anyCarry || carries.hundredths && carries.tenths)) continue;
+      if (stage === 6 && !carries.hundredths) continue;
+      if (stage === 7 && (variant === 0 ? !anyCarry || carries.hundredths && carries.tenths : !carries.hundredths || !carries.tenths)) continue;
+      if (stage === 8 && (a < 1000 || b < 1000 || !carries.hundredths || !carries.tenths)) continue;
+      if (stage === 9 && (variant === 0 ? !carries.hundredths || !carries.tenths : !carriesThroughZero(a, c))) continue;
       if (stage >= 10) {
         if (variant === 0 && (!carries.hundredths || carries.tenths)) continue;
         if (variant === 1 && !carries.tenths) continue;
-        if (variant === 2 && !borrowsThroughZero(a, c)) continue;
+        if (variant === 2 && !carriesThroughZero(a, c)) continue;
       }
       recipes.push(Object.freeze([a, b, c]) as WallRecipe);
     }

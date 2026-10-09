@@ -43,12 +43,12 @@ test('벽돌 개수·드롭 시점·코인 보상과 전투 난수는 기존 규
  }
 }));
 
-test('생성 재료와 기존 재료는 저장·단계 이동 후에도 덧셈과 뺄셈으로 합성된다',()=>withStorage(()=>{
+test('생성 재료와 기존 재료는 저장·단계 이동 후에도 덧셈으로 합성된다',()=>withStorage(()=>{
  const m=new Defense(LEVELS[8],{bricks:[100,200,300],walls:0});for(let i=0;i<9;i++)defeat(m);
  const save=loadSave();save.inventory=m.inventory;assert.ok(writeSave(save));const next=new Defense(LEVELS[9],loadSave().inventory);
  assert.deepEqual(next.bricks.map(b=>b.value),m.bricks.map(b=>b.value));
  const original=next.bricks.slice(0,3),first=next.bricks.slice(3,6),second=next.bricks.slice(6,9);
- assert.ok(next.fuse(original.map(b=>b.id)));assert.ok(next.fuse([first[2].id,first[1].id,first[0].id],'-'));assert.ok(next.fuse(second.map(b=>b.id)));
+ assert.ok(next.fuse(original.map(b=>b.id)));assert.equal(next.fuse([first[2].id,first[1].id,first[0].id],'-'),false);assert.ok(next.fuse(first.map(b=>b.id)));assert.ok(next.fuse(second.map(b=>b.id)));
  assert.equal(next.bricks.length,0);assert.equal(next.wallStock,3);
 }));
 

@@ -5,7 +5,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
   const context=await browser.newContext({viewport:{width:1280,height:800}}),errors=[];context.on('page',p=>{p.on('pageerror',e=>errors.push(String(e)));p.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});});
   const click=async(p,x,y)=>{const b=await p.locator('canvas').boundingBox();await p.mouse.click(b.x+x/1280*b.width,b.y+y/800*b.height);await p.waitForTimeout(70);};
   const cell=(p,x,y)=>click(p,40+(x+.5)*58,118+(y+.5)*58);
-  const answer=async p=>{const notice=await p.locator('#accessible-notice').textContent(),values=notice.match(/\d+\.\d+/g);assert.ok(values?.length>=2,notice);const cash=n=>Math.round(Number(n)*1000);await p.keyboard.type(((cash(values[0])-cash(values[1]))/1000).toFixed(3));await click(p,805,692);};
+  const answer=async p=>{const notice=await p.locator('#accessible-notice').textContent(),values=notice.match(/\d+\.\d+/g);assert.ok(values?.length>=2,notice);const cash=n=>Math.round(Number(n)*1000);await p.keyboard.type(((cash(values[0])-cash(values[1]))/1000).toFixed(2));await click(p,805,692);};
   const page=await context.newPage();await page.goto('http://localhost:4173/?mode=adventure');await page.locator('[data-action="type:basic"]').waitFor({state:'attached'});assert.equal(await page.evaluate(()=>window.__gameTest),undefined);
   await click(page,1135,196);await cell(page,1,3);assert.equal(await page.locator('[data-action="purchase-confirm"]').count(),1);await answer(page);assert.equal(await page.locator('[data-action="toggle"]').count(),1);
   await click(page,1135,770);await page.waitForFunction(()=>/방어 [1-9]/.test(document.getElementById('accessible-state').textContent),{},{timeout:45000});

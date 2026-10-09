@@ -44,33 +44,33 @@ test('마법사가 통과하면 성 체력은 한 개만 줄고 최종 목표 �
  assert.equal(m.castle,4);assert.equal(m.leaks,1);assert.equal(m.phase,'review');assert.equal(m.bossDefeated,false);assert.equal(m.stars,0);
 });
 
-test('최종 준비금은 19.978이지만 구매 문항과 정답은 한 자리 자연수이며 실제 잔액을 보존한다',()=>{
- const m=new Defense(LEVELS.at(-1)!);assert.equal(m.money,19978);assert.equal(purchaseCoins(m.money),9978);
+test('최종 준비금은 19.98이지만 구매 문항과 정답은 한 자리 자연수이며 실제 잔액을 보존한다',()=>{
+ const m=new Defense(LEVELS.at(-1)!);assert.equal(m.money,19980);assert.equal(purchaseCoins(m.money),9980);
  assert.ok(m.requestPurchase({x:1,y:3},'rune'));const q=m.pendingPurchase!;
  assert.ok([q.before,q.cost,q.before-q.cost].every(n=>n>=0&&n<10000));assert.equal(m.answerPurchase('99.9'),false);
- assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,19978-q.cost);
- m.sellTower(m.towers[0].id);assert.equal(m.money,19978);
+ assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,19980-q.cost);
+ m.sellTower(m.towers[0].id);assert.equal(m.money,19980);
 });
 
-test('11단계는 반복 실패 후 재도전해도 19.978을 복원하고 계산·보관 코인을 구분한다',()=>{
+test('11단계는 반복 실패 후 재도전해도 19.98을 복원하고 계산·보관 코인을 구분한다',()=>{
  let m=new Defense(LEVELS[FINAL_STAGE-1]);
  for(let attempt=0;attempt<3;attempt++){
-  assert.equal(m.money,19978);assert.equal(m.phase,'ready');assert.equal(m.towers.length,0);
+  assert.equal(m.money,19980);assert.equal(m.phase,'ready');assert.equal(m.towers.length,0);
   assert.ok(m.requestPurchase({x:1,y:3},'rune'));const q=m.pendingPurchase!;
-  assert.equal(q.wallet,19978);assert.equal(q.before,9978);assert.equal(q.wallet-q.before,10000);
-  assert.equal(purchaseBalanceText(q.wallet,q.before,q.digits),'전체 보유 19.978 코인 · 계산 9.978 · 보관 10.000');
-  assert.equal(m.answerPurchase('0'),false);assert.equal(m.money,19978);
-  m.cancelPurchase();assert.equal(m.money,19978);
+  assert.equal(q.wallet,19980);assert.equal(q.before,9980);assert.equal(q.wallet-q.before,10000);
+  assert.equal(purchaseBalanceText(q.wallet,q.before,q.digits),'전체 보유 19.98 코인 · 계산 9.98 · 보관 10.00');
+  assert.equal(m.answerPurchase('0'),false);assert.equal(m.money,19980);
+  m.cancelPurchase();assert.equal(m.money,19980);
   assert.ok(m.requestPurchase({x:1,y:3},'rune'));const next=m.pendingPurchase!;
-  assert.ok(m.answerPurchase(numberText(next.before-next.cost)));assert.equal(m.money,19978-next.cost);
+  assert.ok(m.answerPurchase(numberText(next.before-next.cost)));assert.equal(m.money,19980-next.cost);
   assert.equal(m.money-(next.before-next.cost),10000,'보관한 10코인은 구매 후에도 보존한다');
   assert.ok(m.start());for(let i=0;i<5;i++)m.spawn();for(const enemy of m.enemies)enemy.next=enemy.path.length;
   m.step(.1);assert.equal(m.phase,'lost');assert.equal(m.castle,0);
   // The retry controller rebuilds Defense with the same level and inventory.
   m=new Defense(m.level,m.inventory,m.difficulty);
  }
- assert.equal(m.money,19978);
- assert.equal(purchaseBalanceText(8420,8420,3),'전체 보유 8.420 코인');
+ assert.equal(m.money,19980);
+ assert.equal(purchaseBalanceText(8420,8420,3),'전체 보유 8.42 코인');
 });
 
 test('기존 10단계 완료 기록은 별·벽돌·내구도를 유지하며 11단계를 해금하고 새 엔딩은 미완료로 둔다',()=>{

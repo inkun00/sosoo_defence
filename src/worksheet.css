@@ -3,3 +3,46 @@ html:has(.workbook),body:has(.workbook),#app:has(.workbook){height:auto;min-heig
 @keyframes reward-appear{from{opacity:0;transform:scale(.55) translateY(25px)}to{opacity:1;transform:none}}@media(max-width:900px){.workbook-unlock{align-items:flex-start;flex-direction:column}.workbook{padding:20px 18px 40px}#ws-pages{overflow:auto;align-items:flex-start}.ws-sheet{flex:none}.workbook-toolbar{gap:8px}.workbook-toolbar button{font-size:14px}.workbook-header{align-items:flex-start}.workbook-home{font-size:13px;padding:11px}.workbook-unlock form>div{flex-wrap:wrap}}@media(prefers-reduced-motion:reduce){.reward-reveal .collection-art{animation:none}}@page{size:A4 portrait;margin:0}@media print{html,body,#app{width:210mm!important;height:auto!important;min-height:0!important;overflow:visible!important;background:white!important}.workbook{padding:0!important;background:white!important;min-height:0!important}.workbook > :not(#ws-pages){display:none!important}#ws-pages{display:block!important;overflow:visible!important}.ws-sheet{box-shadow:none!important;margin:0!important;break-after:page;page-break-after:always;background:white!important}.ws-sheet:last-child{break-after:auto;page-break-after:auto}.ws-sheet,.ws-question,.ws-header,.ws-cipher-group{break-inside:avoid;page-break-inside:avoid}.ws-question{background:white!important}.ws-egg{-webkit-print-color-adjust:exact;print-color-adjust:exact}.ws-answer,.ws-cipher-group i,.ws-final-code i{background:white!important}}
 
 .ws-sheet{border:1px solid #b7a987}.ws-guide{display:block;width:60px;height:66px;background-position:0% 0%;background-size:400% 300%;background-repeat:no-repeat;-webkit-print-color-adjust:exact;print-color-adjust:exact}.ws-emblem{gap:2mm}.ws-header{background:linear-gradient(90deg,transparent,#c9b47d12)}
+/* Compact concept cards preserve the established single A4 sheet and cipher. */
+.ws-sheet{padding:7mm}
+.ws-header{min-height:0;line-height:1.15;padding-bottom:5px}
+.ws-header .ws-eyebrow{margin:0 0 3px}
+.ws-header h1{font-size:22px;line-height:1.15;margin:2px 0}
+.ws-meta{font-size:9.5px}
+.ws-guide{width:44px;height:48px}
+.ws-egg{width:34px;height:48px}
+.ws-mission{padding:4px 0 6px}
+.ws-question-grid{grid-auto-rows:13.5mm;gap:3px}
+.ws-question{padding:3px;gap:5px}
+.ws-question-body{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+.ws-equation{font-size:17px;gap:4px}
+.ws-answer{width:43px;height:21px;vertical-align:middle}
+.ws-concept-text{min-width:0;display:flex;flex-direction:column;gap:2px;font-size:11.5px;line-height:1.3}
+.ws-concept-text>span{color:#554b39}
+.ws-concept-text>div{font-size:13px;font-weight:700;line-height:1.4}
+.ws-concept .ws-answer{width:38px;height:18px}
+.ws-rune{font-size:8px;gap:3px}
+.ws-rune i{width:15px;height:21px}
+.ws-grid-art{width:32px;height:32px;flex:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ws-numberline{width:108px;height:32px;flex:none}
+.ws-numberline+div{font-size:10px}
+.ws-numberline+div>div{font-size:12px}
+.ws-fraction{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;font:700 11px Consolas,monospace}
+.ws-fraction>span{display:flex;flex-direction:column;min-width:20px;text-align:center}
+.ws-fraction i{font-style:normal;line-height:1.05}
+.ws-fraction i:first-child{border-bottom:1px solid #514632;padding-bottom:1px}
+.ws-fraction i:last-child{padding-top:1px}
+.ws-concept-text u{text-decoration-thickness:2px;text-underline-offset:3px}
+.ws-decoder{grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+.ws-decoder>span{height:19px;padding:2px 5px}
+.ws-decoder b,.ws-decoder strong{font-size:11px}
+.ws-map h2{font-size:11px;margin:5px 0 3px}
+.ws-map-note{font-size:9.5px;margin:3px 0}
+.ws-cipher-groups{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.ws-cipher-group{grid-template-columns:minmax(0,1fr);gap:3px;min-height:54px;padding:4px}
+.ws-cipher-group>b{font-size:9px}
+.ws-cipher-group>div{gap:2px}
+.ws-cipher-group i{width:19px;height:18px}
+.ws-cipher-group label:last-child i{width:21px}
+.ws-cipher-group div>span{font-size:11px;margin-top:12px}
+.ws-final-code{padding:4px 0}

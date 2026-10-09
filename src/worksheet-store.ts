@@ -1,5 +1,5 @@
 import {heroSpec,HEROES} from './multiplayer/heroes';
-import {loadLearning,recordLearning,importPendingLearning} from './learning';
+import {loadLearning,recordKindLearning,importPendingLearning} from './learning';
 import {Worksheet,generateWorksheet,codeHash,worksheetCode,validWorksheet,random} from './worksheet';
 export interface CollectedHero{heroId:string;copies:number;obtainedAt:number;}
 export interface Workbook{version:1;sheets:Worksheet[];collection:CollectedHero[];selectedHero:string|null;}
@@ -18,7 +18,7 @@ export function ownedHeroIds(){return [...new Set(loadWorkbook().collection.map(
 export function selectedWorksheetHero(){return loadWorkbook().selectedHero;}
 export async function selectWorksheetHero(id:string|null){return locked(()=>{const book=loadWorkbook();if(id!==null&&!book.collection.some(h=>h.heroId===id))throw Error('아직 획득하지 않은 영웅이에요.');book.selectedHero=id;save(book);});}
 export async function getOrCreateWorksheet(level:number,fresh=false){return locked(async()=>{
- importPendingLearning();const book=loadWorkbook(),pending=[...book.sheets].reverse().find(s=>!s.claimedHero)??book.sheets.at(-1);if(pending&&!fresh)return pending;
+ importPendingLearning();const book=loadWorkbook(),modern=[...book.sheets].reverse().filter(s=>s.questions.some(q=>q.type)),pending=modern.find(s=>!s.claimedHero)??modern[0];if(pending&&!fresh)return pending;
  const generated=generateWorksheet(loadLearning(),level,crypto.randomUUID(),Date.now()),sheet:Worksheet={...generated,codeHash:await codeHash(generated.id,worksheetCode(generated))};
  book.sheets.push(sheet);save(book);return sheet;
 });}
@@ -31,7 +31,7 @@ export async function redeemWorksheet(id:string,input:string,r:()=>number=random
   if(sheet.claimedHero)throw Error('이 학습지는 이미 영웅을 받았어요. 새 학습지로 다시 도전해 주세요.');
   if(hash!==sheet.codeHash)throw Error('암호가 맞지 않아요. 20개 답의 룬 숫자와 여섯 묶음의 합을 다시 확인해 주세요.');
   const hero=drawWorksheetHero(r);sheet.claimedHero=hero.id;const owned=book.collection.find(h=>h.heroId===hero.id);if(owned)owned.copies++;else book.collection.push({heroId:hero.id,copies:1,obtainedAt:Date.now()});book.selectedHero??=hero.id;save(book);
-  for(const [i,q] of sheet.questions.entries())recordLearning(q,'correct','worksheet:'+id+':'+i);
+  for(const [i,q] of sheet.questions.entries())recordKindLearning(q.kind,'correct','worksheet:'+id+':'+i);
   return {hero,copies:owned?.copies??1};
  });
 }

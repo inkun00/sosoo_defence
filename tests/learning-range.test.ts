@@ -20,11 +20,11 @@ test('보스 체력 예외 외의 일반 몬스터·영웅·포탄·재료·구�
 });
 
 test('누적 보유금이 커져도 구매 수식은 10 미만이고 나머지 코인과 회수액은 보존한다',()=>{
- for(const l of LEVELS){const m=new Defense(l);m.money=98759;
+ for(const l of LEVELS){const m=new Defense(l);m.money=98760;
   assert.ok(m.requestPurchase({x:1,y:3},'basic'));const q=m.pendingPurchase!;
-  assert.equal(q.wallet,98759);assert.ok([q.before,q.cost,q.before-q.cost].every(learningValue));
-  assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,98759-q.cost);
-  m.sellTower(m.towers[0].id);assert.equal(m.money,98759);
+  assert.equal(q.wallet,98760);assert.ok([q.before,q.cost,q.before-q.cost].every(learningValue));
+  assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,98760-q.cost);
+  m.sellTower(m.towers[0].id);assert.equal(m.money,98760);
   assert.ok(!m.events.at(-1)!.message.includes(' = '));
  }
  assert.equal(creditMessage(9500,1000,'보상'),'1.0 코인 · 보상');

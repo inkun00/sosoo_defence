@@ -4,17 +4,17 @@ export function normalizedAccountLevel(value:number){return Number.isSafeInteger
 export function learningDescription(level:number){return [
  '한 자리 소수 · 작은 수',
  '한 자리 소수 · 1보다 작은 합',
- '한 자리 소수 · 받아올림·받아내림',
+ '한 자리 소수 · 받아올림',
  '두 자리 소수 · 자리 맞추기',
- '두 자리 소수 · 받아올림·받아내림',
- '두 자리 소수 · 두 자리 연속 받아내림',
+ '두 자리 소수 · 받아올림',
+ '두 자리 소수 · 연속 받아올림',
  '다른 자릿수 · 자연수와 소수',
- '자연수·두 자리 소수 · 연속 받아내림',
- '한 자리 자연수 · 소수의 0을 거치는 받아내림',
- '한 자리 자연수 · 두 소수 자리의 0을 거치는 받아내림',
+ '자연수·두 자리 소수 · 연속 받아올림',
+ '한 자리 자연수 · 받아올려 소수에 0이 생기는 덧셈',
+ '한 자리 자연수 · 받아올려 자연수가 되는 덧셈',
  ][learningLevel(level)-1];}
 function rng(seed:number){let n=seed>>>0;return()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
-// Every triple supports both a+b=c and c-a=b, including repeated values.
+// Every triple supports addition a+b=c, including repeated values.
 // Quantities stay exact in thousandths; learning uses tenths/hundredths only.
 export function decimalTriples(seed:number,round:number,accountLevel=1):DecimalTriple[]{
  const lv=learningLevel(accountLevel),r=rng(seed^Math.imul(round+1,2654435761)^Math.imul(lv,2246822519));

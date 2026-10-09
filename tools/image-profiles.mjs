@@ -4,6 +4,7 @@ export function imageProfile(name){
  const profile={quality:80,alphaQuality:100,effort:6};
  if(name.startsWith('story-')||name==='title-castle-v1')return {...profile,quality:76};
  if(name.startsWith('heroes-level-'))return {...profile,width:768};
+ if(name.startsWith('cpu-opponent-'))return {...profile,width:768};
  if(name.startsWith('fx-flight-'))return {...profile,width:768};
  if(name==='fx-impact-v1'||name==='fx-utility-v1')return {...profile,width:1152};
  if(name==='title-wordmark-v1')return {...profile,quality:88,width:960,trim:true};

@@ -1,11 +1,13 @@
-// All quantities use thousandths as integers. 0.001 is currency only.
+// Keep the existing integer scale for exact arithmetic. Every game amount is
+// a multiple of 10, so displayed questions stop at hundredths (0.01).
 export const SCALE=1000;
+export const DECIMAL_STEP=10,MAX_DECIMAL_DIGITS=2;
 // Operands and results in learning equations have a one-digit whole part.
 export const LEARNING_LIMIT=10*SCALE;
-export function learningValue(value:number){return Number.isSafeInteger(value)&&value>=0&&value<LEARNING_LIMIT;}
+export function learningValue(value:number){return Number.isSafeInteger(value)&&value>=0&&value<LEARNING_LIMIT&&value%DECIMAL_STEP===0;}
 // Keep the full wallet unlimited, but use an actual affordable portion for a
 // purchase exercise when accumulated rewards exceed the learning range.
-export function purchaseCoins(wallet:number){return wallet<LEARNING_LIMIT?wallet:9000+wallet%SCALE;}
+export function purchaseCoins(wallet:number){const amount=Math.floor(wallet/DECIMAL_STEP)*DECIMAL_STEP;return amount<LEARNING_LIMIT?amount:9000+amount%SCALE;}
 export function purchaseBalanceText(wallet:number,before:number,digits:number){
  const total=`전체 보유 ${numberText(wallet,digits)} 코인`;
  return wallet===before?total:`${total} · 계산 ${numberText(before,digits)} · 보관 ${numberText(wallet-before,digits)}`;
@@ -17,13 +19,17 @@ export function creditMessage(before:number,amount:number,label:string,digits=1)
 }
 export function decimal(value:number,digits=1):string {
  if(!Number.isSafeInteger(value))throw new Error('Exact integer amount required');
- const sign=value<0?'-':'';const v=Math.abs(value);
+ digits=Math.max(0,Math.min(MAX_DECIMAL_DIGITS,Math.floor(digits)));
+ // Older match records may contain thousandths; format them at the current
+ // precision without making a new three-place learning question.
+ const rounded=Math.round(value/DECIMAL_STEP)*DECIMAL_STEP;
+ const sign=rounded<0?'-':'';const v=Math.abs(rounded);
  return sign+Math.floor(v/1000)+(digits?'.'+String(v%1000).padStart(3,'0').slice(0,digits):'');
 }
-export function precision(value:number):number{return value%100?value%10?3:2:1;}
+export function precision(value:number):number{return value%100?2:1;}
 export function numberText(value:number,min=1):string{return decimal(value,Math.max(min,precision(value)));}
 export function hit(hp:number,damage:number):{hp:number;valid:boolean;killed:boolean}{
- if(!Number.isSafeInteger(hp)||!Number.isSafeInteger(damage)||hp<=0||damage<=0)throw new Error('Invalid damage');
+ if(!Number.isSafeInteger(hp)||!Number.isSafeInteger(damage)||hp<=0||damage<=0||hp%DECIMAL_STEP||damage%DECIMAL_STEP)throw new Error('Invalid damage');
  const valid=damage<=hp;return {hp:valid?hp-damage:hp,valid,killed:valid&&hp===damage};
 }
 export type FusionOperation='+'|'-';
@@ -42,7 +48,7 @@ export function minimumHits(hp:number,units:number[]):number{
 }
 export function reward(hp:number,hits:number,units:number[],stage:number):number{
  const efficiency=Math.max(.25,Math.min(1,minimumHits(hp,units)/Math.max(1,hits)));
- const unit=stage>=4?1:100;
+ const unit=stage>=2?DECIMAL_STEP:100;
  return Math.max(unit,Math.min(9000,Math.round(2*(160+stage*38+hp*.12)*(0.6+efficiency*.9)/unit)*unit));
 }
 export function regroupMessage(before:number,damage:number,digits:number):string{

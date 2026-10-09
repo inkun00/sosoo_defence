@@ -1,0 +1,75 @@
+{
+  "tool": "Built-in image_gen",
+  "frames": {
+    "idle": [
+      0,
+      1
+    ],
+    "thinking": [
+      2,
+      3
+    ],
+    "cast": [
+      4,
+      5
+    ],
+    "hurt": [
+      6,
+      7
+    ],
+    "victory": [
+      8,
+      9
+    ],
+    "defeat": [
+      10,
+      11
+    ]
+  },
+  "grid": {
+    "columns": 4,
+    "rows": 3
+  },
+  "prompts": [
+    {
+      "level": 1,
+      "prompt": "Create a production game sprite sheet, transparent RGBA background, for one opponent character in a cute hand-painted dark-fantasy stone-castle tower-defense educational game. Subject: a small moss-covered stone apprentice guardian, amber eyes, leafy hood, little wooden rune staff, friendly expressive face, full body 3/4 facing viewer-left. Exactly 12 isolated frames in an exact 4-column by 3-row evenly spaced rectangular grid, no text, no borders, no floor, no shadows outside individual character, no overlapping neighboring cells. Each cell identical size, consistent identity/scale/baseline, character centered with generous transparent safety margins. Reading left to right then next row, frames0,1 idle breathing/blinking; frames2,3 thoughtful hand to chin then raised eyebrow; frames4,5 casting with staff raised and small green magical spark; frames6,7 startled hit recoil with shocked/worried eyes; frames8,9 victorious smiling cheer arms up; frames10,11 defeated sad slumped posture eyes down. Both frames in each pair must visibly differ in movement. Stylized painted game illustration, clear silhouette, gold-trimmed stone details matching fantasy dungeon sprites. Not pixel art, not photorealism. Entire image aspect ratio 4:3, e.g.1536x1152, grid exact, transparent background."
+    },
+    {
+      "level": 2,
+      "prompt": "Create a production animated game sprite atlas on a truly TRANSPARENT RGBA background. Cute expressive hand-painted dark-fantasy stone-castle tower-defense game, polished illustrated sprites, not pixel art or photorealism. ONE consistent full-body character, facing three-quarter viewer-left, identical scale and centered baseline throughout. Exactly 12 frames, strict equal-cell grid FOUR columns by THREE rows, ample transparent margins in every cell, no text, no outlines of the grid, no scenery, no cell bleed. Frame reading order0-11:0,1 idle breathing and blink;2,3 thinking hand to chin and raised eyebrow;4,5 magical casting gesture and corresponding magical effect;6,7 startled recoil from damage with shocked face;8,9 happy victory cheer two distinct arm positions;10,11 sad defeat slumping with closed eyes. Each pair visibly changes pose/expression. Same distinct costume and recognizable face in all12 frames. All staff/wings/fx inside cell margins. Character: lantern scout, small hooded stone ranger with warm brass lantern, leather satchel, amber eyes, blue cloak; casting projects a golden lantern wisp"
+    },
+    {
+      "level": 3,
+      "prompt": "Create a production animated game sprite atlas on a truly TRANSPARENT RGBA background. Cute expressive hand-painted dark-fantasy stone-castle tower-defense game, polished illustrated sprites, not pixel art or photorealism. ONE consistent full-body character, facing three-quarter viewer-left, identical scale and centered baseline throughout. Exactly 12 frames, strict equal-cell grid FOUR columns by THREE rows, ample transparent margins in every cell, no text, no outlines of the grid, no scenery, no cell bleed. Frame reading order0-11:0,1 idle breathing and blink;2,3 thinking hand to chin and raised eyebrow;4,5 magical casting gesture and corresponding magical effect;6,7 startled recoil from damage with shocked face;8,9 happy victory cheer two distinct arm positions;10,11 sad defeat slumping with closed eyes. Each pair visibly changes pose/expression. Same distinct costume and recognizable face in all12 frames. All staff/wings/fx inside cell margins. Character: ember smith, stocky stone dwarf blacksmith with reddish beard, bronze goggles, leather apron, small forge hammer and glowing orange ember core; casting fiery orange sparks"
+    },
+    {
+      "level": 4,
+      "prompt": "Create a production animated game sprite atlas on a truly TRANSPARENT RGBA background. Cute expressive hand-painted dark-fantasy stone-castle tower-defense game, polished illustrated sprites, not pixel art or photorealism. ONE consistent full-body character, facing three-quarter viewer-left, identical scale and centered baseline throughout. Exactly 12 frames, strict equal-cell grid FOUR columns by THREE rows, ample transparent margins in every cell, no text, no outlines of the grid, no scenery, no cell bleed. Frame reading order0-11:0,1 idle breathing and blink;2,3 thinking hand to chin and raised eyebrow;4,5 magical casting gesture and corresponding magical effect;6,7 startled recoil from damage with shocked face;8,9 happy victory cheer two distinct arm positions;10,11 sad defeat slumping with closed eyes. Each pair visibly changes pose/expression. Same distinct costume and recognizable face in all12 frames. All staff/wings/fx inside cell margins. Character: frost sage, gentle female frost elf stone sorcerer with white hair, icy blue robes, silver staff and snow crystal; casting blue frost ribbons"
+    },
+    {
+      "level": 5,
+      "prompt": "Production sprite sheet for a cute painterly dark fantasy stone castle game. Truly transparent RGBA background. ONE consistent character in all12 frames, full body three quarter facing viewer-left, identical scale centered in equal cells, wide transparent padding, no scenery, no text, no grid lines, no overlapping neighboring cells. EXACTLY FOUR columns by THREE rows. Reading left-to-right rows: frames0,1 idle breathe/blink;2,3 thoughtful with hand to chin and raised eyebrow;4,5 dramatic casting with themed magical effect;6,7 damage recoil with startled concerned face;8,9 victorious happy cheer;10,11 sad slumping defeat. Each pair visibly distinct motion and facial expressions, costume identity preserved. Polished painted outlined fantasy game art, rounded charming proportions, crisp readable faces. Character: lightning alchemist, curious stone fox sorcerer, purple robe, brass goggles, electrified blue orb, thin lightning sparks"
+    },
+    {
+      "level": 6,
+      "prompt": "Production sprite sheet for a cute painterly dark fantasy stone castle game. Truly transparent RGBA background. ONE consistent character in all12 frames, full body three quarter facing viewer-left, identical scale centered in equal cells, wide transparent padding, no scenery, no text, no grid lines, no overlapping neighboring cells. EXACTLY FOUR columns by THREE rows. Reading left-to-right rows: frames0,1 idle breathe/blink;2,3 thoughtful with hand to chin and raised eyebrow;4,5 dramatic casting with themed magical effect;6,7 damage recoil with startled concerned face;8,9 victorious happy cheer;10,11 sad slumping defeat. Each pair visibly distinct motion and facial expressions, costume identity preserved. Polished painted outlined fantasy game art, rounded charming proportions, crisp readable faces. Character: rune knight, noble expressive small stone knight, silver charcoal armor with gold rune inlays, burgundy cloak, rune sword, golden arc casting"
+    },
+    {
+      "level": 7,
+      "prompt": "Production sprite sheet for a cute painterly dark fantasy stone castle game. Truly transparent RGBA background. ONE consistent character in all12 frames, full body three quarter facing viewer-left, identical scale centered in equal cells, wide transparent padding, no scenery, no text, no grid lines, no overlapping neighboring cells. EXACTLY FOUR columns by THREE rows. Reading left-to-right rows: frames0,1 idle breathe/blink;2,3 thoughtful with hand to chin and raised eyebrow;4,5 dramatic casting with themed magical effect;6,7 damage recoil with startled concerned face;8,9 victorious happy cheer;10,11 sad slumping defeat. Each pair visibly distinct motion and facial expressions, costume identity preserved. Polished painted outlined fantasy game art, rounded charming proportions, crisp readable faces. Character: crystal oracle, mysterious friendly feminine stone spirit, lilac crystal crown, violet and gold robes, floating small crystal sphere, pink-purple crystalline magic"
+    },
+    {
+      "level": 8,
+      "prompt": "Create original production animation sprite atlas for cute dark fantasy stone castle tower defense. True transparent RGBA canvas. EXACT strict FOUR columns by THREE rows equal cells, exactly12 full-body isolated sprites of ONE IDENTICAL character, 3/4 facing viewer-left, same scale/baseline centered with safe transparent margins all sides, no cell bleed, no background, no floor, no text, no grid. Read rowwise:0,1 calm idle breathing/blinking;2,3 thinking with hand to chin and raised eyebrow;4,5 casting a themed spell with dynamic gesture;6,7 surprised hurt recoil;8,9 happy triumphant cheer;10,11 sorrowful slumped defeat eyes down. Each two-frame pair changes pose and face visibly. Detailed hand-painted fantasy game art with clean outlines and charming chunky proportions. Keep every horn/wing/staff/spell within its own cell. Subject: shadow warden, calm small stone owl mage, charcoal feathered hood and purple eyes, silver moon staff, flowing dark violet cloak, mysterious purple shadow magic but friendly child appropriate"
+    },
+    {
+      "level": 9,
+      "prompt": "Create original production animation sprite atlas for cute dark fantasy stone castle tower defense. True transparent RGBA canvas. EXACT strict FOUR columns by THREE rows equal cells, exactly12 full-body isolated sprites of ONE IDENTICAL character, 3/4 facing viewer-left, same scale/baseline centered with safe transparent margins all sides, no cell bleed, no background, no floor, no text, no grid. Read rowwise:0,1 calm idle breathing/blinking;2,3 thinking with hand to chin and raised eyebrow;4,5 casting a themed spell with dynamic gesture;6,7 surprised hurt recoil;8,9 happy triumphant cheer;10,11 sorrowful slumped defeat eyes down. Each two-frame pair changes pose and face visibly. Detailed hand-painted fantasy game art with clean outlines and charming chunky proportions. Keep every horn/wing/staff/spell within its own cell. Subject: storm dragon sage, friendly small turquoise dragon humanoid sage with expressive eyes, tiny folded wings, gold trimmed teal wizard mantle, staff, blue cyan swirling wind and lightning magic"
+    },
+    {
+      "level": 10,
+      "prompt": "Create original production animation sprite atlas for cute dark fantasy stone castle tower defense. True transparent RGBA canvas. EXACT strict FOUR columns by THREE rows equal cells, exactly12 full-body isolated sprites of ONE IDENTICAL character, 3/4 facing viewer-left, same scale/baseline centered with safe transparent margins all sides, no cell bleed, no background, no floor, no text, no grid. Read rowwise:0,1 calm idle breathing/blinking;2,3 thinking with hand to chin and raised eyebrow;4,5 casting a themed spell with dynamic gesture;6,7 surprised hurt recoil;8,9 happy triumphant cheer;10,11 sorrowful slumped defeat eyes down. Each two-frame pair changes pose and face visibly. Detailed hand-painted fantasy game art with clean outlines and charming chunky proportions. Keep every horn/wing/staff/spell within its own cell. Subject: archmage, majestic expressive elderly stone wizard, long silver beard, deep indigo robes with gold star runes, tall pointed crown hat, ornate gold staff and amber jewel, spectacular restrained violet golden magical aura"
+    }
+  ]
+}

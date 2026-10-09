@@ -11,16 +11,16 @@ import {towersForStage,towerPrice} from '../src/towers';
 test('소수는 정수로 정확히 계산하고 큰 공격은 체력을 바꾸지 않는다',()=>{
  assert.deepEqual(hit(600,1000),{hp:600,valid:false,killed:false});
  let hp=600;for(let i=0;i<6;i++)hp=hit(hp,100).hp;assert.equal(hp,0);
- assert.equal(numberText(301,3),'0.301');assert.equal(recipe(420,530,950),true);
+ assert.equal(numberText(301,3),'0.30');assert.equal(numberText(310,3),'0.31');assert.equal(recipe(420,530,950),true);
  assert.equal(recipe(420,530,960),false);assert.equal(minimumHits(6310,[10,100,1000]),10);
 });
-test('0.001은 4단계부터 돈에만 있고 모든 체력·벽돌·포탄은 단계 자릿수를 지킨다',()=>{
+test('모든 단계에서 돈·가격·보상·체력·벽돌·포탄은 소수 두 자리 이내를 지킨다',()=>{
  for(const l of LEVELS){
   assert.ok(!l.units.includes(1));assert.ok(l.units.every(u=>u>=10));
   assert.ok([...l.hp,...l.bricks].every(n=>n%(l.digits===1?100:10)===0));
   const cost=price(l.units[0],'basic',l.id);assert.ok(cost>=1);
-  if(l.id<4){assert.equal(cost%(l.id===1?100:10),0);assert.equal(reward(l.hp[0],10,l.units,l.id)%100,0);}
-  else assert.ok(towersForStage(l.id).some(t=>towerPrice(t,l.budget,l.id)%10!==0));
+  assert.equal(l.budget%10,0);assert.equal(cost%(l.id===1?100:10),0);assert.equal(reward(l.hp[0],10,l.units,l.id)%(l.id===1?100:10),0);
+  assert.ok(towersForStage(l.id).every(t=>towerPrice(t,l.budget,l.id)%10===0));
  }
 });
 test('유효 타격만 횟수에 들어가고 한 마리 돈 보상은 9 이하이다',()=>{
@@ -39,9 +39,9 @@ test('감속과 확률 기절은 추가 피해 없이 유효 공격에만 적용
  assert.ok(stuns>=15&&stuns<=35,`100번 중 기절 ${stuns}회`);
  t.effect='slow';m.damage(e,t);assert.equal(e.slow,3);assert.equal(e.hp,89900);
 });
-test('구매 계산에 쓰는 시작 코인과 타워 가격의 자연수 부분은 한 자리이고 세 자리 돈은 4단계부터 사용한다',()=>{
+test('구매 계산에 쓰는 시작 코인과 타워 가격은 소수 두 자리이고 자연수 부분은 한 자리다',()=>{
  for(const l of LEVELS){assert.ok(l.budget>0);if(!l.boss)assert.ok(l.budget<10000);for(const t of towersForStage(l.id))assert.ok(towerPrice(t,l.budget,l.id)>0&&towerPrice(t,l.budget,l.id)<10000);}
- assert.ok(towerPrice(towersForStage(4).find(t=>t.id==='lightning')!,LEVELS[3].budget,4)%10!==0);
+ assert.equal(towerPrice(towersForStage(4).find(t=>t.id==='lightning')!,LEVELS[3].budget,4)%10,0);
 });
 test('처치는 돈 또는 벽돌을 하나만 남기고 세 벽돌 합성은 값을 검증하고 소비한다',()=>{
  const m=new Defense(LEVELS[1]);
@@ -51,7 +51,7 @@ test('처치는 돈 또는 벽돌을 하나만 남기고 세 벽돌 합성은 �
  assert.equal(m.fuse([ids[2],ids[1],ids[0]]),false);
  assert.equal(m.fuse(ids),true);assert.equal(m.bricks.length,0);assert.equal(m.wallStock,1);
 });
-test('뺄셈 벽돌 조합은 받아내림도 정확히 계산하고 순서·음수·잘못된 답을 거부한다',()=>{
+test('공통 뺄셈 검증은 학습지와 계산 기록의 받아내림을 정확히 계산한다',()=>{
  assert.equal(recipe(1300,700,600,'-'),true);
  assert.equal(recipe(1310,560,750,'-'),true);
  assert.equal(recipe(6300,2750,3550,'-'),true);
@@ -61,15 +61,16 @@ test('뺄셈 벽돌 조합은 받아내림도 정확히 계산하고 순서·음
  assert.equal(recipe(100,200,-100,'-'),false);
  assert.equal(recipe(1300,700,600),false);
 });
-test('덧셈과 뺄셈 합성을 함께 사용해도 세 재료만 소비하고 성벽과 합성 목표에 반영한다',()=>{
+test('성벽 합성은 덧셈만 허용하고 뺄셈 요청은 세 재료와 재고를 보존한다',()=>{
  const m=new Defense(LEVELS[6]);
  m.bricks=[{id:91,value:420},{id:92,value:530},{id:93,value:950},{id:94,value:750},{id:95,value:560},{id:96,value:1310}];
  assert.equal(m.fuse([94,95,96],'-'),false);assert.equal(m.bricks.length,6);assert.equal(m.wallStock,0);
  assert.equal(m.fuse([96,95,95],'-'),false);assert.equal(m.bricks.length,6);
  assert.equal(m.fuse([91,92,93]),true);assert.equal(m.bricks.length,3);
- assert.equal(m.fuse([96,95,94],'-'),true);assert.equal(m.bricks.length,0);
+ assert.equal(m.fuse([96,95,94],'-'),false);assert.equal(m.bricks.length,3);
+ assert.equal(m.fuse([94,95,96],'+'),true);assert.equal(m.bricks.length,0);
  assert.equal(m.wallStock,2);assert.equal(m.fusions,2);
- assert.match(m.events.at(-1)!.message,/1\.31 − 0\.56 = 0\.75/);
+ assert.match(m.events.at(-1)!.message,/0\.75 \+ 0\.56 = 1\.31/);
  assert.equal(m.fuse([96,95,94],'-'),false);assert.equal(m.wallStock,2);
  assert.equal(m.placeWall({x:1,y:4}),true);assert.equal(m.goals[1].done,true);
 });

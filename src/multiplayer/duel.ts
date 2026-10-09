@@ -121,7 +121,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽의 비어 있는 바닥에 설치해요.');
   if(p.towers.length>=14||(type.unit===10&&p.towers.filter(t=>t.unit===10).length>=3))return bad('설치 제한이에요. 전체 14개, 바늘탑 3개까지예요.');
   const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
-  const before=purchaseCoins(p.money);p.quote={x:action.x,y:action.y,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:lv<4?2:3,nonce,expires:now+60000};
+  const before=purchaseCoins(p.money);p.quote={x:action.x,y:action.y,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:2,nonce,expires:now+60000};
   p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('구매에 사용할 코인에서 남는 코인을 계산해요. 대전은 계속 진행돼요.');
  }
  if(action.type==='answer'){
@@ -138,12 +138,13 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   p.money+=t.cost;p.towers=p.towers.filter(o=>o.id!==t.id);return ok(`${numberText(t.cost)} 코인을 회수했어요.`);
  }
  if(action.type==='fuse'){
+  if(action.operation!=='+')return bad('돌 알은 덧셈으로 만들어요. 두 블럭의 합을 골라 주세요.');
   if(s.status!=='playing')return bad('양쪽이 준비한 뒤 합성할 수 있어요.');
   if(p.egg>=10)return bad('알은 10레벨이에요. 먼저 부화시켜 주세요.');
   if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==3||new Set(action.slots).size!==3||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15)||!['+','-'].includes(action.operation))return bad('서로 다른 블럭 세 개를 다시 골라요.');
   const [a,b,c]=action.slots.map(i=>p.board[i]);
-  if(![a,b,c,action.operation==='+'?a+b:a-b].every(learningValue))return bad('정답의 자연수 부분도 한 자리여야 해요. 다른 블럭 조합을 골라 주세요.');
-  if(!recipe(a,b,c,action.operation)){wrong(s,p,{id:`fusion-${p.round}-${action.operation}-${a}-${b}`,kind:'fusion',a,b,operation:action.operation,submitted:numberText(c),correct:action.operation==='+'?a+b:a-b},s.learningLevel??1);return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
+  if(![a,b,c,a+b].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');
+  if(!recipe(a,b,c,'+')){wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},s.learningLevel??1);return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
   p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,s.learningLevel??1);return ok(`정답! 돌 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
  }
  if(action.type==='hatch'){

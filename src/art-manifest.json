@@ -1,4 +1,144 @@
 {
+  "cpu-opponent-1-v1": {
+    "url": "/assets/dungeon/cpu-opponent-1-v1.bf7c00b82666.webp",
+    "sourceHash": "3dbf02723612ac7d331ef291d8d892e7aba9f876c7a2891c5e008e01c6369598",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2218116,
+    "bytes": 167786,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-10-v1": {
+    "url": "/assets/dungeon/cpu-opponent-10-v1.548dc602c755.webp",
+    "sourceHash": "d3b9f5b170fe4c9f74f17a48bc1cf21d52f55ff65ea6e239309d6a08a74f3d92",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2549976,
+    "bytes": 194536,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-2-v1": {
+    "url": "/assets/dungeon/cpu-opponent-2-v1.97c24e22f9a2.webp",
+    "sourceHash": "5e8a4f3b88f42957e0daeba245ae5cda60bde691255940711a64e96fc49fb2a8",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2047424,
+    "bytes": 149512,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-3-v1": {
+    "url": "/assets/dungeon/cpu-opponent-3-v1.5270575c530c.webp",
+    "sourceHash": "4c06e7b8894e7fcb9775674b9bc19a5a19be5e431628f6a652a8673809f682de",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 1813666,
+    "bytes": 132232,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-4-v1": {
+    "url": "/assets/dungeon/cpu-opponent-4-v1.0ce86ff5d3da.webp",
+    "sourceHash": "f588a13d7949cc2853849e3ba052927890b0b9a5c7359bfc7d4466fabdf3cc20",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2250055,
+    "bytes": 190768,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-5-v1": {
+    "url": "/assets/dungeon/cpu-opponent-5-v1.88762708b87e.webp",
+    "sourceHash": "a0fa7dc7d607744eda95bd6f1c505e33253ec3e851a0ea450b921e5f39159da3",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2254909,
+    "bytes": 164998,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-6-v1": {
+    "url": "/assets/dungeon/cpu-opponent-6-v1.f13da222d996.webp",
+    "sourceHash": "29a7adfe5ab4877026cc8c5c239e97af816e973288210dcbf5d966ee5a5d46a7",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2214199,
+    "bytes": 159110,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-7-v1": {
+    "url": "/assets/dungeon/cpu-opponent-7-v1.f584c60db2c0.webp",
+    "sourceHash": "5049c4e187536af3a7229d7fd1c42faa79c16d6282e3963f1baa9e1f0db9f117",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2493167,
+    "bytes": 203436,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-8-v1": {
+    "url": "/assets/dungeon/cpu-opponent-8-v1.6145343a44d9.webp",
+    "sourceHash": "6c15519160db5cc1f697204a6c6119bc86f2fbdb0eec9d0117c66d2772bb7b0a",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2360779,
+    "bytes": 166102,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "cpu-opponent-9-v1": {
+    "url": "/assets/dungeon/cpu-opponent-9-v1.14aa32c981f0.webp",
+    "sourceHash": "9e61611a896f1d1dcf035042e6288107b893904a6cc0098a39c25fdb02d6476b",
+    "width": 768,
+    "height": 576,
+    "sourceBytes": 2495248,
+    "bytes": 201548,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
   "flame-loop-v1": {
     "url": "/assets/dungeon/flame-loop-v1.558c5de5af84.webp",
     "sourceHash": "f79e56a41c411e5ca4967771648aebd198aed08b6a5d7f7eac0b9fb96eb0bc37",
