@@ -53,6 +53,20 @@ afterEach(()=>{
 });
 function peer(uid:string,rewardHeroes:string[]=[],rewardHero:string|null=null,accountLevel=1){const value=new HostPeer({uid,name:uid==='left'?'왼쪽 수호자':'오른쪽 수호자',accountLevel,rewardHeroes,rewardHero});peers.push(value);return value;}
 function fakePC(value:HostPeer){return value.pc as unknown as FakePeerConnection;}
+test('a credential configuration is used for this peer without changing default peers',()=>{
+ const configuration:RTCConfiguration={iceTransportPolicy:'all',iceServers:[{urls:'turn:relay.example:3478?transport=udp',username:'test-session',credential:'test-only-password'}]};
+ const local=new HostPeer({uid:'relay-host',name:'중계 수호자'},configuration);peers.push(local);
+ assert.deepEqual(fakePC(local).config,configuration);
+ const direct=peer('left');assert.equal(fakePC(direct).config.iceServers?.length,2);
+});
+test('a browser rejecting relay configuration still constructs the direct/STUN peer',()=>{
+ class UnsupportedRelayPeer extends FakePeerConnection{
+  constructor(configuration:RTCConfiguration){if(configuration.iceServers?.some(server=>String(server.urls).includes('unsupported-relay')))throw Error('provider configuration rejected');super(configuration);}
+ }
+ Object.defineProperty(globalThis,'RTCPeerConnection',{configurable:true,writable:true,value:UnsupportedRelayPeer});
+ const local=new HostPeer({uid:'fallback-host',name:'연결 수호자'},{iceServers:[{urls:'turn:unsupported-relay.invalid'}]});peers.push(local);
+ assert.equal(fakePC(local).config.iceTransportPolicy,'all');assert.equal(fakePC(local).config.iceServers?.length,2);
+});
 function invitation(code:string){return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(code.slice(5)),char=>char.charCodeAt(0)))) as Record<string,unknown>;}
 function encode(value:Record<string,unknown>){return'SDS1.'+btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value))));}
 function changed(code:string,change:(value:Record<string,unknown>)=>void){const value=invitation(code);change(value);return encode(value);}

@@ -1,12 +1,25 @@
-/** ICE probes local and public addresses, then chooses a working direct route. */
-export function peerConfiguration():RTCConfiguration{
+import {validRelayConfiguration} from './relay';
+/** ICE prefers working direct routes and can relay restrictive networks. */
+export function peerConfiguration(relay?:unknown,now=Date.now()):RTCConfiguration{
+ const servers=validRelayConfiguration(relay,now)?.iceServers??[];
  return {
   iceTransportPolicy:'all',
   iceServers:[
    {urls:'stun:stun.l.google.com:19302'},
-   {urls:'stun:stun1.l.google.com:19302'}
+   {urls:'stun:stun1.l.google.com:19302'},
+   ...servers
   ]
  };
+}
+
+/** A missing/degraded credential service must not block LAN/STUN connections. */
+export async function resolvePeerConfiguration(request:()=>Promise<unknown>,timeoutMs=4000):Promise<RTCConfiguration>{
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ try{
+  const response=await Promise.race([Promise.resolve().then(request),new Promise<null>(resolve=>{timer=setTimeout(()=>resolve(null),timeoutMs);})]);
+  return peerConfiguration(response);
+ }catch{return peerConfiguration();}
+ finally{clearTimeout(timer);}
 }
 
 /** Publish the candidates gathered so far even when a STUN request stalls. */

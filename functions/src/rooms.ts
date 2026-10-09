@@ -20,6 +20,9 @@ export async function pruneRooms(now=Date.now()){
  for(let page=0;page<10;page++){const attempts=await db().collection('decimalLobbyLimits').where('expiresAt','<=',now).limit(100).get();if(attempts.empty)break;
   const batch=db().batch();attempts.docs.forEach(d=>batch.delete(d.ref));await batch.commit();if(attempts.size<100)break;
  }
+ for(let page=0;page<10;page++){const attempts=await db().collection('decimalRelayLimits').where('expiresAt','<=',now).limit(100).get();if(attempts.empty)break;
+  const batch=db().batch();attempts.docs.forEach(d=>batch.delete(d.ref));await batch.commit();if(attempts.size<100)break;
+ }
 }
 export const duelPruneRooms=onSchedule({schedule:'0 * * * *',region:'asia-northeast3',maxInstances:1,minInstances:0,timeoutSeconds:60,memory:'256MiB',cpu:'gcf_gen1',concurrency:1},async()=>{await pruneRooms();});
 export const duelRoom=onCall({region:'asia-northeast3',maxInstances:10,minInstances:0,timeoutSeconds:30,memory:'256MiB',cpu:'gcf_gen1',concurrency:1},async r=>{

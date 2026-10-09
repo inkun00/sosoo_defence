@@ -23,9 +23,10 @@ export class HostPeer {
  allowedGuestUid:string|null=null;
  onState:(s:DuelState,connected:boolean)=>void=()=>{};onStatus:(m:string)=>void=()=>{};
  private tick:ReturnType<typeof setInterval>;private disposed=false;private started=Date.now();private monotonic=performance.now();private guest:PeerIdentity|null=null;private disconnectedAt=0;private lastPing=0;private lastSnapshot=0;private pending=new Map<string,{resolve:(r:Reply)=>void;timer:ReturnType<typeof setTimeout>}>();private replies=new Map<string,Reply>();private accepted=false;private announced=false;
- constructor(readonly identity:PeerIdentity){
+ constructor(readonly identity:PeerIdentity,configuration:RTCConfiguration=peerConfiguration()){
   this.host=identity;
-  this.pc=new RTCPeerConnection(peerConfiguration());
+  try{this.pc=new RTCPeerConnection(configuration);}
+  catch{this.pc=new RTCPeerConnection(peerConfiguration());}
   this.pc.ondatachannel=e=>{if(this.channel){e.channel.close();return;}this.attach(e.channel);};
   this.pc.onconnectionstatechange=()=>{if(['failed','disconnected','closed'].includes(this.pc.connectionState))this.lost();};
   this.tick=setInterval(()=>this.step(),100);

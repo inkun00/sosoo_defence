@@ -4,5 +4,6 @@
 <h1>자동 대전 연결 검증</h1>
 <p>두 브라우저 연결 객체가 같은 규칙으로 접속 주소를 수집하고 실제 데이터 채널을 연결합니다.</p>
 <label>대전 맵 <select id="map"></select></label>
+<label>접속 설정 <select id="network"><option value="direct">LAN/STUN</option><option value="failure">자격 서버 오류 · 직접 연결 복구</option><option value="timeout">자격 서버 지연 · 직접 연결 복구</option><option value="service">인증된 운영 설정 자동 선택</option><option value="relay">중계 경로만 검증 · TURN 설정 필요</option></select></label>
 <button id="connect">두 수호자 연결하기</button><pre id="result" role="status">연결 대기</pre>
 <script type="module" src="./peer-network-preview.ts"></script></html>

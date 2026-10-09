@@ -6,6 +6,7 @@ service cloud.firestore {
   match /decimalLobbyPrivate/{id} { allow read, write: if false; }
   match /decimalLobbyOwners/{uid} { allow read, write: if false; }
   match /decimalLobbyLimits/{uid} { allow read, write: if false; }
+  match /decimalRelayLimits/{uid} { allow read, write: if false; }
   match /decimalUsers/{uid} {
    allow get: if request.auth != null && request.auth.uid == uid;
    allow list, create, update, delete: if false;

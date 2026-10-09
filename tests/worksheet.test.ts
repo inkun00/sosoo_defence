@@ -6,9 +6,10 @@ import {getOrCreateWorksheet,loadWorkbook,redeemWorksheet,drawWorksheetHero,HERO
 import {worksheetPages,worksheetFocus} from '../src/worksheet-view';
 import {newAdventure,loadSave,writeSave} from '../src/save';
 import {HEROES} from '../src/multiplayer/heroes';
+import {IDBFactory} from 'fake-indexeddb';
 const cache=new Map<string,string>();let failStorage=false;
 Object.defineProperty(globalThis,'localStorage',{value:{getItem:(key:string)=>cache.get(key)??null,setItem:(key:string,v:string)=>{if(failStorage)throw Error('quota');cache.set(key,v);}},configurable:true});
-beforeEach(()=>{cache.clear();failStorage=false;});
+beforeEach(()=>{cache.clear();failStorage=false;Object.defineProperty(globalThis,'indexedDB',{configurable:true,value:new IDBFactory()});});
 function rng(seed=19){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}
 test('1~11단계 학습지는 계산 10개와 서로 다른 개념 10개, 두 자리 이하 소수를 지킨다',async()=>{
  for(let level=1;level<=11;level++)for(let seed=1;seed<=8;seed++){
@@ -57,7 +58,7 @@ test('Web Locks가 없는 환경의 동시 기본 출력은 같은 학습지를 
 test('이전 계산 전용 학습지가 있어도 기본 출력은 새로운 단원 개념 학습지를 준비한다',async()=>{
  const old=await getOrCreateWorksheet(2,true),answers=new Set<number>();old.questions=Array.from({length:20},()=>makeQuestion('sub-2-basic',answers,rng(answers.size+50)));
  old.decoder=old.questions.map((q,i)=>({answer:questionAnswer(q),rune:i%4}));for(let n=10;old.decoder.length<30;n+=10)if(!answers.has(n))old.decoder.push({answer:n,rune:1});old.decoder.sort((a,b)=>a.answer-b.answer);old.codeHash=await codeHash(old.id,worksheetCode(old));assert.ok(validWorksheet(old));
- cache.set('decimal-workbook-v1',JSON.stringify({version:1,sheets:[old],collection:[],selectedHero:null}));const current=await getOrCreateWorksheet(2);assert.notEqual(current.id,old.id);assert.equal(current.questions.filter(q=>q.type).length,10);assert.equal(loadWorkbook().sheets.length,2);
+ cache.set('decimal-workbook-v1',JSON.stringify({version:1,sheets:[old],collection:[],selectedHero:null}));Object.defineProperty(globalThis,'indexedDB',{configurable:true,value:new IDBFactory()});const current=await getOrCreateWorksheet(2);assert.notEqual(current.id,old.id);assert.equal(current.questions.filter(q=>q.type).length,10);assert.equal(loadWorkbook().sheets.length,2);
 });
 test('저장된 모눈 문항은 같은 정답의 글 문제로 표시하고 기존 암호와 영웅 보상을 유지한다',async()=>{
  const generated=generateWorksheet(loadLearning(),4,'legacy-grid-sheet',1700000000000,rng(19));
@@ -105,7 +106,7 @@ test('30종을 모두 중복 없이 지급한 뒤에는 학습지를 소비하�
  assert.throws(()=>drawWorksheetHero(()=>0,rewarded),/모든 영웅|수집.*완료/);
 });
 test('기존 중복 획득 이력과 선택한 영웅은 보존하고 새 보상만 미보유 영웅으로 지급한다',async()=>{
- const previous=await getOrCreateWorksheet(4,true);await redeemWorksheet(previous.id,worksheetCode(previous),()=>0);const legacy=loadWorkbook();legacy.collection[0].copies=3;legacy.collection[0].obtainedAt=1700000000000;cache.set('decimal-workbook-v1',JSON.stringify(legacy));
+ const previous=await getOrCreateWorksheet(4,true);await redeemWorksheet(previous.id,worksheetCode(previous),()=>0);const legacy=loadWorkbook();legacy.collection[0].copies=3;legacy.collection[0].obtainedAt=1700000000000;cache.set('decimal-workbook-v1',JSON.stringify(legacy));Object.defineProperty(globalThis,'indexedDB',{configurable:true,value:new IDBFactory()});
  const sheet=await getOrCreateWorksheet(4,true),result=await redeemWorksheet(sheet.id,worksheetCode(sheet),()=>0),book=loadWorkbook();assert.equal(result.hero.id,'hero-1-1');assert.equal(result.copies,1);assert.deepEqual(book.collection[0],legacy.collection[0]);assert.equal(book.selectedHero,'hero-1-0');assert.equal(book.sheets.find(s=>s.id===previous.id)!.claimedHero,'hero-1-0');assert.equal(book.collection.length,2);
 });
 test('저장이 실패하면 지급도 완료 처리도 하지 않으며 다시 시도할 수 있다',async()=>{

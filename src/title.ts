@@ -2,7 +2,6 @@ import {artURL} from './art';
 import {loadSave,writeSave,hasAdventure,newAdventure} from './save';
 import {DIFFICULTIES,isDifficulty} from './difficulty';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
-import {playCinematic} from './cinematic';
 import {Sound} from './audio';
 import './game.css';
 import './title.css';
@@ -19,7 +18,7 @@ function persist(){const saved=writeSave(save),warning=document.querySelector<HT
 function open(html:string){previous=document.activeElement as HTMLElement;body.innerHTML=html;dialog.classList.remove('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=true;$('title-dialog-close').focus();}
 function close(){dialog.classList.add('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=false;previous?.focus();}
 function navigate(mode:'adventure'|'duel'){sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode',mode);url.searchParams.delete('preview');url.searchParams.delete('ui');location.assign(url.href);}
-async function cinematic(kind:'opening'|'ending',next:()=>void){if(movie)return;movie=true;sound.setPaused(true);await playCinematic(kind,save,()=>{movie=false;sound.setPaused(false);next();});}
+async function cinematic(kind:'opening'|'ending',next:()=>void){if(movie)return;movie=true;sound.setPaused(true);try{const {playCinematic}=await import('./cinematic');await playCinematic(kind,save,()=>{movie=false;sound.setPaused(false);next();});}catch{movie=false;sound.setPaused(false);if(save.music)sound.setMusic(true);open('<h2>이야기를 불러오지 못했어요</h2><p>연결 상태를 확인한 뒤 다시 눌러 주세요.</p>');}}
 function begin(){save=newAdventure(save);persist();close();void cinematic('opening',()=>navigate('adventure'));}
 function newGame(){sound.resume();if(hasAdventure(save)){open(`<p class="title-eyebrow">새로운 수호자의 여정</p><h2>처음부터 시작할까요?</h2><p>현재 ${save.resumeStage}단계까지의 모험을 새로 시작합니다.<br>모험 레벨·별·벽돌·성벽 재고가 초기화됩니다.<br>소리와 난이도 설정, 1:1 계정 기록은 유지됩니다.</p><div class="title-card-actions"><button class="title-button" id="title-cancel">돌아가기</button><button class="title-button primary" id="title-confirm">새 모험 시작</button></div>`);$('title-cancel').onclick=close;$('title-confirm').onclick=begin;}else begin();}
 function settings(){sound.resume();open(`<p class="title-eyebrow">수호자의 준비</p><label class="setting"><span>몬스터 피격 뺄셈식</span><input id="title-hit" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>모험 난이도</span><select id="title-difficulty">${Object.entries(DIFFICULTIES).map(([id,s])=>`<option value="${id}" ${save.difficulty===id?'selected':''}>${s.name}</option>`).join('')}</select></label><p class="title-settings-note">설정은 자동 저장됩니다. 이야기는 한국어 자막으로 표시합니다.</p>`);

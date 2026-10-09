@@ -1,6 +1,9 @@
 import {HostPeer} from '../src/multiplayer/peer';
 import {DUEL_MAPS,duelMap} from '../src/multiplayer/duel-maps';
 import {decimalBoard} from '../src/multiplayer/decimal-boards';
+import {peerConfiguration,resolvePeerConfiguration} from '../src/multiplayer/peer-network';
+import {loadPeerConfiguration} from '../src/multiplayer/relay-store';
+import {auth} from '../src/multiplayer/firebase';
 const mapChoice=document.getElementById('map') as HTMLSelectElement;
 for(const map of DUEL_MAPS){const option=document.createElement('option');option.value=map.id;option.textContent=map.name;mapChoice.append(option);}
 const button=document.getElementById('connect') as HTMLButtonElement;
@@ -16,9 +19,17 @@ function candidates(code:string){
 button.onclick=async()=>{
  button.disabled=true;host?.dispose();guest?.dispose();lines.length=0;
  try{
-  host=new HostPeer({uid:'network-test-host',name:'연결 호스트',accountLevel:1,rewardHeroes:['hero-1-0','hero-4-1'],rewardHero:'hero-1-0'});
-  guest=new HostPeer({uid:'network-test-guest',name:'연결 참가자',accountLevel:8,rewardHeroes:['hero-2-2','hero-10-1'],rewardHero:'hero-2-2'});
-  note(`자동 연결 설정: 양쪽 STUN ${host.pc.getConfiguration().iceServers?.length}개 · 경로 정책 ${host.pc.getConfiguration().iceTransportPolicy}`);
+  const mode=(document.getElementById('network') as HTMLSelectElement).value;
+  let configuration=peerConfiguration();
+  if(mode==='failure')configuration=await resolvePeerConfiguration(async()=>{throw Error('fixture service unavailable');});
+  if(mode==='timeout')configuration=await resolvePeerConfiguration(()=>new Promise(()=>{}),100);
+  if(mode==='service'||mode==='relay'){await auth?.authStateReady();configuration=await loadPeerConfiguration();}
+  const relayCount=configuration.iceServers?.filter(server=>(typeof server.urls==='string'?[server.urls]:server.urls).some(url=>/^turns?:/i.test(url))).length??0;
+  if(mode==='relay'){if(!relayCount)throw Error('실제 TURN 서비스가 설정되지 않아 중계 경로를 검증할 수 없어요.');configuration.iceTransportPolicy='relay';}
+  host=new HostPeer({uid:'network-test-host',name:'연결 호스트',accountLevel:1,rewardHeroes:['hero-1-0','hero-4-1'],rewardHero:'hero-1-0'},configuration);
+  guest=new HostPeer({uid:'network-test-guest',name:'연결 참가자',accountLevel:8,rewardHeroes:['hero-2-2','hero-10-1'],rewardHero:'hero-2-2'},structuredClone(configuration));
+  note(`자동 연결 설정: STUN 2개 · TURN ${relayCount}개 · 경로 정책 ${host.pc.getConfiguration().iceTransportPolicy}`);
+  if(mode==='failure'||mode==='timeout')note('PASS · 자격 서비스 오류/지연 뒤 직접 연결 후보 유지');
   const offer=await host.create(mapChoice.value);note('호스트 접속 주소 유형: '+candidates(offer));
   const answer=await guest.join(offer);note('참가자 접속 주소 유형: '+candidates(answer));
   await host.accept(answer);

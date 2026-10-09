@@ -6,6 +6,7 @@
   "scripts": {
     "optimize:assets": "node tools/optimize-assets.mjs",
     "check:assets": "node tools/check-assets.mjs",
+    "check:bundle": "node tools/check-bundle.mjs",
     "report:payload": "node tools/report-payload.mjs",
     "predev": "npm run optimize:assets",
     "prebuild": "npm run optimize:assets",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
+    "fake-indexeddb": "^6.2.5",
     "firebase-tools": "^15.32.1",
     "playwright": "^1.63.0",
     "sharp": "^0.35.5",

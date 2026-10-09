@@ -8,6 +8,7 @@ import {mountAccountForm} from '../account-form';
 import {DuelScene,DuelView} from './scene';
 import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,duelScore,duelHeroLearningLevel} from './duel';
 import {HostPeer} from './peer';
+import {loadPeerConfiguration} from './relay-store';
 import {ComputerPeer} from './computer-peer';
 import {DEFAULT_DUEL_MAP_ID,duelMap,isDuelMapId} from './duel-maps';
 import {duelMapSummaryHTML,duelMapPickerHTML} from './map-picker';
@@ -138,15 +139,22 @@ function createRoomScreen(draft?:CreateRoomDraft){
  const updateAccess=()=>{const locked=access.value==='password';document.getElementById('room-password-label')!.hidden=!locked;password.required=locked;if(!locked)password.value='';};access.onchange=updateAccess;updateAccess();bind('create-back',()=>{if(!busy)lobby();});
  bind('choose-duel-map',()=>{if(busy)return;const data=new FormData(content.querySelector<HTMLFormElement>('form')!);const saved={title:String(data.get('title')),access:String(data.get('access')),password:String(data.get('password')||'')};mapScreen(()=>createRoomScreen(saved));});
  content.querySelector<HTMLFormElement>('#create-room-form')!.onsubmit=async e=>{e.preventDefault();if(!canEnterRoom())return;const data=new FormData(e.target as HTMLFormElement);busy=true;(document.getElementById('publish-room') as HTMLButtonElement).disabled=true;
- try{const local=startPeer();offerCode=await local.create(selectedMapId);const result=await roomRequest<{room:ListedRoom;now:number}>({action:'create',id:local.id,offer:offerCode,title:String(data.get('title')),access:String(data.get('access')),password:String(data.get('password')||''),internet:true});if(peer!==local)return;serverOffset=result.now-Date.now();listingId=local.id;listingExpires=result.room.expiresAt;connectionScreen();watchRoom(local);}
+ try{const local=await startPeer();offerCode=await local.create(selectedMapId);const result=await roomRequest<{room:ListedRoom;now:number}>({action:'create',id:local.id,offer:offerCode,title:String(data.get('title')),access:String(data.get('access')),password:String(data.get('password')||''),internet:true});if(peer!==local)return;serverOffset=result.now-Date.now();listingId=local.id;listingExpires=result.room.expiresAt;connectionScreen();watchRoom(local);}
  catch(e){disposeRoom();status(errorText(e));}finally{busy=false;const button=document.getElementById('publish-room') as HTMLButtonElement|null;if(button)button.disabled=false;refresh();}};
 }
 function passwordRoomScreen(row:ListedRoom){
  show('room-password','<p class="eyebrow">비밀번호 방</p><h2 id="password-room-name"></h2><form id="room-password-form"><label>방 비밀번호<input name="room-password" type="password" required maxlength="32" autocomplete="off"></label><p data-feedback role="status"></p><div class="duel-row"><button type="button" id="password-back">방 목록으로</button><button class="duel-primary">입장하기</button></div></form>');document.getElementById('password-room-name')!.textContent=row.title;bind('password-back',()=>{if(!busy)lobby();});content.querySelector<HTMLFormElement>('form')!.onsubmit=e=>{e.preventDefault();void joinListedRoom(row,String(new FormData(e.target as HTMLFormElement).get('room-password')));};
 }
 async function joinListedRoom(row:ListedRoom,password:string){
- if(!canEnterRoom())return;busy=true;try{const joined=await roomRequest<{offer:string;claim:string;internet:boolean;expiresAt:number}>({action:'join',id:row.id,password});const local=startPeer();listingId=row.id;listingClaim=joined.claim;listingExpires=joined.expiresAt;answerCode=await local.join(joined.offer);side=1;room=local.id.slice(0,8).toUpperCase();await roomRequest({action:'answer',id:row.id,claim:listingClaim,answer:answerCode});if(peer!==local)return;connectionScreen();watchRoom(local);}
- catch(e){if(listingId)disposeRoom();status(errorText(e));}finally{busy=false;refresh();}
+ if(!canEnterRoom())return;busy=true;
+ try{
+  // Resolve credentials before reserving a slot so a slow service or account
+  // change cannot leave an unnecessary guest lease in the directory.
+  const local=await startPeer();
+  const joined=await roomRequest<{offer:string;claim:string;internet:boolean;expiresAt:number}>({action:'join',id:row.id,password});
+  if(peer!==local){void roomRequest({action:'release',id:row.id,claim:joined.claim}).catch(()=>{});return;}
+  listingId=row.id;listingClaim=joined.claim;listingExpires=joined.expiresAt;answerCode=await local.join(joined.offer);side=1;room=local.id.slice(0,8).toUpperCase();await roomRequest({action:'answer',id:row.id,claim:listingClaim,answer:answerCode});if(peer!==local)return;connectionScreen();watchRoom(local);
+ }catch(e){disposeRoom();status(errorText(e));}finally{busy=false;refresh();}
 }
 function connectionScreen(){
  const hosting=peer?.side===0;show('connection',`<p class="eyebrow">${hosting?'내 컴퓨터가 호스트':'친구의 컴퓨터에 직접 접속'}</p><h2>${hosting?'친구의 입장을 기다리고 있어요':'호스트에 연결하고 있어요'}</h2><p>대전 맵 · ${duelMap(peer instanceof HostPeer?peer.mapId:state?.mapId).name}</p><p>${hosting?'방이 중앙 목록에 등록되었어요. 친구가 공개방 또는 비밀번호로 입장하면 자동으로 연결돼요.':'비밀번호 확인과 접속 정보 교환을 마쳤어요. 연결되면 대전 화면으로 이동해요.'}</p><p data-feedback role="status"></p><div class="duel-row"><button id="connection-back">대기실 · 방 목록</button><button id="connection-cancel">연결 취소 · 방 닫기</button></div>`);bind('connection-back',lobby);bind('connection-cancel',()=>cancelRoom());
@@ -171,8 +179,10 @@ function watchRoom(local:HostPeer){
  }catch(e){if(peer===local){if(local.connected&&local.state?.players[1]){watching=false;clearTimeout(roomPoll);roomPoll=undefined;return;}watching=false;disposeRoom();lobby();status(errorText(e));}}finally{polling=false;if(watching&&peer===local)roomPoll=setTimeout(()=>void poll(),Date.now()-enteredAt<60000?5000:10000);}};
  void poll();
 }
-function startPeer(){
- disposeRoom();const local=new HostPeer({uid:user!.uid,name:(user!.displayName||'수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()});peer=local;slots=[];selectedType='';selectedTower=0;
+async function startPeer(){
+ const uid=user!.uid,configuration=await loadPeerConfiguration();
+ if(user?.uid!==uid||auth?.currentUser?.uid!==uid)throw Error('계정이 바뀌었어요. 다시 로그인해 주세요.');
+ disposeRoom();const local=new HostPeer({uid,name:(user!.displayName||'수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},configuration);peer=local;slots=[];selectedType='';selectedTower=0;
  local.onStatus=status;local.onState=(s,c)=>{if(peer!==local)return;state=s;side=local.side;room=local.id.slice(0,8).toUpperCase();connected=c;const p=s.players[side]!;if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();
   if(s.status!=='waiting'){if(local.side===0&&listingId)void closeListing();}
   if(s.status==='finished'){if(recorded!==local.id){void saveFinished();result();}return;}
