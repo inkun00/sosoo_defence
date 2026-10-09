@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {DuelScene,type DuelView} from '../src/multiplayer/scene';
-import {activeDuelHeroEffects,createDuel,joinDuel,type DuelEnemy,type Side} from '../src/multiplayer/duel';
+import {activeDuelHeroEffects,applyDuel,createDuel,joinDuel,type DuelEnemy,type Side} from '../src/multiplayer/duel';
 import {duelPathDistance,duelPathPosition} from '../src/multiplayer/duel-maps';
 import {heroSpec,type HeroEffect} from '../src/multiplayer/heroes';
 import '../src/game.css';
@@ -9,7 +9,8 @@ const $=(id:string)=>document.getElementById(id)!;
 const baseTime=Date.now(),heroIds={haste:'hero-3-0',brood:'hero-3-1',steadfast:'hero-3-2'};
 const state=createDuel('left','왼쪽 효과 검증',71,baseTime,3,{},'ember-bend');
 joinDuel(state,'right','오른쪽 효과 검증',baseTime,3);
-// This is a static local snapshot. Waiting status disables DuelScene movement
+applyDuel(state,0,{type:'ready'},baseTime,'left-ready');applyDuel(state,1,{type:'ready'},baseTime,'right-ready');
+// This is a static local snapshot. Preparation disables DuelScene movement
 // prediction, and no host ticks or heartbeats run in this preview.
 let side:Side=0,upper=false,ready=false,operation='효과 적용';
 const labels=new Map<number,string>([

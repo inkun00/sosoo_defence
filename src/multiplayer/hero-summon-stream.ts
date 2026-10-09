@@ -5,10 +5,10 @@ export interface HeroSummonEvent{enemyId:number;owner:Side;heroId:string;level:n
 
 /** A reserve hero is a one-time transition, rather than a live enemy count. */
 export class HeroSummonStream{
- private roomIdentity='';private revision=-1;private elapsed=0;
+ private roomIdentity='';private revision=-1;private phase:DuelState['status']|null=null;private phaseTime=0;
  private used:[boolean,boolean]=[false,false];private enemyIds=new Set<number>();
  get identity():string{return this.roomIdentity;}
- reset():void{this.roomIdentity='';this.revision=-1;this.elapsed=0;this.used=[false,false];this.enemyIds.clear();}
+ reset():void{this.roomIdentity='';this.revision=-1;this.phase=null;this.phaseTime=0;this.used=[false,false];this.enemyIds.clear();}
  take(room:string,state:DuelState|null):HeroSummonEvent[]{
   if(!state){this.reset();return [];}
   const identity=`${room}:${state.seed}:${state.createdAt}`;
@@ -18,7 +18,13 @@ export class HeroSummonStream{
   const fresh:HeroSummonEvent[]=[];
   // An initial/reconnected snapshot is the baseline. A long snapshot gap also
   // consumes the transition without celebrating a summon that happened earlier.
-  const recent=!first&&state.status==='playing'&&state.elapsed>=this.elapsed&&state.elapsed-this.elapsed<=2.4;
+  const phaseTime=state.status==='preparing'?state.preparationElapsed:state.elapsed;
+  const active=state.status==='preparing'||state.status==='playing';
+  // Collected heroes enter when preparation begins. Each phase owns a clock:
+  // switching to battle must not turn a minute-old entrance into a new event.
+  const samePhase=state.status===this.phase&&phaseTime>=this.phaseTime&&phaseTime-this.phaseTime<=2.4;
+  const preparationEntry=this.phase==='waiting'&&state.status==='preparing'&&phaseTime<=2.4;
+  const recent=!first&&active&&(samePhase||preparationEntry);
   for(const owner of [0,1] as Side[]){
    const player=state.players[owner],used=!!player?.rewardUsed;
    if(recent&&!this.used[owner]&&used&&player?.rewardHero){
@@ -32,7 +38,7 @@ export class HeroSummonStream{
    // A stale flag in an equal/older snapshot must not re-arm a used reserve.
    this.used[owner]=this.used[owner]||used;
   }
-  this.revision=state.revision;this.elapsed=Math.max(this.elapsed,state.elapsed);
+  this.revision=state.revision;this.phase=state.status;this.phaseTime=phaseTime;
   this.enemyIds=new Set(state.enemies.map(e=>e.id));
   return fresh;
  }

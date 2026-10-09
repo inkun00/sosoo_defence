@@ -6,12 +6,17 @@ import {heroSummonStyle} from './hero-summon-style';
 export function heroArt(h:HeroSpec){return '<span class="collection-art" aria-hidden="true" style="--hero-row:'+h.row*50+'%;background-image:url('+artURL(h.sheet)+');background-position:0% '+h.row*50+'%"></span>';}
 function rankStyle(h:HeroSpec){const s=heroSummonStyle(h.level);return '--hero-color:'+s.cssColor+';--hero-accent:'+s.cssAccent+';--hero-rank:'+s.rank;}
 
-export function collectionHTML(selected=loadWorkbook().selectedHero,disabled=false,book:Workbook=loadWorkbook()){
+export interface CollectionOptions{mode?:'collection'|'deployment';}
+
+export function collectionHTML(selected=loadWorkbook().selectedHero,disabled=false,book:Workbook=loadWorkbook(),options:CollectionOptions={}){
+ const deployment=options.mode==='deployment';
  const cards=book.collection.slice().sort((a,b)=>heroSpec(b.heroId)!.level-heroSpec(a.heroId)!.level).map(c=>{
   const h=heroSpec(c.heroId)!,rank=heroSummonStyle(h.level),active=h.id===selected;
-  return '<button type="button" class="collection-card '+(active?'selected':'')+'" data-rank="'+rank.rank+'" style="'+rankStyle(h)+'" data-collection-hero="'+h.id+'" aria-pressed="'+active+'" '+(disabled?'disabled':'')+'><span class="collection-rank">'+rank.label+' · Lv.'+h.level+'</span><span class="collection-portrait">'+heroArt(h)+'</span><strong>'+h.name+'</strong><small>'+h.description+'</small><span class="collection-equip">'+(active?'◆ 대전 동료로 선택됨':'이 영웅 선택')+' · '+c.copies+'회 획득</span></button>';
+  return '<button type="button" class="collection-card '+(active?'selected':'')+'" data-rank="'+rank.rank+'" style="'+rankStyle(h)+'" data-collection-hero="'+h.id+'" aria-pressed="'+active+'" '+(disabled?'disabled':'')+'><span class="collection-rank">'+rank.label+' · Lv.'+h.level+'</span><span class="collection-portrait">'+heroArt(h)+'</span><strong>'+h.name+'</strong><small>'+h.description+'</small><span class="collection-equip">'+(deployment?'이 영웅으로 출전':active?'◆ 대전 동료로 선택됨':'이 영웅 선택')+' · '+c.copies+'회 획득</span></button>';
  }).join('');
- return '<section class="hero-collection"><div class="collection-intro"><p>학습지의 암호를 풀어 만난 영웅들이에요. 동료 하나를 골라 대전마다 원하는 때에 한 번 소환해요.</p><div class="collection-meta"><span>수집 '+book.collection.length+' / 30</span><span>소환 후에도 영구 보관</span><span>이 브라우저에 저장</span></div></div><div class="collection-grid">'+(cards||'<div class="collection-empty"><span class="collection-empty-rune" aria-hidden="true">✦</span><strong>새로운 동료를 기다리는 중</strong><p>학습지 20문항의 암호를 풀어 첫 영웅을 깨워 보세요.</p></div>')+'</div><details class="collection-chances"><summary>레벨별 영웅 등장 확률</summary><div>'+HERO_LEVEL_CHANCES.map((n,i)=>'<span>Lv.'+(i+1)+' · '+n+'%</span>').join('')+'</div><p>같은 레벨의 영웅 3종은 같은 확률이에요. 이미 가진 영웅을 얻으면 획득 횟수가 쌓여요.</p></details></section>';
+ const introduction=deployment?'이번 대전에 함께 출전할 영웅을 골라요. 카드를 누르면 준비를 마치고, 두 수호자가 모두 준비됐을 때 영웅이 바로 등장해요.':'학습지의 암호를 풀어 만난 영웅들이에요. 대전을 시작할 때 동료 하나를 선택하면 바로 출전해요.';
+ const chances=deployment?'':'<details class="collection-chances"><summary>레벨별 영웅 등장 확률</summary><div>'+HERO_LEVEL_CHANCES.map((n,i)=>'<span>Lv.'+(i+1)+' · '+n+'%</span>').join('')+'</div><p>같은 레벨의 영웅 3종은 같은 확률이에요. 이미 가진 영웅을 얻으면 획득 횟수가 쌓여요.</p></details>';
+ return '<section class="hero-collection" data-mode="'+(deployment?'deployment':'collection')+'"><div class="collection-intro"><p>'+introduction+'</p><div class="collection-meta"><span>수집 '+book.collection.length+' / 30</span><span>출전 후에도 영구 보관</span><span>이 브라우저에 저장</span></div></div><div class="collection-grid">'+(cards||'<div class="collection-empty"><span class="collection-empty-rune" aria-hidden="true">✦</span><strong>새로운 동료를 기다리는 중</strong><p>학습지 20문항의 암호를 풀어 첫 영웅을 깨워 보세요.</p></div>')+'</div>'+chances+'</section>';
 }
 
 /** Acquisition reveal shares the exact rank palette and strength with battle. */

@@ -26,6 +26,19 @@ test('시작을 누른 양쪽이 준비되면 공동 60초 문제풀이가 시�
  assert.equal(canPurchaseDuelTower(s),true);assert.ok(s.players.every(p=>p?.money===DUEL_START_MONEY));
 });
 
+test('수집 영웅 자동 출전은 준비 예산·타워 비축·60초 전투 전환을 바꾸지 않는다',()=>{
+ const s=createDuel('a','왼쪽',17,NOW,1,{rewardHeroes:['hero-1-0','hero-3-2']});joinDuel(s,'b','오른쪽',NOW,1);
+ assert.equal(applyDuel(s,0,{type:'ready',heroId:'hero-3-2'},NOW,'hero-ready').ok,true);
+ assert.equal(applyDuel(s,1,{type:'ready'},NOW,'other-ready').ok,true);
+ assert.equal(s.status,'preparing');assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].hero,'hero-3-2');
+ const hero=structuredClone(s.enemies[0]),q=reserve(s),budget=DUEL_START_MONEY-q.cost;
+ connectedAdvance(s,NOW+30000);assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,1);assert.deepEqual(s.enemies[0],hero);
+ connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);
+ assert.equal(s.players[0].money,0);assert.equal(s.players[0].stock.basic,1);assert.deepEqual(s.enemies[0],hero);
+ assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'stock').ok,true);
+ assert.equal(s.players[0].money,0);assert.equal(s.players[0].stock.basic,0);assert.equal(s.players[0].quote,null);
+});
+
 test('타워 선택 후 가격 뺄셈 정답마다 설치 대신 비축이 한 개 늘어난다',()=>{
  const s=preparing(),p=s.players[0];
  assert.equal(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},NOW,'basic').ok,true);

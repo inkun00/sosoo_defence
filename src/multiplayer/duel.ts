@@ -1,5 +1,5 @@
 import {TOWERS,towerType,towerPrice,towerPriceBand,parseMoney,PurchaseVariation} from '../towers';
-import {heroSpec,HeroEffect} from './heroes';
+import {heroSpec,HeroEffect,HeroSpec} from './heroes';
 import {hit,numberText,recipe,reward,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
 import {decimalBoard,normalizedAccountLevel} from './decimal-boards';
@@ -13,7 +13,7 @@ export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
 export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;stock:Record<string,number>;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
 export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fromX?:number;fromY?:number;owner:Side;enemyId:number;x:number;y?:number;before:number;unit:number;after:number;effect:string;}
 export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:number;createdAt:number;startedAt:number;preparationStartedAt:number;preparationElapsed:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'preparing'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
-export type DuelAction={type:'ready'}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
+export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
 export const DUEL_SECONDS=300,DUEL_PREPARATION_SECONDS=60,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor(s.elapsed/30));}
 export function duelTowerLevel(s:DuelState){return s.status==='preparing'?Math.min(10,s.learningLevel??1):duelLevel(s);}
@@ -68,7 +68,7 @@ function enemySpeed(s:DuelState,e:DuelEnemy){
 }
 /** Shared path sampling keeps rendered turns and host-authoritative movement identical. */
 export function duelEnemyPosition(s:DuelState,e:DuelEnemy,seconds=0){
- const direction=e.target===0?-1:1,distance=duelEnemyDistance(s,e)+(seconds>0&&e.stun<=0?direction*enemySpeed(s,e)*seconds:0),position=duelPathPosition(s.mapId,distance);
+ const direction=e.target===0?-1:1,distance=duelEnemyDistance(s,e)+(s.status==='playing'&&seconds>0&&e.stun<=0?direction*enemySpeed(s,e)*seconds:0),position=duelPathPosition(s.mapId,distance);
  // At a corner, the negative direction enters the preceding segment rather
  // than facing back along the segment used for positive-distance sampling.
  const facing=direction<0?duelPathPosition(s.mapId,distance-1e-8):position;
@@ -85,6 +85,13 @@ function spawn(s:DuelState,owner:Side,target:Side,level:number,hp:number,hero:st
  if(s.enemies.length>=100)return false;
  const {x,y}=duelPathPosition(s.mapId,pathDistance);
  s.enemies.push({id:s.nextId++,owner,target,hero,level,hp,max:hp,x,y,pathDistance,slow:0,stun:0,hits:0,...(rewardSummon?{rewardSummon:true}:{}),...(sourceHeroId?{sourceHeroId}:{})});return true;
+}
+function rewardEscortCount(hero:HeroSpec){return hero.effect==='brood'?1+Math.floor(hero.level/3):0;}
+function summonReward(s:DuelState,side:Side,hero:HeroSpec){
+ const p=s.players[side]!,length=duelMap(s.mapId).length;
+ spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:length-1,true);
+ for(let i=0;i<rewardEscortCount(hero);i++)spawn(s,side,(1-side) as Side,hero.level,200+hero.level*100,null,side===0?1+(i+1)*1.25:length-1-(i+1)*1.25,false,hero.id);
+ p.rewardUsed=true;note(s,`${p.name} · 수집 영웅 ${hero.name} Lv.${hero.level} 출전!`);
 }
 export function advanceDuel(s:DuelState,now:number){
  if(!Number.isFinite(now)||now<s.updatedAt)return;
@@ -155,15 +162,28 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(p.rewardUsed)return bad('학습지 영웅은 대전마다 한 번만 소환할 수 있어요.');
   const hero=p.rewardHero?heroSpec(p.rewardHero):null;
   if(!hero||!(p.rewardRoster??[]).includes(hero.id))return bad('준비하기 전에 획득한 학습지 영웅을 선택해요.');
-  const escorts=hero.effect==='brood'?1+Math.floor(hero.level/3):0;
+  const escorts=rewardEscortCount(hero);
   if(s.enemies.length+1+escorts>100)return bad('길이 붐벼요. 잠시 뒤 소환해 주세요.');
-  const length=duelMap(s.mapId).length;spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:length-1,true);
-  for(let i=0;i<escorts;i++)spawn(s,side,(1-side) as Side,hero.level,200+hero.level*100,null,side===0?1+(i+1)*1.25:length-1-(i+1)*1.25,false,hero.id);
-  p.rewardUsed=true;note(s,`${p.name} · 학습지 영웅 ${hero.name} Lv.${hero.level} 소환!`);return ok(`${hero.name} 출발! 다음 대전에서도 선택할 수 있어요.`);
+  summonReward(s,side,hero);return ok(`${hero.name} 출발! 다음 대전에서도 선택할 수 있어요.`);
  }
  if(action.type==='ready'){
-  if(s.status!=='waiting')return bad('이미 대전이 시작됐어요.');p.ready=true;
-  if(s.players.every(p=>p?.ready)){s.status='preparing';s.preparationStartedAt=now;s.preparationElapsed=0;s.updatedAt=now;for(const a of s.players)a!.lastSeen=now;note(s,'양쪽 준비 완료 · 1분 동안 타워 문제를 풀어요!');}return ok('준비했어요.');
+  if(s.status!=='waiting')return bad('이미 대전이 시작됐어요.');
+  if(p.ready)return bad('이미 시작을 준비했어요. 상대의 준비를 기다려요.');
+  const roster=(p.rewardRoster??[]).filter(id=>!!heroSpec(id));
+  const heroId=action.heroId===undefined?(p.rewardHero&&roster.includes(p.rewardHero)?p.rewardHero:roster[0]??null):action.heroId;
+  if(heroId!==null&&!roster.includes(heroId))return bad('보유한 수집 영웅 중 하나를 선택해요.');
+  if(roster.length>0&&heroId===null)return bad('함께 출전할 수집 영웅을 선택해요.');
+  const readyTogether=s.players.every((a,i)=>i===side||a?.ready);
+  // Validate room capacity before committing either selection or readiness.
+  const arrivals=readyTogether?s.players.reduce((count,a,i)=>{const id=i===side?heroId:a?.rewardHero,hero=id?heroSpec(id):null;return count+(a&&!a.rewardUsed&&hero?1+rewardEscortCount(hero):0);},0):0;
+  if(s.enemies.length+arrivals>100)return bad('길이 붐벼요. 잠시 뒤 시작해 주세요.');
+  p.rewardHero=heroId;p.ready=true;
+  if(readyTogether){
+   s.status='preparing';s.preparationStartedAt=now;s.preparationElapsed=0;s.updatedAt=now;
+   for(const owner of [0,1] as Side[]){const a=s.players[owner]!;a.lastSeen=now;const hero=a.rewardHero?heroSpec(a.rewardHero):null;if(!a.rewardUsed&&hero&&(a.rewardRoster??[]).includes(hero.id))summonReward(s,owner,hero);}
+   note(s,'양쪽 준비 완료 · 영웅 출전! 1분 동안 타워 문제를 풀어요!');
+  }
+  return ok('준비했어요.');
  }
  if(!['playing','preparing'].includes(s.status))return bad('게임을 시작하면 1분 동안 타워 문제를 풀어요.');
  if(action.type==='cancel'){release(p);return ok('구매를 취소했어요.');}

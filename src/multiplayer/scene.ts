@@ -102,12 +102,12 @@ export class DuelScene extends Phaser.Scene{
   // Load only the two selected companions before combat so their entrance
   // does not wait for an atlas or briefly show a generic enemy placeholder.
   for(const player of s?.players??[]){const companion=player?.rewardHero?heroSpec(player.rewardHero):null;if(companion)this.ensureHero(companion.level);}
-  this.text(this.ui,1130,657,reserve?`학습지 · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
+  this.text(this.ui,1130,657,reserve?`${p?.rewardUsed?'출전 영웅':'함께할 영웅'} · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
   if(v.computer){this.panel(this.ui,1130,748,266,100);const phrase=this.text(this.ui,1159,733,v.computer.phrase,13,'#f2d7a2');phrase.setWordWrapWidth(138).setOrigin(.5,.5);}
   else this.button('heroes',1069,756,113,57,'영웅 도감',true,false,16);
-  this.button('reserve',v.computer?1165:1192,v.computer?779:756,v.computer?175:113,v.computer?32:57,s?.status==='waiting'?'영웅 선택':p?.rewardUsed?'사용 완료':reserve?`Lv.${reserve.level} 소환`:'영웅 없음',!!p&&!v.busy&&(s?.status==='waiting'&&!p.ready||s?.status==='playing'&&!!reserve&&!p.rewardUsed),!!reserve&&!p?.rewardUsed,v.computer?13:16);
-  this.controls.get('reserve')!.label=s?.status==='waiting'?'학습지 영웅 선택':p?.rewardUsed?'학습지 영웅 사용 완료':reserve?`학습지 영웅 ${reserve.name} 레벨 ${reserve.level} 한 번 소환`:'학습지 영웅 없음';
-  if(s?.status==='waiting')this.button('ready',485,424,240,57,p?.ready?'상대 준비 기다리는 중':v.computer?'1분 준비 시작':'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
+  const companionLabel=p?.rewardUsed?'영웅 출전 완료':s?.status==='waiting'&&p?.rewardRoster.length?'시작할 때 영웅 선택':'수집 영웅 없음';
+  this.text(this.ui,v.computer?1165:1192,v.computer?779:756,companionLabel,v.computer?13:12,p?.rewardUsed?'#a3e9dd':'#c1b7aa');
+  if(s?.status==='waiting')this.button('ready',485,424,310,57,p?.ready?'상대 준비 기다리는 중':p?.rewardRoster.length?'영웅 선택 · 1분 준비 시작':'1분 준비 시작',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
   else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'굽이치는 길을 지켜요 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,424,message,18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
   this.syncShots();this.syncEnemies();this.syncHeroSummons();this.onControls();
  }

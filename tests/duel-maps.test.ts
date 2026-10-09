@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {DUEL_MAPS,DEFAULT_DUEL_MAP_ID,duelMap,duelPathDistance,duelPathPosition,duelRoadCell,isDuelMapId} from '../src/multiplayer/duel-maps';
 import {advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,validDuelCell,DUEL_PREPARATION_SECONDS,DuelEnemy,DuelState} from '../src/multiplayer/duel';
 const ROOM_NOW=100000,NOW=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
-function match(mapId?:string){
- const s=createDuel('left','왼쪽',17,ROOM_NOW,1,{},mapId);joinDuel(s,'right','오른쪽',ROOM_NOW);
+function match(mapId?:string,rewardHero?:string){
+ const loadout=rewardHero?{rewardHeroes:[rewardHero],rewardHero}:{};
+ const s=createDuel('left','왼쪽',17,ROOM_NOW,1,loadout,mapId);joinDuel(s,'right','오른쪽',ROOM_NOW,1,loadout);
  assert.ok(applyDuel(s,0,{type:'ready'},ROOM_NOW,'a').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'b').ok);assert.equal(s.status,'preparing');
  s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);return s;
 }
@@ -92,7 +93,10 @@ test('부화와 학습지 영웅의 호위는 양쪽 곡선 길에 좌우 대칭
   const s=match(map.id);for(const side of [0,1] as const){s.players[side]!.egg=10;assert.ok(applyDuel(s,side,{type:'hatch',heroId:'hero-10-1'},NOW,`h-${side}`).ok);}
   const a=s.enemies.filter(e=>e.owner===0),b=s.enemies.filter(e=>e.owner===1);assert.equal(a.length,5);assert.equal(b.length,5);
   for(let i=0;i<a.length;i++){assert.ok(Math.abs(a[i].x+b[i].x-23)<1e-8);assert.equal(a[i].y,b[i].y);assert.ok(Math.abs(a[i].pathDistance!+b[i].pathDistance!-map.length)<1e-8);}
-  const reward=match(map.id);for(const side of [0,1] as const){const p=reward.players[side]!;p.rewardRoster=['hero-10-1'];p.rewardHero='hero-10-1';assert.ok(applyDuel(reward,side,{type:'summon-reward'},NOW,`reward-${side}`).ok);}
+  const reward=match(map.id,'hero-10-1');for(const side of [0,1] as const){assert.equal(reward.players[side]!.rewardUsed,true);assert.equal(applyDuel(reward,side,{type:'summon-reward'},NOW,`duplicate-${side}`).ok,false);}
   assert.equal(reward.enemies.filter(e=>e.rewardSummon).length,2);assert.ok(reward.enemies.every(e=>duelRoadCell(map.id,Math.round(e.x),Math.round(e.y!))));
+  const left=reward.enemies.filter(e=>e.owner===0),right=reward.enemies.filter(e=>e.owner===1);
+  assert.equal(left.length,5);assert.equal(right.length,5);
+  for(let i=0;i<left.length;i++){assert.ok(Math.abs(left[i].x+right[i].x-23)<1e-8);assert.equal(left[i].y,right[i].y);assert.ok(Math.abs(left[i].pathDistance!+right[i].pathDistance!-map.length)<1e-8);}
  }
 });

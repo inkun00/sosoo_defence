@@ -23,7 +23,7 @@ import {Sound} from '../audio';
 import {loadSave} from '../save';
 import {hitEquationsEnabled,setHitEquationsEnabled} from '../combat-preferences';
 import {recordLearning,importLearningRecords,LearningSample} from '../learning';
-import {ownedHeroIds,selectedWorksheetHero,selectWorksheetHero} from '../worksheet-store';
+import {loadWorkbook,ownedHeroIds,selectedWorksheetHero,selectWorksheetHero} from '../worksheet-store';
 import {collectionHTML} from '../collection-ui';
 import '../collection.css';
 import '../game.css';
@@ -204,6 +204,21 @@ function rewardCollection(fromLobby=true){
  show('collection',`<p class="eyebrow">학습지 보상 · 대전당 한 번</p><h2>함께 출발할 영웅 선택</h2>${frozen?'<p>준비를 마쳤어요. 선택은 다음 대전 전에 바꿀 수 있어요.</p>':''}${collectionHTML(selected,frozen)}<p data-feedback role="status"></p><div class="duel-row"><button id="collection-back">${fromLobby?'대기실로':'대전으로'}</button><a href="/?mode=worksheet" target="_blank" rel="noopener">학습지 · 암호 입력 ↗</a></div>`);
  bind('collection-back',()=>fromLobby?lobby():close());content.querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(b=>b.onclick=async()=>{if(frozen||busy)return;try{const id=b.dataset.collectionHero!;if(peer&&state){const reply=await send({type:'select-reward',heroId:id});if(!reply?.ok)return;}await selectWorksheetHero(id);rewardCollection(fromLobby);}catch(e){status(errorText(e));}});
 }
+async function startWithCollectedHero(){
+ const p=state?.players[side];if(!state||state.status!=='waiting'||!p||p.ready||busy)return;
+ if(!p.rewardRoster.length){await send({type:'ready'});return;}
+ const book=loadWorkbook(),roster=new Set(p.rewardRoster);
+ book.collection=book.collection.filter(hero=>roster.has(hero.heroId));
+ show('collection',`<p class="eyebrow">수집 영웅 · 함께 출전</p><h2>함께 출전할 영웅을 선택하세요</h2>${collectionHTML(p.rewardHero,false,book,{mode:'deployment'})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
+ const entryPeer=peer,entryHeading=content.querySelector('h2');
+ bind('deployment-back',close);
+ content.querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(button=>button.onclick=async()=>{
+  if(busy)return;const id=button.dataset.collectionHero!,reply=await send({type:'ready',heroId:id});
+  if(!reply?.ok||peer!==entryPeer)return;
+  if(state?.status!=='finished'&&dialogKind==='collection'&&entryHeading?.isConnected)close();
+  void selectWorksheetHero(id).catch(error=>status(errorText(error)));
+ });
+}
 function result(){
  if(peer instanceof ComputerPeer){const definition=peer.definition,won=state?.winner===side,draw=state?.winner===null;
   show('result',`<div class="computer-result-portrait" role="img" aria-label="${definition.name}의 ${draw?'대기':won?'패배':'승리'} 표정" style="background-image:url('${artURL('cpu-opponent-'+definition.level+'-v1')}');--pose-from:${won?'66.6667%':'0%'};--pose-to:${won?'100%':'33.3333%'};--pose-row:${draw?'0%':'100%'}"></div><p class="eyebrow">컴퓨터와 대결 · Lv.${definition.level} ${definition.name}</p><h2>${draw?'두 불꽃을 모두 지켰어요':won?'멋진 전략으로 이겼어요!':'다시 도전해 볼까요?'}</h2><p id="result-reason"></p><p>합성 정답 ${state?.players[0].solved??0}회 · 남은 불꽃 ${numberText(state?.players[0].flame??0)}</p><p id="result-save"></p><div id="result-wrong"></div><div class="duel-row"><button id="computer-retry">같은 상대와 다시 대결</button><button class="duel-primary" id="computer-other">다른 상대 선택</button></div>`);
@@ -225,11 +240,10 @@ scene.onAction=async key=>{sound.resume();sound.play('ui');
  if(key.startsWith('slot:')){slots.splice(Number(key.slice(5)),1);refresh();return;}
  switch(key){
   case 'page:prev':shopPage=0;refresh();break;case 'page:next':shopPage=1;refresh();break;
-  case 'ready':await send({type:'ready'});break;
+  case 'ready':await startWithCollectedHero();break;
   case 'fuse':await send({type:'fuse',round:state!.players[side]!.round,slots:[...slots],operation:'+'});break;
   case 'sell':await send({type:'sell',towerId:selectedTower});selectedTower=0;refresh();break;
   case 'hatch':heroBook();break;case 'heroes':heroBook(true);break;
-  case 'reserve':if(state?.status==='waiting')rewardCollection(false);else {const reply=await send({type:'summon-reward'});if(reply?.ok)sound.play('kill');}break;
   case 'lobby':peer instanceof ComputerPeer?computerScreen():lobby();break;
   case 'settings':settings();break;
   case 'leave':if(state&&state.status!=='finished'){show('leave','<h2>대전을 나갈까요?</h2><p>진행 중인 대전은 상대의 승리로 끝나요.</p><div class="duel-row"><button id="stay">계속하기</button><button id="surrender" class="duel-primary">나가기</button></div>');bind('stay',close);bind('surrender',exitGame);}else exitGame();break;
@@ -242,5 +256,5 @@ if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitt
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pagehide',()=>{peer?.dispose();sound.dispose();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave'].includes(dialogKind))close();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave','collection'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});

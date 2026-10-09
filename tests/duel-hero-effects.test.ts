@@ -61,7 +61,7 @@ test('감속 저항은 수호 영웅 자신에게만 표시되고 주변 몬스�
 });
 
 test('군집 효과는 부화한 영웅의 동반 돌 병사에만 기록되고 일반 몬스터와 구분된다',()=>{
- const s=match();s.players[1]!.egg=3;
+ const s=match();s.enemies=[];s.players[1]!.egg=3;
  assert.ok(applyDuel(s,1,{type:'hatch',heroId:'hero-3-1'},NOW,'h').ok);
  const hero=s.enemies.find(e=>e.hero)!,escorts=s.enemies.filter(e=>!e.hero);
  assert.equal(escorts.length,2);
@@ -74,8 +74,8 @@ test('군집 효과는 부화한 영웅의 동반 돌 병사에만 기록되고 
  s.enemies=escorts;assert.deepEqual(activeDuelHeroEffects(s,escorts[0]),['brood'],'영웅 처치 뒤에도 소환된 병사는 병사로 남는다');
 });
 
-test('학습지 보상 영웅의 동반 병사도 군집 아이콘을 받고 가속과 동시에 표시된다',()=>{
- const s=match();assert.ok(applyDuel(s,0,{type:'summon-reward'},NOW,'reward').ok);
+test('시작할 때 자동 출전한 학습지 영웅의 병사도 군집 아이콘을 받고 가속과 동시에 표시된다',()=>{
+ const s=match();assert.equal(s.players[0].rewardUsed,true);assert.equal(applyDuel(s,0,{type:'summon-reward'},NOW,'duplicate').ok,false);
  const escorts=s.enemies.filter(e=>!e.hero);
  assert.equal(escorts.length,2);assert.ok(s.enemies.find(e=>e.hero)?.rewardSummon);
  for(const soldier of escorts){assert.equal(soldier.sourceHeroId,'hero-3-1');assert.deepEqual(activeDuelHeroEffects(s,soldier),['brood']);}
