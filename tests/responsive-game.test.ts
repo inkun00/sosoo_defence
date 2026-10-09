@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
-import {gameScreenLayout,observeGameScreen} from '../src/responsive-game';
+import {gameScreenLayout,duelScreenLayout,observeGameScreen} from '../src/responsive-game';
 
 test('short landscape phones use a compact logical height with one uniform scale',()=>{
  for(const [width,height] of [[568,320],[667,375],[844,390],[915,412],[932,430]]){
@@ -30,6 +30,19 @@ test('invalid measurements remain finite while the game waits for a visible pare
   const layout=gameScreenLayout(width,height);assert.ok(layout.scale>0&&Number.isFinite(layout.scale));
   assert.ok(Number.isFinite(layout.height));
  }
+});
+
+test('duel crafting keeps both 44px rows visible after reserving space for audio controls',()=>{
+ for(const [width,height] of [[568,271],[667,326],[844,281],[844,341],[1024,719]]){
+  const layout=duelScreenLayout(width,height),touch=Math.max(68,Math.ceil(44/layout.scale));
+  assert.ok(layout.width*layout.scale<=width+.01);
+  assert.ok(layout.height*layout.scale<=height+.01);
+  if(layout.compact){
+   assert.ok(touch*layout.scale>=44);
+   assert.ok(3*touch+369<=layout.height-8,'last crafting row must remain above the bottom margin');
+  }
+ }
+ assert.deepEqual(duelScreenLayout(1280,720),gameScreenLayout(1280,720));
 });
 
 test('FIT reads fresh parent bounds before both same-height rotation and game-size changes, then disposes listeners',t=>{
