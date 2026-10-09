@@ -66,12 +66,12 @@ test('연속 정답으로 최고 10레벨 알 한 개만 성장하고 부화는 
  const s=match();for(let i=0;i<10;i++)assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,10);const board=[...s.players[0].board];assert.equal(solve(s,0).ok,false);assert.deepEqual(s.players[0].board,board);
  assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,'wrong').ok,false);assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-10-0'},NOW,'right').ok);assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].target,1);assert.equal(s.enemies[0].hp,HEROES.find(h=>h.id==='hero-10-0')!.hp);assert.equal(s.players[0].egg,0);assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-10-0'},NOW,'duplicate').ok,false);
 });
-test('군집 영웅은 알 한 개만 소비하고 레벨이 높을수록 더 많은 돌 병사를 데려온다',()=>{
- const s=match();s.players[1]!.egg=10;assert.ok(applyDuel(s,1,{type:'hatch',heroId:'hero-10-1'},NOW,'h').ok);assert.equal(s.enemies.filter(e=>e.hero).length,1);assert.equal(s.enemies.length,5);assert.ok(s.enemies.every(e=>e.owner===1&&e.target===0));assert.equal(s.players[1]!.egg,0);
+test('특수효과 영웅은 알 한 개를 소비하고 동반 병사 없이 한 명만 출전한다',()=>{
+ const s=match();s.players[1]!.egg=10;assert.ok(applyDuel(s,1,{type:'hatch',heroId:'hero-10-1'},NOW,'h').ok);assert.equal(s.enemies.filter(e=>e.hero).length,1);assert.equal(s.enemies.length,1);assert.ok(s.enemies.every(e=>e.owner===1&&e.target===0));assert.equal(s.players[1]!.egg,0);
 });
-test('가속은 같은 방향의 주변 아군에게만 적용되고 수호 영웅의 감속 저항이 증가한다',()=>{
- const a=match(),b=match();a.enemies=[enemy({id:1,owner:0,target:1,x:4}),enemy({id:2,owner:0,target:1,x:4,hero:'hero-10-0',level:10,hp:36750,max:36750})];b.enemies=[enemy({id:1,owner:0,target:1,x:4}),enemy({id:3,owner:1,target:0,x:4,hero:'hero-10-0',level:10,hp:36750,max:36750})];advanceDuel(a,NOW+1000);advanceDuel(b,NOW+1000);assert.ok(a.enemies[0].x>b.enemies[0].x);
- const c=match();c.enemies=[enemy({id:4,hero:'hero-10-2',level:10,slow:3}),enemy({id:5,hero:'hero-1-2',level:10,slow:3})];advanceDuel(c,NOW+1000);assert.ok(c.enemies[0].x<c.enemies[1].x);
+test('이동 가속은 같은 편에게 적용되고 기존 영웅별 감속 저항은 제거된다',()=>{
+ const a=match(),b=match();a.enemies=[enemy({id:1,owner:0,target:1,x:4}),enemy({id:2,owner:0,target:1,x:4,hero:'hero-1-0',level:1})];b.enemies=[enemy({id:1,owner:0,target:1,x:4}),enemy({id:3,owner:1,target:0,x:4,hero:'hero-1-0',level:1})];advanceDuel(a,NOW+1000);advanceDuel(b,NOW+1000);assert.ok(a.enemies[0].x>b.enemies[0].x);
+ const c=match();c.enemies=[enemy({id:4,hero:'hero-10-2',level:10,slow:3}),enemy({id:5,hero:'hero-1-2',level:10,slow:3})];advanceDuel(c,NOW+1000);assert.ok(Math.abs(c.enemies[0].x-c.enemies[1].x)<1e-10);
 });
 test('기본 웨이브는 8초부터 양쪽 대칭이고 시간에 따라 레벨이 증가한다',()=>{const s=match();advanceDuel(s,NOW+8000);assert.equal(s.enemies.length,2);assert.equal(s.enemies[0].hp,s.enemies[1].hp);assert.equal(s.enemies[0].hp%100,0);s.players.forEach(p=>p!.lastSeen=NOW+35000);advanceDuel(s,NOW+35000);assert.ok(s.enemies.some(e=>e.level===2));});
 test('처치된 몬스터의 마지막 체력 뺄셈도 발사 기록에 남고 실제 코인 보상은 유효 타격 효율을 따른다',()=>{

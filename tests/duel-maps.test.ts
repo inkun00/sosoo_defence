@@ -82,21 +82,21 @@ test('되돌아오는 회랑에서도 좌표 대신 불꽃까지 남은 경로�
 test('가속 영웅의 범위는 서로 다른 높이의 아군을 구별한다',()=>{
  const alone=match('crystal-twin'),far=match('crystal-twin'),near=match('crystal-twin');
  for(const s of [alone,far,near])s.enemies=[enemy(s,4,1,{id:1,owner:0,target:1})];
- far.enemies.push(enemy(far,4,5,{id:2,owner:0,target:1,hero:'hero-10-0',level:10,hp:36750,max:36750}));
- near.enemies.push(enemy(near,4,3,{id:2,owner:0,target:1,hero:'hero-10-0',level:10,hp:36750,max:36750}));
+ far.enemies.push(enemy(far,4,5,{id:2,owner:0,target:1,hero:'hero-1-0',level:1,hp:800,max:800}));
+ near.enemies.push(enemy(near,4,3,{id:2,owner:0,target:1,hero:'hero-1-0',level:1,hp:800,max:800}));
  for(const s of [alone,far,near])advanceDuel(s,NOW+100);
  assert.ok(Math.abs(alone.enemies[0].pathDistance!-far.enemies[0].pathDistance!)<1e-8);assert.ok(near.enemies[0].pathDistance!>alone.enemies[0].pathDistance!);
 });
 
-test('부화와 학습지 영웅의 호위는 양쪽 곡선 길에 좌우 대칭으로 배치된다',()=>{
+test('부화와 학습지 영웅은 동반 병사 없이 양쪽 곡선 길에 좌우 대칭으로 배치된다',()=>{
  for(const map of DUEL_MAPS){
   const s=match(map.id);for(const side of [0,1] as const){s.players[side]!.egg=10;assert.ok(applyDuel(s,side,{type:'hatch',heroId:'hero-10-1'},NOW,`h-${side}`).ok);}
-  const a=s.enemies.filter(e=>e.owner===0),b=s.enemies.filter(e=>e.owner===1);assert.equal(a.length,5);assert.equal(b.length,5);
+  const a=s.enemies.filter(e=>e.owner===0),b=s.enemies.filter(e=>e.owner===1);assert.equal(a.length,1);assert.equal(b.length,1);assert.ok(s.enemies.every(e=>e.hero));
   for(let i=0;i<a.length;i++){assert.ok(Math.abs(a[i].x+b[i].x-23)<1e-8);assert.equal(a[i].y,b[i].y);assert.ok(Math.abs(a[i].pathDistance!+b[i].pathDistance!-map.length)<1e-8);}
   const reward=match(map.id,'hero-10-1');for(const side of [0,1] as const){assert.equal(reward.players[side]!.rewardUsed,true);assert.equal(applyDuel(reward,side,{type:'summon-reward'},NOW,`duplicate-${side}`).ok,false);}
   assert.equal(reward.enemies.filter(e=>e.rewardSummon).length,2);assert.ok(reward.enemies.every(e=>duelRoadCell(map.id,Math.round(e.x),Math.round(e.y!))));
   const left=reward.enemies.filter(e=>e.owner===0),right=reward.enemies.filter(e=>e.owner===1);
-  assert.equal(left.length,5);assert.equal(right.length,5);
+  assert.equal(left.length,1);assert.equal(right.length,1);assert.ok(reward.enemies.every(e=>e.hero));
   for(let i=0;i<left.length;i++){assert.ok(Math.abs(left[i].x+right[i].x-23)<1e-8);assert.equal(left[i].y,right[i].y);assert.ok(Math.abs(left[i].pathDistance!+right[i].pathDistance!-map.length)<1e-8);}
  }
 });

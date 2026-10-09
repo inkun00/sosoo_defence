@@ -12,6 +12,8 @@ body.preview #app{height:100dvh;overflow:hidden;display:flex;flex-direction:colu
 .preview-controls nav{display:flex;flex-wrap:wrap;gap:6px}
 .preview-controls button{font-size:14px;padding:7px 12px;color:#ffe4af;background:#302b35;border:1px solid #aa8559;border-radius:5px}
 .preview-controls button:disabled{opacity:.45;cursor:wait}
+.preview-controls button[aria-pressed="true"]{background:#574528;box-shadow:inset 0 0 0 1px #ffe6af}
+#hero-description{margin:7px 0;font-size:15px;color:#ffe0a1;font-weight:bold}
 #status{margin:8px 0;font-size:14px;color:#decbb0}
 #proof{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;font-size:12px}
 #proof span{padding:4px 7px;background:#212837;border-radius:4px;line-height:1.5}
@@ -25,13 +27,21 @@ body.preview #app{height:100dvh;overflow:hidden;display:flex;flex-direction:colu
 <main id="game-shell"><div id="field"></div></main>
 <section class="preview-controls" aria-label="영웅 효과 검증 도구">
 <nav>
-<button id="effects-on" disabled>효과 적용</button>
+<button data-effect="haste" disabled>이동 가속</button>
+<button data-effect="vitality" disabled>체력 강화</button>
+<button data-effect="shield" disabled>보호막</button>
+<button data-effect="enemy-slow" disabled>상대 포탑 감속</button>
+<button data-effect="tower-haste" disabled>내 포탑 가속</button>
+<button id="level-low" disabled>낮은 레벨</button>
+<button id="level-high" disabled>높은 레벨</button>
+<button id="shield-hit" disabled>보호막 공격</button>
 <button id="out-of-range" disabled>범위 벗어남</button>
 <button id="hero-exit" disabled>영웅 퇴장</button>
 <button id="restore-effects" disabled>영웅 효과 복구</button>
-<button id="swap-side" disabled>참가자 시점</button>
+<button id="swap-side" disabled>상대 시점</button>
 <button id="top-bend" disabled>상단 굽이</button>
 </nav>
+<p id="hero-description"></p>
 <p id="status" role="status">실제 DuelScene과 영웅 이미지를 불러오는 중입니다.</p>
 <output id="proof" aria-label="모델이 판정한 효과 목록"></output>
 <pre id="errors"></pre>

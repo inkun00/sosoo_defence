@@ -38,13 +38,13 @@ test('waiting to preparation emits the two selected collected heroes once in hos
  play(s);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
 });
 
-test('ordinary hatching and escorts are excluded even when the hero matches the reserve',()=>{
+test('ordinary hatching is excluded even when the hero matches the reserve, without extra escorts',()=>{
  const s=state(),stream=new HeroSummonStream();stream.take('room',s);prepare(s);assert.equal(stream.take('room',s).length,2);play(s);stream.take('room',s);s.players[0].egg=1;
  assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},now,'egg').ok,true);s.revision++;
  assert.deepEqual(stream.take('room',s),[]);
  s.players[0].egg=1;applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},now,'egg2');s.revision++;
  assert.deepEqual(stream.take('room',s),[]);assert.equal(s.enemies.filter(e=>e.owner===0&&e.hero==='hero-1-0').length,3);
- assert.ok(s.enemies.filter(e=>e.owner===1&&!e.hero).length>0);
+ assert.equal(s.enemies.filter(e=>e.owner===1&&!e.hero).length,0);assert.equal(s.enemies.filter(e=>e.owner===1).length,1);
  assert.equal(applyDuel(s,0,{type:'summon-reward'},now,'duplicate').ok,false);
 });
 

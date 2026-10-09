@@ -30,7 +30,7 @@ test('양쪽 시작 준비가 끝나는 즉시 선택한 영웅이 각각 한 �
  assert.equal(s.enemies.length,2);assert.equal(s.preparationStartedAt,ROOM_NOW);assert.equal(s.preparationElapsed,0);
  for(const side of [0,1] as const){
   const p=s.players[side]!,e=s.enemies.find(e=>e.owner===side)!;
-  assert.equal(e.hero,p.rewardHero);assert.equal(e.target,1-side);assert.equal(e.rewardSummon,true);assert.equal(e.hp,heroSpec(p.rewardHero!)!.hp);
+  assert.equal(e.hero,p.rewardHero);assert.equal(e.target,1-side);assert.equal(e.rewardSummon,true);assert.equal(e.vitalityBaseMax??e.max,heroSpec(p.rewardHero!)!.hp);assert.equal(e.hp,e.max);
   assert.equal(e.pathDistance,side===0?1:duelMap(s.mapId).length-1);assert.equal(p.rewardUsed,true);
   assert.equal(p.money,DUEL_START_MONEY);assert.equal(p.egg,0);assert.equal(p.solved,0);
   assert.equal(applyDuel(s,side,{type:'ready',heroId:p.rewardHero},ROOM_NOW,'repeat').ok,false);
@@ -56,13 +56,13 @@ test('영웅 출전 연출 중인 준비 60초에는 이동·피해·발사·코
  assert.ok(s.enemies.every(e=>e.hp===enemies.find(o=>o.id===e.id)!.hp));assert.equal(s.shots.length,0);
 });
 
-test('군집 수집 영웅의 호위는 함께 출전하며 일반 알 부화에는 수집 소환 표식이 없다',()=>{
+test('수집 영웅과 알 부화는 각각 영웅 한 명만 출전하며 수집 소환 표식을 구별한다',()=>{
  const s=room();assert.ok(applyDuel(s,0,{type:'ready',heroId:'hero-10-1'},ROOM_NOW,'left').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'right').ok);
- const left=s.enemies.filter(e=>e.owner===0);assert.equal(left.length,5);assert.equal(left[0].hero,'hero-10-1');assert.equal(left[0].rewardSummon,true);
- assert.ok(left.slice(1).every(e=>!e.hero&&e.rewardSummon===undefined&&e.sourceHeroId==='hero-10-1'));
+ const left=s.enemies.filter(e=>e.owner===0);assert.equal(left.length,1);assert.equal(left[0].hero,'hero-10-1');assert.equal(left[0].rewardSummon,true);
+ assert.ok(s.enemies.every(e=>e.hero),'기존 군집형 동반 병사가 자동 생성되지 않는다');
  startCombat(s);const before=s.enemies.length;s.players[0].egg=10;const money=s.players[0].money;
  assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-10-1'},START,'egg').ok);
- assert.equal(s.enemies[before].hero,'hero-10-1');assert.ok(s.enemies.slice(before).every(e=>e.rewardSummon===undefined));
+ assert.equal(s.enemies.length,before+1);assert.equal(s.enemies[before].hero,'hero-10-1');assert.ok(s.enemies.slice(before).every(e=>e.rewardSummon===undefined));
  assert.equal(s.players[0].egg,0);assert.equal(s.players[0].money,money);assert.equal(s.players[0].rewardUsed,true);
 });
 
@@ -82,11 +82,11 @@ test('영웅이 없는 플레이어는 선택 없이 시작하며 자동 출전�
  startCombat(s);assert.equal(applyDuel(s,0,{type:'summon-reward'},START,'manual').ok,false);
 });
 
-test('30종의 자동 출전 영웅은 기존 체력과 군집 수를 그대로 사용한다',()=>{
+test('30종의 자동 출전 영웅은 기존 체력을 사용하고 각 한 명만 출전한다',()=>{
  for(const hero of HEROES){
   const s=createDuel('a','가',17,ROOM_NOW,1,{rewardHeroes:[hero.id]});joinDuel(s,'b','나',ROOM_NOW);ready(s);
-  const deployed=s.enemies.find(e=>e.hero)!;assert.equal(deployed.hero,hero.id);assert.equal(deployed.hp,hero.hp);assert.equal(deployed.max,hero.hp);
-  assert.equal(s.enemies.length,1+(hero.effect==='brood'?1+Math.floor(hero.level/3):0));assert.ok(s.enemies.every(e=>e.hp<10000));
+  const deployed=s.enemies.find(e=>e.hero)!;assert.equal(deployed.hero,hero.id);assert.equal(deployed.vitalityBaseMax??deployed.max,hero.hp);assert.ok(deployed.max>=hero.hp);assert.equal(deployed.hp,deployed.max);
+  assert.equal(s.enemies.length,1);assert.ok(hero.hp<10000);
  }
 });
 
@@ -95,7 +95,7 @@ test('길이 이미 가득한 방에서는 선택과 시작 준비를 함께 거
  s.enemies=Array.from({length:100},(_,id)=>({id,owner:0 as const,target:1 as const,hero:null,level:1,hp:800,max:800,x:1,pathDistance:1,slow:0,stun:0,hits:0}));
  const before=structuredClone(s.players[0]);
  assert.equal(applyDuel(s,0,{type:'ready',heroId:'hero-10-1'},ROOM_NOW,'full').ok,false);assert.deepEqual(s.players[0],before);assert.equal(s.status,'waiting');
- s.enemies=[];assert.ok(applyDuel(s,0,{type:'ready',heroId:'hero-10-1'},ROOM_NOW,'again').ok);assert.equal(s.status,'preparing');assert.equal(s.enemies.length,6);
+ s.enemies=[];assert.ok(applyDuel(s,0,{type:'ready',heroId:'hero-10-1'},ROOM_NOW,'again').ok);assert.equal(s.status,'preparing');assert.equal(s.enemies.length,2);
 });
 
 test('초대 신원은 30종 중 중복 없는 보유 목록과 목록에 포함된 선택만 허용한다',()=>{

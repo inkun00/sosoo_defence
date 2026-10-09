@@ -5,7 +5,7 @@ import {duelMap,isDuelMapId} from './duel-maps';
 export interface PeerIdentity{uid:string;name:string;accountLevel?:number;rewardHeroes?:string[];rewardHero?:string|null;}
 export interface Reply{ok:boolean;message:string;}
 interface Invitation{v:1;kind:'offer'|'answer';id:string;host:PeerIdentity;sdp:RTCSessionDescriptionInit;mapId?:string;rules?:string;}
-const DUEL_RULES='preparation-60-hero-v2';
+const DUEL_RULES='hero-auras-5-v3';
 const GRACE=45000;
 function randomId(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const hex=Array.from(b,n=>n.toString(16).padStart(2,'0')).join('');return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;}
 function encode(v:Invitation){const bytes=new TextEncoder().encode(JSON.stringify(v));return 'SDS1.'+btoa(String.fromCharCode(...bytes));}
@@ -13,7 +13,7 @@ function decode(code:string,kind:Invitation['kind']){
  if(code.length>24000||!code.trim().startsWith('SDS1.'))throw Error('초대/응답 코드를 확인해 주세요.');
  let v:Invitation;try{v=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(code.trim().slice(5)),c=>c.charCodeAt(0))));}catch{throw Error('코드 전체를 복사해 주세요.');}
  if(v.v!==1||v.kind!==kind||!/^[a-f0-9-]{36}$/.test(v.id)||!validIdentity(v.host)||v.sdp?.type!==kind||typeof v.sdp.sdp!=='string'||v.sdp.sdp.length>16000||v.mapId!==undefined&&!isDuelMapId(v.mapId))throw Error('다른 종류의 접속 코드예요.');
- if(v.rules!==DUEL_RULES)throw Error('두 사람 모두 새로고침한 뒤 새 방에서 1분 준비 대전을 시작해 주세요.');return v;
+ if(v.rules!==DUEL_RULES)throw Error('두 사람 모두 새로고침한 뒤 새 방에서 영웅 대전을 시작해 주세요.');return v;
 }
 export function validIdentity(i:PeerIdentity){return !!i&&typeof i.uid==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(i.uid)&&typeof i.name==='string'&&i.name.length>0&&i.name.length<=16&&(i.accountLevel===undefined||Number.isSafeInteger(i.accountLevel)&&i.accountLevel>=1&&i.accountLevel<=1000000)&&(i.rewardHeroes===undefined||Array.isArray(i.rewardHeroes)&&i.rewardHeroes.length<=30&&new Set(i.rewardHeroes).size===i.rewardHeroes.length&&i.rewardHeroes.every(id=>typeof id==='string'&&!!heroSpec(id)))&&(i.rewardHero===undefined||i.rewardHero===null||typeof i.rewardHero==='string'&&!!heroSpec(i.rewardHero)&&!!i.rewardHeroes?.includes(i.rewardHero));}
 export class HostPeer {

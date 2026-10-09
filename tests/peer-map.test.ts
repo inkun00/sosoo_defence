@@ -72,7 +72,7 @@ test('all ten map ids travel through offer, echoed answer, host state and guest 
  }
 });
 
-test('the host-authoritative ready exchange synchronizes both selected collected heroes and escorts',async()=>{
+test('the host-authoritative ready exchange synchronizes both selected heroes without extra escorts',async()=>{
  const {host,guest}=await pair(DUEL_MAPS[4].id,true);
  assert.equal((await host.send({type:'ready',heroId:'hero-10-1'})).ok,true);
  assert.equal(host.state?.enemies.length,0,'one player being ready does not spawn units before both are ready');
@@ -82,8 +82,7 @@ test('the host-authoritative ready exchange synchronizes both selected collected
  assert.ok(host.state?.players.every(player=>player?.rewardUsed));
  assert.deepEqual(guest.state?.enemies,host.state?.enemies);
  assert.deepEqual(host.state?.enemies.filter(enemy=>enemy.rewardSummon).map(enemy=>[enemy.owner,enemy.hero]),[[0,'hero-10-1'],[1,'hero-3-1']]);
- assert.equal(host.state?.enemies.filter(enemy=>enemy.owner===0&&!enemy.hero).length,4);
- assert.equal(host.state?.enemies.filter(enemy=>enemy.owner===1&&!enemy.hero).length,2);
+ assert.equal(host.state?.enemies.length,2);assert.equal(host.state?.enemies.filter(enemy=>!enemy.hero).length,0);
 });
 
 test('new preparation invitations without a map keep the default road when both peers agree',async()=>{
@@ -114,13 +113,13 @@ test('unknown map ids in create, offer and answer are rejected before RTC descri
 test('guest snapshots accept only the agreed map and preserve the last valid state after mismatches',async()=>{
  const {host,guest,guestChannel}=await pair(DUEL_MAPS[6].id);let emitted=0;guest.onState=()=>{emitted++;};
  const snapshot=structuredClone(host.state!) as DuelState;snapshot.revision=20;
- guestChannel.receive(JSON.stringify({kind:'state',rules:'preparation-60-hero-v2',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
+ guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-auras-5-v3',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
  const baseline=guest.state;
  for(const mapId of [DUEL_MAPS[7].id,undefined,'unknown-map']){
   const wrong=structuredClone(snapshot);wrong.revision=1000;wrong.mapId=mapId;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'preparation-60-hero-v2',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-auras-5-v3',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
  }
- const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'preparation-60-hero-v2',id:host.id,state:fresh}));
+ const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-auras-5-v3',id:host.id,state:fresh}));
  assert.equal(guest.state?.revision,21);assert.equal(guest.state?.mapId,DUEL_MAPS[6].id);assert.equal(emitted,2);
 });
 

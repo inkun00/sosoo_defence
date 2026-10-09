@@ -118,10 +118,10 @@ test('10종 맵 × CPU 10레벨의 100대전이 60초 준비·재고 배치·처
  assert.ok(reports.find(r=>r.level===10)!.computerPrepared>reports.find(r=>r.level===1)!.computerPrepared);
 });
 
-test('1분 준비 경제의 기준 전략 결과와 CPU 난이도별 행동 차이를 기록한다',()=>{
+test('다섯 영웅 효과를 적용한 준비 경제의 기준 전략과 CPU 난이도별 차이를 기록한다',()=>{
  for(const seed of [17,91,912]){
   const levels=[1,4,5,9,10],matches=levels.map(level=>simulateComputerDuel(level,seed));
-  assert.deepEqual(matches.map(m=>m.winner),[0,0,null,null,null]);
+  assert.deepEqual(matches.map(m=>m.winner),[0,0,null,null,1]);
   assert.ok(matches.every(m=>m.status==='finished'&&m.legalEconomy&&m.zeroCombatCoins));
   assert.ok(matches[4].computerSolved>matches[0].computerSolved);assert.ok(matches[4].computerPurchased>matches[0].computerPurchased);
   const burst=simulateComputerDuel(10,seed,'burst');assert.equal(burst.winner,null);assert.ok(burst.playerPrepared>matches[4].playerPrepared);assert.ok(burst.playerCashBuilt>matches[4].playerCashBuilt);

@@ -1,6 +1,6 @@
 # Hero aura effect icons
 
-Created on 2026-10-09 using the built-in `image_gen.imagegen` tool through the [imagegen skill](C:/Users/user/.codex/skills/.system/imagegen/SKILL.md). Each of the three distinct assets used a separate generation call with `transparent_background: true`. No CLI fallback was used.
+The original three icon assets were created on 2026-10-09 using the built-in `image_gen.imagegen` tool through the [imagegen skill](C:/Users/user/.codex/skills/.system/imagegen/SKILL.md). Each asset used a separate generation call with `transparent_background: true`. The original generation record below is retained for provenance; the former brood and steadfast gameplay effects have been removed.
 
 Style was informed by visual inspection of `public/assets/dungeon/heroes-level-1-v1.png`: chunky stone and crystal forms, strong outlines, and warm gold highlights. The generated icons use a common stone and gold medallion frame with distinct center symbols and colors. Each was visually checked for a single contained symbol, no text, and transparent cutout edges.
 
@@ -14,9 +14,21 @@ The original generated PNGs are copied into the project. Runtime derivatives may
 
 ## Runtime integration and validation
 
-The game displays the cyan wing on living units inside a same-owner haste hero's actual radius, the violet egg on soldiers spawned alongside a brood hero, and the frost shield on steadfast heroes themselves. Brood and steadfast do not create additional nearby-unit buffs. Hovering over an icon explains its meaning. Icons follow each unit, combine when applicable, and haste disappears on range exit or leader removal. At the top edge, the icon row moves below the sprite to preserve the face and player header.
+Each of the 30 heroes now has exactly one of five effects, with six heroes assigned to each effect:
 
-The three optimized WebP assets total 20,656 bytes. Their width is 96 px, with lossless alpha preserved; generated PNG originals remain in the project. Optimization uses the existing content-hashed asset pipeline.
+| Effect | Eligible target | Level scaling |
+| --- | --- | --- |
+| Haste | Same-owner monsters | Movement speed +10% at Lv.1, +4 percentage points per level, +46% at Lv.10 |
+| Vitality | Same-owner monsters | Maximum health +10% at Lv.1, +4 percentage points per level, +46% at Lv.10 |
+| Shield | Same-owner monsters | Blocks one attack at Lv.1–7 and two attacks at Lv.8–10; no automatic recharge after depletion |
+| Enemy slow | Opponent towers | Attack speed −10% at Lv.1, −46% at Lv.10 |
+| Tower haste | Same-owner towers | Attack speed +10% at Lv.1, +46% at Lv.10 |
+
+All five effects use an actual two-dimensional radius of 2 cells at Lv.1–3, 3 cells at Lv.4–6, 4 cells at Lv.7–9, and 5 cells at Lv.10. Equal effects use the strongest qualifying hero and never stack additively. Effects end outside the radius or when the source hero disappears. Monster and tower icons follow their targets; depleted shield and vitality buffers hide their icons. The earlier extra-soldier spawning and personal slow resistance are removed. Collected heroes still enter once at the start of the common preparation minute, and remain frozen until combat starts.
+
+Haste reuses the original cyan-wing WebP. The other four effects use reusable 32×32 Phaser Graphics textures with matching gold circular frames: a pink heart and cross for vitality, a blue shield for protection, a violet hourglass and downward arrow for opponent tower slowing, and a golden rune bolt and upward arrow for allied tower acceleration. These textures require no additional image downloads. The same effect queries used for gameplay determine whether each icon is visible.
+
+The three original optimized WebP assets total 20,656 bytes. Their width is 96 px, with lossless alpha preserved; generated PNG originals remain in the project. Optimization uses the existing content-hashed asset pipeline.
 
 | Effect | Saved original | Runtime bytes |
 | --- | --- | ---: |
@@ -24,7 +36,7 @@ The three optimized WebP assets total 20,656 bytes. Their width is 96 px, with l
 | Brood | [hero-effect-brood-v1.png](C:/Users/user/myproject/sosoo/game/public/assets/dungeon/hero-effect-brood-v1.png) | 7,042 |
 | Steadfast | [hero-effect-steadfast-v1.png](C:/Users/user/myproject/sosoo/game/public/assets/dungeon/hero-effect-steadfast-v1.png) | 7,382 |
 
-The `tools/duel-hero-effect-preview.html` fixture renders the real DuelScene and exposes static controls for range exit, hero removal, restored effects, participant view, and the upper map bend. The model regression suite covers exact aura bounds, allies versus opponents, simultaneous effects, both brood spawning paths, and legacy states without source metadata.
+The `tools/duel-hero-effect-preview.html` fixture renders the real DuelScene. The model regression suite covers radius boundaries, eligible allies and opponents, strongest-only overlap, health effects, attack speed changes, shield depletion, source removal, and automatic single-hero entry. Catalog tests preserve every hero ID and image row, verify the five-way distribution, and confirm displayed values match the gameplay parameters.
 
 ## Final prompt: Haste
 
