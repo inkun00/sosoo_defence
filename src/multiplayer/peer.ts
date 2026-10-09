@@ -34,7 +34,7 @@ export class HostPeer {
  async create(mapId?:string){duelMap(mapId);this.mapId=mapId;this.side=0;this.id=randomId();this.state=createDuel(this.identity.uid,this.identity.name,crypto.getRandomValues(new Uint32Array(1))[0],this.now(),this.identity.accountLevel??1,this.identity,mapId);this.attach(this.pc.createDataChannel('decimal-duel',{ordered:true}));await this.pc.setLocalDescription(await this.pc.createOffer());await gatherPeerCandidates(this.pc);this.emit();return encode({v:1,rules:DUEL_RULES,kind:'offer',id:this.id,host:this.identity,sdp:this.pc.localDescription!.toJSON(),mapId});}
  async join(code:string){const v=decode(code,'offer');if(v.host.uid===this.identity.uid)throw Error('서로 다른 계정으로 참가해 주세요.');this.mapId=v.mapId;this.side=1;this.id=v.id;this.host=v.host;await this.pc.setRemoteDescription(v.sdp);await this.pc.setLocalDescription(await this.pc.createAnswer());await gatherPeerCandidates(this.pc);return encode({v:1,rules:DUEL_RULES,kind:'answer',id:this.id,host:v.host,sdp:this.pc.localDescription!.toJSON(),mapId:v.mapId});}
  async accept(code:string){if(this.side!==0||this.accepted)throw Error('이미 참가자를 연결했어요. 두 명까지만 대전할 수 있어요.');const v=decode(code,'answer');if(v.id!==this.id||v.host.uid!==this.identity.uid)throw Error('이 방의 응답 코드가 아니에요.');if(v.mapId!==this.mapId)throw Error('두 사람 모두 새로고침한 뒤 같은 맵으로 다시 연결해 주세요.');await this.pc.setRemoteDescription(v.sdp);this.accepted=true;}
- private attach(channel:RTCDataChannel){this.channel=channel;channel.onopen=()=>{this.connected=true;this.disconnectedAt=0;this.lastSnapshot=this.now();if(this.side===1)this.write({kind:'hello',rules:DUEL_RULES,id:this.id,identity:this.identity});this.emit();};channel.onclose=()=>this.lost();channel.onerror=()=>this.lost();channel.onmessage=e=>{
+ private attach(channel:RTCDataChannel){this.channel=channel;channel.onopen=()=>{this.restored();this.lastSnapshot=this.now();if(this.side===1)this.write({kind:'hello',rules:DUEL_RULES,id:this.id,identity:this.identity});this.emit();};channel.onclose=()=>this.lost();channel.onerror=()=>this.lost();channel.onmessage=e=>{
   if(typeof e.data!=='string'||e.data.length>(this.side===0?4096:800000)){channel.close();return;}
   try{this.receive(JSON.parse(e.data));}catch{this.onStatus('잘못된 접속 메시지를 거부했어요.');}
  };}
@@ -44,10 +44,10 @@ export class HostPeer {
   if(this.side===0){
    if(m.kind==='hello'){
     if(m.rules!==DUEL_RULES||!validIdentity(m.identity)||this.allowedGuestUid!==null&&m.identity.uid!==this.allowedGuestUid||m.identity.uid===this.identity.uid||this.guest&&this.guest.uid!==m.identity.uid)throw Error('참가자');
-    joinDuel(this.state!,m.identity.uid,m.identity.name,this.now(),m.identity.accountLevel??1,m.identity);this.guest=m.identity;this.connected=true;this.state!.players[1]!.lastSeen=this.now();this.emit();this.broadcast();return;
+    joinDuel(this.state!,m.identity.uid,m.identity.name,this.now(),m.identity.accountLevel??1,m.identity);this.guest=m.identity;this.restored();this.state!.players[1]!.lastSeen=this.now();this.emit();this.broadcast();return;
    }
    if(!this.guest)return;
-   if(m.kind==='ping'){this.state!.players[1]!.lastSeen=this.now();this.write({kind:'pong',id:this.id});return;}
+   if(m.kind==='ping'){this.state!.players[1]!.lastSeen=this.now();if(this.restored())this.emit();this.write({kind:'pong',id:this.id});return;}
    if(m.kind==='action'&&typeof m.requestId==='string'&&/^[a-f0-9-]{36}$/.test(m.requestId)){
     if(!m.action||JSON.stringify(m.action).length>2048)throw Error('요청 크기');const cached=this.replies.get(m.requestId),reply=cached??this.perform(1,m.action);
     this.replies.set(m.requestId,reply);if(this.replies.size>64)this.replies.delete(this.replies.keys().next().value!);
@@ -56,7 +56,7 @@ export class HostPeer {
   }else{
    if(m.kind==='state'&&m.rules===DUEL_RULES&&m.state?.version===1&&m.state.mapId===this.mapId&&Array.isArray(m.state.players)&&m.state.players[0]?.uid===this.host.uid&&m.state.players[1]?.uid===this.identity.uid&&Number.isSafeInteger(m.state.revision)){
     if(this.state&&m.state.revision<this.state.revision)return;
-    this.state=m.state;this.connected=true;this.disconnectedAt=0;this.lastSnapshot=this.now();this.emit();
+    this.state=m.state;this.restored();this.lastSnapshot=this.now();this.emit();
    }else if(m.kind==='reply'){const pending=this.pending.get(m.requestId);if(pending){clearTimeout(pending.timer);this.pending.delete(m.requestId);pending.resolve({ok:m.ok===true,message:String(m.message||'').slice(0,300)});}}
   }
  }
@@ -74,6 +74,8 @@ export class HostPeer {
  }
  private emit(){if(this.state)this.onState(this.state,this.connected);}
  private broadcast(){if(this.side!==0||!this.guest||!this.state)return;const state=structuredClone(this.state);state.players[0].wrongQuestions=[];this.write({kind:'state',rules:DUEL_RULES,id:this.id,state});}
+ /** A brief ICE outage does not necessarily close and reopen the data channel. */
+ private restored(){const changed=!this.connected;this.connected=true;this.disconnectedAt=0;this.announced=false;return changed;}
  private lost(){if(this.disposed)return;this.connected=false;this.disconnectedAt||=this.now();this.emit();if(!this.announced){this.announced=true;this.onStatus('직접 연결이 끊겼어요. 45초 동안 연결을 기다려요.');}}
  private step(){
   if(this.disposed||!this.id)return;const now=this.now();

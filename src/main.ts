@@ -1,4 +1,6 @@
 import {pageRequest,openAuthorizedPage} from './page-access';
+import {reloadOnCachedRestore} from './page-lifecycle';
+reloadOnCachedRestore(window,()=>location.reload());
 const request=pageRequest(location.search);
 // Keep each entry's CSS preloads with its import. A conditional chain can be
 // folded into one preload call with only the final branch's styles in Vite.

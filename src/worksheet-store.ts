@@ -13,7 +13,13 @@ export function loadWorkbook():Workbook{
  }catch{return empty();}
 }
 function save(book:Workbook){try{localStorage.setItem(KEY,JSON.stringify(book));}catch{throw Error('브라우저 저장 공간이 부족해요. 저장 공간을 확보한 뒤 다시 시도해 주세요.');}}
-async function locked<T>(fn:()=>Promise<T>|T):Promise<T>{if(typeof navigator!=='undefined'&&navigator.locks)return navigator.locks.request('decimal-workbook',fn);return fn();}
+let fallbackQueue:Promise<unknown>=Promise.resolve();
+async function locked<T>(fn:()=>Promise<T>|T):Promise<T>{
+ if(typeof navigator!=='undefined'&&navigator.locks)return navigator.locks.request('decimal-workbook',fn);
+ // Hashing yields before a new sheet is saved. Serialize same-page requests
+ // even without Web Locks so each one reads the previous request's workbook.
+ const request=fallbackQueue.then(fn);fallbackQueue=request.then(()=>undefined,()=>undefined);return request;
+}
 export function ownedHeroIds(){return [...new Set(loadWorkbook().collection.map(h=>h.heroId))];}
 export function selectedWorksheetHero(){return loadWorkbook().selectedHero;}
 export async function selectWorksheetHero(id:string|null){return locked(()=>{const book=loadWorkbook();if(id!==null&&!book.collection.some(h=>h.heroId===id))throw Error('아직 획득하지 않은 영웅이에요.');book.selectedHero=id;save(book);});}

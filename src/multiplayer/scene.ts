@@ -312,7 +312,7 @@ export class DuelScene extends Phaser.Scene{
  update(_time:number,delta:number){const view=this.view(),s=view.state;this.opponentPortrait?.sync(view.computer);this.heroSummonEffects?.update();if(!s)return;const smooth=1-Math.exp(-delta/100);
   // Predict movement between host snapshots for smooth art; HP and outcomes
   // always come from the host. Prediction stops during a connection outage.
-  const age=s.status==='playing'?Math.min(1.5,(performance.now()-this.receivedAt)/1000):0;
+  const age=s.status==='playing'&&view.connected?Math.min(1.5,(performance.now()-this.receivedAt)/1000):0;
   for(const e of s.enemies){const v=this.enemies.get(e.id);if(!v)continue;const entrance=this.heroSummonEffects?.pose(e.id),point=duelEnemyPosition(s,e,age),targetX=X+(point.x+.5)*T,targetY=this.boardY+(point.y+.5)*T-4-(entrance?.lift??0);v.sprite.x+=(targetX-v.sprite.x)*smooth;v.sprite.y+=(targetY-v.sprite.y)*smooth;if(Math.abs(point.dx)>.01)v.sprite.setFlipX(point.dx<0);if(entrance)v.sprite.setDisplaySize(v.size*entrance.scale,v.size*entrance.scale).setAlpha(entrance.alpha);
    // On the uppermost bends, put labels below the walking sprite so the
    // guardian names and flame counters above the board stay readable.

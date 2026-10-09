@@ -34,6 +34,26 @@ test('오답·도움말·정답을 분류하고 역사 오답을 중복 수입�
 test('같은 학습지를 다시 열어도 유지하고 새 출력은 새 20문항을 보관한다',async()=>{
  const s=await getOrCreateWorksheet(4,true);assert.equal((await getOrCreateWorksheet(4)).id,s.id);const other=await getOrCreateWorksheet(4,true);assert.notEqual(s.id,other.id);assert.equal(loadWorkbook().sheets.length,2);assert.ok(!JSON.stringify(loadWorkbook()).includes('"code":'));
 });
+test('Web Locks가 없는 환경에서도 동시에 새로 만든 학습지를 모두 보관한다',async()=>{
+ const descriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{}});
+ try{
+  const sheets=await Promise.all(Array.from({length:3},()=>getOrCreateWorksheet(4,true)));
+  assert.equal(new Set(sheets.map(s=>s.id)).size,3);
+  assert.deepEqual(loadWorkbook().sheets.map(s=>s.id),sheets.map(s=>s.id));
+  for(const sheet of sheets)assert.equal(loadWorkbook().sheets.find(s=>s.id===sheet.id)?.codeHash,sheet.codeHash);
+ }finally{if(descriptor)Object.defineProperty(globalThis,'navigator',descriptor);else Reflect.deleteProperty(globalThis,'navigator');}
+});
+test('Web Locks가 없는 환경의 동시 기본 출력은 같은 학습지를 열고 저장 실패 후에도 다시 만들 수 있다',async()=>{
+ const descriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{}});
+ try{
+  failStorage=true;await assert.rejects(getOrCreateWorksheet(4,true),/저장 공간/);failStorage=false;
+  const sheets=await Promise.all(Array.from({length:3},()=>getOrCreateWorksheet(4)));
+  assert.equal(new Set(sheets.map(s=>s.id)).size,1);assert.equal(loadWorkbook().sheets.length,1);
+  assert.equal(loadWorkbook().sheets[0].id,sheets[0].id);
+ }finally{if(descriptor)Object.defineProperty(globalThis,'navigator',descriptor);else Reflect.deleteProperty(globalThis,'navigator');}
+});
 test('이전 계산 전용 학습지가 있어도 기본 출력은 새로운 단원 개념 학습지를 준비한다',async()=>{
  const old=await getOrCreateWorksheet(2,true),answers=new Set<number>();old.questions=Array.from({length:20},()=>makeQuestion('sub-2-basic',answers,rng(answers.size+50)));
  old.decoder=old.questions.map((q,i)=>({answer:questionAnswer(q),rune:i%4}));for(let n=10;old.decoder.length<30;n+=10)if(!answers.has(n))old.decoder.push({answer:n,rune:1});old.decoder.sort((a,b)=>a.answer-b.answer);old.codeHash=await codeHash(old.id,worksheetCode(old));assert.ok(validWorksheet(old));

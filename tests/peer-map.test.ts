@@ -35,6 +35,7 @@ class FakePeerConnection{
  addEventListener(_type:string,listener:()=>void){this.listeners.add(listener);}
  removeEventListener(_type:string,listener:()=>void){this.listeners.delete(listener);}
  deliverChannel(channel:FakeChannel){this.channels.push(channel);this.ondatachannel?.({channel:channel as unknown as RTCDataChannel});}
+ changeConnection(state:RTCPeerConnectionState){this.connectionState=state;this.onconnectionstatechange?.();}
  close(){this.connectionState='closed';this.onconnectionstatechange?.();}
 }
 
@@ -173,6 +174,32 @@ test('guest snapshots accept only the agreed map and preserve the last valid sta
  }
  const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'score-5min-v5',id:host.id,state:fresh}));
  assert.equal(guest.state?.revision,21);assert.equal(guest.state?.mapId,DUEL_MAPS[6].id);assert.equal(emitted,2);
+});
+
+test('live guest heartbeats restore a temporarily disconnected host without reopening the data channel',async()=>{
+ const {host,guestChannel}=await pair(DUEL_MAPS[0].id),messages:string[]=[];
+ let connectedEmits=0;host.onStatus=message=>messages.push(message);host.onState=(_state,connected)=>{if(connected)connectedEmits++;};
+ for(let attempt=0;attempt<2;attempt++){
+  fakePC(host).changeConnection('disconnected');assert.equal(host.connected,false);
+  fakePC(host).changeConnection('connected');
+  // A stale room packet cannot restore the current room's connection.
+  guestChannel.send(JSON.stringify({kind:'ping',id:'another-room'}));assert.equal(host.connected,false);
+  // The existing SCTP channel stays open, so its onopen event is not repeated.
+  guestChannel.send(JSON.stringify({kind:'ping',id:host.id}));assert.equal(host.connected,true);
+ }
+ assert.equal(connectedEmits,2,'both recoveries reach the host UI');
+ assert.equal(messages.length,2,'a recovered connection can report a later outage');
+});
+
+test('fresh host snapshots clear the guest outage notice so another interruption is reported',async()=>{
+ const {host,guest,guestChannel}=await pair(DUEL_MAPS[1].id),messages:string[]=[];
+ guest.onStatus=message=>messages.push(message);
+ for(let attempt=0;attempt<2;attempt++){
+  fakePC(guest).changeConnection('disconnected');assert.equal(guest.connected,false);
+  const snapshot=structuredClone(host.state!);snapshot.revision+=attempt+1;
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'score-5min-v5',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
+ }
+ assert.equal(messages.length,2);
 });
 
 test('a missing map in an old guest answer cannot silently change a newly selected room',async()=>{

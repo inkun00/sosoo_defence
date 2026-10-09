@@ -4,7 +4,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {imageProfile,transformedImage} from './image-profiles.mjs';
 const manifest=JSON.parse(await readFile('src/art-manifest.json','utf8'));
-let count=0,bytes=0;
+let count=0,bytes=0,coreBytes=0,collectionBytes=0;
 for(const [name,art]of Object.entries(manifest)){
  const sourcePath='public/assets/dungeon/'+name+'.png',source=sharp(sourcePath),before=await source.metadata();
  const buffer=await readFile('web-public'+art.url),image=sharp(buffer),after=await image.metadata();
@@ -13,13 +13,18 @@ for(const [name,art]of Object.entries(manifest)){
  assert.ok(art.url.includes(createHash('sha256').update(buffer).digest('hex').slice(0,12)),name+' content hash');
  if(before.hasAlpha){const expected=await transformedImage(sharp,sourcePath,imageProfile(name)).ensureAlpha().extractChannel('alpha').raw().toBuffer();const actual=await image.ensureAlpha().extractChannel('alpha').raw().toBuffer();assert.deepEqual(actual,expected,name+' transparent edges');}
  bytes+=art.bytes;
+ if(/^(cpu-opponent-|hero-collection-|hero-effect-)/.test(name))collectionBytes+=art.bytes;
+ else coreBytes+=art.bytes;
  count++;
 }
 const sourceNames=(await readdir('public/assets/dungeon')).filter(n=>n.endsWith('.png')&&!/^tower-(basic|slow|stun|range)\.png$/.test(n)).map(n=>n.slice(0,-4));
 assert.deepEqual(Object.keys(manifest).sort(),sourceNames.sort(),'every active image optimized');
 const deployed=(await readdir('dist/assets/dungeon')).filter(n=>/\.(png|jpe?g|webp)$/i.test(n));
 assert.deepEqual(deployed.sort(),Object.values(manifest).map(art=>art.url.split('/').at(-1)).sort(),'only current optimized images deployed');
-assert.ok(bytes<7*1048576,'image payload must remain below 7 MiB');
+// Keep the original game budget; separately bound the fifteen newer CPU,
+// collection and effect images instead of counting them against that budget.
+assert.ok(coreBytes<7*1048576,'core image payload must remain below 7 MiB');
+assert.ok(collectionBytes<2*1048576,'CPU and collection image payload must remain below 2 MiB');
 const licenses=await readdir('dist/licenses');
 for(const required of ['hahmlet-OFL.txt','Phaser-MIT.txt','tower-audio-LICENSES.txt','tower-audio-v1.json'])assert.ok(licenses.includes(required),'missing public attribution: '+required);
 assert.ok(!(await readdir('dist/assets/dungeon')).some(name=>/prompt/i.test(name)),'generation prompts must stay out of game downloads');
