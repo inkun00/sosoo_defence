@@ -6,6 +6,7 @@ import {loadSave,writeSave} from '../src/save';
 import {numberText,purchaseCoins,purchaseBalanceText} from '../src/math';
 import {stageMonsterKinds} from '../src/monsters';
 import {playLevel} from '../tools/simulate';
+import {playAutomaticStage} from './adventure-helpers';
 
 test('최종 11단계에 일반 몬스터 12마리와 별도로 체력 99.9인 마법사가 한 번 등장한다',()=>{
  const m=new Defense(LEVELS[FINAL_STAGE-1]);assert.equal(FINAL_STAGE,11);assert.equal(m.enemyCount,13);
@@ -95,8 +96,7 @@ test('최종 표준 난이도는 혼합 타워의 분산 배치로 클리어하�
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 벽돌·성벽을 이어 가져가며 1~11단계를 연속 클리어한다`,()=>{
  let inventory:Inventory={bricks:[],walls:0};
  for(const l of LEVELS){
-  let m=playLevel(l.id,difficulty,undefined,0,undefined,inventory);
-  for(let layout=1;layout<10&&m.phase!=='won';layout++)m=playLevel(l.id,difficulty,undefined,layout,undefined,inventory);
+  const m=playAutomaticStage(l.id,difficulty,inventory);
   assert.equal(m.phase,'won',`${difficulty} ${l.id}단계`);assert.ok(m.castle>0);assert.ok(m.goals.every(g=>g.done));
   assert.equal(m.purchases,m.formation.length);assert.deepEqual(m.towers.map(t=>({id:t.id,x:t.x,y:t.y,typeId:t.typeId})),m.formation);
   if(l.boss)assert.ok(m.bossSpawned&&m.bossDefeated);inventory=m.inventory;

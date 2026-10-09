@@ -15,9 +15,10 @@ export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fr
 export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:number;createdAt:number;startedAt:number;preparationStartedAt:number;preparationElapsed:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'preparing'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
 export const DUEL_PREPARATION_SECONDS=60,DUEL_SECONDS=240,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
-/** One-shot kills and first-try answers earn 100 points; every extra attempt lowers the award. */
-export function duelKillScore(hits:number){return Math.max(1,Math.floor(100/Math.max(1,Math.floor(Number.isFinite(hits)?hits:1))));}
-export function duelQuestionScore(wrongAttempts:number){return duelKillScore(Math.max(0,Number.isFinite(wrongAttempts)?Math.floor(wrongAttempts):0)+1);}
+export const DUEL_KILL_BASE_SCORE=100,DUEL_KILL_EFFICIENCY_SCORE=100,DUEL_QUESTION_BASE_SCORE=25;
+/** Every kill rewards defense; fewer hits and fewer wrong answers add more points. */
+export function duelKillScore(hits:number){return DUEL_KILL_BASE_SCORE+Math.floor(DUEL_KILL_EFFICIENCY_SCORE/Math.max(1,Math.floor(Number.isFinite(hits)?hits:1)));}
+export function duelQuestionScore(wrongAttempts:number){return Math.floor(DUEL_QUESTION_BASE_SCORE/(Math.max(0,Number.isFinite(wrongAttempts)?Math.floor(wrongAttempts):0)+1));}
 export function duelScore(p:Pick<DuelPlayer,'combatScore'|'questionScore'>|null|undefined){return (p?.combatScore??0)+(p?.questionScore??0);}
 function awardQuestion(p:DuelPlayer,wrongAttempts:number){p.questionScore=(p.questionScore??0)+duelQuestionScore(wrongAttempts);p.answeredQuestions=(p.answeredQuestions??0)+1;}
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor(s.elapsed/30));}

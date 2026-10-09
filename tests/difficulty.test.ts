@@ -15,6 +15,27 @@ test('표준은 후반까지 속도가 증가하고 연습·표준·도전의 �
   if(stage>1)assert.ok(s.speed>balanceFor(stage-1,'standard').speed);
  }
 });
+test('초반 예산은 실제 단계 정의 한 곳에 있고 후반 준비금은 보존한다',()=>{
+ assert.deepEqual(LEVELS.map(level=>level.budget),[900,3500,6560,6630,8860,8760,8790,8950,8950,9760,19980]);
+});
+test('표준 중반과 도전 초반은 몬스터 간격을 줄이고 연습·후반 방어 시간은 유지한다',()=>{
+ assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'practice').spawnInterval),Array(11).fill(8.4));
+ assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'standard').spawnInterval),[8.4,8.4,6.4,4.4,4.4,8.4,8.4,8.4,8.4,8.4,8.4]);
+ assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'challenge').spawnInterval),[3.2,2.8,4.4,4.4,4.4,8.4,8.4,8.4,8.4,8.4,8.4]);
+ for(const level of LEVELS)for(const difficulty of ['practice','standard','challenge'] as const)assert.ok(8+(level.hp.length-1)*balanceFor(level.id,difficulty).spawnInterval<=120);
+});
+test('실제 몬스터 예약은 난이도별 간격을 사용하고 일시정지에서는 멈춘다',()=>{
+ for(const stage of [1,2,3,4,5,10,11])for(const difficulty of ['practice','standard','challenge'] as const){
+  const m=new Defense(LEVELS[stage-1],undefined,difficulty);m.phase='playing';
+  for(let frame=0;frame<80;frame++)m.step(.1);
+  assert.equal(m.spawned,1);m.togglePause();for(let frame=0;frame<100;frame++)m.step(.1);
+  assert.equal(m.spawned,1);assert.ok(Math.abs(m.elapsed-8)<1e-8);m.togglePause();
+  const intervalFrames=Math.round(m.balance.spawnInterval/.1);
+  for(let frame=0;frame<intervalFrames-1;frame++)m.step(.1);
+  assert.equal(m.spawned,1,`${difficulty} stage ${stage}: second spawn too early`);
+  m.step(.1);assert.equal(m.spawned,2,`${difficulty} stage ${stage}: second spawn missing`);
+ }
+});
 test('0.01 바늘탑의 대량 설치를 막고 실패하면 돈·배치·구매 횟수가 그대로이며 회수 후 재설치된다',()=>{
  const m=new Defense(LEVELS[9]);
  const sites=[{x:1,y:3},{x:5,y:3},{x:1,y:0},{x:5,y:0}];

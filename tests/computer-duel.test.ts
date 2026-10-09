@@ -7,6 +7,7 @@ import {DUEL_MAPS,duelRoadCell} from '../src/multiplayer/duel-maps';
 import {decimalBoard} from '../src/multiplayer/decimal-boards';
 import {numberText,recipe} from '../src/math';
 import {simulateComputerDuel} from '../tools/computer-duel-simulation';
+import {simulateDuelDifficulty,DUEL_AUDIT_POLICIES} from '../tools/audit-duel-difficulty';
 
 function local(level=1,accountLevel=1){let now=100000;const peer=new ComputerPeer({uid:'student',name:'수호자',accountLevel},level,{seed:912,clock:()=>now,autoTick:false});return {peer,get now(){return now;},advance(ms:number){now+=ms;peer.step(now);},run(ms:number){for(let passed=0;passed<ms;){const dt=Math.min(100,ms-passed);passed+=dt;now+=dt;peer.step(now);}}};}
 function stockTotal(stock:Record<string,number>){return Object.values(stock).reduce((n,count)=>n+count,0);}
@@ -140,10 +141,11 @@ test('10종 맵 × CPU 10레벨의 100대전이 60초 준비·재고 배치·처
  assert.ok(reports.find(r=>r.level===10)!.computerPrepared>reports.find(r=>r.level===1)!.computerPrepared);
 });
 
-test('다섯 영웅 효과를 적용한 준비 경제의 기준 전략과 CPU 난이도별 차이를 기록한다',()=>{
+test('준비 경제의 기준 전략은 입문 CPU를 이기고 최고 CPU의 방어·영웅 압박에 패배한다',()=>{
  for(const seed of [17,91,912]){
   const levels=[1,4,5,9,10],matches=levels.map(level=>simulateComputerDuel(level,seed));
-  assert.deepEqual(matches.map(m=>m.winner),[0,0,0,1,1]);
+  assert.equal(matches[0].winner,0,'입문 CPU는 기존 느린 기준 전략으로 클리어할 수 있다');
+  assert.equal(matches[4].winner,1,'최고 CPU는 적은 방어와 느린 합성의 기준 전략을 압박한다');
   assert.ok(matches.every(m=>m.status==='finished'&&m.legalEconomy&&m.zeroCombatCoins));
   for(const match of matches.filter(m=>m.reason.startsWith('5분 종료'))){
    assert.equal(match.totalSeconds,DUEL_TOTAL_SECONDS);assert.equal(match.seconds,DUEL_SECONDS);
@@ -152,7 +154,52 @@ test('다섯 영웅 효과를 적용한 준비 경제의 기준 전략과 CPU �
    assert.equal(match.computerScore,match.computerCombatScore+match.computerQuestionScore);
   }
   assert.ok(matches[4].computerSolved>matches[0].computerSolved);assert.ok(matches[4].computerPurchased>matches[0].computerPurchased);
-  const burst=simulateComputerDuel(10,seed,'burst');assert.equal(burst.winner,0);assert.ok(burst.playerScore>burst.computerScore);assert.ok(burst.playerPrepared>matches[4].playerPrepared);assert.ok(burst.playerCashBuilt>matches[4].playerCashBuilt);
+  const burst=simulateComputerDuel(10,seed,'burst');assert.ok(burst.status==='finished'&&burst.legalEconomy&&burst.zeroCombatCoins);assert.ok(burst.playerPrepared>matches[4].playerPrepared);
+ }
+});
+
+test('입문 1~3단계는 느린 정상 정답 정책으로 클리어할 수 있다',()=>{
+ const weak={...DUEL_AUDIT_POLICIES[0],mistakeRate:0};
+ for(const level of [1,2,3])for(const seed of [17,91,912]){
+  const result=simulateDuelDifficulty(level,seed,weak);
+  assert.equal(result.winner,0,`CPU ${level} / seed ${seed}: 느린 정상 공략의 승리 경로`);
+  assert.ok(result.legal&&result.zeroCombatCoins);
+ }
+});
+
+test('상위 8~10단계는 6개 행 배치의 빠른 합성을 막고 고급 방어를 구성하면 클리어할 수 있다',()=>{
+ const fast=DUEL_AUDIT_POLICIES[2],minimal={...fast,id:'minimal6-row',maxTowers:6,placement:'row' as const,mistakeRate:0},strong={...fast,id:'strong-defense',upgradeDefense:true,mistakeRate:0};
+ for(const level of [8,9,10])for(const seed of [17,91,912]){
+  const exploit=simulateDuelDifficulty(level,seed,minimal),good=simulateDuelDifficulty(level,seed,strong);
+  assert.equal(exploit.winner,1,`CPU ${level} / seed ${seed}: 6개 고정 배치로 합성만 반복하면 성이 파괴된다`);
+  assert.equal(exploit.flames[0],0);assert.ok(exploit.battleSeconds<DUEL_SECONDS);
+  assert.equal(good.winner,0,`CPU ${level} / seed ${seed}: 비용을 지불하고 타워를 교체하는 정상 공략`);
+  assert.equal(good.totalSeconds,DUEL_TOTAL_SECONDS);assert.equal(good.battleSeconds,DUEL_SECONDS);
+  assert.ok(good.towerTypes[0].includes('sniper')&&good.towerTypes[0].includes('catapult'));
+  assert.equal(good.towerTypes[1].length,COMPUTER_OPPONENTS[level-1].maxTowers,'상위 CPU는 실제 처치 보상으로 열린 설치 칸을 채운다');
+  assert.ok(good.cashBuilds[1]>0&&good.towerPositions[1].some(t=>t.type==='sniper'&&!t.prepared&&t.cost>0),'장거리 업그레이드는 일반 전투 가격을 지불한다');
+  assert.ok(good.towerPositions[1].filter(t=>t.prepared).length<good.prepared[1],'비축 기본 포탑을 회수하고 고급 타워로 교체한다');
+  assert.ok(good.hatches[1].includes(level),'상위 CPU는 전투 제한 시간 안에 목표 레벨 영웅을 부화한다');
+  assert.ok([exploit,good].every(r=>r.legal&&r.zeroCombatCoins&&r.status==='finished'));
+ }
+});
+
+test('최고 CPU는 준비 문제 사이의 중복 대기를 줄이고 비축 방어를 초반에 배치한다',async()=>{
+ const f=local(10),s=f.peer.state,cpu=s.players[1]!;await f.peer.send({type:'ready'});
+ f.run(10000);assert.ok(cpu.purchases>=4,'정답 뒤 전투 설치 간격만큼 다시 기다리지 않는다');
+ f.run(60000-(f.now-s.preparationStartedAt));const prepared=stockTotal(cpu.stock);assert.ok(prepared>=8);
+ f.run(7600);assert.equal(cpu.towers.filter(t=>t.prepared).length,prepared,'첫 웨이브 접근 전에 비축 타워를 집중 설치한다');
+ f.run(55000-s.elapsed*1000);assert.ok(s.enemies.some(e=>e.owner===1&&e.hero&&e.level===10));
+ assert.equal(cpu.accountLevel,10);assert.equal(s.players[0].accountLevel,1);f.peer.dispose();
+});
+
+test('10종 굽잇길은 실제 사거리와 고급 타워 교체를 활용하는 정상 공략으로 최고 CPU를 이길 수 있다',()=>{
+ const policy={...DUEL_AUDIT_POLICIES[2],id:'coverage-defense',upgradeDefense:true,placement:'coverage' as const};
+ for(const map of DUEL_MAPS){
+  const result=simulateDuelDifficulty(10,912,policy,map.id);
+  assert.equal(result.winner,0,`${map.id}: 모든 전장에 정상 클리어 경로가 있다`);
+  assert.equal(result.flames[0],FLAME_MAX);assert.equal(result.totalSeconds,DUEL_TOTAL_SECONDS);
+  assert.ok(result.legal&&result.zeroCombatCoins&&result.towerPositions[0].some(t=>t.type==='sniper'&&t.cost>0));
  }
 });
 

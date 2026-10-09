@@ -6,7 +6,7 @@ import {onAuthStateChanged,User} from 'firebase/auth';
 import {auth,firebaseEmulator} from './firebase';
 import {mountAccountForm} from '../account-form';
 import {DuelScene,DuelView} from './scene';
-import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,duelScore,duelHeroLearningLevel} from './duel';
+import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,duelScore,duelHeroLearningLevel,DUEL_KILL_BASE_SCORE,DUEL_KILL_EFFICIENCY_SCORE,DUEL_QUESTION_BASE_SCORE} from './duel';
 import {HostPeer} from './peer';
 import {loadPeerConfiguration} from './relay-store';
 import {mountGameAudioControls} from '../game-audio-controls';
@@ -80,7 +80,7 @@ async function send(action:DuelAction){
 function back(){const url=new URL(location.href);url.searchParams.set('mode','adventure');url.searchParams.delete('emulator');location.assign(url.href);}
 function bind(id:string,fn:()=>unknown){document.getElementById(id)?.addEventListener('click',fn);}
 function settings(fromLobby=false,fromComputer=false){
- show('settings',`<h2>게임 설정</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><p class="duel-warning">총 5분: 문제풀이 1분 + 전투 4분. 시간 종료 시 총점이 높은 쪽이 승리하고, 동점이면 무승부예요. 몬스터 처치마다 100 ÷ 타격 수, 문제 정답마다 100 ÷ (오답 횟수 + 1)의 소수점 이하를 버린 점수를 얻어요. 각각 최소 1점이에요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
+ show('settings',`<h2>게임 설정</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><p class="duel-warning">총 5분: 문제풀이 1분 + 전투 4분. 시간 종료 시 총점이 높은 쪽이 승리하고, 동점이면 무승부예요. 몬스터 처치마다 기본 ${DUEL_KILL_BASE_SCORE}점에 ${DUEL_KILL_EFFICIENCY_SCORE} ÷ 타격 수의 소수점 이하를 버린 보너스를 더해요. 문제 정답마다 ${DUEL_QUESTION_BASE_SCORE} ÷ (오답 횟수 + 1)의 소수점 이하를 버린 점수를 얻어요. 적은 타격과 적은 오답일수록 점수가 높아요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
  document.getElementById('setting-hit-equations')!.onchange=()=>{const enabled=(document.getElementById('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);document.getElementById('setting-equations-state')!.textContent=enabled?'ON':'OFF';};
  bind('settings-back',()=>fromComputer?computerScreen():fromLobby?lobby():close());
 }

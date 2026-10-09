@@ -15,8 +15,8 @@ const names=[
 ] as const;
 /** Difficulty changes decision time and strategy, never money, damage or flame health. */
 export const COMPUTER_OPPONENTS:readonly ComputerOpponent[]=names.map(([id,name,title,description],i)=>({
- level:i+1,id,name,title,description,thinkMs:5200-i*440,buildMs:14500-i*1050,
- fusionMs:24500-i*2150,hatchMs:32000-i*1350,maxTowers:2+i,heroLevel:1+i,
+ level:i+1,id,name,title,description,thinkMs:5200-i*440,buildMs:i>=7?[3600,2900,2200][i-7]:14500-i*1050,
+ fusionMs:i>=7?[6000,5800,5150][i-7]:24500-i*2150,hatchMs:32000-i*1350,maxTowers:i>=7?5+i:2+i,heroLevel:1+i,
 }));
 export function computerOpponent(level:number){return COMPUTER_OPPONENTS[Math.max(0,Math.min(9,Math.floor(level||1)-1))];}
 

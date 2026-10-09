@@ -18,7 +18,8 @@ export interface WallPreview extends Cell{valid:boolean;message:string;}
 export interface WallImpact{wallId:number;enemyId:number;kind:MonsterKind;durability:number;dx:number;dy:number;force:number;}
 export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'wall-impact'|'wall-break'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
 export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
-export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8,SPAWN_INTERVAL=8.4;
+export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8;
+export {DEFAULT_SPAWN_INTERVAL as SPAWN_INTERVAL} from './difficulty';
 export class Defense{
  level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
  towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Wall[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
@@ -192,7 +193,7 @@ export class Defense{
  step(dt:number){
   if(this.phase!=='playing')return;dt=Math.max(0,Math.min(dt,.1));this.elapsed=Math.min(this.duration,this.elapsed+dt);
   this.moveWalls(dt);
-  if(this.spawned<this.level.hp.length&&this.elapsed+1e-9>=FIRST_SPAWN_DELAY+this.spawned*SPAWN_INTERVAL)this.spawn();
+  if(this.spawned<this.level.hp.length&&this.elapsed+1e-9>=FIRST_SPAWN_DELAY+this.spawned*this.balance.spawnInterval)this.spawn();
   if(this.level.boss&&!this.bossSpawned&&this.elapsed+1e-9>=this.level.boss.spawnAt)this.spawnBoss();
   for(const e of this.enemies){
    if(e.hp===0)continue;e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt);

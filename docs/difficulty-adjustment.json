@@ -1,0 +1,1219 @@
+{
+  "generatedAt": "2026-10-09T14:52:29.680021+00:00",
+  "source": {
+    "baseHead": "04de4ea867b2ac5de2a18e89200af93342a21af0",
+    "kind": "working-tree",
+    "dirtyGameFiles": [
+      "src/difficulty.ts",
+      "src/levels.ts",
+      "src/model.ts",
+      "src/multiplayer/computer-opponents.ts",
+      "src/multiplayer/computer-peer.ts",
+      "src/multiplayer/controller.ts",
+      "src/multiplayer/duel.ts",
+      "src/multiplayer/peer.ts"
+    ]
+  },
+  "method": "Paired production-engine policy simulations; automatic adventure firing; actual purchase, addition, deployment, sale, reward and CPU action paths. Policy names are assumed decision patterns, not measured student ability.",
+  "units": {
+    "moneyAndHP": "integer thousandths; 1000 = 1.00 displayed coin or HP",
+    "scores": "integer points"
+  },
+  "changes": {
+    "adventureBudgetsDisplayed": [
+      0.9,
+      3.5,
+      6.56,
+      6.63,
+      8.86,
+      8.76,
+      8.79,
+      8.95,
+      8.95,
+      9.76,
+      19.98
+    ],
+    "standardSpawnIntervalsSeconds": [
+      8.4,
+      8.4,
+      6.4,
+      4.4,
+      4.4,
+      8.4,
+      8.4,
+      8.4,
+      8.4,
+      8.4,
+      8.4
+    ],
+    "challengeSpawnIntervalsSeconds": [
+      3.2,
+      2.8,
+      4.4,
+      4.4,
+      4.4,
+      8.4,
+      8.4,
+      8.4,
+      8.4,
+      8.4,
+      8.4
+    ],
+    "challengeEarlySpeed": 35,
+    "killScore": "100 + floor(100 / max(1, hitsIncludingBlockedShields))",
+    "questionScore": "floor(25 / (max(0, wrongAttempts) + 1))",
+    "networkRules": "score-5min-v6",
+    "cpuUpperLevels": [
+      {
+        "level": 8,
+        "thinkMs": 2120,
+        "buildMs": 3600,
+        "fusionMs": 6000,
+        "maxTowers": 12,
+        "heroLevel": 8
+      },
+      {
+        "level": 9,
+        "thinkMs": 1680,
+        "buildMs": 2900,
+        "fusionMs": 5800,
+        "maxTowers": 13,
+        "heroLevel": 9
+      },
+      {
+        "level": 10,
+        "thinkMs": 1240,
+        "buildMs": 2200,
+        "fusionMs": 5150,
+        "maxTowers": 14,
+        "heroLevel": 10
+      }
+    ]
+  },
+  "campaign": {
+    "beforeRuns": 2831,
+    "afterRuns": 2896,
+    "afterBreakdown": {
+      "current-budget": 1584,
+      "budget-probe": 792,
+      "early-budget-probe": 144,
+      "inventory-campaign": 262,
+      "retry-inventory-probe": 48,
+      "automatic-campaign-witness": 66
+    },
+    "pairedConditions": [
+      {
+        "stage": 1,
+        "difficulty": "challenge",
+        "strategy": "few",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8800,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            5,
+            5
+          ],
+          "winningCastle": [
+            5,
+            5
+          ],
+          "spent": [
+            100,
+            100
+          ],
+          "remaining": [
+            8700,
+            8700
+          ]
+        },
+        "after": {
+          "budget": 900,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 4,
+          "defenses": 4,
+          "bossKills": 0,
+          "castle": [
+            0,
+            2
+          ],
+          "winningCastle": [
+            1,
+            2
+          ],
+          "spent": [
+            100,
+            100
+          ],
+          "remaining": [
+            800,
+            800
+          ]
+        }
+      },
+      {
+        "stage": 2,
+        "difficulty": "challenge",
+        "strategy": "few",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8750,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            5,
+            5
+          ],
+          "winningCastle": [
+            5,
+            5
+          ],
+          "spent": [
+            1270,
+            1270
+          ],
+          "remaining": [
+            7480,
+            7480
+          ]
+        },
+        "after": {
+          "budget": 3500,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 5,
+          "defenses": 5,
+          "bossKills": 0,
+          "castle": [
+            0,
+            2
+          ],
+          "winningCastle": [
+            1,
+            2
+          ],
+          "spent": [
+            1270,
+            1270
+          ],
+          "remaining": [
+            2230,
+            2230
+          ]
+        }
+      },
+      {
+        "stage": 3,
+        "difficulty": "standard",
+        "strategy": "few",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8750,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 7,
+          "defenses": 7,
+          "bossKills": 0,
+          "castle": [
+            0,
+            2
+          ],
+          "winningCastle": [
+            2,
+            2
+          ],
+          "spent": [
+            2620,
+            2620
+          ],
+          "remaining": [
+            6130,
+            6130
+          ]
+        },
+        "after": {
+          "budget": 6560,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 1,
+          "defenses": 1,
+          "bossKills": 0,
+          "castle": [
+            0,
+            1
+          ],
+          "winningCastle": [
+            1,
+            1
+          ],
+          "spent": [
+            2620,
+            2620
+          ],
+          "remaining": [
+            3940,
+            3940
+          ]
+        }
+      },
+      {
+        "stage": 3,
+        "difficulty": "challenge",
+        "strategy": "few",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8750,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 7,
+          "defenses": 7,
+          "bossKills": 0,
+          "castle": [
+            0,
+            2
+          ],
+          "winningCastle": [
+            1,
+            2
+          ],
+          "spent": [
+            2620,
+            2620
+          ],
+          "remaining": [
+            6130,
+            6130
+          ]
+        },
+        "after": {
+          "budget": 6560,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 0,
+          "defenses": 0,
+          "bossKills": 0,
+          "castle": [
+            0,
+            0
+          ],
+          "winningCastle": null,
+          "spent": [
+            2620,
+            2620
+          ],
+          "remaining": [
+            3940,
+            3940
+          ]
+        }
+      },
+      {
+        "stage": 4,
+        "difficulty": "standard",
+        "strategy": "mixed",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8840,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            5,
+            5
+          ],
+          "winningCastle": [
+            5,
+            5
+          ],
+          "spent": [
+            6580,
+            6580
+          ],
+          "remaining": [
+            2260,
+            2260
+          ]
+        },
+        "after": {
+          "budget": 6630,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            3,
+            5
+          ],
+          "winningCastle": [
+            3,
+            5
+          ],
+          "spent": [
+            6580,
+            6580
+          ],
+          "remaining": [
+            50,
+            50
+          ]
+        }
+      },
+      {
+        "stage": 4,
+        "difficulty": "standard",
+        "strategy": "cheap",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8840,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            4,
+            4
+          ],
+          "winningCastle": [
+            4,
+            4
+          ],
+          "spent": [
+            5370,
+            5370
+          ],
+          "remaining": [
+            3470,
+            3470
+          ]
+        },
+        "after": {
+          "budget": 6630,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            1,
+            3
+          ],
+          "winningCastle": [
+            1,
+            3
+          ],
+          "spent": [
+            5370,
+            5370
+          ],
+          "remaining": [
+            1260,
+            1260
+          ]
+        }
+      },
+      {
+        "stage": 5,
+        "difficulty": "standard",
+        "strategy": "mixed",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8860,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            5,
+            5
+          ],
+          "winningCastle": [
+            5,
+            5
+          ],
+          "spent": [
+            8130,
+            8130
+          ],
+          "remaining": [
+            730,
+            730
+          ]
+        },
+        "after": {
+          "budget": 8860,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            2,
+            5
+          ],
+          "winningCastle": [
+            2,
+            5
+          ],
+          "spent": [
+            8130,
+            8130
+          ],
+          "remaining": [
+            730,
+            730
+          ]
+        }
+      },
+      {
+        "stage": 5,
+        "difficulty": "challenge",
+        "strategy": "cheap",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8860,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            1,
+            1
+          ],
+          "winningCastle": [
+            1,
+            1
+          ],
+          "spent": [
+            5270,
+            5270
+          ],
+          "remaining": [
+            3590,
+            3590
+          ]
+        },
+        "after": {
+          "budget": 8860,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 0,
+          "defenses": 0,
+          "bossKills": 0,
+          "castle": [
+            0,
+            0
+          ],
+          "winningCastle": null,
+          "spent": [
+            5270,
+            5270
+          ],
+          "remaining": [
+            3590,
+            3590
+          ]
+        }
+      },
+      {
+        "stage": 5,
+        "difficulty": "challenge",
+        "strategy": "mixed",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 8860,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            4,
+            5
+          ],
+          "winningCastle": [
+            4,
+            5
+          ],
+          "spent": [
+            8130,
+            8130
+          ],
+          "remaining": [
+            730,
+            730
+          ]
+        },
+        "after": {
+          "budget": 8860,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 0,
+          "castle": [
+            1,
+            5
+          ],
+          "winningCastle": [
+            1,
+            5
+          ],
+          "spent": [
+            8130,
+            8130
+          ],
+          "remaining": [
+            730,
+            730
+          ]
+        }
+      },
+      {
+        "stage": 10,
+        "difficulty": "challenge",
+        "strategy": "mixed",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 9760,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 6,
+          "defenses": 7,
+          "bossKills": 6,
+          "castle": [
+            0,
+            5
+          ],
+          "winningCastle": [
+            2,
+            5
+          ],
+          "spent": [
+            9390,
+            9390
+          ],
+          "remaining": [
+            370,
+            370
+          ]
+        },
+        "after": {
+          "budget": 9760,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 6,
+          "defenses": 7,
+          "bossKills": 6,
+          "castle": [
+            0,
+            5
+          ],
+          "winningCastle": [
+            2,
+            5
+          ],
+          "spent": [
+            9390,
+            9390
+          ],
+          "remaining": [
+            370,
+            370
+          ]
+        }
+      },
+      {
+        "stage": 11,
+        "difficulty": "standard",
+        "strategy": "mixed",
+        "wallPolicy": "auto",
+        "before": {
+          "budget": 19980,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 8,
+          "castle": [
+            2,
+            5
+          ],
+          "winningCastle": [
+            2,
+            5
+          ],
+          "spent": [
+            19550,
+            19550
+          ],
+          "remaining": [
+            430,
+            430
+          ]
+        },
+        "after": {
+          "budget": 19980,
+          "attempts": 8,
+          "uniqueFormations": 8,
+          "clears": 8,
+          "defenses": 8,
+          "bossKills": 8,
+          "castle": [
+            2,
+            5
+          ],
+          "winningCastle": [
+            2,
+            5
+          ],
+          "spent": [
+            19550,
+            19550
+          ],
+          "remaining": [
+            430,
+            430
+          ]
+        }
+      }
+    ],
+    "campaigns": [
+      {
+        "difficulty": "practice",
+        "beforeComplete": 8,
+        "afterComplete": 8,
+        "attemptsEach": 8
+      },
+      {
+        "difficulty": "standard",
+        "beforeComplete": 8,
+        "afterComplete": 8,
+        "attemptsEach": 8
+      },
+      {
+        "difficulty": "challenge",
+        "beforeComplete": 7,
+        "afterComplete": 5,
+        "attemptsEach": 8
+      }
+    ],
+    "legalSuccessfulWitnesses": 66,
+    "independentStages": 33,
+    "carriedInventoryStages": 33,
+    "allWitnessesClearLearningObjectives": true,
+    "allFinalStageWitnessesDefeatBoss": true
+  },
+  "duel": {
+    "beforeMatches": 325,
+    "afterMatches": 580,
+    "afterBreakdown": {
+      "main": 150,
+      "mapSweep": 30,
+      "cpu10Controls": 105,
+      "upperControls": 90,
+      "upperMapValidation": 120,
+      "coverageMapValidation": 20,
+      "accountControl": 5,
+      "rewardHeroControl": 5,
+      "existingHarness": 55
+    },
+    "mainMap": "ember-bend",
+    "seeds": [
+      17,
+      91,
+      203,
+      912,
+      1027
+    ],
+    "mainPolicyWinsByLevel": [
+      {
+        "policy": "weak",
+        "attemptsPerLevel": 5,
+        "before": [
+          5,
+          5,
+          5,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "after": [
+          5,
+          5,
+          5,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "policy": "ordinary",
+        "attemptsPerLevel": 5,
+        "before": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          3,
+          0,
+          0
+        ],
+        "after": [
+          5,
+          5,
+          5,
+          5,
+          2,
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "policy": "fast",
+        "attemptsPerLevel": 5,
+        "before": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "after": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ]
+      }
+    ],
+    "cpu10TenMapControl": {
+      "seed": 912,
+      "before": [
+        {
+          "policy": "weak",
+          "n": 10,
+          "wins": 0
+        },
+        {
+          "policy": "ordinary",
+          "n": 10,
+          "wins": 0
+        },
+        {
+          "policy": "fast",
+          "n": 10,
+          "wins": 10
+        }
+      ],
+      "after": [
+        {
+          "policy": "weak",
+          "n": 10,
+          "wins": 0
+        },
+        {
+          "policy": "ordinary",
+          "n": 10,
+          "wins": 0
+        },
+        {
+          "policy": "fast",
+          "n": 10,
+          "wins": 2
+        }
+      ]
+    },
+    "pairedCpu10Controls": [
+      {
+        "policy": "fast-minimal6-row",
+        "before": {
+          "policy": "fast-minimal6-row",
+          "n": 5,
+          "wins": 5,
+          "losses": 0,
+          "timeouts": 5,
+          "meanScoresPlayerCpu": "8779 : 5246.8",
+          "meanCombatPlayerCpu": "279 : 346.8",
+          "meanQuestionPlayerCpu": "8500 : 4900",
+          "questionSharePercentPlayerCpu": "96.8 : 93.4",
+          "meanFlamePlayerCpu": "2300 : 9000",
+          "meanPreparedPlayerCpu": "6 : 6",
+          "meanCashBuildsPlayerCpu": "0 : 5"
+        },
+        "after": {
+          "policy": "fast-minimal6-row",
+          "n": 5,
+          "wins": 0,
+          "losses": 5,
+          "timeouts": 0,
+          "meanScoresPlayerCpu": "3024 : 3494",
+          "meanCombatPlayerCpu": "1449 : 2469",
+          "meanQuestionPlayerCpu": "1575 : 1025",
+          "questionSharePercentPlayerCpu": "52.1 : 29.3",
+          "meanFlamePlayerCpu": "0 : 9000",
+          "meanPreparedPlayerCpu": "6 : 8",
+          "meanCashBuildsPlayerCpu": "0 : 11"
+        }
+      },
+      {
+        "policy": "ordinary-fast-fusion",
+        "before": {
+          "policy": "ordinary-fast-fusion",
+          "n": 5,
+          "wins": 5,
+          "losses": 0,
+          "timeouts": 5,
+          "meanScoresPlayerCpu": "7423.4 : 5392.6",
+          "meanCombatPlayerCpu": "369 : 492.6",
+          "meanQuestionPlayerCpu": "7054.4 : 4900",
+          "questionSharePercentPlayerCpu": "95.0 : 90.9",
+          "meanFlamePlayerCpu": "9000 : 9000",
+          "meanPreparedPlayerCpu": "8 : 6",
+          "meanCashBuildsPlayerCpu": "2 : 5"
+        },
+        "after": {
+          "policy": "ordinary-fast-fusion",
+          "n": 5,
+          "wins": 0,
+          "losses": 5,
+          "timeouts": 0,
+          "meanScoresPlayerCpu": "4154 : 5389.4",
+          "meanCombatPlayerCpu": "2497 : 4114.4",
+          "meanQuestionPlayerCpu": "1657 : 1275",
+          "questionSharePercentPlayerCpu": "39.9 : 23.7",
+          "meanFlamePlayerCpu": "0 : 9000",
+          "meanPreparedPlayerCpu": "8 : 8",
+          "meanCashBuildsPlayerCpu": "2 : 11"
+        }
+      },
+      {
+        "policy": "fast-perfect",
+        "before": {
+          "policy": "fast-perfect",
+          "n": 5,
+          "wins": 5,
+          "losses": 0,
+          "timeouts": 5,
+          "meanScoresPlayerCpu": "9118 : 5242.4",
+          "meanCombatPlayerCpu": "418 : 342.4",
+          "meanQuestionPlayerCpu": "8700 : 4900",
+          "questionSharePercentPlayerCpu": "95.4 : 93.5",
+          "meanFlamePlayerCpu": "9000 : 9000",
+          "meanPreparedPlayerCpu": "8 : 6",
+          "meanCashBuildsPlayerCpu": "6 : 5"
+        },
+        "after": {
+          "policy": "fast-perfect",
+          "n": 5,
+          "wins": 5,
+          "losses": 0,
+          "timeouts": 5,
+          "meanScoresPlayerCpu": "5099 : 4819",
+          "meanCombatPlayerCpu": "2924 : 3469",
+          "meanQuestionPlayerCpu": "2175 : 1350",
+          "questionSharePercentPlayerCpu": "42.7 : 28.0",
+          "meanFlamePlayerCpu": "1000 : 9000",
+          "meanPreparedPlayerCpu": "8 : 8",
+          "meanCashBuildsPlayerCpu": "6 : 12"
+        }
+      },
+      {
+        "policy": "fast-no-fusion",
+        "before": {
+          "policy": "fast-no-fusion",
+          "n": 5,
+          "wins": 0,
+          "losses": 5,
+          "timeouts": 5,
+          "meanScoresPlayerCpu": "1218 : 5286",
+          "meanCombatPlayerCpu": "418 : 386",
+          "meanQuestionPlayerCpu": "800 : 4900",
+          "questionSharePercentPlayerCpu": "65.7 : 92.7",
+          "meanFlamePlayerCpu": "9000 : 9000",
+          "meanPreparedPlayerCpu": "8 : 6",
+          "meanCashBuildsPlayerCpu": "6 : 5"
+        },
+        "after": {
+          "policy": "fast-no-fusion",
+          "n": 5,
+          "wins": 0,
+          "losses": 5,
+          "timeouts": 5,
+          "meanScoresPlayerCpu": "3124 : 4242",
+          "meanCombatPlayerCpu": "2924 : 2892",
+          "meanQuestionPlayerCpu": "200 : 1350",
+          "questionSharePercentPlayerCpu": "6.4 : 31.8",
+          "meanFlamePlayerCpu": "1000 : 9000",
+          "meanPreparedPlayerCpu": "8 : 8",
+          "meanCashBuildsPlayerCpu": "6 : 12"
+        }
+      }
+    ],
+    "upperTenMapValidation": [
+      {
+        "level": 8,
+        "policy": "fast-minimal6-row",
+        "n": 20,
+        "wins": 0,
+        "losses": 20,
+        "timeouts": 0,
+        "meanScoresPlayerCpu": "3556.7 : 3724.65",
+        "meanCombatPlayerCpu": "1764.2 : 2682.15",
+        "meanQuestionPlayerCpu": "1792.5 : 1042.5",
+        "questionSharePercentPlayerCpu": "50.4 : 28.0",
+        "meanFlamePlayerCpu": "0 : 8400",
+        "meanPreparedPlayerCpu": "6 : 9",
+        "meanCashBuildsPlayerCpu": "0 : 7"
+      },
+      {
+        "level": 9,
+        "policy": "fast-minimal6-row",
+        "n": 20,
+        "wins": 0,
+        "losses": 20,
+        "timeouts": 0,
+        "meanScoresPlayerCpu": "3579.9 : 3664.35",
+        "meanCombatPlayerCpu": "1824.9 : 2641.85",
+        "meanQuestionPlayerCpu": "1755 : 1022.5",
+        "questionSharePercentPlayerCpu": "49.0 : 27.9",
+        "meanFlamePlayerCpu": "0 : 9000",
+        "meanPreparedPlayerCpu": "6 : 8",
+        "meanCashBuildsPlayerCpu": "0 : 9.7"
+      },
+      {
+        "level": 10,
+        "policy": "fast-minimal6-row",
+        "n": 20,
+        "wins": 1,
+        "losses": 19,
+        "timeouts": 0,
+        "meanScoresPlayerCpu": "2994.15 : 3300.65",
+        "meanCombatPlayerCpu": "1421.65 : 2284.4",
+        "meanQuestionPlayerCpu": "1572.5 : 1016.25",
+        "questionSharePercentPlayerCpu": "52.5 : 30.8",
+        "meanFlamePlayerCpu": "200 : 8300",
+        "meanPreparedPlayerCpu": "6 : 8",
+        "meanCashBuildsPlayerCpu": "0 : 10.65"
+      },
+      {
+        "level": 8,
+        "policy": "fast-strong-defense-5pct",
+        "n": 20,
+        "wins": 20,
+        "losses": 0,
+        "timeouts": 20,
+        "meanScoresPlayerCpu": "5185.9 : 4530.05",
+        "meanCombatPlayerCpu": "3164.4 : 3330.05",
+        "meanQuestionPlayerCpu": "2021.5 : 1200",
+        "questionSharePercentPlayerCpu": "39.0 : 26.5",
+        "meanFlamePlayerCpu": "9000 : 8600",
+        "meanPreparedPlayerCpu": "7 : 9",
+        "meanCashBuildsPlayerCpu": "13 : 7"
+      },
+      {
+        "level": 9,
+        "policy": "fast-strong-defense-5pct",
+        "n": 20,
+        "wins": 20,
+        "losses": 0,
+        "timeouts": 20,
+        "meanScoresPlayerCpu": "5174.15 : 4567.3",
+        "meanCombatPlayerCpu": "3152.65 : 3342.3",
+        "meanQuestionPlayerCpu": "2021.5 : 1225",
+        "questionSharePercentPlayerCpu": "39.1 : 26.8",
+        "meanFlamePlayerCpu": "8630 : 9000",
+        "meanPreparedPlayerCpu": "7 : 8",
+        "meanCashBuildsPlayerCpu": "13 : 10.4"
+      },
+      {
+        "level": 10,
+        "policy": "fast-strong-defense-5pct",
+        "n": 20,
+        "wins": 18,
+        "losses": 2,
+        "timeouts": 18,
+        "meanScoresPlayerCpu": "5025.05 : 4565.55",
+        "meanCombatPlayerCpu": "3027.3 : 3245.55",
+        "meanQuestionPlayerCpu": "1997.75 : 1320",
+        "questionSharePercentPlayerCpu": "39.8 : 28.9",
+        "meanFlamePlayerCpu": "7000 : 8750",
+        "meanPreparedPlayerCpu": "8 : 8",
+        "meanCashBuildsPlayerCpu": "13.2 : 11.55"
+      }
+    ],
+    "cpu10CoverageValidation": {
+      "level": 10,
+      "policy": "fast-coverage-defense-5pct",
+      "n": 20,
+      "wins": 20,
+      "losses": 0,
+      "timeouts": 20,
+      "meanScoresPlayerCpu": "5274.8 : 4708.9",
+      "meanCombatPlayerCpu": "3228.3 : 3358.9",
+      "meanQuestionPlayerCpu": "2046.5 : 1350",
+      "questionSharePercentPlayerCpu": "38.8 : 28.7",
+      "meanFlamePlayerCpu": "9000 : 8750",
+      "meanPreparedPlayerCpu": "8 : 8",
+      "meanCashBuildsPlayerCpu": "13.7 : 11.65"
+    },
+    "newStrongDefenseControls": [
+      {
+        "policy": "fast-strong-defense",
+        "n": 5,
+        "wins": 5,
+        "losses": 0,
+        "timeouts": 5,
+        "meanScoresPlayerCpu": "5394.8 : 4819",
+        "meanCombatPlayerCpu": "3219.8 : 3469",
+        "meanQuestionPlayerCpu": "2175 : 1350",
+        "questionSharePercentPlayerCpu": "40.3 : 28.0",
+        "meanFlamePlayerCpu": "9000 : 9000",
+        "meanPreparedPlayerCpu": "8 : 8",
+        "meanCashBuildsPlayerCpu": "13 : 12"
+      },
+      {
+        "policy": "fast-strong-defense-5pct",
+        "n": 5,
+        "wins": 5,
+        "losses": 0,
+        "timeouts": 5,
+        "meanScoresPlayerCpu": "5272.4 : 4817.6",
+        "meanCombatPlayerCpu": "3240.8 : 3467.6",
+        "meanQuestionPlayerCpu": "2031.6 : 1350",
+        "questionSharePercentPlayerCpu": "38.5 : 28.0",
+        "meanFlamePlayerCpu": "9000 : 9000",
+        "meanPreparedPlayerCpu": "8 : 8",
+        "meanCashBuildsPlayerCpu": "13 : 12"
+      },
+      {
+        "policy": "strong-defense-no-fusion",
+        "n": 5,
+        "wins": 0,
+        "losses": 5,
+        "timeouts": 5,
+        "meanScoresPlayerCpu": "3443.4 : 4242",
+        "meanCombatPlayerCpu": "3243.4 : 2892",
+        "meanQuestionPlayerCpu": "200 : 1350",
+        "questionSharePercentPlayerCpu": "5.8 : 31.8",
+        "meanFlamePlayerCpu": "9000 : 9000",
+        "meanPreparedPlayerCpu": "8 : 8",
+        "meanCashBuildsPlayerCpu": "13 : 12"
+      },
+      {
+        "policy": "strong-defense-fusion6-errors15",
+        "n": 5,
+        "wins": 0,
+        "losses": 5,
+        "timeouts": 5,
+        "meanScoresPlayerCpu": "4200.2 : 4446.6",
+        "meanCombatPlayerCpu": "3227 : 3096.6",
+        "meanQuestionPlayerCpu": "973.2 : 1350",
+        "questionSharePercentPlayerCpu": "23.2 : 30.4",
+        "meanFlamePlayerCpu": "9000 : 9000",
+        "meanPreparedPlayerCpu": "8 : 8",
+        "meanCashBuildsPlayerCpu": "13 : 12"
+      },
+      {
+        "policy": "fast-coverage-defense-5pct",
+        "n": 5,
+        "wins": 5,
+        "losses": 0,
+        "timeouts": 5,
+        "meanScoresPlayerCpu": "5205.6 : 4817.2",
+        "meanCombatPlayerCpu": "3174 : 3467.2",
+        "meanQuestionPlayerCpu": "2031.6 : 1350",
+        "questionSharePercentPlayerCpu": "39.0 : 28.0",
+        "meanFlamePlayerCpu": "9000 : 9000",
+        "meanPreparedPlayerCpu": "8 : 8",
+        "meanCashBuildsPlayerCpu": "14 : 12"
+      }
+    ],
+    "allLegalEconomyAndNormalFinish": true
+  },
+  "validation": {
+    "unitTests": 465,
+    "failures": 0,
+    "frontendBuild": "PASS",
+    "bundleBudgetAndImportChecks": "PASS",
+    "localAdventure844x330HorizontalOverflow": false,
+    "preservedRules": [
+      "60-second preparation plus 240-second battle",
+      "castle destruction can end early; timeout uses only combat plus question score",
+      "each account own hero-addition learning level",
+      "arithmetic limited to two decimal places",
+      "walls break on three collisions",
+      "final wizard HP 99.9"
+    ]
+  },
+  "limits": [
+    "Automatic policies use known correct arithmetic followed by assumed delays and optional error rates; no student cohort, distraction or touchscreen response time is measured.",
+    "Adventure wall policy recognizes genuine addition triples instantly. The probes do not estimate actual player win rates.",
+    "The main duel comparison uses five seeds on one map; map sweep uses one seed, upper and coverage validation use two seeds.",
+    "The weak six-tower policy still wins one of sixty upper-map trials by destroying the CPU castle. Strengthening is not universal defeat of every weak policy.",
+    "A good range-aware policy wins all twenty CPU10 map trials; this establishes legal winning paths, not universal player success."
+  ],
+  "reproduce": [
+    "npx tsx tools/audit-campaign-difficulty.ts --output test-results/difficulty-after-campaign.json",
+    "npx tsx tools/audit-duel-difficulty.ts --output test-results/difficulty-after-duel.json",
+    "npm test",
+    "npm run build",
+    "npm run check:bundle"
+  ],
+  "rawArtifacts": [
+    {
+      "path": "test-results/difficulty-before-campaign.json",
+      "sha256": "0d52b650eae32c162066eb0e95d5b0daa914d2b7e8bb2615720b47d2892d33eb"
+    },
+    {
+      "path": "test-results/difficulty-after-campaign.json",
+      "sha256": "ca626001b436efbb1f62062ca8efbc618df1053d09e59bf6dbe08a116a1b26fa"
+    },
+    {
+      "path": "test-results/difficulty-before-duel.json",
+      "sha256": "ea9f0aff22862446c71db307bb80c6ad8b6f87e7eb5a4b9ed74918a7667a9d92"
+    },
+    {
+      "path": "test-results/difficulty-after-duel.json",
+      "sha256": "ea1cdbf476af5aec0d83fb55066bc91b5b2d93fd0928a9770408bcbe3c996159"
+    }
+  ]
+}
