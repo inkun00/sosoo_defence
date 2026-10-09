@@ -1,6 +1,6 @@
 import {pathToFileURL} from 'node:url';
 import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/computer-peer';
-import {DuelAction,applyDuel,duelLevel,duelTowerLevel,duelBuildCost,canUseDuelTower,validDuelCell,DUEL_PREPARATION_SECONDS,DUEL_SECONDS} from '../src/multiplayer/duel';
+import {DuelAction,applyDuel,duelLevel,duelTowerLevel,duelBuildCost,canUseDuelTower,validDuelCell,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,duelScore} from '../src/multiplayer/duel';
 import {DUEL_MAPS} from '../src/multiplayer/duel-maps';
 import {TOWERS,towerPrice} from '../src/towers';
 import {numberText} from '../src/math';
@@ -50,7 +50,7 @@ export function simulateComputerDuel(level:number,seed:number,strategy:Strategy=
   if(p.egg>=desired&&now>=nextHatch){const hero=heroesAtLevel(p.egg)[burst?1:(p.solved+1)%3];if(act({type:'hatch',heroId:hero.id}).ok)nextHatch=now+hatch;}
   else if(p.egg<desired&&now>=nextFuse){nextFuse=now+fuse;const slots=additionSlots(p.board);if(slots)act({type:'fuse',round:p.round,slots,operation:'+'});}
  }
- const result={level,seed,strategy,mapId:s.mapId??'legacy-straight',status:s.status,winner:s.winner,preparationSeconds:s.preparationElapsed,seconds:Math.round(s.elapsed),totalSeconds:Math.round((now-initialNow)/1000),zeroCombatCoins,legalEconomy,playerPrepared,computerPrepared,playerStockPlaced,computerStockPlaced,playerCashBuilt,computerCashBuilt,playerEarned,computerEarned,waves:s.wave,computerHatched,traversedBend,playerFlame:p.flame,computerFlame:s.players[1]!.flame,playerPurchased:p.purchases,computerSolved:s.players[1]!.solved,computerPurchased:s.players[1]!.purchases};peer.dispose();return result;
+ const result={level,seed,strategy,mapId:s.mapId??'legacy-straight',status:s.status,winner:s.winner,reason:s.reason,playerScore:duelScore(p),computerScore:duelScore(s.players[1]!),playerCombatScore:p.combatScore??0,computerCombatScore:s.players[1]!.combatScore??0,playerQuestionScore:p.questionScore??0,computerQuestionScore:s.players[1]!.questionScore??0,preparationSeconds:s.preparationElapsed,seconds:Math.round(s.elapsed),totalSeconds:Math.round((now-initialNow)/1000),zeroCombatCoins,legalEconomy,playerPrepared,computerPrepared,playerStockPlaced,computerStockPlaced,playerCashBuilt,computerCashBuilt,playerEarned,computerEarned,waves:s.wave,computerHatched,traversedBend,playerFlame:p.flame,computerFlame:s.players[1]!.flame,playerPurchased:p.purchases,computerSolved:s.players[1]!.solved,computerPurchased:s.players[1]!.purchases};peer.dispose();return result;
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){

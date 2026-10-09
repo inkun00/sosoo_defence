@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
+import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,DUEL_SECONDS,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
 import {HEROES} from '../src/multiplayer/heroes';import {recipe,numberText} from '../src/math';
 const NOW=160000,PREP_NOW=NOW-60000;
 function preparation(){const s=createDuel('a','왼쪽',17,PREP_NOW);joinDuel(s,'b','오른쪽',PREP_NOW);applyDuel(s,0,{type:'ready'},PREP_NOW,'r1');applyDuel(s,1,{type:'ready'},PREP_NOW,'r2');assert.equal(s.status,'preparing');return s;}
@@ -89,6 +89,6 @@ test('타워가 회수되어도 발사 기록은 고유 발사체 종류와 출�
 test('호스트 판정은 초과 피해를 거부하고 상대 불꽃 파괴·시간제한·연결 종료를 처리한다',()=>{
  const s=match();assert.ok(build(s,0,'double',3,2).ok);s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);assert.equal(s.enemies[0].hp,100);assert.ok(s.log.some(l=>l.includes('공격력이')));
  const win=match();win.players[1]!.flame=1000;win.enemies=[enemy({owner:0,target:1,x:22.99,hero:'hero-1-0'})];advanceDuel(win,NOW+1000);assert.equal(win.status,'finished');assert.equal(win.winner,0);
- const timeout=match();timeout.elapsed=299.95;advanceDuel(timeout,NOW+100);assert.equal(timeout.status,'finished');assert.equal(timeout.winner,null);
+ const timeout=match();timeout.elapsed=DUEL_SECONDS-.05;advanceDuel(timeout,NOW+100);assert.equal(timeout.status,'finished');assert.equal(timeout.winner,null);
  const offline=match();offline.players[0].lastSeen=NOW+50000;advanceDuel(offline,NOW+50000);assert.equal(offline.winner,0);assert.equal(offline.status,'finished');
 });

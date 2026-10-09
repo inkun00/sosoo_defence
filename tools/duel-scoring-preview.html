@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1:1 5분 제한과 점수 화면 검증</title>
+<style>
+body.preview{margin:0;background:#111216;color:#f6e8cd;font-family:system-ui,sans-serif;overflow:hidden}
+body.preview #app{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+#app #game-shell{position:relative;inset:auto;display:block;width:100%;min-height:0;flex:1;margin:0 auto}
+#game-shell #field{width:100%;height:100%}
+.preview-controls{width:100%;max-width:1280px;margin:0 auto;padding:7px 10px;background:#171d27;flex:none;font-size:12px}
+.preview-controls nav{display:flex;flex-wrap:wrap;gap:6px}
+.preview-controls button{font-size:14px;padding:7px 12px;color:#ffe4af;background:#302b35;border:1px solid #aa8559;border-radius:5px}
+.preview-controls button[aria-pressed="true"]{background:#574528;box-shadow:inset 0 0 0 1px #ffe6af}
+.preview-controls button:disabled{opacity:.45}
+#status{margin:6px 0;color:#ffe0a1;font-size:14px}
+#proof{display:block;color:#decbb0;line-height:1.5}
+#errors{margin:0;color:#ffb4a9;white-space:pre-wrap}
+#errors:empty{display:none}
+</style>
+<body class="preview">
+<div id="app">
+<main id="game-shell"><div id="field"></div></main>
+<section class="preview-controls" aria-label="실제 대전 엔진 점수 검증 도구">
+<nav><button data-scenario="preparation" disabled>준비 5:00 · 문제 점수</button><button data-scenario="combat" disabled>전투 2:00 · 처치와 정답 점수</button><button data-scenario="timeout" disabled>5분 종료 · 점수 승부</button><button id="swap-side" disabled>참가자 시점</button></nav>
+<p id="status" role="status">실제 DuelScene과 게임 이미지를 불러오는 중입니다.</p>
+<output id="proof" aria-label="엔진이 계산한 점수 내역"></output>
+<pre id="errors"></pre>
+</section>
+</div>
+<script type="module" src="./duel-scoring-preview.ts"></script>
+</body>
+</html>

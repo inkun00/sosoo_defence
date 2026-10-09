@@ -8,13 +8,18 @@ export {decimalBoard} from './decimal-boards';
 export type Side=0|1;
 export interface DuelTower{id:number;typeId:string;x:number;y:number;unit:number;cost:number;enabled:boolean;cooldown:number;prepared?:boolean;}
 export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;y?:number;pathDistance?:number;slow:number;stun:number;hits:number;rewardSummon?:boolean;sourceHeroId?:string;vitalityBaseMax?:number;vitalityBonus?:number;vitalitySpent?:number;shieldSpent?:number;}
-export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;purpose?:'preparation';}
+export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;purpose?:'preparation';wrongAttempts?:number;}
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
-export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;stock:Record<string,number>;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];}
+export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;stock:Record<string,number>;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];combatScore?:number;questionScore?:number;kills?:number;answeredQuestions?:number;towerWrongAttempts?:number;fusionWrongAttempts?:number;}
 export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fromX?:number;fromY?:number;owner:Side;enemyId:number;x:number;y?:number;before:number;unit:number;after:number;effect:string;shielded?:boolean;}
 export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:number;createdAt:number;startedAt:number;preparationStartedAt:number;preparationElapsed:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'preparing'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
-export const DUEL_SECONDS=300,DUEL_PREPARATION_SECONDS=60,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
+export const DUEL_PREPARATION_SECONDS=60,DUEL_SECONDS=240,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
+/** One-shot kills and first-try answers earn 100 points; every extra attempt lowers the award. */
+export function duelKillScore(hits:number){return Math.max(1,Math.floor(100/Math.max(1,Math.floor(Number.isFinite(hits)?hits:1))));}
+export function duelQuestionScore(wrongAttempts:number){return duelKillScore(Math.max(0,Number.isFinite(wrongAttempts)?Math.floor(wrongAttempts):0)+1);}
+export function duelScore(p:Pick<DuelPlayer,'combatScore'|'questionScore'>|null|undefined){return (p?.combatScore??0)+(p?.questionScore??0);}
+function awardQuestion(p:DuelPlayer,wrongAttempts:number){p.questionScore=(p.questionScore??0)+duelQuestionScore(wrongAttempts);p.answeredQuestions=(p.answeredQuestions??0)+1;}
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor(s.elapsed/30));}
 export function duelHeroLearningLevel(p:Pick<DuelPlayer,'accountLevel'>){return learningLevel(p.accountLevel??1);}
 export function duelTowerLevel(s:DuelState){return s.status==='preparing'?Math.min(10,s.learningLevel??1):duelLevel(s);}
@@ -29,7 +34,7 @@ export function duelBuildCost(s:DuelState,side:Side,typeId:string){
  return towerPrice(type,p.money,duelTowerLevel(s),p.purchaseVariation);
 }
 // Tower preparation shares one room level; hero addition uses each player's account level.
-function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!heroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({accountLevel:personalLevel})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[]};}
+function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!heroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({accountLevel:personalLevel})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1,loadout:RewardLoadout={},mapId?:string):DuelState{duelMap(mapId);return {version:1,seed,...(mapId===undefined?{}:{mapId}),learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,preparationStartedAt:0,preparationElapsed:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel,loadout),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
 export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLevel=1,loadout:RewardLoadout={}){
  if(s.players.some(p=>p?.uid===uid))return;
@@ -42,6 +47,7 @@ export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLe
 export function duelSide(s:DuelState,uid:string):Side{const i=s.players.findIndex(p=>p?.uid===uid);if(i<0)throw Error('이 대전에 참가한 계정이 아니에요.');return i as Side;}
 function note(s:DuelState,text:string){s.log.push(text);s.log=s.log.slice(-6);}
 function end(s:DuelState,winner:Side|null,reason:string){s.status='finished';s.winner=winner;s.reason=reason;note(s,reason);}
+function endByScore(s:DuelState){const [a,b]=s.players as [DuelPlayer,DuelPlayer],left=duelScore(a),right=duelScore(b);s.elapsed=DUEL_SECONDS;end(s,left===right?null:left>right?0:1,`5분 종료 · 점수 ${left} : ${right}${left===right?' · 무승부':' · 높은 점수로 승부를 결정했어요.'}`);}
 function owns(side:Side,x:number){return side===0?x>=1&&x<=10:x>=13&&x<=22;}
 export function validDuelCell(s:DuelState,side:Side,x:number,y:number){
  const p=s.players[side];return !!p&&Number.isInteger(x)&&Number.isInteger(y)&&owns(side,x)&&y>=0&&y<DUEL_ROWS&&!duelRoadCell(s.mapId,x,y)&&!p.towers.some(t=>t.x===x&&t.y===y);
@@ -185,15 +191,16 @@ export function advanceDuel(s:DuelState,now:number){
      const before=e.hp;damageEnemy(e,result.hp);e.hits++;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,typeId:t.typeId,fromX:t.x,fromY:t.y,owner:side,enemyId:e.id,x:e.x,y:e.y??DUEL_ROAD,before,unit:t.unit,after:e.hp,effect:spec.effect});note(s,`${p.name}: ${numberText(before)} − ${numberText(t.unit)} = ${numberText(e.hp)}`);
      if(spec.effect==='slow')e.slow=3;
      if(spec.effect==='stun'&&((Math.imul(e.id+e.hits,1103515245)+s.seed)>>>0)%100<25)e.stun=1.5;
-     if(e.hp===0)income(p,reward(e.max,e.hits,TOWERS.filter(t=>t.unlock<=lv).map(t=>t.unit),lv));
+     if(e.hp===0){income(p,reward(e.max,e.hits,TOWERS.filter(t=>t.unlock<=lv).map(t=>t.unit),lv));p.combatScore=(p.combatScore??0)+duelKillScore(e.hits+(e.shieldSpent??0));p.kills=(p.kills??0)+1;}
      if(e.hp===0&&e.hero){towerSources=auraSources(s);syncHeroAuras(s,towerSources);}
     }
    }
    s.enemies=s.enemies.filter(e=>e.hp>0);s.shots=(s.shots??[]).filter(e=>s.elapsed-e.time<2.4).slice(-48);
    const [a,b]=s.players as [DuelPlayer,DuelPlayer];
    if(a.flame===0||b.flame===0)end(s,a.flame===0&&b.flame===0?null:a.flame===0?1:0,'불꽃이 파괴되어 대전이 끝났어요.');
-   else if(s.elapsed>=DUEL_SECONDS-1e-7){s.elapsed=DUEL_SECONDS;end(s,a.flame===b.flame?null:a.flame>b.flame?0:1,'5분 종료 · 남은 불꽃 체력으로 승부를 결정했어요.');}
+   else if(s.elapsed>=DUEL_SECONDS-1e-7)endByScore(s);
   }
+  if(s.status==='playing'&&s.elapsed>=DUEL_SECONDS-1e-7)endByScore(s);
  }
  for(const p of s.players)if(p?.quote&&p.quote.expires<=now)release(p);
  s.updatedAt=now;s.revision++;
@@ -201,9 +208,10 @@ export function advanceDuel(s:DuelState,now:number){
 export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,nonce:string):{ok:boolean;message:string}{
  const p=s.players[side];if(!p)throw Error('참가자 정보가 없어요.');
  const bad=(message:string)=>({ok:false,message}),ok=(message:string)=>({ok:true,message});
- // The host normally advances before applying requests; enforce the deadline
- // here as well so a delayed answer cannot add stock after combat starts.
- if(s.status==='preparing'&&now>=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000)advanceDuel(s,now);
+ if(!Number.isFinite(now))return bad('요청 시간을 확인할 수 없어요. 다시 시도해 주세요.');
+ // Requests cannot extend either phase or award points after its deadline,
+ // even when called directly instead of through the usual host tick.
+ if(s.status==='preparing'&&now>=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000||s.status==='playing'&&now>=s.startedAt+DUEL_SECONDS*1000)advanceDuel(s,now);
  if(s.status==='finished')return bad(s.reason);
  if(action.type==='tick')return ok('');
  if(action.type==='surrender'){end(s,(1-side) as Side,'상대가 대전을 나갔어요.');release(p);return ok('대전을 마쳤어요.');}
@@ -247,16 +255,17 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(p.quote)return bad('열린 구매 문제를 먼저 풀거나 취소해요.');
   const type=towerType(action.typeId),lv=duelTowerLevel(s);if(!type||!canUseDuelTower(s,side,action.typeId))return bad('타워를 다시 선택해 주세요.');
   const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
-  const before=purchaseCoins(p.money);p.quote={x:-1,y:-1,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:2,nonce,expires:s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000,purpose:'preparation'};
+  // Cancelling and rerolling a quote cannot erase mistakes before the next correct answer.
+  const before=purchaseCoins(p.money);p.quote={x:-1,y:-1,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:2,nonce,expires:s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000,purpose:'preparation',wrongAttempts:p.towerWrongAttempts??0};
   p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('남는 코인을 계산하면 선택한 타워를 한 개 모아요.');
  }
  if(action.type==='answer'){
   if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 타워를 설치해요.');
   const q=p.quote;if(!q||q.nonce!==action.nonce)return bad('새 구매 문제를 열어 주세요.');
   if(typeof action.answer!=='string'||action.answer.length>12)return bad('답을 12글자 이내로 입력해 주세요.');
-  if(parseMoney(action.answer)!==q.before-q.cost){wrong(s,p,{id:q.nonce,kind:'tower',a:q.before,b:q.cost,operation:'-',submitted:action.answer,correct:q.before-q.cost},duelTowerLevel(s));return bad('소수점을 맞추고 다시 빼 보세요. 돈은 그대로예요.');}
+  if(parseMoney(action.answer)!==q.before-q.cost){q.wrongAttempts=(p.towerWrongAttempts??q.wrongAttempts??0)+1;p.towerWrongAttempts=q.wrongAttempts;wrong(s,p,{id:q.nonce,kind:'tower',a:q.before,b:q.cost,operation:'-',submitted:action.answer,correct:q.before-q.cost},duelTowerLevel(s));return bad('소수점을 맞추고 다시 빼 보세요. 돈은 그대로예요.');}
   const type=towerType(q.typeId);if(!type)return bad('타워를 다시 선택해 주세요.');p.money=q.wallet-q.cost;(p.stock??={})[type.id]=(p.stock[type.id]??0)+1;
-  p.purchases++;note(s,`${p.name}: ${numberText(q.before)} − ${numberText(q.cost)} = ${numberText(q.before-q.cost)} · ${type.name} +1`);release(p);return ok('정답! 설치할 타워를 한 개 모았어요.');
+  p.purchases++;awardQuestion(p,p.towerWrongAttempts??q.wrongAttempts??0);p.towerWrongAttempts=0;note(s,`${p.name}: ${numberText(q.before)} − ${numberText(q.cost)} = ${numberText(q.before-q.cost)} · ${type.name} +1`);release(p);return ok('정답! 설치할 타워를 한 개 모았어요.');
  }
  if(action.type==='build'){
   if(s.status!=='playing')return bad('1분 문제풀이가 끝나면 모은 타워를 설치할 수 있어요.');
@@ -285,9 +294,11 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(p.egg>=10)return bad('알은 10레벨이에요. 먼저 부화시켜 주세요.');
   if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==3||new Set(action.slots).size!==3||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15))return bad('서로 다른 블럭 세 개를 다시 골라요.');
   const [a,b,c]=action.slots.map(i=>p.board[i]);
-  if(![a,b,c,a+b].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');
-  if(!recipe(a,b,c,'+')){wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
-  p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
+  // Mistakes belong to the whole board round, even if the player changes operands.
+  if(![a,b,c].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');
+  if(!learningValue(a+b)){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');}
+  if(!recipe(a,b,c,'+')){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
+  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
  }
  if(action.type==='hatch'){
   if(s.status!=='playing')return bad('양쪽이 준비한 뒤 부화할 수 있어요.');const hero=heroSpec(action.heroId);

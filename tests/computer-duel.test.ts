@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/computer-peer';
 import {COMPUTER_OPPONENTS,computerOpponent} from '../src/multiplayer/computer-opponents';
-import {DUEL_START_MONEY,DUEL_PREPARATION_SECONDS,FLAME_MAX,duelBuildCost,applyDuel,createDuel,joinDuel,advanceDuel,canPurchaseDuelTower,validDuelCell} from '../src/multiplayer/duel';
+import {DUEL_START_MONEY,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_TOTAL_SECONDS,FLAME_MAX,duelBuildCost,applyDuel,createDuel,joinDuel,advanceDuel,canPurchaseDuelTower,validDuelCell} from '../src/multiplayer/duel';
 import {DUEL_MAPS,duelRoadCell} from '../src/multiplayer/duel-maps';
 import {decimalBoard} from '../src/multiplayer/decimal-boards';
 import {numberText,recipe} from '../src/math';
@@ -131,7 +131,7 @@ test('선택한 10종 맵에서 컴퓨터도 같은 길과 설치 규칙을 사�
 test('10종 맵 × CPU 10레벨의 100대전이 60초 준비·재고 배치·처치 코인·합성을 거쳐 끝난다',()=>{
  const reports=DUEL_MAPS.flatMap(map=>Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id)));assert.equal(reports.length,100);
  for(const r of reports){
-  const label=`${r.mapId} / Lv.${r.level}`;assert.equal(r.status,'finished',label);assert.equal(r.preparationSeconds,60);assert.ok(r.seconds>0&&r.seconds<=300);assert.ok(r.totalSeconds>60&&r.totalSeconds<=360);assert.ok(r.zeroCombatCoins,label);assert.ok(r.legalEconomy,`${label}: 코인·재고·설치 제한·전투 문제 없음`);
+  const label=`${r.mapId} / Lv.${r.level}`;assert.equal(r.status,'finished',label);assert.equal(r.preparationSeconds,60);assert.ok(r.seconds>0&&r.seconds<=DUEL_SECONDS);assert.ok(r.totalSeconds>60&&r.totalSeconds<=DUEL_TOTAL_SECONDS);assert.ok(r.zeroCombatCoins,label);assert.ok(r.legalEconomy,`${label}: 코인·재고·설치 제한·전투 문제 없음`);
   assert.ok(r.playerPrepared>=1&&r.computerPrepared>=1,label);assert.ok(r.playerStockPlaced>=1&&r.computerStockPlaced>=1,`${label}: 양쪽 모두 재고 배치`);assert.ok(r.playerEarned>0&&r.computerEarned>0,`${label}: 처치 보상`);
   assert.ok(r.computerSolved>=1);assert.ok(r.computerHatched);assert.ok(r.traversedBend);assert.ok(r.waves>=3);assert.ok(r.playerFlame>=0&&r.playerFlame<=FLAME_MAX);assert.ok(r.computerFlame>=0&&r.computerFlame<=FLAME_MAX);
  }
@@ -143,10 +143,16 @@ test('10종 맵 × CPU 10레벨의 100대전이 60초 준비·재고 배치·처
 test('다섯 영웅 효과를 적용한 준비 경제의 기준 전략과 CPU 난이도별 차이를 기록한다',()=>{
  for(const seed of [17,91,912]){
   const levels=[1,4,5,9,10],matches=levels.map(level=>simulateComputerDuel(level,seed));
-  assert.deepEqual(matches.map(m=>m.winner),[0,0,null,null,1]);
+  assert.deepEqual(matches.map(m=>m.winner),[0,0,0,1,1]);
   assert.ok(matches.every(m=>m.status==='finished'&&m.legalEconomy&&m.zeroCombatCoins));
+  for(const match of matches.filter(m=>m.reason.startsWith('5분 종료'))){
+   assert.equal(match.totalSeconds,DUEL_TOTAL_SECONDS);assert.equal(match.seconds,DUEL_SECONDS);
+   assert.equal(match.winner,match.playerScore===match.computerScore?null:match.playerScore>match.computerScore?0:1);
+   assert.equal(match.playerScore,match.playerCombatScore+match.playerQuestionScore);
+   assert.equal(match.computerScore,match.computerCombatScore+match.computerQuestionScore);
+  }
   assert.ok(matches[4].computerSolved>matches[0].computerSolved);assert.ok(matches[4].computerPurchased>matches[0].computerPurchased);
-  const burst=simulateComputerDuel(10,seed,'burst');assert.equal(burst.winner,null);assert.ok(burst.playerPrepared>matches[4].playerPrepared);assert.ok(burst.playerCashBuilt>matches[4].playerCashBuilt);
+  const burst=simulateComputerDuel(10,seed,'burst');assert.equal(burst.winner,0);assert.ok(burst.playerScore>burst.computerScore);assert.ok(burst.playerPrepared>matches[4].playerPrepared);assert.ok(burst.playerCashBuilt>matches[4].playerCashBuilt);
  }
 });
 
