@@ -22,7 +22,21 @@ export async function getOrCreateWorksheet(level:number,fresh=false){return lock
  const generated=generateWorksheet(loadLearning(),level,crypto.randomUUID(),Date.now()),sheet:Worksheet={...generated,codeHash:await codeHash(generated.id,worksheetCode(generated))};
  book.sheets.push(sheet);save(book);return sheet;
 });}
-export function drawWorksheetHero(r:()=>number=random){let x=r()*100,level=10;for(let i=0;i<HERO_LEVEL_CHANCES.length;i++){x-=HERO_LEVEL_CHANCES[i];if(x<0){level=i+1;break;}}return HEROES.filter(h=>h.level===level)[Math.floor(r()*3)];}
+function worksheetHeroPools(ownedHeroIds:Iterable<string>){
+ const owned=new Set(ownedHeroIds);
+ return HERO_LEVEL_CHANCES.map((weight,i)=>({level:i+1,weight,heroes:HEROES.filter(h=>h.level===i+1&&!owned.has(h.id))})).filter(pool=>pool.heroes.length>0);
+}
+export function worksheetHeroLevelChances(ownedHeroIds:Iterable<string>=[]):number[]{
+ const pools=worksheetHeroPools(ownedHeroIds),total=pools.reduce((sum,pool)=>sum+pool.weight,0);
+ return HERO_LEVEL_CHANCES.map((_,i)=>(pools.find(pool=>pool.level===i+1)?.weight??0)/(total||1)*100);
+}
+export function drawWorksheetHero(r:()=>number=random,ownedHeroIds:Iterable<string>=[]){
+ const pools=worksheetHeroPools(ownedHeroIds);
+ if(!pools.length)throw Error('영웅 30종을 모두 모았어요. 수집이 완료되어 새로운 영웅 보상은 없어요.');
+ let x=r()*pools.reduce((sum,pool)=>sum+pool.weight,0),selected=pools[pools.length-1];
+ for(const pool of pools){x-=pool.weight;if(x<0){selected=pool;break;}}
+ return selected.heroes[Math.floor(r()*selected.heroes.length)];
+}
 export async function redeemWorksheet(id:string,input:string,r:()=>number=random){
  const code=input.trim().toUpperCase();if(!/^[A-Z]{6}$/.test(code))throw Error('알파벳 여섯 글자를 입력해 주세요.');
  const hash=await codeHash(id,code);
@@ -30,8 +44,9 @@ export async function redeemWorksheet(id:string,input:string,r:()=>number=random
   const book=loadWorkbook(),sheet=book.sheets.find(s=>s.id===id);if(!sheet)throw Error('이 브라우저에서 출력한 학습지를 선택해 주세요.');
   if(sheet.claimedHero)throw Error('이 학습지는 이미 영웅을 받았어요. 새 학습지로 다시 도전해 주세요.');
   if(hash!==sheet.codeHash)throw Error('암호가 맞지 않아요. 20개 답의 룬 숫자와 여섯 묶음의 합을 다시 확인해 주세요.');
-  const hero=drawWorksheetHero(r);sheet.claimedHero=hero.id;const owned=book.collection.find(h=>h.heroId===hero.id);if(owned)owned.copies++;else book.collection.push({heroId:hero.id,copies:1,obtainedAt:Date.now()});book.selectedHero??=hero.id;save(book);
+  // Read the eligible roster inside the lock so separate worksheets cannot award the same hero.
+  const hero=drawWorksheetHero(r,book.collection.map(h=>h.heroId));sheet.claimedHero=hero.id;book.collection.push({heroId:hero.id,copies:1,obtainedAt:Date.now()});book.selectedHero??=hero.id;save(book);
   for(const [i,q] of sheet.questions.entries())recordKindLearning(q.kind,'correct','worksheet:'+id+':'+i);
-  return {hero,copies:owned?.copies??1};
+  return {hero,copies:1};
  });
 }

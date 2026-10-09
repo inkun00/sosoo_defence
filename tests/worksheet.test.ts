@@ -5,6 +5,7 @@ import {loadLearning,recordLearning,recordKindLearning,classify,importLearningRe
 import {getOrCreateWorksheet,loadWorkbook,redeemWorksheet,drawWorksheetHero,HERO_LEVEL_CHANCES,selectWorksheetHero,ownedHeroIds} from '../src/worksheet-store';
 import {worksheetPages} from '../src/worksheet-view';
 import {newAdventure,loadSave,writeSave} from '../src/save';
+import {HEROES} from '../src/multiplayer/heroes';
 const cache=new Map<string,string>();let failStorage=false;
 Object.defineProperty(globalThis,'localStorage',{value:{getItem:(key:string)=>cache.get(key)??null,setItem:(key:string,v:string)=>{if(failStorage)throw Error('quota');cache.set(key,v);}},configurable:true});
 beforeEach(()=>{cache.clear();failStorage=false;});
@@ -43,10 +44,37 @@ test('암호 오답에는 보상이 없고 정답·새로고침·중복 제출�
  const result=await redeemWorksheet(s.id,code.toLowerCase(),()=>0);assert.equal(result.hero.id,'hero-1-0');assert.equal(loadWorkbook().sheets[0].claimedHero,result.hero.id);assert.equal(loadWorkbook().selectedHero,result.hero.id);assert.equal(loadLearning().counts[s.questions[0].kind]!.correct,s.questions.filter(q=>q.kind===s.questions[0].kind).length);
  await assert.rejects(redeemWorksheet(s.id,code),/이미/);assert.equal(loadWorkbook().collection[0].copies,1);
 });
-test('동시 암호 제출에서도 하나만 성공하고 여러 학습지의 몬스터를 선택할 수 있다',async()=>{
+test('동시 암호 제출에서도 하나만 성공하고 여러 학습지의 영웅을 선택할 수 있다',async()=>{
  const a=await getOrCreateWorksheet(4,true),outcomes=await Promise.allSettled([redeemWorksheet(a.id,worksheetCode(a),()=>0),redeemWorksheet(a.id,worksheetCode(a),()=>0)]);assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
  const b=await getOrCreateWorksheet(4,true);await redeemWorksheet(b.id,worksheetCode(b),()=>.999);assert.equal(loadWorkbook().collection.length,2);assert.equal(ownedHeroIds().length,2);await selectWorksheetHero('hero-10-2');assert.equal(loadWorkbook().selectedHero,'hero-10-2');await assert.rejects(selectWorksheetHero('hero-8-0'),/획득/);assert.equal(loadWorkbook().selectedHero,'hero-10-2');
- const c=await getOrCreateWorksheet(4,true);await redeemWorksheet(c.id,worksheetCode(c),()=>0);assert.equal(loadWorkbook().collection.find(h=>h.heroId==='hero-1-0')!.copies,2);
+ const c=await getOrCreateWorksheet(4,true);const third=await redeemWorksheet(c.id,worksheetCode(c),()=>0);assert.equal(third.hero.id,'hero-1-1');assert.equal(third.copies,1);assert.equal(loadWorkbook().collection.length,3);assert.ok(loadWorkbook().collection.every(h=>h.copies===1));
+});
+test('세 학습지에 같은 난수를 사용해도 서로 다른 영웅 세 명을 한 번씩 받는다',async()=>{
+ const rewarded=[];for(let i=0;i<3;i++){const sheet=await getOrCreateWorksheet(4,true),result=await redeemWorksheet(sheet.id,worksheetCode(sheet),()=>0);rewarded.push(result.hero.id);assert.equal(result.copies,1);}
+ assert.deepEqual(rewarded,['hero-1-0','hero-1-1','hero-1-2']);assert.equal(new Set(rewarded).size,3);assert.deepEqual(ownedHeroIds(),rewarded);assert.ok(loadWorkbook().collection.every(h=>h.copies===1));
+});
+test('서로 다른 학습지의 암호를 동시에 제출해도 같은 영웅을 지급하지 않는다',async()=>{
+ const a=await getOrCreateWorksheet(4,true),b=await getOrCreateWorksheet(4,true),results=await Promise.all([redeemWorksheet(a.id,worksheetCode(a),()=>0),redeemWorksheet(b.id,worksheetCode(b),()=>0)]);
+ assert.equal(new Set(results.map(result=>result.hero.id)).size,2);assert.equal(loadWorkbook().collection.length,2);assert.ok(results.every(result=>result.copies===1));assert.ok(loadWorkbook().sheets.every(sheet=>sheet.claimedHero));
+});
+test('획득을 마친 레벨은 제외하고 남은 레벨의 확률을 다시 나누며 남은 변형만 고른다',()=>{
+ const owned=HEROES.filter(h=>h.level===1).map(h=>h.id),remainingWeight=100-HERO_LEVEL_CHANCES[0],boundary=HERO_LEVEL_CHANCES[1]/remainingWeight;
+ let calls=0;assert.equal(drawWorksheetHero(()=>calls++===0?boundary-.000001:0,owned).id,'hero-2-0');
+ calls=0;assert.equal(drawWorksheetHero(()=>calls++===0?boundary+.000001:0,owned).id,'hero-3-0');
+ assert.equal(drawWorksheetHero(()=>0,['hero-1-0','hero-1-1']).id,'hero-1-2');
+ assert.equal(drawWorksheetHero(()=>.999,new Set(HEROES.filter(h=>h.id!=='hero-6-1').map(h=>h.id))).id,'hero-6-1');
+});
+test('30종을 모두 중복 없이 지급한 뒤에는 학습지를 소비하거나 학습 기록을 바꾸지 않는다',async()=>{
+ const rewarded=new Set<string>();for(let i=0;i<HEROES.length;i++){const sheet=await getOrCreateWorksheet(4,true),result=await redeemWorksheet(sheet.id,worksheetCode(sheet),()=>0);assert.ok(!rewarded.has(result.hero.id));rewarded.add(result.hero.id);assert.equal(result.copies,1);}
+ assert.equal(rewarded.size,30);assert.deepEqual([...rewarded].sort(),HEROES.map(h=>h.id).sort());assert.equal(loadWorkbook().collection.length,30);assert.ok(loadWorkbook().collection.every(h=>h.copies===1));
+ const extra=await getOrCreateWorksheet(4,true),beforeBook=JSON.stringify(loadWorkbook()),beforeLearning=JSON.stringify(loadLearning());
+ await assert.rejects(redeemWorksheet(extra.id,worksheetCode(extra),()=>0),/모든 영웅|수집.*완료/);
+ assert.equal(JSON.stringify(loadWorkbook()),beforeBook);assert.equal(JSON.stringify(loadLearning()),beforeLearning);assert.equal(loadWorkbook().sheets.find(s=>s.id===extra.id)!.claimedHero,null);
+ assert.throws(()=>drawWorksheetHero(()=>0,rewarded),/모든 영웅|수집.*완료/);
+});
+test('기존 중복 획득 이력과 선택한 영웅은 보존하고 새 보상만 미보유 영웅으로 지급한다',async()=>{
+ const previous=await getOrCreateWorksheet(4,true);await redeemWorksheet(previous.id,worksheetCode(previous),()=>0);const legacy=loadWorkbook();legacy.collection[0].copies=3;legacy.collection[0].obtainedAt=1700000000000;cache.set('decimal-workbook-v1',JSON.stringify(legacy));
+ const sheet=await getOrCreateWorksheet(4,true),result=await redeemWorksheet(sheet.id,worksheetCode(sheet),()=>0),book=loadWorkbook();assert.equal(result.hero.id,'hero-1-1');assert.equal(result.copies,1);assert.deepEqual(book.collection[0],legacy.collection[0]);assert.equal(book.selectedHero,'hero-1-0');assert.equal(book.sheets.find(s=>s.id===previous.id)!.claimedHero,'hero-1-0');assert.equal(book.collection.length,2);
 });
 test('저장이 실패하면 지급도 완료 처리도 하지 않으며 다시 시도할 수 있다',async()=>{
  const s=await getOrCreateWorksheet(4,true);failStorage=true;await assert.rejects(redeemWorksheet(s.id,worksheetCode(s)),/저장 공간/);assert.equal(loadWorkbook().collection.length,0);assert.equal(loadWorkbook().sheets[0].claimedHero,null);failStorage=false;await redeemWorksheet(s.id,worksheetCode(s));assert.equal(loadWorkbook().collection.length,1);
