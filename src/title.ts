@@ -3,6 +3,7 @@ import {loadSave,writeSave,hasAdventure,newAdventure} from './save';
 import {DIFFICULTIES,isDifficulty} from './difficulty';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {Sound} from './audio';
+import {mountGameAudioControls} from './game-audio-controls';
 import './game.css';
 import './title.css';
 const app=document.querySelector<HTMLDivElement>('#app')!;let save=loadSave(),movie=false;
@@ -10,18 +11,20 @@ const sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);
 document.addEventListener('click',e=>{if(!movie&&(e.target as HTMLElement).closest('button'))sound.play('ui');});
 app.innerHTML=`<main class="title-screen" aria-label="소수 디펜스 시작 화면"><div class="title-art" aria-hidden="true"></div><div class="title-shade" aria-hidden="true"></div><div class="title-flame-glow" aria-hidden="true"></div><canvas class="title-embers" aria-hidden="true"></canvas><section class="title-copy"><h1 aria-label="소수 디펜스"><img class="title-logo" src="${artURL('title-wordmark-v1')}" alt="" width="1200" height="297" decoding="async" fetchpriority="high"></h1><nav class="title-menu" aria-label="모험 선택"><button class="title-button primary" id="title-new">새게임</button><button class="title-button" id="title-continue">이어하기</button><button class="title-button" id="title-duel">1:1대전</button><button class="title-button" id="title-settings">설정</button><button class="title-button title-worksheet" id="title-worksheet">학습지 출력</button></nav><div class="title-replays"><button id="title-opening">오프닝 다시 보기 ↗</button><button id="title-ending" hidden>엔딩 다시 보기 ↗</button></div></section><footer class="title-footer"><span>초등 4학년 · 소수의 덧셈과 뺄셈</span></footer><p class="title-save-warning" role="alert" hidden></p></main><div id="title-dialog" class="title-dialog hidden" role="dialog" aria-modal="true" aria-label="모험 설정"><div class="title-card"><button class="title-close" id="title-dialog-close" aria-label="닫기">×</button><div id="title-dialog-body"></div></div></div>`;
 const $=(id:string)=>document.getElementById(id)!;const dialog=$('title-dialog'),body=$('title-dialog-body');let previous:HTMLElement|null=null;
+let settingsAudioControls:ReturnType<typeof mountGameAudioControls>|undefined;
 function refresh(){
  const progress=hasAdventure(save);($('title-continue') as HTMLButtonElement).disabled=!progress;
  $('title-ending').hidden=!save.campaignCompleted;
 }
 function persist(){const saved=writeSave(save),warning=document.querySelector<HTMLElement>('.title-save-warning')!;warning.hidden=saved;warning.textContent=saved?'':'이 브라우저에서는 진행 저장이 제한되어 있어요.';refresh();}
-function open(html:string){previous=document.activeElement as HTMLElement;body.innerHTML=html;dialog.classList.remove('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=true;$('title-dialog-close').focus();}
-function close(){dialog.classList.add('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=false;previous?.focus();}
+function open(html:string){settingsAudioControls?.dispose();settingsAudioControls=undefined;previous=document.activeElement as HTMLElement;body.innerHTML=html;dialog.classList.remove('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=true;$('title-dialog-close').focus();}
+function close(){settingsAudioControls?.dispose();settingsAudioControls=undefined;dialog.classList.add('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=false;previous?.focus();}
 function navigate(mode:'adventure'|'duel'){sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode',mode);url.searchParams.delete('preview');url.searchParams.delete('ui');location.assign(url.href);}
 async function cinematic(kind:'opening'|'ending',next:()=>void){if(movie)return;movie=true;sound.setPaused(true);try{const {playCinematic}=await import('./cinematic');await playCinematic(kind,save,()=>{movie=false;sound.setPaused(false);next();});}catch{movie=false;sound.setPaused(false);if(save.music)sound.setMusic(true);open('<h2>이야기를 불러오지 못했어요</h2><p>연결 상태를 확인한 뒤 다시 눌러 주세요.</p>');}}
 function begin(){save=newAdventure(save);persist();close();void cinematic('opening',()=>navigate('adventure'));}
 function newGame(){sound.resume();if(hasAdventure(save)){open(`<p class="title-eyebrow">새로운 수호자의 여정</p><h2>처음부터 시작할까요?</h2><p>현재 ${save.resumeStage}단계까지의 모험을 새로 시작합니다.<br>모험 레벨·별·벽돌·성벽 재고가 초기화됩니다.<br>소리와 난이도 설정, 1:1 계정 기록은 유지됩니다.</p><div class="title-card-actions"><button class="title-button" id="title-cancel">돌아가기</button><button class="title-button primary" id="title-confirm">새 모험 시작</button></div>`);$('title-cancel').onclick=close;$('title-confirm').onclick=begin;}else begin();}
-function settings(){sound.resume();open(`<p class="title-eyebrow">수호자의 준비</p><label class="setting"><span>몬스터 피격 뺄셈식</span><input id="title-hit" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>모험 난이도</span><select id="title-difficulty">${Object.entries(DIFFICULTIES).map(([id,s])=>`<option value="${id}" ${save.difficulty===id?'selected':''}>${s.name}</option>`).join('')}</select></label><p class="title-settings-note">설정은 자동 저장됩니다. 이야기는 한국어 자막으로 표시합니다.</p>`);
+function settings(){sound.resume();open(`<p class="title-eyebrow">수호자의 준비</p><div id="settings-audio"></div><label class="setting"><span>몬스터 피격 뺄셈식</span><input id="title-hit" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><label class="setting"><span>모험 난이도</span><select id="title-difficulty">${Object.entries(DIFFICULTIES).map(([id,s])=>`<option value="${id}" ${save.difficulty===id?'selected':''}>${s.name}</option>`).join('')}</select></label><p class="title-settings-note">설정은 자동 저장됩니다. 이야기는 한국어 자막으로 표시합니다.</p>`);
+ settingsAudioControls=mountGameAudioControls($('settings-audio'),{variant:'settings',getState:()=>({sfx:save.sfx,music:save.music}),change:(kind,enabled)=>{sound.resume();save[kind]=enabled;if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);persist();sound.play('ui');}});
  $('title-hit').onchange=()=>setHitEquationsEnabled(($('title-hit') as HTMLInputElement).checked);
  $('title-difficulty').onchange=()=>{const value=($('title-difficulty') as HTMLSelectElement).value;if(isDifficulty(value)){save.difficulty=value;persist();}};
 }
@@ -31,6 +34,6 @@ refresh();$('title-new').onclick=newGame;$('title-continue').onclick=()=>{if(has
 const canvas=document.querySelector<HTMLCanvasElement>('.title-embers')!,context=canvas.getContext('2d')!,reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function resize(){canvas.width=Math.round(innerWidth);canvas.height=Math.round(innerHeight);}resize();window.addEventListener('resize',resize);
 let raf=0,last=0,clock=0;function embers(now:number){if(last&&!document.hidden&&!movie)clock+=Math.min(.1,(now-last)/1000);last=now;context.clearRect(0,0,canvas.width,canvas.height);if(!reduced){for(let i=0;i<38;i++){const x=(i*147.3+Math.sin(clock*.35+i)*22)%canvas.width,y=canvas.height-(i*49.1+clock*(12+i%5*3))%(canvas.height+25);context.globalAlpha=.15+.45*Math.pow(Math.sin(clock*.7+i),2);context.fillStyle=i%5?'#ffd18a':'#c39cff';context.beginPath();context.arc(x,y,1+i%3*.65,0,Math.PI*2);context.fill();}context.globalAlpha=1;}raf=requestAnimationFrame(embers);}if(!reduced)raf=requestAnimationFrame(embers);
-window.addEventListener('pagehide',()=>{cancelAnimationFrame(raf);sound.dispose();});
+window.addEventListener('pagehide',()=>{cancelAnimationFrame(raf);settingsAudioControls?.dispose();sound.dispose();});
 // Explicit local preview uses the same renderer; it never unlocks or saves an ending.
 if(import.meta.env.DEV&&new URLSearchParams(location.search).get('preview')==='ending'){const preview=document.createElement('button');preview.className='title-preview';preview.textContent='엔딩 개발 미리보기';preview.onclick=()=>void cinematic('ending',()=>{});document.querySelector('.title-replays')!.append(preview);}

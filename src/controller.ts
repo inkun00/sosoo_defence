@@ -6,7 +6,7 @@ import {GameUI,Panel,UIState,Control} from './ui';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
-import {mountGameAudioControls} from './game-audio-controls';
+import {mountGameAudioControls,type GameAudioKind} from './game-audio-controls';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {GAME_WIDTH,GAME_HEIGHT} from './layout';
 import type {Cell} from './path';
@@ -27,14 +27,16 @@ app.innerHTML=`<main id="game-shell" aria-label="소수의 성 디펜스 게임"
 <p class="portrait-note">태블릿을 가로로 돌리면 더 크게 플레이할 수 있어요.</p>`;
 const $=(id:string)=>document.getElementById(id)!;
 const save=loadSave(),sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);let movie=false;
+let settingsAudioControls:ReturnType<typeof mountGameAudioControls>|undefined;
+function changeAudio(kind:GameAudioKind,enabled:boolean){
+ sound.resume();save[kind]=enabled;
+ if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);
+ if(!writeSave(save))notify('이 브라우저에서는 소리 설정을 저장할 수 없어요.');
+ gameAudioControls.sync();settingsAudioControls?.sync();sound.play('ui');
+}
 const gameAudioControls=mountGameAudioControls($('game-shell'),{
  getState:()=>({sfx:save.sfx,music:save.music}),
- change:(kind,enabled)=>{
-  sound.resume();save[kind]=enabled;
-  if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);
-  if(!writeSave(save))notify('이 브라우저에서는 소리 설정을 저장할 수 없어요.');
-  sound.play('ui');
- },
+ change:changeAudio,
 });
 save.started=true;
 let model=new Defense(LEVELS[save.resumeStage-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
@@ -103,15 +105,18 @@ function setPanel(next:Panel,resumeBattle=false){
 }
 function closePanel(){if(panel==='purchase')model.cancelPurchase();panel=null;field.input.enabled=true;if(resumeAfterPanel&&model.phase==='paused')model.togglePause();resumeAfterPanel=false;update();}
 function openHTML(content:string){
+ settingsAudioControls?.dispose();settingsAudioControls=undefined;
  resumeAfterHTML=model.phase==='playing'||resumeAfterPanel;
  if(model.phase==='playing')model.togglePause();resumeAfterPanel=false;panel=null;field.input.enabled=false;
  $('modal-body').innerHTML=content;$('modal').classList.remove('hidden');$('modal-close').focus();update();
 }
 function closeHTML(){
  if($('modal').classList.contains('hidden'))return;
+ settingsAudioControls?.dispose();settingsAudioControls=undefined;
  $('modal').classList.add('hidden');field.input.enabled=true;if(resumeAfterHTML&&model.phase==='paused')model.togglePause();resumeAfterHTML=false;update();document.querySelector('canvas')?.focus();
 }
 function stage(n:number){
+ settingsAudioControls?.dispose();settingsAudioControls=undefined;
  if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
  save.resumeStage=n;save.started=true;writeSave(save);
@@ -135,7 +140,8 @@ function calculation(){
  openHTML(`<p class="eyebrow">전투 속 계산 기록</p><h2>같은 자리끼리 계산해요</h2><p>${model.level.hint}</p>${d?`<div class="help-equation">${lastHit!.message}</div><pre class="vertical-math">  ${decimal(d.before,model.level.digits).padStart(6)}\n− ${decimal(d.damage,model.level.digits).padStart(6)}\n─────────\n  ${decimal(d.after,model.level.digits).padStart(6)}</pre><p>${d.hint}</p>`:'<p>타워가 실제로 공격한 뒤 최근 공격의 계산을 이곳에서 확인할 수 있어요.</p>'}${equation?`<p class="math-record">최근 기록: ${equation}</p>`:''}<p>0.1은 0.01 열 개, 1은 0.1 열 개와 같아요.<br>0.7 = 0.70처럼 끝에 0을 붙여 생각할 수 있어요.<br>모든 소수 계산은 소수 두 자리까지만 사용해요.</p>`);
 }
 function settings(){
- openHTML(`<p class="eyebrow">게임 설정</p><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}/></label><p>설정은 같은 브라우저에 자동 저장돼요.</p>`);
+ openHTML(`<p class="eyebrow">게임 설정</p><div id="settings-audio"></div><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}/></label><p>설정은 같은 브라우저에 자동 저장돼요.</p>`);
+ settingsAudioControls=mountGameAudioControls($('settings-audio'),{variant:'settings',getState:()=>({sfx:save.sfx,music:save.music}),change:changeAudio});
  $('setting-hit-equations').onchange=()=>{const enabled=($('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);$('setting-equations-state').textContent=enabled?'ON':'OFF';};
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
@@ -216,6 +222,6 @@ document.addEventListener('keydown',e=>{
  if(e.code==='Space'&&!panel){e.preventDefault();action('pause');}else if(e.key.toLowerCase()==='f'&&!panel)action('forge');
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
-window.addEventListener('pagehide',()=>{gameAudioControls.dispose();sound.dispose();});
+window.addEventListener('pagehide',()=>{settingsAudioControls?.dispose();gameAudioControls.dispose();sound.dispose();});
 if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();}}});
 

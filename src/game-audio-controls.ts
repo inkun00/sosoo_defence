@@ -5,12 +5,14 @@ export interface GameAudioState{sfx:boolean;music:boolean;}
 export interface GameAudioControlsOptions{
  getState:()=>GameAudioState;
  change:(kind:GameAudioKind,enabled:boolean)=>void|Promise<void>;
+ variant?:'toolbar'|'settings';
 }
 
-/** Keep sound preferences available without covering the game canvas. */
+/** Share the same sound buttons between the game toolbar and settings. */
 export function mountGameAudioControls(shell:HTMLElement,options:GameAudioControlsOptions){
+ const inSettings=options.variant==='settings';
  const toolbar=document.createElement('div');
- toolbar.className='game-audio-controls';
+ toolbar.className=inSettings?'game-audio-settings':'game-audio-controls';
  toolbar.setAttribute('role','group');
  toolbar.setAttribute('aria-label','게임 소리');
  let disposed=false;
@@ -46,7 +48,7 @@ export function mountGameAudioControls(shell:HTMLElement,options:GameAudioContro
    icon.textContent=kind==='sfx'?(enabled?'🔊':'🔇'):'♫';
   }
  }
- shell.classList.add('has-game-audio-controls');
+ if(!inSettings)shell.classList.add('has-game-audio-controls');
  shell.prepend(toolbar);
  sync();
  return {
@@ -56,7 +58,7 @@ export function mountGameAudioControls(shell:HTMLElement,options:GameAudioContro
    disposed=true;
    for(const {button,toggle} of buttons)button.removeEventListener('click',toggle);
    toolbar.remove();
-   shell.classList.remove('has-game-audio-controls');
+   if(!inSettings)shell.classList.remove('has-game-audio-controls');
   }
  };
 }

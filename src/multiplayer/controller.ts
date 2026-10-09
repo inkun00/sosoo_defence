@@ -9,7 +9,7 @@ import {DuelScene,DuelView} from './scene';
 import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,duelScore,duelHeroLearningLevel,DUEL_KILL_BASE_SCORE,DUEL_KILL_EFFICIENCY_SCORE,DUEL_QUESTION_BASE_SCORE} from './duel';
 import {HostPeer} from './peer';
 import {loadPeerConfiguration} from './relay-store';
-import {mountGameAudioControls} from '../game-audio-controls';
+import {mountGameAudioControls,type GameAudioKind} from '../game-audio-controls';
 import {ComputerPeer} from './computer-peer';
 import {DEFAULT_DUEL_MAP_ID,duelMap,isDuelMapId} from './duel-maps';
 import {duelMapSummaryHTML,duelMapPickerHTML} from './map-picker';
@@ -47,14 +47,16 @@ let audioStatus='',audioFlame=9000;
 function loadDuelMap(){try{const id=localStorage.getItem('sosoo-duel-map');return isDuelMapId(id)?id:DEFAULT_DUEL_MAP_ID;}catch{return DEFAULT_DUEL_MAP_ID;}}
 let selectedMapId=loadDuelMap();
 const sound=new Sound();sound.sfx=loadSave().sfx;sound.setMusic(loadSave().music);
+let settingsAudioControls:ReturnType<typeof mountGameAudioControls>|undefined;
+function changeAudio(kind:GameAudioKind,enabled:boolean){
+ sound.resume();if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);
+ const preferences=loadSave();preferences[kind]=enabled;
+ if(!writeSave(preferences))status('이 브라우저에서는 소리 설정을 저장할 수 없어요.');
+ gameAudioControls.sync();settingsAudioControls?.sync();sound.play('ui');
+}
 const gameAudioControls=mountGameAudioControls(document.getElementById('game-shell')!,{
  getState:()=>({sfx:sound.sfx,music:sound.music}),
- change:(kind,enabled)=>{
-  sound.resume();if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);
-  const preferences=loadSave();preferences[kind]=enabled;
-  if(!writeSave(preferences))status('이 브라우저에서는 소리 설정을 저장할 수 없어요.');
-  sound.play('ui');
- },
+ change:changeAudio,
 });
 document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))sound.play('ui');});
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,selectedTower,message,busy,connected,computer:peer instanceof ComputerPeer?peer.opponent:undefined});
@@ -68,8 +70,8 @@ observeGameScreen(game,field,layout=>{scene.setScreenLayout(layout);shopPage=Mat
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;purchasePanel.feedback(text);const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
 function refresh(){purchasePanel.sync(state?.status==='preparing'?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=DUEL_SECONDS-60?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
-function show(kind:string,html:string){dialogKind=kind;dialog.dataset.screen=kind;content.innerHTML=html;const heading=content.querySelector('h2');if(heading){heading.id||='duel-dialog-title';dialog.setAttribute('aria-labelledby',heading.id);}app.dataset.duelView=!state||['auth','lobby','computer-levels','map-select','create-room','room-password','connection','profile','history','leaderboard'].includes(kind)?'hall':'battle';dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
-function close(){dialogKind='';app.dataset.duelView='battle';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
+function show(kind:string,html:string){settingsAudioControls?.dispose();settingsAudioControls=undefined;dialogKind=kind;dialog.dataset.screen=kind;content.innerHTML=html;const heading=content.querySelector('h2');if(heading){heading.id||='duel-dialog-title';dialog.setAttribute('aria-labelledby',heading.id);}app.dataset.duelView=!state||['auth','lobby','computer-levels','map-select','create-room','room-password','connection','profile','history','leaderboard'].includes(kind)?'hall':'battle';dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
+function close(){settingsAudioControls?.dispose();settingsAudioControls=undefined;dialogKind='';app.dataset.duelView='battle';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
 function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const labels:Record<string,string>={'auth/email-already-in-use':'이미 가입한 이메일이에요. 로그인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/weak-password':'비밀번호는 6글자 이상 적어 주세요.','auth/invalid-email':'이메일 주소를 확인해 주세요.','auth/too-many-requests':'잠시 기다렸다가 다시 로그인해 주세요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.','functions/unauthenticated':'다시 로그인해 주세요.','functions/resource-exhausted':'잠시 뒤 다시 눌러 주세요.'};return labels[code]||(e as Error)?.message||'연결을 확인하고 다시 시도해 주세요.';}
 async function send(action:DuelAction){
  if(!user||auth?.currentUser?.uid!==user.uid||busy||!peer)return;const local=peer,p=state?.players[side],q=p?.quote;let sample:LearningSample|undefined,evidence='';
@@ -80,7 +82,8 @@ async function send(action:DuelAction){
 function back(){const url=new URL(location.href);url.searchParams.set('mode','adventure');url.searchParams.delete('emulator');location.assign(url.href);}
 function bind(id:string,fn:()=>unknown){document.getElementById(id)?.addEventListener('click',fn);}
 function settings(fromLobby=false,fromComputer=false){
- show('settings',`<h2>게임 설정</h2><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><p class="duel-warning">총 5분: 문제풀이 1분 + 전투 4분. 시간 종료 시 총점이 높은 쪽이 승리하고, 동점이면 무승부예요. 몬스터 처치마다 기본 ${DUEL_KILL_BASE_SCORE}점에 ${DUEL_KILL_EFFICIENCY_SCORE} ÷ 타격 수의 소수점 이하를 버린 보너스를 더해요. 문제 정답마다 ${DUEL_QUESTION_BASE_SCORE} ÷ (오답 횟수 + 1)의 소수점 이하를 버린 점수를 얻어요. 적은 타격과 적은 오답일수록 점수가 높아요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
+ show('settings',`<h2>게임 설정</h2><div id="settings-audio"></div><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><p class="duel-warning">총 5분: 문제풀이 1분 + 전투 4분. 시간 종료 시 총점이 높은 쪽이 승리하고, 동점이면 무승부예요. 몬스터 처치마다 기본 ${DUEL_KILL_BASE_SCORE}점에 ${DUEL_KILL_EFFICIENCY_SCORE} ÷ 타격 수의 소수점 이하를 버린 보너스를 더해요. 문제 정답마다 ${DUEL_QUESTION_BASE_SCORE} ÷ (오답 횟수 + 1)의 소수점 이하를 버린 점수를 얻어요. 적은 타격과 적은 오답일수록 점수가 높아요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
+ settingsAudioControls=mountGameAudioControls(document.getElementById('settings-audio')!,{variant:'settings',getState:()=>({sfx:sound.sfx,music:sound.music}),change:changeAudio});
  document.getElementById('setting-hit-equations')!.onchange=()=>{const enabled=(document.getElementById('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);document.getElementById('setting-equations-state')!.textContent=enabled?'ON':'OFF';};
  bind('settings-back',()=>fromComputer?computerScreen():fromLobby?lobby():close());
 }
@@ -316,6 +319,6 @@ async function accountChanged(value:User|null){const previousUid=user?.uid;user=
 if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitting==='true')return;void accountChanged(value);});else authScreen();
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
-window.addEventListener('pagehide',()=>{peer?.dispose();gameAudioControls.dispose();sound.dispose();});
+window.addEventListener('pagehide',()=>{peer?.dispose();settingsAudioControls?.dispose();gameAudioControls.dispose();sound.dispose();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&dialogKind==='leaderboard')lobby();else if(e.key==='Escape'&&['heroes','leave','collection'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});
