@@ -217,7 +217,5 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
 window.addEventListener('pagehide',()=>{gameAudioControls.dispose();sound.dispose();});
-// A cached page has already disposed its audio and controls; restore a fresh game.
-window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();}}});
 

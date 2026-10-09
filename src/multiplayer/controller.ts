@@ -296,7 +296,5 @@ if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitt
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pagehide',()=>{peer?.dispose();gameAudioControls.dispose();sound.dispose();});
-// A cached page has already closed its peer/audio; rebuild it on back navigation.
-window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave','collection'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});
