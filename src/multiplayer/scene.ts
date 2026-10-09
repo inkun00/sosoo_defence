@@ -15,7 +15,7 @@ import {OpponentPortrait,ComputerView} from './opponent-portrait';
 import {HeroSummonStream} from './hero-summon-stream';
 import {HeroSummonEffects} from './hero-summon-effects';
 const X=37,Y=132,T=38;
-export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];operation:'+'|'-';selectedTower:number;message:string;busy:boolean;connected:boolean;computer?:ComputerView;}
+export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];selectedTower:number;message:string;busy:boolean;connected:boolean;computer?:ComputerView;}
 export class DuelScene extends Phaser.Scene{
  ready=false;controls=new Map<string,{x:number;y:number;w:number;h:number;enabled:boolean;label:string;run:()=>void}>();
  onAction:(key:string)=>void=()=>{};onCell:(x:number,y:number)=>void=()=>{};onControls:()=>void=()=>{};
@@ -60,7 +60,7 @@ export class DuelScene extends Phaser.Scene{
  }
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}
  redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];this.opponentPortrait?.sync(v.computer);if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
-  const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.operation,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.flame,p.money,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
+  const signature=JSON.stringify([v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.flame,p.money,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
   if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.syncHeroSummons();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,44,1264,76);this.text(this.ui,136,40,'소수의 성 · 1:1',24);this.text(this.ui,359,25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,359,56,`대전 Lv.${s?duelLevel(s):1}`,18,'#ffca7e');
   const seconds=Math.max(0,Math.ceil(300-(s?.elapsed??0)));this.text(this.ui,615,41,p?numberText(p.money)+' 코인':'돌 알을 깨워 상대 불꽃을 공격해요',p?28:19,'#ffcb7b');this.text(this.ui,879,41,`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`,26);this.button('settings',963,42,76,55,'설정',true,false,18);
@@ -80,11 +80,11 @@ export class DuelScene extends Phaser.Scene{
   this.panel(this.ui,240,607,467,324);this.text(this.ui,240,457,'동일한 순서의 소수 블럭 16개',20);
   this.text(this.ui,240,479,`학습 Lv.${s?.learningLevel??1} · ${learningDescription(s?.learningLevel??1)}`,12,'#ffca7e');
   (p?.board??Array(16).fill(0)).forEach((n,i)=>this.button('block:'+i,76+i%4*110,518+Math.floor(i/4)*61,99,56,p?numberText(n):'?',!!p&&s?.status==='playing'&&!v.busy&&!v.slots.includes(i),v.slots.includes(i),23));
-  this.panel(this.ui,738,607,505,324);this.text(this.ui,738,468,'세 블럭으로 돌 알 성장',23);
-  this.text(this.ui,682,521,'덧셈으로 돌 알을 깨워요',19,'#ffca7e');
+  this.panel(this.ui,738,607,505,324);this.text(this.ui,738,468,'세 블럭으로 영웅 알 성장',23);
+  this.text(this.ui,682,521,'덧셈으로 영웅 알을 깨워요',19,'#ffca7e');
   [540,667,794].forEach((x,i)=>this.button('slot:'+i,x,586,103,58,p&&v.slots[i]!==undefined?numberText(p.board[v.slots[i]]):'?',true,false,27));this.text(this.ui,605,586,'+',25);this.text(this.ui,733,586,'=',25);
   this.button('fuse',922,586,105,59,'합성',!!p&&v.slots.length===3&&p.egg<10&&s?.status==='playing'&&!v.busy,true,22);
-  const eggLevel=p?.egg??0;const egg=this.add.image(551,684,'duel-eggs','egg-'+Math.max(1,eggLevel)).setDisplaySize(62,98).setAlpha(eggLevel?1:.3);this.ui.add(egg);this.text(this.ui,639,648,eggLevel?`돌 알 Lv.${eggLevel}`:'합성 정답으로 알 획득',19,'#ffca7e');
+  const eggLevel=p?.egg??0;const egg=this.add.image(551,684,'duel-eggs','egg-'+Math.max(1,eggLevel)).setDisplaySize(62,98).setAlpha(eggLevel?1:.3);this.ui.add(egg);this.text(this.ui,639,648,eggLevel?`영웅 알 Lv.${eggLevel}`:'덧셈 정답으로 알 획득',19,'#ffca7e');
   this.text(this.ui,730,692,eggLevel?'지금 부화하거나 정답을 더 맞혀요':'정답 1회당 1레벨 · 최고 10레벨',17,'#c1b7aa');this.button('hatch',863,737,229,56,'영웅 부화 ▶',eggLevel>0&&s?.status==='playing'&&!v.busy,true,22);
   const selected=p?.towers.find(t=>t.id===v.selectedTower);
   if(selected){this.text(this.ui,1085,696,'타워 자동 공격',16,'#c1b7aa');this.button('sell',1220,696,105,57,'회수',!v.busy);}

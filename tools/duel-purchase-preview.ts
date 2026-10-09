@@ -7,7 +7,7 @@ const start=Date.now(),state=createDuel('left','왼쪽 검증',71,start);
 joinDuel(state,'right','오른쪽 검증',start);
 applyDuel(state,0,{type:'ready'},start,'r0');applyDuel(state,1,{type:'ready'},start,'r1');
 let serial=0,busy=false;
-const view=():DuelView=>({state,side:0,room:'UI TEST',selectedType:'basic',shopPage:0,slots:[],operation:'+',selectedTower:0,message:'구매 계산 중에도 전투와 시간이 계속 진행돼요.',busy,connected:true});
+const view=():DuelView=>({state,side:0,room:'UI TEST',selectedType:'basic',shopPage:0,slots:[],selectedTower:0,message:'구매 계산 중에도 전투와 시간이 계속 진행돼요.',busy,connected:true});
 const scene=new DuelScene(view);
 new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:800,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},audio:{noAudio:true}});
 const panel=mountPurchasePanel(document.getElementById('field')!,send);

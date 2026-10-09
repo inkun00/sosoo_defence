@@ -22,7 +22,7 @@ function makeRoom():DuelState{
  return s;
 }
 accepted=makeRoom();displayed=accepted;
-const view=():DuelView=>({state:displayed,side:0,room,selectedType:'',shopPage:0,slots:[],operation:'+',selectedTower:0,message:'로컬 발사체 검증',busy:false,connected:true});
+const view=():DuelView=>({state:displayed,side:0,room,selectedType:'',shopPage:0,slots:[],selectedTower:0,message:'로컬 발사체 검증',busy:false,connected:true});
 const scene=new DuelScene(view);
 
 function updateDOM():void{

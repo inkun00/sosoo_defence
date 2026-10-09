@@ -5,9 +5,9 @@ import {createDuel,joinDuel,applyDuel,advanceDuel} from '../src/multiplayer/duel
 import {emptyProgress,progressAfter,MatchRecord} from '../src/multiplayer/records';
 import {numberText} from '../src/math';
 const NOW=100000;
-function recipes(board:number[],operation:'+'|'-'){
+function recipes(board:number[]){
  const involved=new Set<number>();
- for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&(operation==='+'?board[a]+board[b]:board[a]-board[b])===board[c]){involved.add(a);involved.add(b);involved.add(c);}
+ for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&board[a]+board[b]===board[c]){involved.add(a);involved.add(b);involved.add(c);}
  return involved;
 }
 test('각 난이도·순서에서 5개의 삼중 세트를 만들고 16개 블럭 모두 덧셈에 참여한다',()=>{
@@ -15,10 +15,10 @@ test('각 난이도·순서에서 5개의 삼중 세트를 만들고 16개 블�
   const triples=decimalTriples(seed,round,lv),board=decimalBoard(seed,round,lv);
   assert.equal(triples.length,5);assert.equal(board.length,16);assert.deepEqual(board,decimalBoard(seed,round,lv));
   assert.ok(board.every(n=>n>0&&n<10000&&Number.isSafeInteger(n)&&n%10===0));
-  for(const [a,b,c]of triples){assert.equal(a+b,c);assert.equal(c-a,b);}
+  for(const [a,b,c]of triples)assert.equal(a+b,c);
   const remaining=[...board];for(const n of triples.flat()){const i=remaining.indexOf(n);assert.ok(i>=0);remaining.splice(i,1);}
   assert.equal(remaining.length,1);assert.ok(triples.flat().includes(remaining[0]));
-  assert.equal(recipes(board,'+').size,16);assert.equal(recipes(board,'-').size,16);
+  assert.equal(recipes(board).size,16);
  }
 });
 test('낮은 레벨은 한 자리 소수, 중간은 두 자리 소수와 연속 받아올림, 높은 레벨은 0이 생기는 덧셈이다',()=>{

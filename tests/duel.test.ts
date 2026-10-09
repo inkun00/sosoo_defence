@@ -1,16 +1,19 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,DuelState,DuelEnemy} from '../src/multiplayer/duel';
+import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
 import {HEROES} from '../src/multiplayer/heroes';import {recipe,numberText} from '../src/math';
 const NOW=100000;
 function match(){const s=createDuel('a','왼쪽',17,NOW);joinDuel(s,'b','오른쪽',NOW);applyDuel(s,0,{type:'ready'},NOW,'r1');applyDuel(s,1,{type:'ready'},NOW,'r2');return s;}
 function answer(s:DuelState,side:0|1){const q=s.players[side]!.quote!;return applyDuel(s,side,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},s.updatedAt,'a');}
 function enemy(o:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:500,max:500,x:3,slow:0,stun:0,hits:0,...o};}
-function solve(s:DuelState,side:0|1,operation:'+'|'-'='+'){
- const p=s.players[side]!;for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&recipe(p.board[a],p.board[b],p.board[c],operation))return applyDuel(s,side,{type:'fuse',round:p.round,slots:[a,b,c],operation},s.updatedAt,'f');throw Error('No recipe');
+function recipeSlots(board:number[],operation:'+'|'-'){
+ for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&recipe(board[a],board[b],board[c],operation))return [a,b,c];throw Error('No recipe');
+}
+function solve(s:DuelState,side:0|1){
+ const p=s.players[side]!;return applyDuel(s,side,{type:'fuse',round:p.round,slots:recipeSlots(p.board,'+'),operation:'+'},s.updatedAt,'f');
 }
 test('영웅 30종은 레벨 1~10 각각 3종이며 4프레임 시트와 증가하는 효과를 가진다',()=>{assert.equal(HEROES.length,30);assert.equal(new Set(HEROES.map(h=>h.id)).size,30);for(let l=1;l<=10;l++)assert.equal(HEROES.filter(h=>h.level===l).length,3);for(let i=3;i<30;i++)assert.ok(HEROES[i].hp>HEROES[i-3].hp);assert.ok(HEROES.every(h=>h.hp%10===0));});
-test('블럭 16개는 같은 시드와 문제 순서에서 양쪽에 같고 모든 판에 덧셈·뺄셈 해답이 있다',()=>{
- for(let seed=0;seed<40;seed++)for(let round=0;round<10;round++){const a=decimalBoard(seed,round);assert.equal(a.length,16);assert.deepEqual(a,decimalBoard(seed,round));for(const op of ['+','-'] as const)assert.ok(a.some((v,i)=>a.some((w,j)=>i!==j&&a.some((z,k)=>k!==i&&k!==j&&recipe(v,w,z,op)))));assert.ok(a.every(v=>v%100===0));}
+test('블럭 16개는 같은 시드와 문제 순서에서 양쪽에 같고 모든 판에 덧셈 해답이 있다',()=>{
+ for(let seed=0;seed<40;seed++)for(let round=0;round<10;round++){const a=decimalBoard(seed,round);assert.equal(a.length,16);assert.deepEqual(a,decimalBoard(seed,round));assert.equal(recipeSlots(a,'+').length,3);assert.ok(a.every(v=>v%100===0));}
 });
 test('두 계정이 준비해야 시작하고 제삼자·다른 방 참가자는 들어갈 수 없다',()=>{const s=createDuel('a','가',17,NOW);applyDuel(s,0,{type:'ready'},NOW,'a');assert.equal(s.status,'waiting');joinDuel(s,'b','나',NOW);assert.throws(()=>joinDuel(s,'c','다',NOW));assert.throws(()=>duelSide(s,'c'));assert.equal(duelSide(s,'b'),1);applyDuel(s,1,{type:'ready'},NOW,'b');assert.equal(s.status,'playing');});
 test('기존 타워 구매처럼 정답에만 차감·설치하고 상대 진영·길·점유 칸만 거부한다',()=>{
@@ -41,9 +44,24 @@ test('계산 중 전투가 계속되고 보상은 보관 후 문제 종료에 �
  applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},s.updatedAt,'expiry');s.players[0].escrow=1234;s.players[0].quote!.expires=s.updatedAt+10;advanceDuel(s,s.updatedAt+20);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].escrow,0);
 });
 test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 정답만 알 레벨을 올린다',()=>{
- const s=match(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.equal(solve(s,1,'-').ok,false);assert.equal(s.players[1]!.egg,0);assert.ok(solve(s,1).ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);
+ const s=match(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.ok(solve(s,1).ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);
+ for(const p of s.players){assert.equal(p!.egg,1);assert.equal(p!.solved,1);assert.equal(p!.round,1);}
  const before=JSON.stringify(s.players[0]);assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},NOW,'stale').ok,false);assert.equal(JSON.stringify(s.players[0]),before);
  assert.equal(applyDuel(s,0,{type:'fuse',round:1,slots:[0,0,2],operation:'+'},NOW,'duplicate').ok,false);
+});
+test('양쪽의 올바른 뺄셈 합성 요청도 거부하고 모든 플레이어 상태를 유지한다',()=>{
+ const s=match();
+ for(const side of [0,1] as const){
+  assert.ok(solve(s,side).ok);assert.ok(applyDuel(s,side,{type:'quote',x:side===0?3:20,y:2,typeId:'basic'},NOW,`quote-${side}`).ok);
+  s.players[side]!.escrow=100*(side+1);
+ }
+ for(const side of [0,1] as const){
+  const p=s.players[side]!,slots=recipeSlots(p.board,'-');
+  // A stale or forged client can still send subtraction despite the action type.
+  const action={type:'fuse',round:p.round,slots,operation:'-'} as unknown as DuelAction;
+  const before=structuredClone(s.players),result=applyDuel(s,side,action,NOW,`subtract-${side}`);
+  assert.equal(result.ok,false);assert.match(result.message,/덧셈/);assert.deepEqual(s.players,before);
+ }
 });
 test('연속 정답으로 최고 10레벨 알 한 개만 성장하고 부화는 현재 레벨 영웅 한 마리다',()=>{
  const s=match();for(let i=0;i<10;i++)assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,10);const board=[...s.players[0].board];assert.equal(solve(s,0).ok,false);assert.deepEqual(s.players[0].board,board);
