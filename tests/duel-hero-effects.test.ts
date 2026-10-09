@@ -1,12 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {activeDuelHeroEffects,advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,DuelEnemy,DuelState} from '../src/multiplayer/duel';
+import {activeDuelHeroEffects,advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,DUEL_PREPARATION_SECONDS,DuelEnemy,DuelState} from '../src/multiplayer/duel';
 
-const NOW=100000;
+const ROOM_NOW=100000,NOW=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
 function match(mapId?:string):DuelState{
- const s=createDuel('a','왼쪽',17,NOW,1,{rewardHeroes:['hero-3-1'],rewardHero:'hero-3-1'},mapId);
- joinDuel(s,'b','오른쪽',NOW);
- applyDuel(s,0,{type:'ready'},NOW,'r1');applyDuel(s,1,{type:'ready'},NOW,'r2');
+ const s=createDuel('a','왼쪽',17,ROOM_NOW,1,{rewardHeroes:['hero-3-1'],rewardHero:'hero-3-1'},mapId);
+ joinDuel(s,'b','오른쪽',ROOM_NOW);
+ assert.ok(applyDuel(s,0,{type:'ready'},ROOM_NOW,'r1').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'r2').ok);assert.equal(s.status,'preparing');
+ s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);
  return s;
 }
 function enemy(extra:Partial<DuelEnemy>={}):DuelEnemy{

@@ -5,7 +5,7 @@ import {onAuthStateChanged,User} from 'firebase/auth';
 import {auth,firebaseEmulator} from './firebase';
 import {mountAccountForm} from '../account-form';
 import {DuelScene,DuelView} from './scene';
-import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower} from './duel';
+import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_PREPARATION_SECONDS} from './duel';
 import {HostPeer} from './peer';
 import {ComputerPeer} from './computer-peer';
 import {DEFAULT_DUEL_MAP_ID,duelMap,isDuelMapId} from './duel-maps';
@@ -51,7 +51,7 @@ game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 �
 const purchasePanel=mountPurchasePanel(document.getElementById('field')!,action=>send(action));
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;purchasePanel.feedback(text);const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
-function refresh(){purchasePanel.sync(state&&canPurchaseDuelTower(state)?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=240?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
+function refresh(){purchasePanel.sync(state?.status==='preparing'?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=240?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}
 function show(kind:string,html:string){dialogKind=kind;dialog.dataset.screen=kind;content.innerHTML=html;const heading=content.querySelector('h2');if(heading){heading.id||='duel-dialog-title';dialog.setAttribute('aria-labelledby',heading.id);}app.dataset.duelView=!state||['auth','lobby','computer-levels','map-select','create-room','room-password','connection','profile','history'].includes(kind)?'hall':'battle';dialog.classList.remove('hidden');if(scene.input)scene.input.enabled=false;refresh();}
 function close(){dialogKind='';app.dataset.duelView='battle';dialog.classList.add('hidden');if(scene.input)scene.input.enabled=true;refresh();}
 function errorText(e:unknown){const code=(e as {code?:string})?.code||'';const labels:Record<string,string>={'auth/email-already-in-use':'이미 가입한 이메일이에요. 로그인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/weak-password':'비밀번호는 6글자 이상 적어 주세요.','auth/invalid-email':'이메일 주소를 확인해 주세요.','auth/too-many-requests':'잠시 기다렸다가 다시 로그인해 주세요.','auth/network-request-failed':'인터넷 연결을 확인해 주세요.','functions/unauthenticated':'다시 로그인해 주세요.','functions/resource-exhausted':'잠시 뒤 다시 눌러 주세요.'};return labels[code]||(e as Error)?.message||'연결을 확인하고 다시 시도해 주세요.';}
@@ -83,18 +83,18 @@ function mapScreen(backTo:()=>void){
 }
 function computerScreen(){
  if(!user||auth?.currentUser?.uid!==user.uid){disposeRoom();authScreen();return;}
- if(peer instanceof HostPeer&&state?.status==='playing'){status('온라인 대전을 마친 뒤 컴퓨터와 대결할 수 있어요.');return;}
+ if(peer instanceof HostPeer&&state&&(state.status==='preparing'||state.status==='playing')){status('온라인 대전을 마친 뒤 컴퓨터와 대결할 수 있어요.');return;}
  const saved=loadComputerProgress(),current=peer instanceof ComputerPeer&&state?.status!=='finished';
  show('computer-levels',`<p class="eyebrow">컴퓨터와 대결 · 수호자 연습</p><h2>겨룰 상대를 선택하세요</h2><p class="duel-intro">상대 레벨이 높을수록 계산과 전략이 어려워져요. 두 사람에게 같은 코인과 규칙이 적용돼요.</p>${duelMapSummaryHTML(selectedMapId)}<div class="computer-opponent-grid">${COMPUTER_OPPONENTS.map(o=>`<button class="computer-opponent-card" data-computer-level="${o.level}"><span class="computer-opponent-portrait" style="background-image:url('${artURL('cpu-opponent-'+o.level+'-v1')}')" aria-hidden="true"></span><span class="computer-opponent-level">Lv.${o.level} · ${saved.wins[o.level-1]?'승리 '+saved.wins[o.level-1]+'회':'도전하기'}</span><strong>${o.name}</strong><span class="computer-opponent-title">${o.title}</span><small>${o.description}</small></button>`).join('')}</div><p class="computer-progress-note">컴퓨터 대전 결과는 이 브라우저에만 저장돼요. 온라인 계정의 승패와 경험치에는 포함되지 않아요.${current?' 새 상대를 고르면 현재 연습 대전은 끝나요.':''}</p><p data-feedback role="status"></p><div class="duel-row">${current?'<button class="duel-primary" id="computer-continue">현재 대전 계속하기</button>':''}<button id="computer-back">온라인 대기실</button><button id="computer-settings">게임 설정</button></div>`);
  bind('choose-duel-map',()=>mapScreen(computerScreen));
  content.querySelectorAll<HTMLButtonElement>('[data-computer-level]').forEach(button=>button.onclick=()=>startComputer(Number(button.dataset.computerLevel)));
- bind('computer-continue',close);bind('computer-back',async()=>{if(current&&state?.status==='playing'){await send({type:'surrender'});await saveFinished();}disposeRoom();lobby();});bind('computer-settings',()=>settings(true,true));
+ bind('computer-continue',close);bind('computer-back',async()=>{if(current&&state&&(state.status==='preparing'||state.status==='playing')){await send({type:'surrender'});await saveFinished();}disposeRoom();lobby();});bind('computer-settings',()=>settings(true,true));
 }
 function startComputer(level:number,mapId=selectedMapId){
  if(!user||auth?.currentUser?.uid!==user.uid){disposeRoom();authScreen();return;}
- if(peer instanceof HostPeer&&state?.status==='playing')return;
+ if(peer instanceof HostPeer&&state&&(state.status==='preparing'||state.status==='playing'))return;
  disposeRoom();sound.resume();const local=new ComputerPeer({uid:user.uid,name:(user.displayName||'나의 수호자').slice(0,16),rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},level,{mapId});
- peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='게임 시작을 누른 뒤 타워를 설치해요. 계산 중에도 전투는 계속 진행돼요.';lastRound=0;
+ peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='게임 시작을 누르면 1분 동안 문제를 풀어 타워를 비축해요. 전투가 시작되면 바로 설치할 수 있어요.';lastRound=0;
  local.onState=(s,c)=>{if(peer!==local)return;state=s;connected=c;const p=s.players[0];if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();if(s.status==='finished'&&recorded!==local.id){void saveFinished();result();}};
  close();
 }
@@ -107,7 +107,7 @@ function lobby(){
  bind('computer-mode',computerScreen);bind('worksheet-heroes',()=>rewardCollection(true));bind('duel-settings',()=>settings(true));bind('refresh-rooms',()=>loadRooms());
  bind('create-room',()=>{if(canEnterRoom())createRoomScreen();});
  bind('return-room',()=>peer?(state?.players[1]?close():connectionScreen()):status('먼저 방을 만들거나 참가해 주세요.'));
- bind('close-current-room',()=>{if(state?.status==='playing'){status('진행 중인 대전은 나가기 버튼으로 끝내 주세요.');return;}void cancelRoom();});
+ bind('close-current-room',()=>{if(state&&(state.status==='preparing'||state.status==='playing')){status('진행 중인 대전은 나가기 버튼으로 끝내 주세요.');return;}void cancelRoom();});
  bind('heroes-book',()=>heroBook(true));
  roomRowsSignature='';renderRooms();
 }
@@ -159,7 +159,7 @@ function watchRoom(local:HostPeer){
  clearTimeout(roomPoll);let polling=false,accepted=false,acceptedAt=0,connectedAck=false;const enteredAt=Date.now();
  let watching=true;const poll=async()=>{if(!watching||polling||peer!==local)return;polling=true;try{
   const connected=local.connected&&!!local.state?.players[1];
-  if(local.state?.status==='playing'||local.state?.status==='finished'){if(local.side===0)await closeListing();if(!listingId||local.side===1){watching=false;clearTimeout(roomPoll);roomPoll=undefined;}return;}
+  if(local.state&&local.state.status!=='waiting'){if(local.side===0)await closeListing();if(!listingId||local.side===1){watching=false;clearTimeout(roomPoll);roomPoll=undefined;}return;}
   if(connected){if(local.side===0&&!connectedAck&&listingId){await roomRequest({action:'connected',id:listingId});connectedAck=true;}watching=false;clearTimeout(roomPoll);roomPoll=undefined;return;}
   if(Date.now()+serverOffset>=listingExpires)throw Error('방을 만든 뒤 5분이 지나 목록에서 사라졌어요. 새 방을 만들어 주세요.');
   if(local.side===0&&!accepted){const result=await roomRequest<{answer:string;guestUid:string}>({action:'poll',id:listingId});if(result.answer){local.allowedGuestUid=result.guestUid;accepted=true;acceptedAt=Date.now();await local.accept(result.answer);}}
@@ -170,7 +170,7 @@ function watchRoom(local:HostPeer){
 function startPeer(){
  disposeRoom();const local=new HostPeer({uid:user!.uid,name:(user!.displayName||'수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()});peer=local;slots=[];selectedType='';selectedTower=0;
  local.onStatus=status;local.onState=(s,c)=>{if(peer!==local)return;state=s;side=local.side;room=local.id.slice(0,8).toUpperCase();connected=c;const p=s.players[side]!;if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();
-  if(s.status==='playing'||s.status==='finished'){if(local.side===0&&listingId)void closeListing();}
+  if(s.status!=='waiting'){if(local.side===0&&listingId)void closeListing();}
   if(s.status==='finished'){if(recorded!==local.id){void saveFinished();result();}return;}
   if(c&&s.players[1]&&['connection','room-password','create-room'].includes(dialogKind))close();
  };
@@ -195,7 +195,7 @@ async function history(){
  for(const r of rows){const details=document.createElement('details'),title=document.createElement('summary');title.textContent=`${new Date(r.endedAt).toLocaleString('ko-KR')} · ${r.outcome==='win'?'승리':r.outcome==='loss'?'패배':'무승부'} · 경험치 +${r.experienceGain} · 오답 ${r.wrongQuestions.length}문항`;details.append(title);for(const q of r.wrongQuestions){const p=document.createElement('p');p.textContent=wrongText(q);details.append(p);}root.append(details);}
  }catch(e){status(errorText(e));}
 }
-async function exitGame(){if(state?.status==='playing'){await send({type:'surrender'});await saveFinished();}disposeRoom();back();}
+async function exitGame(){if(state&&(state.status==='preparing'||state.status==='playing')){await send({type:'surrender'});await saveFinished();}disposeRoom();back();}
 function heroBook(fromLobby=false){const egg=state?.players[side]?.egg??0;show('heroes',`<p class="eyebrow">돌의 영웅 · 레벨마다 3종</p><h2>${fromLobby?'영웅 30종':'부화할 영웅 선택 · 영웅 알 Lv.'+egg}</h2><p>가속형은 주변 아군을 빠르게, 군집형은 돌 병사와 함께, 수호형은 감속에 강해요. 덧셈 정답을 더 맞히면 더 높은 레벨의 영웅 한 마리가 나와요.</p><div class="hero-grid">${(fromLobby?HEROES:heroesAtLevel(egg)).map(h=>`<button class="hero-card" data-hero="${h.id}" ${fromLobby?'disabled':''}><span class="hero-crop" style="background-image:url('${artURL(h.sheet)}');background-position:0% ${h.row*50}%"></span><strong>Lv.${h.level} · ${h.name}</strong><span>체력 ${numberText(h.hp)}</span><small>${h.description}</small>${fromLobby?'':'<span class="duel-gold">이 영웅 부화 ▶</span>'}</button>`).join('')}</div><p data-feedback role="status"></p><button id="hero-back">${fromLobby?'대기실로':'더 성장시키기 · 닫기'}</button>`);
  bind('hero-back',()=>fromLobby?lobby():close());content.querySelectorAll<HTMLButtonElement>('[data-hero]').forEach(b=>b.onclick=async()=>{const r=await send({type:'hatch',heroId:b.dataset.hero!});if(r?.ok){sound.play('kill');close();}});
 }
@@ -213,14 +213,14 @@ function result(){
  }
  const won=state?.winner===side,draw=state?.winner===null,record=state&&peer?finishedRecord(state,side,peer.id):null;show('result',`<p class="eyebrow">호스트 직접 연결 · 대전 종료</p><h2>${draw?'함께 지킨 불꽃 · 무승부':won?'상대 불꽃을 이겼어요!':'다음에는 다른 전략으로!'}</h2><p id="result-reason"></p><p>합성 정답 ${state?.players[side]?.solved??0}회 · 남은 불꽃 ${numberText(state?.players[side]?.flame??0)} · 경험치 +${record?matchExperience(record):0}</p><p id="result-save"></p><div id="result-wrong"></div><div class="duel-row"><button id="retry-save">기록 저장 다시 시도</button><button class="duel-primary" id="result-lobby">새 대전 준비</button></div>`);document.getElementById('result-reason')!.textContent=state?.reason||'';document.getElementById('result-save')!.textContent=record?saveMessage:'대전 시작 전 종료된 방은 승패·경험치에 포함하지 않아요.';
  const root=document.getElementById('result-wrong')!;for(const q of record?.wrongQuestions??[]){const p=document.createElement('p');p.textContent=wrongText(q);root.append(p);}bind('retry-save',saveFinished);bind('result-lobby',()=>{disposeRoom();lobby();});}
-scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;if(p.quote){status('하단의 설치 계산을 먼저 마쳐 주세요.');return;}
+scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;if(state.status!=='playing'){status('준비 시간에는 타워를 비축해요. 1분이 끝나면 배치할 수 있어요.');return;}
  const tower=p.towers.find(t=>t.x===x&&t.y===y);if(tower){selectedTower=tower.id;selectedType='';refresh();return;}
- if(selectedType){if(!canPurchaseDuelTower(state)){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'quote',x,y,typeId:selectedType});}
+ if(selectedType){if(!canPurchaseDuelTower(state)){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'build',x,y,typeId:selectedType});}
 };
 scene.onAction=async key=>{sound.resume();sound.play('ui');
  if(key.startsWith('type:')&&(!state||!canPurchaseDuelTower(state))){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}
- if(key.startsWith('type:')&&state?.players[side]?.quote){status('하단의 설치 계산을 먼저 마쳐 주세요.');return;}
- if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;status('내 쪽 빈 바닥을 골라요. 계산 중에도 전투는 계속돼요.');scene.preview(-1,-1);return;}
+ if(key.startsWith('type:')&&state?.players[side]?.quote){status('하단의 비축 문제를 풀거나 취소해 주세요.');return;}
+ if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;scene.preview(-1,-1);if(state?.status==='preparing'){await send({type:'prepare-quote',typeId:selectedType});}else{status('내 쪽 빈 바닥을 선택하면 비축 타워부터 설치해요. 비축이 없으면 코인으로 바로 구매해요.');}return;}
  if(key.startsWith('block:')){const i=Number(key.slice(6));if(!slots.includes(i)&&slots.length<3)slots.push(i);refresh();return;}
  if(key.startsWith('slot:')){slots.splice(Number(key.slice(5)),1);refresh();return;}
  switch(key){
@@ -236,11 +236,11 @@ scene.onAction=async key=>{sound.resume();sound.play('ui');
  }
 };
 let controlsSignature='';
-scene.onControls=()=>{if(scene.input)scene.input.enabled=dialog.classList.contains('hidden');const p=state?.players[side];document.getElementById('duel-state')!.textContent=state&&p?`방 ${room} · ${state.status} · 내 불꽃 ${numberText(p.flame)} · 코인 ${numberText(p.money)} · 학습 Lv.${state.learningLevel??1} ${learningDescription(state.learningLevel??1)} · 영웅 알 Lv.${p.egg} · 영웅 ${state.enemies.filter(e=>e.hero).length}마리 · ${state.log.at(-1)||''}`:'대전 대기실';const container=document.getElementById('duel-controls')!;const signature=JSON.stringify([dialog.classList.contains('hidden'),[...scene.controls].map(([key,c])=>[key,c.label,c.enabled])]);if(signature===controlsSignature)return;controlsSignature=signature;container.replaceChildren();if(!dialog.classList.contains('hidden'))return;for(const [key,c]of scene.controls){const b=document.createElement('button');b.type='button';b.dataset.duelAction=key;b.textContent=c.label;b.disabled=!c.enabled;b.onclick=c.run;container.append(b);}};
+scene.onControls=()=>{if(scene.input)scene.input.enabled=dialog.classList.contains('hidden');const p=state?.players[side];document.getElementById('duel-state')!.textContent=state&&p?`방 ${room} · ${state.status} · 내 불꽃 ${numberText(p.flame)} · ${state.status==='preparing'?'준비 예산':'코인'} ${numberText(p.money)} · 비축 타워 ${Object.values(p.stock).reduce((a,b)=>a+b,0)}개${state.status==='preparing'?' · 준비 '+Math.ceil(Math.max(0,DUEL_PREPARATION_SECONDS-state.preparationElapsed))+'초':''} · 학습 Lv.${state.learningLevel??1} ${learningDescription(state.learningLevel??1)} · 영웅 알 Lv.${p.egg} · 영웅 ${state.enemies.filter(e=>e.hero).length}마리 · ${state.log.at(-1)||''}`:'대전 대기실';const container=document.getElementById('duel-controls')!;const signature=JSON.stringify([dialog.classList.contains('hidden'),[...scene.controls].map(([key,c])=>[key,c.label,c.enabled])]);if(signature===controlsSignature)return;controlsSignature=signature;container.replaceChildren();if(!dialog.classList.contains('hidden'))return;for(const [key,c]of scene.controls){const b=document.createElement('button');b.type='button';b.dataset.duelAction=key;b.textContent=c.label;b.disabled=!c.enabled;b.onclick=c.run;container.append(b);}};
 async function accountChanged(value:User|null){const previousUid=user?.uid;user=value;progressLoading=!!value;if(!value){progress=emptyProgress();disposeRoom();authScreen();return;}if(previousUid&&previousUid!==value.uid)disposeRoom();if(!(peer instanceof ComputerPeer))lobby();try{const loaded=await loadProgress(value.uid);if(user?.uid!==value.uid)return;progress=loaded;const saved=await flushResults(value.uid);if(user?.uid!==value.uid)return;if(saved.progress)progress=saved.progress;const oldMatches=await loadLearningHistory(value.uid);if(user?.uid===value.uid)importLearningRecords(oldMatches);}catch(e){status(errorText(e));}finally{if(user?.uid===value.uid){progressLoading=false;if(dialogKind==='lobby')lobby();}}}
 if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitting==='true')return;void accountChanged(value);});else authScreen();
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
-window.addEventListener('beforeunload',e=>{if(state?.status==='playing'){e.preventDefault();e.returnValue='';}});
+window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
 window.addEventListener('pagehide',()=>{peer?.dispose();sound.dispose();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&['heroes','leave'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});

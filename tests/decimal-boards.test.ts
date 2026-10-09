@@ -1,10 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {decimalBoard,decimalTriples,learningLevel} from '../src/multiplayer/decimal-boards';
-import {createDuel,joinDuel,applyDuel,advanceDuel} from '../src/multiplayer/duel';
+import {createDuel,joinDuel,applyDuel,advanceDuel,DUEL_PREPARATION_SECONDS,DuelState} from '../src/multiplayer/duel';
 import {emptyProgress,progressAfter,MatchRecord} from '../src/multiplayer/records';
 import {numberText} from '../src/math';
 const NOW=100000;
+const START=NOW+DUEL_PREPARATION_SECONDS*1000;
+function startCombat(s:DuelState){
+ applyDuel(s,0,{type:'ready'},NOW,'r0');applyDuel(s,1,{type:'ready'},NOW,'r1');
+ assert.equal(s.status,'preparing');s.players.forEach(p=>p!.lastSeen=START);advanceDuel(s,START);assert.equal(s.status,'playing');
+}
 function recipes(board:number[]){
  const involved=new Set<number>();
  for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&board[a]+board[b]===board[c]){involved.add(a);involved.add(b);involved.add(c);}
@@ -39,7 +44,7 @@ test('풀이가 100판 진행되어도 초급 계정의 소수 자릿수가 갑�
 test('계정 레벨이 다르면 낮은 레벨로 두 사람의 판을 다시 맞추고 경기 내 난이도는 고정한다',()=>{
  const s=createDuel('high','고급',17,NOW,10);assert.equal(s.learningLevel,10);
  joinDuel(s,'low','초급',NOW,1);assert.equal(s.learningLevel,1);assert.deepEqual(s.players[0].board,s.players[1]!.board);assert.ok(s.players[0].board.every(n=>n<1000&&n%100===0));
- applyDuel(s,0,{type:'ready'},NOW,'r0');applyDuel(s,1,{type:'ready'},NOW,'r1');s.players.forEach(p=>p!.lastSeen=NOW+90000);advanceDuel(s,NOW+90000);assert.equal(s.learningLevel,1);
+ startCombat(s);s.players.forEach(p=>p!.lastSeen=START+90000);advanceDuel(s,START+90000);assert.equal(s.learningLevel,1);
  const high=createDuel('a','가',17,NOW,12);joinDuel(high,'b','나',NOW,9);assert.equal(high.learningLevel,9);assert.deepEqual(high.players[0].board,high.players[1]!.board);
 });
 test('연속 승리 경험치로 계정 레벨이 오르면 다음 경기의 계산도 어려워진다',()=>{
@@ -48,8 +53,8 @@ test('연속 승리 경험치로 계정 레벨이 오르면 다음 경기의 계
  const s=createDuel('a','가',18,NOW,p.level);joinDuel(s,'b','나',NOW,p.level);assert.equal(s.learningLevel,4);assert.ok(s.players[0].board.some(n=>n%100!==0));
 });
 test('합성 오답에는 시간에 따른 대전 레벨 대신 실제 문항 난이도를 기록한다',()=>{
- const s=createDuel('a','가',17,NOW,9);joinDuel(s,'b','나',NOW,9);applyDuel(s,0,{type:'ready'},NOW,'r0');applyDuel(s,1,{type:'ready'},NOW,'r1');const board=s.players[0].board;
+ const s=createDuel('a','가',17,NOW,9);joinDuel(s,'b','나',NOW,9);startCombat(s);const board=s.players[0].board;
  let slots:number[]=[];for(let a=0;a<16&&!slots.length;a++)for(let b=0;b<16&&!slots.length;b++)for(let c=0;c<16&&!slots.length;c++)if(a!==b&&a!==c&&b!==c&&board[a]+board[b]<10000&&board[a]+board[b]!==board[c])slots=[a,b,c];
- assert.equal(applyDuel(s,0,{type:'fuse',operation:'+',round:0,slots},NOW,'wrong').ok,false);assert.equal(s.players[0].wrongQuestions[0].level,9);
+ assert.equal(applyDuel(s,0,{type:'fuse',operation:'+',round:0,slots},START,'wrong').ok,false);assert.equal(s.players[0].wrongQuestions[0].level,9);
  assert.equal(s.players[0].wrongQuestions[0].submitted,numberText(board[slots[2]]));assert.equal(s.players[0].egg,0);assert.deepEqual(s.players[0].board,board);
 });

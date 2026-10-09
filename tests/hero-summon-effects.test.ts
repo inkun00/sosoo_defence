@@ -1,17 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type Phaser from 'phaser';
-import {createDuel,joinDuel,applyDuel,type DuelState,type Side} from '../src/multiplayer/duel';
+import {createDuel,joinDuel,applyDuel,advanceDuel,DUEL_PREPARATION_SECONDS,type DuelState,type Side} from '../src/multiplayer/duel';
 import {HeroSummonStream,type HeroSummonEvent} from '../src/multiplayer/hero-summon-stream';
 import {HeroSummonEffects,heroSummonPose} from '../src/multiplayer/hero-summon-effects';
 import {heroSummonStyle} from '../src/hero-summon-style';
 import {duelPathDistance} from '../src/multiplayer/duel-maps';
 
-const now=100000;
+const ROOM_NOW=100000,now=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
 function state():DuelState{
- const s=createDuel('left','나',17,now,10,{rewardHeroes:['hero-1-0','hero-10-1'],rewardHero:'hero-1-0'});
- joinDuel(s,'right','친구',now,10,{rewardHeroes:['hero-10-1'],rewardHero:'hero-10-1'});
- applyDuel(s,0,{type:'ready'},now,'l');applyDuel(s,1,{type:'ready'},now,'r');return s;
+ const s=createDuel('left','나',17,ROOM_NOW,10,{rewardHeroes:['hero-1-0','hero-10-1'],rewardHero:'hero-1-0'});
+ joinDuel(s,'right','친구',ROOM_NOW,10,{rewardHeroes:['hero-10-1'],rewardHero:'hero-10-1'});
+ assert.ok(applyDuel(s,0,{type:'ready'},ROOM_NOW,'l').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'r').ok);assert.equal(s.status,'preparing');
+ s.players.forEach(p=>p!.lastSeen=now);advanceDuel(s,now);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);return s;
 }
 function summon(s:DuelState,owner:Side=0):void{assert.equal(applyDuel(s,owner,{type:'summon-reward'},now,'reserve').ok,true);s.revision++;}
 

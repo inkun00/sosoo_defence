@@ -1,8 +1,10 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
 import {HEROES} from '../src/multiplayer/heroes';import {recipe,numberText} from '../src/math';
-const NOW=100000;
-function match(){const s=createDuel('a','왼쪽',17,NOW);joinDuel(s,'b','오른쪽',NOW);applyDuel(s,0,{type:'ready'},NOW,'r1');applyDuel(s,1,{type:'ready'},NOW,'r2');return s;}
+const NOW=160000,PREP_NOW=NOW-60000;
+function preparation(){const s=createDuel('a','왼쪽',17,PREP_NOW);joinDuel(s,'b','오른쪽',PREP_NOW);applyDuel(s,0,{type:'ready'},PREP_NOW,'r1');applyDuel(s,1,{type:'ready'},PREP_NOW,'r2');assert.equal(s.status,'preparing');return s;}
+function match(){const s=preparation();s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');return s;}
+function build(s:DuelState,side:0|1,typeId:string,x:number,y:number){s.players[side]!.money=8800;return applyDuel(s,side,{type:'build',typeId,x,y},s.updatedAt,'build');}
 function answer(s:DuelState,side:0|1){const q=s.players[side]!.quote!;return applyDuel(s,side,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},s.updatedAt,'a');}
 function enemy(o:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:500,max:500,x:3,slow:0,stun:0,hits:0,...o};}
 function recipeSlots(board:number[],operation:'+'|'-'){
@@ -15,33 +17,30 @@ test('영웅 30종은 레벨 1~10 각각 3종이며 4프레임 시트와 증가�
 test('블럭 16개는 같은 시드와 문제 순서에서 양쪽에 같고 모든 판에 덧셈 해답이 있다',()=>{
  for(let seed=0;seed<40;seed++)for(let round=0;round<10;round++){const a=decimalBoard(seed,round);assert.equal(a.length,16);assert.deepEqual(a,decimalBoard(seed,round));assert.equal(recipeSlots(a,'+').length,3);assert.ok(a.every(v=>v%100===0));}
 });
-test('두 계정이 준비해야 시작하고 제삼자·다른 방 참가자는 들어갈 수 없다',()=>{const s=createDuel('a','가',17,NOW);applyDuel(s,0,{type:'ready'},NOW,'a');assert.equal(s.status,'waiting');joinDuel(s,'b','나',NOW);assert.throws(()=>joinDuel(s,'c','다',NOW));assert.throws(()=>duelSide(s,'c'));assert.equal(duelSide(s,'b'),1);applyDuel(s,1,{type:'ready'},NOW,'b');assert.equal(s.status,'playing');});
-test('기존 타워 구매처럼 정답에만 차감·설치하고 상대 진영·길·점유 칸만 거부한다',()=>{
- const s=match();assert.equal(applyDuel(s,0,{type:'quote',x:13,y:2,typeId:'basic'},NOW,'x').ok,false);assert.equal(validDuelCell(s,0,3,3),false);
- assert.ok(applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'q').ok);assert.equal(s.players[0].money,8800);assert.equal(s.players[0].towers.length,0);
- assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'1'},NOW,'w').ok,false);assert.equal(s.players[0].money,8800);assert.ok(answer(s,0).ok);assert.equal(s.players[0].money,8700);
- assert.equal(validDuelCell(s,0,3,2),false);assert.ok(validDuelCell(s,0,4,2));assert.ok(validDuelCell(s,0,4,1));assert.ok(validDuelCell(s,0,5,2));assert.ok(validDuelCell(s,0,5,0));assert.ok(validDuelCell(s,0,6,2));assert.ok(validDuelCell(s,0,3,5));assert.equal(s.players[1]!.money,8800);
+test('두 계정이 준비해야 시작하고 제삼자·다른 방 참가자는 들어갈 수 없다',()=>{const s=createDuel('a','가',17,NOW);applyDuel(s,0,{type:'ready'},NOW,'a');assert.equal(s.status,'waiting');joinDuel(s,'b','나',NOW);assert.throws(()=>joinDuel(s,'c','다',NOW));assert.throws(()=>duelSide(s,'c'));assert.equal(duelSide(s,'b'),1);applyDuel(s,1,{type:'ready'},NOW,'b');assert.equal(s.status,'preparing');assert.equal(s.startedAt,0);});
+test('전투 중 타워는 문제 없이 코인으로 설치하고 상대 진영·길·점유 칸은 거부한다',()=>{
+ const s=match(),p=s.players[0];p.money=8800;
+ assert.equal(applyDuel(s,0,{type:'build',x:13,y:2,typeId:'basic'},NOW,'x').ok,false);assert.equal(validDuelCell(s,0,3,3),false);
+ assert.ok(applyDuel(s,0,{type:'build',x:3,y:2,typeId:'basic'},NOW,'q').ok);assert.equal(p.money,8700);assert.equal(p.quote,null);
+ assert.equal(validDuelCell(s,0,3,2),false);assert.ok(validDuelCell(s,0,4,2));assert.ok(validDuelCell(s,0,4,1));assert.ok(validDuelCell(s,0,5,2));assert.ok(validDuelCell(s,0,5,0));assert.ok(validDuelCell(s,0,6,2));assert.ok(validDuelCell(s,0,3,5));assert.equal(s.players[1]!.money,0);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},NOW,'repeat').ok,false);
- assert.ok(applyDuel(s,0,{type:'sell',towerId:s.players[0].towers[0].id},NOW,'reclaim').ok);assert.ok(validDuelCell(s,0,5,2),'회수한 칸은 다시 사용할 수 있다');
+ assert.ok(applyDuel(s,0,{type:'sell',towerId:p.towers[0].id},NOW,'reclaim').ok);assert.equal(p.money,8800);assert.ok(validDuelCell(s,0,3,2));
 });
-
-test('1:1 구매 문제도 취소·회수마다 달라지고 오답 재시도와 상대의 견적은 유지된다',()=>{
- const s=match(),p=s.players[0];let previous='';const formulas=new Set<string>();
+test('준비 문제는 취소할 때도 바뀌고 오답 재시도와 상대의 준비 예산은 유지된다',()=>{
+ const s=preparation(),p=s.players[0];let previous='';const formulas=new Set<string>();
  for(let i=0;i<12;i++){
-  const nonce=`q-${i}`;assert.ok(applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,nonce).ok);
+  const nonce=`q-${i}`;assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},PREP_NOW,nonce).ok);
   const q=p.quote!,formula=`${q.before}-${q.cost}`;assert.notEqual(formula,previous);previous=formula;formulas.add(formula);
-  assert.equal(applyDuel(s,0,{type:'answer',nonce,answer:'0'},NOW,`wrong-${i}`).ok,false);assert.equal(p.quote,q);
-  if(i%2===0)applyDuel(s,0,{type:'cancel'},NOW,`cancel-${i}`);
-  else {assert.ok(answer(s,0).ok);assert.ok(applyDuel(s,0,{type:'sell',towerId:p.towers[0].id},NOW,`sell-${i}`).ok);}
-  assert.equal(p.money,8800);assert.equal(s.players[1]!.purchaseVariation,undefined);
+  assert.equal(applyDuel(s,0,{type:'answer',nonce,answer:'0'},PREP_NOW,`wrong-${i}`).ok,false);assert.equal(p.quote,q);
+  applyDuel(s,0,{type:'cancel'},PREP_NOW,`cancel-${i}`);
+  assert.equal(p.money,8800);assert.equal(s.players[1]!.purchaseVariation,undefined);assert.equal(p.towers.length,0);
  }
  assert.ok(formulas.size>=3);
 });
-test('계산 중 전투가 계속되고 보상은 보관 후 문제 종료에 반영되며 만료도 환급한다',()=>{
- const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'a');answer(s,0);applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},NOW,'b');s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);
- assert.equal(s.players[0].money,8700);assert.ok(s.players[0].escrow>0);assert.equal(s.enemies.length,0);assert.ok(s.elapsed>0);const escrow=s.players[0].escrow;
- applyDuel(s,0,{type:'cancel'},s.updatedAt,'c');assert.equal(s.players[0].money,8700+escrow);assert.equal(s.players[0].escrow,0);
- applyDuel(s,0,{type:'quote',x:6,y:2,typeId:'double'},s.updatedAt,'expiry');s.players[0].escrow=1234;s.players[0].quote!.expires=s.updatedAt+10;advanceDuel(s,s.updatedAt+20);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].escrow,0);
+test('준비 종료 뒤에는 전투 보상을 즉시 코인에 반영하고 설치 문제를 띄우지 않는다',()=>{
+ const s=match();assert.ok(build(s,0,'basic',3,2).ok);s.players[0].money=0;s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);
+ assert.ok(s.players[0].money>0);assert.equal(s.players[0].escrow,0);assert.equal(s.enemies.length,0);assert.ok(s.elapsed>0);
+ const money=s.players[0].money;assert.equal(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},s.updatedAt,'forged').ok,false);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].money,money);
 });
 test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 정답만 알 레벨을 올린다',()=>{
  const s=match(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.ok(solve(s,1).ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);
@@ -52,7 +51,7 @@ test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 
 test('양쪽의 올바른 뺄셈 합성 요청도 거부하고 모든 플레이어 상태를 유지한다',()=>{
  const s=match();
  for(const side of [0,1] as const){
-  assert.ok(solve(s,side).ok);assert.ok(applyDuel(s,side,{type:'quote',x:side===0?3:20,y:2,typeId:'basic'},NOW,`quote-${side}`).ok);
+  assert.ok(solve(s,side).ok);assert.ok(build(s,side,'basic',side===0?3:20,2).ok);
   s.players[side]!.escrow=100*(side+1);
  }
  for(const side of [0,1] as const){
@@ -76,19 +75,19 @@ test('가속은 같은 방향의 주변 아군에게만 적용되고 수호 영�
 });
 test('기본 웨이브는 8초부터 양쪽 대칭이고 시간에 따라 레벨이 증가한다',()=>{const s=match();advanceDuel(s,NOW+8000);assert.equal(s.enemies.length,2);assert.equal(s.enemies[0].hp,s.enemies[1].hp);assert.equal(s.enemies[0].hp%100,0);s.players.forEach(p=>p!.lastSeen=NOW+35000);advanceDuel(s,NOW+35000);assert.ok(s.enemies.some(e=>e.level===2));});
 test('처치된 몬스터의 마지막 체력 뺄셈도 발사 기록에 남고 실제 코인 보상은 유효 타격 효율을 따른다',()=>{
- const a=match(),b=match();for(const s of [a,b]){applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'basic'},NOW,'shot');answer(s,0);s.enemies=[enemy({hp:100,max:500,hits:s===a?2:10})];}
+ const a=match(),b=match();for(const s of [a,b]){assert.ok(build(s,0,'basic',3,2).ok);s.enemies=[enemy({hp:100,max:500,hits:s===a?2:10})];}
  const before=a.players[0].money;advanceDuel(a,NOW+100);advanceDuel(b,NOW+100);assert.equal(a.enemies.length,0);assert.equal(a.shots.length,1);assert.equal(a.shots[0].before,100);assert.equal(a.shots[0].unit,100);assert.equal(a.shots[0].after,0);assert.ok(a.players[0].money>b.players[0].money);assert.ok(a.players[0].money-before<=9000);assert.equal(a.players[0].money%100,0);
  advanceDuel(a,NOW+3000);assert.equal(a.shots.length,0);
 });
 test('타워가 회수되어도 발사 기록은 고유 발사체 종류와 출발 칸을 유지한다',()=>{
- const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'double'},NOW,'origin');answer(s,0);
+ const s=match();assert.ok(build(s,0,'double',3,2).ok);
  s.enemies=[enemy({hp:500,max:500})];advanceDuel(s,NOW+100);
  const shot=s.shots[0];assert.ok(shot);assert.equal(shot.typeId,'double');assert.equal(shot.fromX,3);assert.equal(shot.fromY,2);
  assert.ok(applyDuel(s,0,{type:'sell',towerId:shot.towerId},s.updatedAt,'sold').ok);
  assert.equal(s.players[0].towers.length,0);assert.equal(s.shots[0],shot);assert.equal(shot.fromX,3);
 });
 test('호스트 판정은 초과 피해를 거부하고 상대 불꽃 파괴·시간제한·연결 종료를 처리한다',()=>{
- const s=match();applyDuel(s,0,{type:'quote',x:3,y:2,typeId:'double'},NOW,'t');answer(s,0);s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);assert.equal(s.enemies[0].hp,100);assert.ok(s.log.some(l=>l.includes('공격력이')));
+ const s=match();assert.ok(build(s,0,'double',3,2).ok);s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);assert.equal(s.enemies[0].hp,100);assert.ok(s.log.some(l=>l.includes('공격력이')));
  const win=match();win.players[1]!.flame=1000;win.enemies=[enemy({owner:0,target:1,x:22.99,hero:'hero-1-0'})];advanceDuel(win,NOW+1000);assert.equal(win.status,'finished');assert.equal(win.winner,0);
  const timeout=match();timeout.elapsed=299.95;advanceDuel(timeout,NOW+100);assert.equal(timeout.status,'finished');assert.equal(timeout.winner,null);
  const offline=match();offline.players[0].lastSeen=NOW+50000;advanceDuel(offline,NOW+50000);assert.equal(offline.winner,0);assert.equal(offline.status,'finished');

@@ -1,9 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DUEL_MAPS,DEFAULT_DUEL_MAP_ID,duelMap,duelPathDistance,duelPathPosition,duelRoadCell,isDuelMapId} from '../src/multiplayer/duel-maps';
-import {advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,validDuelCell,DuelEnemy,DuelState} from '../src/multiplayer/duel';
-const NOW=100000;
-function match(mapId?:string){const s=createDuel('left','왼쪽',17,NOW,1,{},mapId);joinDuel(s,'right','오른쪽',NOW);applyDuel(s,0,{type:'ready'},NOW,'a');applyDuel(s,1,{type:'ready'},NOW,'b');return s;}
+import {advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,validDuelCell,DUEL_PREPARATION_SECONDS,DuelEnemy,DuelState} from '../src/multiplayer/duel';
+const ROOM_NOW=100000,NOW=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
+function match(mapId?:string){
+ const s=createDuel('left','왼쪽',17,ROOM_NOW,1,{},mapId);joinDuel(s,'right','오른쪽',ROOM_NOW);
+ assert.ok(applyDuel(s,0,{type:'ready'},ROOM_NOW,'a').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'b').ok);assert.equal(s.status,'preparing');
+ s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);return s;
+}
 function enemy(s:DuelState,x:number,y:number,extra:Partial<DuelEnemy>={}):DuelEnemy{return{id:90,owner:1,target:0,hero:null,level:1,hp:500,max:500,x,y,pathDistance:duelPathDistance(s.mapId,x,y),slow:0,stun:0,hits:0,...extra};}
 function keepConnected(s:DuelState,now:number){s.players.forEach(p=>p!.lastSeen=now);advanceDuel(s,now);}
 
@@ -30,8 +34,9 @@ test('길 위의 신규 설치를 막고 예전 방과 잘못된 맵 식별자�
  assert.throws(()=>createDuel('a','가',1,NOW,1,{},'not-a-map'));assert.throws(()=>duelMap('not-a-map'));
  const legacy=match();assert.equal(legacy.mapId,undefined);assert.equal(duelMap().length,23);assert.equal(validDuelCell(legacy,0,7,3),false);assert.equal(validDuelCell(legacy,0,7,1),true);
  const curved=match(DEFAULT_DUEL_MAP_ID);assert.equal(validDuelCell(curved,0,7,1),false);assert.equal(validDuelCell(curved,0,8,3),true);
- assert.equal(applyDuel(curved,0,{type:'quote',x:7,y:1,typeId:'basic'},NOW,'road').ok,false);
- assert.equal(applyDuel(curved,0,{type:'quote',x:8,y:3,typeId:'basic'},NOW,'floor').ok,true);
+ curved.players[0].stock.basic=1;
+ assert.equal(applyDuel(curved,0,{type:'build',x:7,y:1,typeId:'basic'},NOW,'road').ok,false);assert.equal(curved.players[0].stock.basic,1);
+ assert.equal(applyDuel(curved,0,{type:'build',x:8,y:3,typeId:'basic'},NOW,'floor').ok,true);assert.equal(curved.players[0].stock.basic,0);
 });
 
 test('경로 샘플은 모서리를 돌아가며 모든 맵의 대응 위치가 정확히 좌우 대칭이다',()=>{

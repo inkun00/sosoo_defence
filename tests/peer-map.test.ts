@@ -68,11 +68,11 @@ test('all ten map ids travel through offer, echoed answer, host state and guest 
   assert.equal(host.mapId,map.id);assert.equal(guest.mapId,map.id);assert.equal(host.state?.mapId,map.id);assert.equal(guest.state?.mapId,map.id);
   assert.equal(fakePC(host).remoteDescription?.type,'answer');assert.equal(fakePC(guest).remoteDescription?.type,'offer');
   assert.equal((await host.send({type:'ready'})).ok,true);assert.equal((await guest.send({type:'ready'})).ok,true);
-  assert.equal(host.state?.status,'playing');assert.equal(guest.state?.status,'playing');assert.equal(guest.state?.mapId,map.id);
+  assert.equal(host.state?.status,'preparing');assert.equal(guest.state?.status,'preparing');assert.equal(guest.state?.mapId,map.id);
  }
 });
 
-test('an old invitation without a map keeps the legacy road when both peers agree',async()=>{
+test('new preparation invitations without a map keep the default road when both peers agree',async()=>{
  const {host,guest,offer,answer}=await pair();
  assert.equal(Object.hasOwn(invitation(offer),'mapId'),false);assert.equal(Object.hasOwn(invitation(answer),'mapId'),false);
  assert.equal(host.mapId,undefined);assert.equal(guest.mapId,undefined);assert.equal(guest.state?.mapId,undefined);
@@ -100,13 +100,13 @@ test('unknown map ids in create, offer and answer are rejected before RTC descri
 test('guest snapshots accept only the agreed map and preserve the last valid state after mismatches',async()=>{
  const {host,guest,guestChannel}=await pair(DUEL_MAPS[6].id);let emitted=0;guest.onState=()=>{emitted++;};
  const snapshot=structuredClone(host.state!) as DuelState;snapshot.revision=20;
- guestChannel.receive(JSON.stringify({kind:'state',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
+ guestChannel.receive(JSON.stringify({kind:'state',rules:'preparation-60-v1',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
  const baseline=guest.state;
  for(const mapId of [DUEL_MAPS[7].id,undefined,'unknown-map']){
   const wrong=structuredClone(snapshot);wrong.revision=1000;wrong.mapId=mapId;
-  guestChannel.receive(JSON.stringify({kind:'state',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'preparation-60-v1',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
  }
- const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',id:host.id,state:fresh}));
+ const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'preparation-60-v1',id:host.id,state:fresh}));
  assert.equal(guest.state?.revision,21);assert.equal(guest.state?.mapId,DUEL_MAPS[6].id);assert.equal(emitted,2);
 });
 
@@ -115,4 +115,15 @@ test('a missing map in an old guest answer cannot silently change a newly select
  const oldOffer=changed(offer,value=>{delete value.mapId;}),oldAnswer=await guest.join(oldOffer);
  assert.equal(guest.mapId,undefined);await assert.rejects(host.accept(oldAnswer),/같은 맵/);
  assert.equal(host.mapId,DUEL_MAPS[8].id);assert.equal(host.state?.mapId,DUEL_MAPS[8].id);assert.equal(fakePC(host).remoteDescription,null);
+});
+
+test('old rule offers, answers and snapshots cannot join a 60-second preparation match',async()=>{
+ const host=peer('left'),guest=peer('right'),offer=await host.create(DUEL_MAPS[0].id);
+ await assert.rejects(guest.join(changed(offer,v=>{delete v.rules;})),/새로고침/);
+ assert.equal(fakePC(guest).remoteDescription,null);
+ const answer=await guest.join(offer);await assert.rejects(host.accept(changed(answer,v=>{delete v.rules;})),/새로고침/);
+ assert.equal(fakePC(host).remoteDescription,null);await host.accept(answer);
+ const paired=await pair(DUEL_MAPS[1].id),baseline=paired.guest.state,snapshot=structuredClone(paired.host.state!);snapshot.revision+=100;
+ paired.guestChannel.receive(JSON.stringify({kind:'state',id:paired.host.id,state:snapshot}));
+ assert.equal(paired.guest.state,baseline);
 });

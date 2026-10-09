@@ -30,8 +30,11 @@ button.onclick=async()=>{
   if(host.state?.mapId!==mapChoice.value||guest.state?.mapId!==mapChoice.value)throw Error('양쪽 맵이 일치하지 않아요.');
   note('PASS · 양쪽 같은 맵 · '+duelMap(mapChoice.value).name);
   await host.send({type:'ready'});const ready=await guest.send({type:'ready'});
-  if(!ready.ok||host.state?.status!=='playing')throw Error('준비 메시지를 교환하지 못했어요.');
-  note('PASS · 실제 데이터 채널에서 양쪽 준비 완료 · 대전 시작');
+  if(!ready.ok||host.state?.status!=='preparing')throw Error('준비 메시지를 교환하지 못했어요.');
+  note('PASS · 실제 데이터 채널에서 양쪽 준비 완료 · 60초 문제풀이 시작');
+  const started=host.state!.preparationStartedAt;
+  host.onState=s=>{if(s.status==='playing'){note(`PASS · 호스트 전투 시작: ${s.startedAt-started}ms · 코인 ${s.players[0].money}/${s.players[1]!.money}`);host!.onState=()=>{};}};
+  guest.onState=s=>{if(s.status==='playing'){note(`PASS · 참가자 전투 시작: ${s.startedAt-started}ms · 코인 ${s.players[0].money}/${s.players[1]!.money}`);guest!.onState=()=>{};}};
  }catch(error){note('FAIL · '+(error as Error).message);host?.dispose();guest?.dispose();}
  finally{button.disabled=false;}
 };
