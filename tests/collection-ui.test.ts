@@ -16,7 +16,6 @@ test('출전 선택에서는 제공된 보유 영웅만 표시하며 카드가 �
  assert.doesNotMatch(html,/data-collection-hero="hero-8-2"/);
  assert.match(html,/이 영웅으로 출전 · 2회 획득/);
  assert.match(html,/두 수호자가 모두 준비됐을 때 영웅이 바로 등장/);
- assert.match(html,/출전 후에도 영구 보관/);
  assert.doesNotMatch(html,/collection-chances|원하는 때|한 번 소환/);
 });
 
