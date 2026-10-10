@@ -1,5 +1,5 @@
 import {duelEnemyPosition,type DuelState,type Side} from './duel';
-import {heroSpec} from './heroes';
+import {worksheetHeroSpec} from './heroes';
 
 export interface HeroSummonEvent{enemyId:number;owner:Side;heroId:string;level:number;name:string;x:number;y?:number;}
 
@@ -28,7 +28,7 @@ export class HeroSummonStream{
   for(const owner of [0,1] as Side[]){
    const player=state.players[owner],used=!!player?.rewardUsed;
    if(recent&&!this.used[owner]&&used&&player?.rewardHero){
-    const hero=heroSpec(player.rewardHero);
+    const hero=worksheetHeroSpec(player.rewardHero);
     const candidates=state.enemies.filter(e=>e.owner===owner&&e.hero===player.rewardHero&&e.rewardSummon!==false&&!this.enemyIds.has(e.id)).sort((a,b)=>a.id-b.id);
     // New hosts explicitly identify the reserve; a compatibility fallback is
     // only needed for hosts that predate the optional wire marker.

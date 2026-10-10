@@ -1,0 +1,121 @@
+{
+  "mode": "built-in imagegen",
+  "transparent_background": true,
+  "use_case": "stylized-concept",
+  "asset": "public/assets/dungeon/worksheet-heroes-v1.png",
+  "dimensions": {
+    "width": 1536,
+    "height": 1024
+  },
+  "layout": {
+    "columns": 4,
+    "rows": 3,
+    "framesPerHero": 4,
+    "facing": "right",
+    "rowOrder": [
+      "starry scholar dragon mage",
+      "lunar armored knight",
+      "dawn phoenix"
+    ]
+  },
+  "entries": [
+    {
+      "intent": "generate",
+      "source": "C:/Users/user/.codex/generated_images/01a12612-3744-7031-a3a3-51f68344eec1/exec-8c575915-f782-45cc-b3c9-1bd71467f9b9.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: production transparent animated sprite atlas for a Korean educational fantasy tower-defense game, special heroes earned by completing worksheets.\nCreate ONE landscape sprite sheet, 1536x1024 preferred, containing EXACTLY FOUR equally spaced columns and EXACTLY THREE equally spaced rows, total 12 sprites. Invisible uniform grid: columns each 25% of width, rows each one third of height. Every sprite is individually centered within its cell with at least 14% truly transparent clear space to all cell edges. Do not draw the grid. Characters never cross cell boundaries. The canvas background must be genuinely transparent alpha everywhere outside the individual character silhouettes and their close-contained magic accessories: no colored backdrop, no gradient, no ground, no broad shadow, no checkerboard artwork.\nTop row, all FOUR cells: the SAME adorable starry mage in a consistent 4-frame gentle hovering cycle. A small scholarly lavender dragon with a short ivory muzzle, two tiny horns, an indigo wizard robe embroidered with gold stars, a pointed star-shaped hat, small folded wings, a closed floating gold-clasp book held close, and a short star staff. Unique silhouette and rich blue-violet magic accents. Frame1 slightly raised, frame2 centered, frame3 slightly lower, frame4 centered; subtly moving robe and wings while face, clothing, hat and accessories remain identical.\nMiddle row, all FOUR cells: the SAME cute lunar armored knight in a consistent 4-frame walking cycle. A compact brave fantasy humanoid with big expressive teal eyes visible within a silver crescent helmet, indigo and moon-silver plated armor, a midnight cape, a broad crescent shield, and a short luminous moonblade. Frame1 left foot forward, frame2 centered, frame3 right foot forward, frame4 centered with slight bounce. Identical armor, face, shield, weapon and proportions across frames.\nBottom row, all FOUR cells: the SAME dawn phoenix in a consistent 4-frame hovering wing-flap cycle. A warm gold and coral-orange firebird with a clear cute bird face, a gold crest, ivory chest, rounded elegant wings and two long flame-tipped tail feathers. Frame1 wings half-raised, frame2 wings raised, frame3 wings half-lowered, frame4 wings level. Identical feather pattern, head, tail, color and body scale across frames; wings and contained sparks fit wholly inside every cell.\nAll 12 characters face RIGHT in a consistent slightly top-down three-quarter view, with their nose or beak pointing toward the right-hand side of the cell. Full body always visible. Keep each row's sprite size and center anchor identical across its four frames. Make all 3 species immediately visually distinct from gray stone creatures and from one another; these are premium collectible heroes, not recolors.\nStyle/medium: friendly polished hand-painted 2D fantasy game illustration, chunky compact readable silhouettes, crisp dark outlines, textured material shading, luminous magical accents, soft warm rim light, charming expressive eyes. Detailed enough for collectible hero portraits, readable when reduced to small moving game sprites. Original characters, consistent finish and lighting across all rows. No words, letters, numbers, logos, watermarks, labels, sheet title, UI, borders or scene background.",
+      "selected": false
+    },
+    {
+      "intent": "edit",
+      "use_case": "precise-object-edit",
+      "source": "C:/Users/user/.codex/generated_images/01a12612-3744-7031-a3a3-51f68344eec1/exec-8ef1628c-d425-49f1-81a0-c0156ea08b52.png",
+      "referenced_image_paths": [
+        "C:/Users/user/.codex/generated_images/01a12612-3744-7031-a3a3-51f68344eec1/exec-8c575915-f782-45cc-b3c9-1bd71467f9b9.png"
+      ],
+      "prompt": "Use case: precise-object-edit.\nEdit this 1536x1024 transparent sprite atlas. Keep the same THREE characters, their distinctive designs, outfits, faces, colors, hand-painted 2D style, 4 poses per character and RIGHT-facing direction. Change only each sprite's SIZE AND POSITION to fix production animation cell padding.\nIMPORTANT exact layout: output still 1536x1024, invisible grid of 4 columns (each384px) and 3 rows (each341.333px). Exactly 12 sprites, no new characters. Row1 purple scholarly star dragon mage; Row2 moon-armored knight; Row3 warm dawn phoenix.\nAll sprites must be noticeably SMALLER than the reference, approximately 25% smaller. Every individual sprite INCLUDING staff, shield, sword, cape, wings, tail, sparks, halo and magic glow must fit entirely inside a rectangle no wider than285px and no taller than260px. Allow at least40px perfectly empty transparent padding on ALL FOUR SIDES of EVERY cell. No sprite or glow may reach a cell boundary. Do not include broad aura backgrounds or shadows.\nCENTER the complete sprite bounds including all accessories at exact cell centers: first row x192,576,960,1344 with y170; second row same x with y512; third row same x with y853. Keep each row's four sprite centers and scale consistent. Keep the 4 recognizable alternating gentle walking, hovering or wing-flap poses. No frame's body, weapon, wing, tail or magic may enter a neighboring frame. Preserve genuinely transparent alpha background. Remove any residual backdrop haze outside the sprites. No colored backdrop, no gradient, no checkerboard artwork, no grid, no labels, no text, no border, no watermark.",
+      "selected": true
+    }
+  ],
+  "validation": {
+    "format": "RGBA PNG",
+    "hasAlpha": true,
+    "alphaZeroPixels": 1197607,
+    "alphaUnder10Pixels": 1283538,
+    "totalPixels": 1572864,
+    "frameBoundsAlphaAbove32": [
+      [
+        104,
+        113,
+        313,
+        295
+      ],
+      [
+        104,
+        114,
+        313,
+        301
+      ],
+      [
+        83,
+        117,
+        297,
+        303
+      ],
+      [
+        89,
+        114,
+        306,
+        302
+      ],
+      [
+        75,
+        76,
+        316,
+        281
+      ],
+      [
+        77,
+        78,
+        319,
+        284
+      ],
+      [
+        64,
+        79,
+        308,
+        287
+      ],
+      [
+        64,
+        78,
+        297,
+        285
+      ],
+      [
+        90,
+        15,
+        295,
+        238
+      ],
+      [
+        96,
+        15,
+        309,
+        243
+      ],
+      [
+        83,
+        41,
+        300,
+        243
+      ],
+      [
+        92,
+        39,
+        305,
+        240
+      ]
+    ],
+    "notes": "All 12 sprites visually inspected. Clear separation between frames; no alpha above 32 touches a cell boundary. Source copied without raster edits, preserving generated alpha."
+  }
+}

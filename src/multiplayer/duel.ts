@@ -1,5 +1,5 @@
 import {towerType,towerPrice,parseMoney,PurchaseVariation} from '../towers';
-import {heroSpec,heroEffectStats,HeroEffect,HeroSpec} from './heroes';
+import {heroSpec,worksheetHeroSpec,heroEffectStats,HeroEffect,HeroSpec} from './heroes';
 import {hit,numberText,recipe,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
 import {decimalBoard,learningLevel,normalizedAccountLevel} from './decimal-boards';
@@ -35,7 +35,7 @@ export function duelBuildCost(s:DuelState,side:Side,typeId:string){
  return towerPrice(type,p.money,duelTowerLevel(s),p.purchaseVariation);
 }
 // Tower preparation shares one room level; hero addition uses each player's account level.
-function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!heroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},heroStock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({accountLevel:personalLevel})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
+function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!worksheetHeroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},heroStock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({accountLevel:personalLevel})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1,loadout:RewardLoadout={},mapId?:string):DuelState{duelMap(mapId);return {version:1,seed,...(mapId===undefined?{}:{mapId}),learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,preparationStartedAt:0,preparationElapsed:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel,loadout),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
 export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLevel=1,loadout:RewardLoadout={}){
  if(s.players.some(p=>p?.uid===uid))return;
@@ -60,8 +60,9 @@ function auraSources(s:DuelState):AuraSource[]{
  const sources:AuraSource[]=[];
  for(const source of s.enemies){
   if(source.hp<=0||!source.hero)continue;
-  const hero=heroSpec(source.hero);if(!hero)continue;
-  sources.push({owner:source.owner,effect:hero.effect,...heroEffectStats(hero.level),...duelPathPosition(s.mapId,duelEnemyDistance(s,source))});
+  const collected=source.rewardSummon===true,hero=collected?worksheetHeroSpec(source.hero):heroSpec(source.hero);if(!hero)continue;
+  const effects=collected?(hero.effects??[hero.effect]):[hero.effect],stats=heroEffectStats(hero.level),position=duelPathPosition(s.mapId,duelEnemyDistance(s,source));
+  for(const effect of effects)sources.push({owner:source.owner,effect,...stats,...position});
  }
  return sources;
 }
@@ -225,13 +226,13 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  if(action.type==='surrender'){end(s,(1-side) as Side,'상대가 대전을 나갔어요.');release(p);return ok('대전을 마쳤어요.');}
  if(action.type==='select-reward'){
   if(s.status!=='waiting'||p.ready)return bad('준비하기 전에 학습지 영웅을 선택해요.');
-  if(action.heroId!==null&&(!(p.rewardRoster??[]).includes(action.heroId)||!heroSpec(action.heroId)))return bad('이 방을 만들거나 참가할 때 보유한 영웅만 선택할 수 있어요.');
+  if(action.heroId!==null&&(!(p.rewardRoster??[]).includes(action.heroId)||!worksheetHeroSpec(action.heroId)))return bad('이 방을 만들거나 참가할 때 보유한 영웅만 선택할 수 있어요.');
   p.rewardHero=action.heroId;return ok('학습지 영웅을 선택했어요.');
  }
  if(action.type==='summon-reward'){
   if(s.status!=='playing')return bad('대전이 시작된 뒤 원하는 때에 소환해요.');
   if(p.rewardUsed)return bad('학습지 영웅은 대전마다 한 번만 소환할 수 있어요.');
-  const hero=p.rewardHero?heroSpec(p.rewardHero):null;
+  const hero=p.rewardHero?worksheetHeroSpec(p.rewardHero):null;
   if(!hero||!(p.rewardRoster??[]).includes(hero.id))return bad('준비하기 전에 획득한 학습지 영웅을 선택해요.');
   if(s.enemies.length+1>100)return bad('길이 붐벼요. 잠시 뒤 소환해 주세요.');
   summonReward(s,side,hero);syncHeroAuras(s);return ok(`${hero.name} 출발! 다음 대전에서도 선택할 수 있어요.`);
@@ -246,7 +247,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  if(action.type==='ready'){
   if(s.status!=='waiting')return bad('이미 대전이 시작됐어요.');
   if(p.ready)return bad('이미 시작을 준비했어요. 상대의 준비를 기다려요.');
-  const roster=(p.rewardRoster??[]).filter(id=>!!heroSpec(id));
+  const roster=(p.rewardRoster??[]).filter(id=>!!worksheetHeroSpec(id));
   const heroId=action.heroId===undefined?(p.rewardHero&&roster.includes(p.rewardHero)?p.rewardHero:roster[0]??null):action.heroId;
   if(heroId!==null&&!roster.includes(heroId))return bad('보유한 수집 영웅 중 하나를 선택해요.');
   if(roster.length>0&&heroId===null)return bad('함께 출전할 수집 영웅을 선택해요.');

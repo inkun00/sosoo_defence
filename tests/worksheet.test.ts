@@ -5,12 +5,21 @@ import {loadLearning,recordLearning,recordKindLearning,classify,importLearningRe
 import {getOrCreateWorksheet,loadWorkbook,redeemWorksheet,drawWorksheetHero,HERO_LEVEL_CHANCES,selectWorksheetHero,ownedHeroIds} from '../src/worksheet-store';
 import {worksheetPages,worksheetFocus} from '../src/worksheet-view';
 import {newAdventure,loadSave,writeSave} from '../src/save';
-import {HEROES} from '../src/multiplayer/heroes';
+import {HEROES,WORKSHEET_HEROES,worksheetHeroSpec} from '../src/multiplayer/heroes';
 import {IDBFactory} from 'fake-indexeddb';
 const cache=new Map<string,string>();let failStorage=false;
 Object.defineProperty(globalThis,'localStorage',{value:{getItem:(key:string)=>cache.get(key)??null,setItem:(key:string,v:string)=>{if(failStorage)throw Error('quota');cache.set(key,v);}},configurable:true});
 beforeEach(()=>{cache.clear();failStorage=false;Object.defineProperty(globalThis,'indexedDB',{configurable:true,value:new IDBFactory()});});
 function rng(seed=19){return ()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}
+
+test('학습지 보상은 기존 30개 ID를 유지하며 전용 이름·외모·세 효과의 특별 영웅을 반환한다',()=>{
+ assert.deepEqual(WORKSHEET_HEROES.map(h=>h.id),HEROES.map(h=>h.id));
+ for(const selected of WORKSHEET_HEROES){
+  const owned=WORKSHEET_HEROES.filter(h=>h.id!==selected.id).map(h=>h.id),drawn=drawWorksheetHero(()=>.999,owned);
+  assert.equal(drawn,worksheetHeroSpec(selected.id));assert.notEqual(drawn.name,HEROES.find(h=>h.id===drawn.id)!.name);
+  assert.equal(drawn.sheet,'worksheet-heroes-v1');assert.equal(drawn.effects?.length,3);assert.equal(new Set(drawn.effects).size,3);
+ }
+});
 test('1~11단계 학습지는 계산 10개와 서로 다른 개념 10개, 두 자리 이하 소수를 지킨다',async()=>{
  for(let level=1;level<=11;level++)for(let seed=1;seed<=8;seed++){
   const generated=generateWorksheet(loadLearning(),level,'sheet-'+level+'-'+seed,1700000000000,rng(seed)),s={...generated,codeHash:await codeHash(generated.id,worksheetCode(generated))};

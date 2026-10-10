@@ -6,7 +6,8 @@ import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
 import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,duelScore,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects,duelHeroLearningLevel} from './duel';
 import {duelMap,duelRoadCell} from './duel-maps';
-import {HEROES,heroSpec,heroesAtLevel} from './heroes';
+import {HEROES,WORKSHEET_HEROES,heroSpec,worksheetHeroSpec,heroesAtLevel} from './heroes';
+import {heroSummonStyle} from '../hero-summon-style';
 import {HitEquationPopups} from '../hit-equations';
 import {learningDescription} from './decimal-boards';
 import {AmbientProps} from '../ambient-props';
@@ -26,7 +27,7 @@ export class DuelScene extends Phaser.Scene{
  onAction:(key:string)=>void=()=>{};onCell:(x:number,y:number)=>void=()=>{};onControls:()=>void=()=>{};
  onSound:(type:string,towerTypeId?:string)=>void=()=>{};
  private terrain!:Phaser.GameObjects.Container;private units!:Phaser.GameObjects.Container;private ui!:Phaser.GameObjects.Container;private guides!:Phaser.GameObjects.Graphics;
- private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;effects:DuelHeroEffectBadges;last:number;size:number;heroId:string|null;owner:Side}>();
+ private enemies=new Map<number,{sprite:Phaser.GameObjects.Sprite;hp:Phaser.GameObjects.Text;name:Phaser.GameObjects.Text;effects:DuelHeroEffectBadges;last:number;size:number;heroId:string|null;owner:Side;reward:boolean;halo?:Phaser.GameObjects.Graphics}>();
  private towerViews=new Map<number,{head:Phaser.GameObjects.Image;tower:DuelTower;side:Side;effects:DuelHeroEffectBadges}>();private signature='';private uiSignature='';private revision=-1;private receivedAt=0;
  private shotStream=new DuelShotStream();private shotTimers=new Set<Phaser.Time.TimerEvent>();private shotEffects=new Set<Phaser.GameObjects.GameObject>();
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -60,7 +61,7 @@ export class DuelScene extends Phaser.Scene{
  preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));loadDuelHeroEffectBadges(this);}
  create(){
   registerDungeon(this);registerDuelHeroEffectBadges(this);
-  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.opponentPortrait?.destroy();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();for(const enemy of this.enemies.values())enemy.effects.destroy();this.enemies.clear();for(const tower of this.towerViews.values())tower.effects.destroy();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
+  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.opponentPortrait?.destroy();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();for(const enemy of this.enemies.values()){enemy.effects.destroy();enemy.halo?.destroy();}this.enemies.clear();for(const tower of this.towerViews.values())tower.effects.destroy();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
   this.opponentPortrait=new OpponentPortrait(this,this.reduced);
   this.opponentPortrait.setLayout(this.screenLayout.compact,this.screenLayout.height);
   this.ambient=new AmbientProps(this,this.reduced);
@@ -120,10 +121,10 @@ export class DuelScene extends Phaser.Scene{
   if(selected){this.text(this.ui,compact?1110:1085,shopBottomY,compact?'자동 공격':'타워 자동 공격',16,'#c1b7aa');this.button('sell',1220,shopBottomY,105,compact?touch:57,'회수',!v.busy);}
   else if(preparing)this.button('prepare:heroes',1130,shopBottomY,228,compact?touch:56,'영웅 부화 문제',!v.busy,true,18);
   else if(!compact)this.text(this.ui,1130,697,v.selectedType?'내 쪽 빈 바닥에 바로 설치':'타워는 회수 후 다시 배치해요',16,'#c1b7aa');
-  const reserve=p?.rewardHero?heroSpec(p.rewardHero):null;
+  const reserve=p?.rewardHero?worksheetHeroSpec(p.rewardHero):null;
   // Prepare every reserved hero atlas before its manually timed entrance.
-  for(const player of s?.players??[]){const companion=player?.rewardHero?heroSpec(player.rewardHero):null;if(companion)this.ensureHero(companion.level);for(const [id,count]of Object.entries(player?.heroStock??{})){const hero=count>0?heroSpec(id):null;if(hero)this.ensureHero(hero.level);}}
-  if(!compact&&!preparing)this.text(this.ui,1130,657,reserve?`${p?.rewardUsed?'출전 영웅':'수집 영웅'} · ${reserve.name} Lv.${reserve.level}`:'학습지 암호를 풀면 영웅 획득',12,'#ffca7e');
+  for(const player of s?.players??[]){const companion=player?.rewardHero?worksheetHeroSpec(player.rewardHero):null;if(companion)this.ensureHero(companion.level,true);for(const [id,count]of Object.entries(player?.heroStock??{})){const hero=count>0?heroSpec(id):null;if(hero)this.ensureHero(hero.level);}}
+  if(!compact&&!preparing)this.text(this.ui,1130,657,reserve?`✦ ${reserve.name} Lv.${reserve.level} · 효과 3종`:'학습지 암호를 풀면 특별 영웅 획득',11,'#ffca7e');
   if(v.computer&&!compact){this.panel(this.ui,1130,748,266,100);const phrase=this.text(this.ui,1159,733,v.computer.phrase,13,'#f2d7a2');phrase.setWordWrapWidth(138).setOrigin(.5,.5);}
   else if(!v.computer&&!selected&&(!compact||!preparing))this.button('heroes',compact?1070:1069,compact?shopBottomY:756,113,compact?touch:57,'영웅 도감',true,false,16);
   const companionLabel=p?.rewardUsed?'영웅 출전 완료':s?.status==='waiting'&&p?.rewardRoster.length?'시작할 때 영웅 선택':reserve?'소환할 때까지 대기':'수집 영웅 없음';
@@ -175,10 +176,11 @@ export class DuelScene extends Phaser.Scene{
    this.controls.get('summon:'+hero.id)!.label=`${hero.name} 레벨 ${hero.level} 비축 ${count}개 소환 · ${hero.description}`;
   });
   if(!heroes.length){this.text(this.ui,8+mainWidth/2,firstY,'소환할 비축 영웅이 없어요',21,'#c1b7aa');this.text(this.ui,8+mainWidth/2,firstY+35,'오른쪽에서 타워를 골라 배치해요',18,'#a3e9dd');}
-  const reward=p.rewardHero?heroSpec(p.rewardHero):null,readyReward=!!reward&&!p.rewardUsed;
+  const reward=p.rewardHero?worksheetHeroSpec(p.rewardHero):null,readyReward=!!reward&&!p.rewardUsed;
   this.text(this.ui,sideLeft+sideWidth/2,area.y+15,'소환 대기',compact?19:22,'#ffca7e');
   const tacticHeight=compact?rowHeight:84,tacticFirstY=compact?firstY:area.y+77,tacticSecondY=compact?firstY+rowHeight+4:area.y+173;
-  this.button('summon-reward',sideLeft+sideWidth/2,tacticFirstY,sideWidth-18,tacticHeight,readyReward?`${reward!.name}\n수집 영웅 소환 ▶`:p.rewardUsed?'수집 영웅 출전 완료':'수집 영웅 없음',readyReward&&!v.busy,true,compact?19:18);
+  this.button('summon-reward',sideLeft+sideWidth/2,tacticFirstY,sideWidth-18,tacticHeight,readyReward?`✦ ${reward!.name}\n3종 효과 · 소환 ▶`:p.rewardUsed?'특별 영웅 출전 완료':'수집 영웅 없음',readyReward&&!v.busy,true,compact?19:18);
+  if(reward)this.controls.get('summon-reward')!.label=`학습지 특별 영웅 ${reward.name} 레벨 ${reward.level} · 세 효과 동시 발동 · ${reward.description} · ${p.rewardUsed?'출전 완료':'소환'}`;
   this.button('hatch',sideLeft+sideWidth/2,tacticSecondY,sideWidth-18,tacticHeight,p.egg?`남은 알 Lv.${p.egg}\n영웅 선택 · 소환 ▶`:'남은 영웅 알 없음',p.egg>0&&!v.busy,true,compact?19:18);
   const pageY=compact?firstY+rowHeight+4:area.y+280;
   const pageLeft=compact?24:sideLeft+12,pageWidth=compact?mainWidth-32:sideWidth-24,navWidth=compact?Math.max(touch,150):70;
@@ -244,27 +246,29 @@ export class DuelScene extends Phaser.Scene{
    view.effects.position(x,y-53<this.boardY+8?y+53:y-53,X+3,X+24*T-3,this.boardY);
   }
  }
- private ensureHero(level:number){
-  const key='heroes-'+level;if(this.textures.exists(key)||this.loadingHeroes.has(level)||performance.now()<(this.heroRetry.get(level)??0))return;this.loadingHeroes.add(level);
+ private ensureHero(level:number,reward=false){
+  const assetLevel=reward?0:level,key=reward?'worksheet-heroes':'heroes-'+level;if(this.textures.exists(key)||this.loadingHeroes.has(assetLevel)||performance.now()<(this.heroRetry.get(assetLevel)??0))return;this.loadingHeroes.add(assetLevel);
   const event='filecomplete-image-'+key,complete=()=>{this.load.off('loaderror',failed);const texture=this.textures.get(key),source=texture.getSourceImage();
-   for(let row=0;row<3;row++)for(let frame=0;frame<4;frame++){const y=Math.round(row*source.height/3),end=Math.round((row+1)*source.height/3);texture.add(`hero-${level}-${row}-${frame}`,0,Math.round(frame*source.width/4),y,Math.round(source.width/4),end-y);}
-   for(const h of heroesAtLevel(level))this.anims.create({key:h.id,frames:Array.from({length:4},(_,i)=>({key,frame:h.id+'-'+i})),frameRate:5,repeat:-1});this.loadingHeroes.delete(level);this.syncEnemies();
+   for(let row=0;row<3;row++)for(let frame=0;frame<4;frame++){const y=Math.round(row*source.height/3),end=Math.round((row+1)*source.height/3),id=reward?'worksheet-hero-'+row:`hero-${level}-${row}`;texture.add(`${id}-${frame}`,0,Math.round(frame*source.width/4),y,Math.round(source.width/4),end-y);}
+   for(const h of reward?WORKSHEET_HEROES.slice(0,3):heroesAtLevel(level)){const animation=reward?'worksheet-hero-'+h.variant:h.id;this.anims.create({key:animation,frames:Array.from({length:4},(_,i)=>({key,frame:animation+'-'+i})),frameRate:5,repeat:-1});}this.loadingHeroes.delete(assetLevel);this.syncEnemies();
   };
-  const failed=(file:Phaser.Loader.File)=>{if(file.key!==key)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingHeroes.delete(level);this.heroRetry.set(level,performance.now()+30000);};
-  this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(key,artURL(`heroes-level-${level}-v1`));if(!this.load.isLoading())this.load.start();
+  const failed=(file:Phaser.Loader.File)=>{if(file.key!==key)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingHeroes.delete(assetLevel);this.heroRetry.set(assetLevel,performance.now()+30000);};
+  this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(key,artURL(reward?'worksheet-heroes-v1':`heroes-level-${level}-v1`));if(!this.load.isLoading())this.load.start();
  }
- private syncEnemies(){const s=this.view().state,live=new Set(s?.enemies.map(e=>e.id));for(const [id,v]of this.enemies)if(!live.has(id)){v.sprite.destroy();v.hp.destroy();v.name.destroy();v.effects.destroy();this.enemies.delete(id);}
-  for(const e of s?.enemies??[]){let v=this.enemies.get(e.id);const hero=e.hero?heroSpec(e.hero):null,kind:MonsterKind=e.level>=8?'king':e.level>=6?'crystal':e.level>=4?'golem':e.level>=2?'beetle':'slime',size=hero?44+hero.level*2.6:39+e.level*1.4;
+ private syncEnemies(){const s=this.view().state,live=new Set(s?.enemies.map(e=>e.id));for(const [id,v]of this.enemies)if(!live.has(id)){v.sprite.destroy();v.hp.destroy();v.name.destroy();v.effects.destroy();v.halo?.destroy();this.enemies.delete(id);}
+  for(const e of s?.enemies??[]){let v=this.enemies.get(e.id);const reward=e.rewardSummon===true,hero=e.hero?(reward?worksheetHeroSpec(e.hero):heroSpec(e.hero)):null,kind:MonsterKind=e.level>=8?'king':e.level>=6?'crystal':e.level>=4?'golem':e.level>=2?'beetle':'slime',size=hero?(reward?56+hero.level*2.8:44+hero.level*2.6):39+e.level*1.4;
    const point=duelEnemyPosition(s!,e),x=X+(point.x+.5)*T,y=this.boardY+(point.y+.5)*T-4;
-   if(hero)this.ensureHero(hero.level);const heroReady=hero&&this.textures.exists('heroes-'+hero.level),texture=heroReady?'heroes-'+hero.level:'dungeon-'+MONSTERS[kind].atlas,frame=heroReady?hero.id+'-0':kind+'-0';
-   if(!v){const sprite=this.add.sprite(x,y,texture,frame);sprite.setDisplaySize(size,size).setDepth(4).setFlipX(point.dx?point.dx<0:e.target===0);if(!this.reduced)sprite.play(heroReady?hero.id:kind+'-walk');
+   if(hero)this.ensureHero(hero.level,reward);const heroTexture=reward?'worksheet-heroes':'heroes-'+hero?.level,heroAnimation=reward?'worksheet-hero-'+hero?.variant:hero?.id,heroReady=hero&&this.textures.exists(heroTexture),texture=heroReady?heroTexture:'dungeon-'+MONSTERS[kind].atlas,frame=heroReady?heroAnimation+'-0':kind+'-0',name=hero?`${reward?'✦':'★'} ${hero.name}${reward?' · 3효과':''}`:'',nameColor=reward?heroSummonStyle(e.level).cssAccent:e.owner===0?'#9fe8ff':'#ffcc8a';
+   if(!v){const sprite=this.add.sprite(x,y,texture,frame);sprite.setDisplaySize(size,size).setDepth(4).setFlipX(point.dx?point.dx<0:e.target===0);if(!this.reduced)sprite.play(heroReady?heroAnimation!:kind+'-walk');
     const hp=this.add.text(x,y-size*.5-11,'',{fontFamily:'Malgun Gothic',fontSize:18,fontStyle:'bold',color:'#fff2d6',backgroundColor:'#11131dea',padding:{x:3,y:1}}).setOrigin(.5).setDepth(7);
-    const name=this.add.text(x,y-size*.5-31,hero?`★ ${hero.name}`:'',{fontFamily:'Malgun Gothic',fontSize:11,color:e.owner===0?'#9fe8ff':'#ffcc8a',backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name,effects:new DuelHeroEffectBadges(this,this.reduced),last:e.hp,size,heroId:e.hero,owner:e.owner};this.enemies.set(e.id,v);
+    const title=this.add.text(x,y-size*.5-31,name,{fontFamily:'Malgun Gothic',fontSize:11,color:nameColor,backgroundColor:'#11131dea'}).setOrigin(.5).setDepth(7);v={sprite,hp,name:title,effects:new DuelHeroEffectBadges(this,this.reduced),last:e.hp,size,heroId:e.hero,owner:e.owner,reward};this.enemies.set(e.id,v);
    }else if(v.last!==e.hp){if(!this.reduced)this.tweens.add({targets:v.sprite,alpha:.4,yoyo:true,duration:90,repeat:1});v.last=e.hp;}
-   const changed=v.heroId!==e.hero||v.size!==size||v.owner!==e.owner;
-   if(changed){v.heroId=e.hero;v.owner=e.owner;v.size=size;v.name.setText(hero?`★ ${hero.name}`:'').setColor(e.owner===0?'#9fe8ff':'#ffcc8a');}
+   const changed=v.heroId!==e.hero||v.size!==size||v.owner!==e.owner||v.reward!==reward;
+   if(changed){v.heroId=e.hero;v.owner=e.owner;v.size=size;v.reward=reward;v.name.setText(name).setColor(nameColor);}
+   if(reward&&!v.halo){const color=heroSummonStyle(e.level).color;v.halo=this.add.graphics().setName('worksheet-hero-halo-'+e.id).setDepth(3.8).setPosition(x,y).fillStyle(color,.13).fillEllipse(0,size*.32,size*1.2,size*.45).lineStyle(1.5,color,.85).strokeEllipse(0,size*.32,size*1.2,size*.45);}
+   else if(!reward&&v.halo){v.halo.destroy();v.halo=undefined;}
    if(changed||v.sprite.texture.key!==texture){v.sprite.stop().setTexture(texture,frame).setDisplaySize(size,size);}
-   if(!this.reduced){const anim=heroReady?hero.id:kind+'-'+(e.slow>0||e.stun>0?'frozen':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);}
+   if(!this.reduced){const anim=heroReady?heroAnimation!:kind+'-'+(e.slow>0||e.stun>0?'frozen':'walk');if(v.sprite.anims.currentAnim?.key!==anim)v.sprite.play(anim);}
    v.hp.setText(numberText(e.hp));
    v.effects.sync(activeDuelHeroEffects(s!,e));
   }
@@ -333,6 +337,7 @@ export class DuelScene extends Phaser.Scene{
   for(const e of s.enemies){const v=this.enemies.get(e.id);if(!v)continue;const entrance=this.heroSummonEffects?.pose(e.id),point=duelEnemyPosition(s,e,age),targetX=X+(point.x+.5)*T,targetY=this.boardY+(point.y+.5)*T-4-(entrance?.lift??0),dx=targetX-v.sprite.x;v.sprite.x+=dx*smooth;v.sprite.y+=(targetY-v.sprite.y)*smooth;
    // Turn with the visible movement, once interpolation reaches the new segment.
    if(Math.abs(point.dx)>.01&&dx*point.dx>.01)v.sprite.setFlipX(point.dx<0);if(entrance)v.sprite.setDisplaySize(v.size*entrance.scale,v.size*entrance.scale).setAlpha(entrance.alpha);
+   v.halo?.setPosition(v.sprite.x,v.sprite.y);
    // On the uppermost bends, put labels below the walking sprite so the
    // guardian names and flame counters above the board stay readable.
    const below=v.sprite.y-v.size*.5-(v.name.text?31:11)<this.boardY+8,offset=(below?1:-1)*(v.size*.5+11);

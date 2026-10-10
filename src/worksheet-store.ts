@@ -1,4 +1,4 @@
-import {heroSpec,HEROES} from './multiplayer/heroes';
+import {worksheetHeroSpec,WORKSHEET_HEROES} from './multiplayer/heroes';
 import {loadLearning,recordKindLearning,importPendingLearning} from './learning';
 import {Worksheet,generateWorksheet,codeHash,worksheetCode,validWorksheet,random} from './worksheet';
 import {storageRecordUpdate} from './storage-lock';
@@ -8,8 +8,8 @@ export const HERO_LEVEL_CHANCES=[40,24,14,8,5,3.5,2.5,1.5,1,.5];
 const KEY='decimal-workbook-v1',empty=():Workbook=>({version:1,sheets:[],collection:[],selectedHero:null});
 function parseWorkbook(value:string|null):Workbook{
  try{const raw=JSON.parse(value||'null');if(raw?.version!==1)return empty();const book=empty();
-  book.sheets=Array.isArray(raw.sheets)?raw.sheets.filter((s:Worksheet)=>validWorksheet(s)&&(s.claimedHero===null||!!heroSpec(s.claimedHero))):[];
-  book.collection=Array.isArray(raw.collection)?raw.collection.filter((h:CollectedHero)=>h&&heroSpec(h.heroId)&&Number.isSafeInteger(h.copies)&&h.copies>0&&Number.isSafeInteger(h.obtainedAt)):[];
+  book.sheets=Array.isArray(raw.sheets)?raw.sheets.filter((s:Worksheet)=>validWorksheet(s)&&(s.claimedHero===null||!!worksheetHeroSpec(s.claimedHero))):[];
+  book.collection=Array.isArray(raw.collection)?raw.collection.filter((h:CollectedHero)=>h&&worksheetHeroSpec(h.heroId)&&Number.isSafeInteger(h.copies)&&h.copies>0&&Number.isSafeInteger(h.obtainedAt)):[];
   book.selectedHero=raw.selectedHero===null?null:book.collection.some(h=>h.heroId===raw.selectedHero)?raw.selectedHero:book.collection[0]?.heroId??null;return book;
  }catch{return empty();}
 }
@@ -33,7 +33,7 @@ export async function getOrCreateWorksheet(level:number,fresh=false){
 }
 function worksheetHeroPools(ownedHeroIds:Iterable<string>){
  const owned=new Set(ownedHeroIds);
- return HERO_LEVEL_CHANCES.map((weight,i)=>({level:i+1,weight,heroes:HEROES.filter(h=>h.level===i+1&&!owned.has(h.id))})).filter(pool=>pool.heroes.length>0);
+ return HERO_LEVEL_CHANCES.map((weight,i)=>({level:i+1,weight,heroes:WORKSHEET_HEROES.filter(h=>h.level===i+1&&!owned.has(h.id))})).filter(pool=>pool.heroes.length>0);
 }
 export function worksheetHeroLevelChances(ownedHeroIds:Iterable<string>=[]):number[]{
  const pools=worksheetHeroPools(ownedHeroIds),total=pools.reduce((sum,pool)=>sum+pool.weight,0);

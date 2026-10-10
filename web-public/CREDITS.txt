@@ -219,3 +219,12 @@ are preserved; optimized WebP backgrounds are loaded only when displayed.
 Generation prompts: licenses/hero-collection-v1-prompts.json (source-only).
 Rarity-scaled summoning rings, columns, particles and entrance motion are
 rendered in code and require no extra animation downloads.
+
+WORKSHEET REWARD HEROES (2026-10-10)
+Original star mage dragon, moon knight and dawn phoenix in one transparent
+3-row, 4-column animation atlas: assets/dungeon/worksheet-heroes-v1.png.
+Generated and edited with the built-in OpenAI image_gen tool. Source PNG
+pixels and alpha are preserved; optimized WebP is loaded on demand.
+Exact prompts, generation paths and frame validation are retained in
+licenses/worksheet-heroes-v1-prompts.json (source-only, excluded from deployment).
+Reward names, three simultaneous aura effects and rank halos are game code.

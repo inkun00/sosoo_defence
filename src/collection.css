@@ -30,6 +30,9 @@
 .collection-card .collection-rank{font-size:11px;color:var(--hero-accent);letter-spacing:.14em;align-self:end;padding:4px 10px;border-radius:20px;background:#111826b8}
 .collection-card strong{font-size:16px;line-height:1.3;max-width:100%;align-self:end;overflow-wrap:anywhere}
 .collection-card small{font-size:11px;line-height:1.5;color:#d4c8b6;text-align:center;max-width:100%;align-self:center}
+.collection-abilities>span{display:block}
+.collection-abilities .collection-ability-area{color:var(--hero-accent);font-weight:700;margin-bottom:3px}
+.worksheet-hero .collection-portrait:after{content:"✦";position:absolute;right:3px;bottom:4px;color:var(--hero-accent);font-size:23px;text-shadow:0 0 12px var(--hero-color)}
 .collection-card .collection-equip{font-size:10px;color:var(--hero-accent);margin:0;border-top:1px solid #9b80485c;padding-top:7px;align-self:end}
 .collection-portrait{position:relative;display:grid;place-items:center;align-self:stretch;filter:drop-shadow(0 3px 5px #0008)}
 .collection-portrait:before{content:"";position:absolute;inset:14% 5%;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--hero-color) 27%,transparent),transparent 65%);pointer-events:none}
@@ -76,6 +79,13 @@
  .workbook .hero-collection-dialog #ws-close{top:18px;right:24px}
  .workbook-dialog{padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
 }
+
+/* A worksheet companion keeps all three simultaneous abilities readable. */
+:is(.workbook,#duel-dialog[data-screen="collection"] .duel-card,.hero-collection-preview) .collection-card.worksheet-hero{grid-template-rows:22px 134px 42px 82px 30px;min-height:400px}
+.worksheet-hero .collection-rank{letter-spacing:.025em;white-space:nowrap}
+.hero-reveal.worksheet-hero .collection-abilities{padding:9px 18px;border:1px solid color-mix(in srgb,var(--hero-color) 35%,transparent);border-radius:9px;background:#111826a8}
+@media(max-width:700px){:is(.workbook,#duel-dialog[data-screen="collection"] .duel-card,.hero-collection-preview) .collection-card.worksheet-hero{grid-template-rows:20px 105px 40px 80px 31px;min-height:350px}.worksheet-hero .collection-rank{font-size:10px;padding-inline:5px}.worksheet-hero .collection-portrait:after{right:0;font-size:20px}}
+@media(orientation:landscape) and (max-height:600px){:is(.workbook,#duel-dialog[data-screen="collection"] .duel-card,.hero-collection-preview) .collection-card.worksheet-hero{grid-template-rows:16px 60px 26px 66px 20px;min-height:230px}.worksheet-hero .collection-rank{font-size:9px}.worksheet-hero .collection-portrait:after{bottom:0;font-size:17px}.collection-abilities .collection-ability-area{margin-bottom:2px}}
 @media(orientation:landscape) and (max-height:600px){
  .workbook .hero-collection-dialog,#duel-dialog[data-screen="collection"] .duel-card{padding:20px 28px 24px}
  .workbook .hero-collection-dialog{padding-top:56px}

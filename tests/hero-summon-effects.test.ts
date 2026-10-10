@@ -6,6 +6,7 @@ import {HeroSummonStream,type HeroSummonEvent} from '../src/multiplayer/hero-sum
 import {HeroSummonEffects,heroSummonPose} from '../src/multiplayer/hero-summon-effects';
 import {heroSummonStyle} from '../src/hero-summon-style';
 import {duelPathDistance} from '../src/multiplayer/duel-maps';
+import {worksheetHeroSpec} from '../src/multiplayer/heroes';
 
 const ROOM_NOW=100000,now=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
 function state():DuelState{
@@ -41,6 +42,7 @@ test('preparation and battle start stay quiet, and the selected collected heroes
  play(s);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);assert.equal(s.enemies.length,0);
  summon(s);const a=host.take('room',s),b=guest.take('room',structuredClone(s));assert.deepEqual(a,b);assert.equal(a.length,2);assert.equal(a[0].owner,0);assert.equal(a[0].heroId,'hero-1-0');
  assert.equal(a[1].owner,1);assert.equal(a[1].level,10);
+ assert.equal(a[0].name,worksheetHeroSpec('hero-1-0')!.name);assert.equal(a[1].name,worksheetHeroSpec('hero-10-1')!.name);
  assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
  advance(s,.1);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
 });

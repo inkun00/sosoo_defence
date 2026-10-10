@@ -781,5 +781,19 @@
       "effort": 6,
       "width": 768
     }
+  },
+  "worksheet-heroes-v1": {
+    "url": "/assets/dungeon/worksheet-heroes-v1.d10e2f5c0aa1.webp",
+    "sourceHash": "804ea03e4f935dff9ff942f28feeb508552034086e6d2863e64e28e1a4921dc2",
+    "width": 768,
+    "height": 512,
+    "sourceBytes": 1944373,
+    "bytes": 89634,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
   }
 }
