@@ -66,11 +66,12 @@ test('포탑 아이콘도 올바른 편, 거리, 죽은 출처를 판정하며 �
  buff.hp=1000;buff.pathDistance=20;assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),[]);
 });
 
-test('기존 군집 동반 병사는 제거되고 준비 출전과 알 부화는 영웅 한 개체씩 생성한다',()=>{
+test('기존 군집 동반 병사는 제거되고 수집 소환과 알 부화는 영웅 한 개체씩 생성한다',()=>{
  const s=createDuel('a','왼쪽',17,ROOM_NOW,3,{rewardHeroes:['hero-3-1'],rewardHero:'hero-3-1'});joinDuel(s,'b','오른쪽',ROOM_NOW);
  applyDuel(s,0,{type:'ready'},ROOM_NOW,'a');applyDuel(s,1,{type:'ready'},ROOM_NOW,'b');
- assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].rewardSummon,true);assert.equal(s.players[0].rewardUsed,true);
+ assert.equal(s.enemies.length,0);assert.equal(s.players[0].rewardUsed,false);
  s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);s.players[1]!.egg=3;
+ assert.equal(applyDuel(s,0,{type:'summon-reward'},NOW,'reward').ok,true);assert.equal(s.enemies[0].rewardSummon,true);
  assert.equal(applyDuel(s,1,{type:'hatch',heroId:'hero-3-1'},NOW,'h').ok,true);
  assert.equal(s.enemies.length,2);assert.ok(s.enemies.every(e=>!!e.hero&&!e.sourceHeroId));
  assert.equal(applyDuel(s,0,{type:'summon-reward'},NOW,'duplicate').ok,false);

@@ -6,9 +6,9 @@ import {emptyProgress,progressAfter,MatchRecord} from '../src/multiplayer/record
 import {numberText} from '../src/math';
 const NOW=100000;
 const START=NOW+DUEL_PREPARATION_SECONDS*1000;
-function startCombat(s:DuelState){
+function startPreparation(s:DuelState){
  applyDuel(s,0,{type:'ready'},NOW,'r0');applyDuel(s,1,{type:'ready'},NOW,'r1');
- assert.equal(s.status,'preparing');s.players.forEach(p=>p!.lastSeen=START);advanceDuel(s,START);assert.equal(s.status,'playing');
+ assert.equal(s.status,'preparing');
 }
 function recipes(board:number[]){
  const involved=new Set<number>();
@@ -58,30 +58,30 @@ test('Lv.1과 Lv.8은 방장 순서와 상관없이 자신의 덧셈 판을 유�
   assert.notDeepEqual(s.players[0].board,s.players[1]!.board);
   const low=s.players.find(p=>p?.accountLevel===1)!;assert.ok(low.board.every(n=>n<1000&&n%100===0));
   const high=s.players.find(p=>p?.accountLevel===8)!;assert.ok(high.board.some(n=>n>=1000));assert.ok(high.board.some(n=>n%100!==0));
-  startCombat(s);s.players.forEach(p=>p!.lastSeen=START+90000);advanceDuel(s,START+90000);assert.equal(s.learningLevel,1);
+  startPreparation(s);s.players.forEach(p=>p!.lastSeen=START+90000);advanceDuel(s,START+90000);assert.equal(s.status,'playing');assert.equal(s.learningLevel,1);
   for(const side of [0,1] as Side[])personalBoard(s,side);
  }
 });
 test('합성 순서가 달라도 각자의 새 판과 부화 뒤의 재사용은 계정 레벨에 맞고 오래된 요청은 상태를 보존한다',()=>{
  for(const levels of [[1,8],[8,1]]){
-  const s=createDuel('host','방장',918,NOW,levels[0]);joinDuel(s,'guest','참가자',NOW,levels[1]);startCombat(s);
+  const s=createDuel('host','방장',918,NOW,levels[0]);joinDuel(s,'guest','참가자',NOW,levels[1]);startPreparation(s);
   for(let turn=0;turn<7;turn++)for(const side of (turn%2?[1,0]:[0,1]) as Side[]){
    const p=s.players[side]!,other=s.players[(1-side) as Side]!,before=structuredClone(p),otherBefore=structuredClone(other),slots=addition(p.board);
-   if(p.round>0){assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round-1,slots},START,`stale-${side}-${turn}`).ok,false);assert.deepEqual(p,before);}
-   assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots:[slots[0],slots[0],slots[2]]},START,`invalid-${side}-${turn}`).ok,false);assert.deepEqual(p,before);
-   assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots},START,`valid-${side}-${turn}`).ok,true);
+   if(p.round>0){assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round-1,slots},NOW,`stale-${side}-${turn}`).ok,false);assert.deepEqual(p,before);}
+   assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots:[slots[0],slots[0],slots[2]]},NOW,`invalid-${side}-${turn}`).ok,false);assert.deepEqual(p,before);
+   assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots},NOW,`valid-${side}-${turn}`).ok,true);
    assert.equal(p.round,before.round+1);assert.equal(p.egg,before.egg+1);assert.deepEqual(other,otherBefore);personalBoard(s,side);personalBoard(s,(1-side) as Side);
-   if(p.egg===3){const board=[...p.board],round=p.round;assert.equal(applyDuel(s,side,{type:'hatch',heroId:'hero-3-0'},START,`hatch-${side}-${turn}`).ok,true);assert.equal(p.egg,0);assert.equal(p.round,round);assert.deepEqual(p.board,board);personalBoard(s,side);}
+   if(p.egg===3){const board=[...p.board],round=p.round;assert.equal(applyDuel(s,side,{type:'hatch',heroId:'hero-3-0'},NOW,`hatch-${side}-${turn}`).ok,true);assert.equal(p.egg,0);assert.equal(p.round,round);assert.deepEqual(p.board,board);personalBoard(s,side);}
   }
   assert.equal(s.players[0].solved,7);assert.equal(s.players[1]!.solved,7);assert.equal(s.players[0].egg,1);assert.equal(s.players[1]!.egg,1);
  }
 });
 test('같은 계정 레벨은 같은 순서에서 동일한 판이며 10을 넘는 계정의 덧셈은 10단계·두 자리 소수로 제한된다',()=>{
  for(const level of [1,8,10,99]){
-  const s=createDuel('host','방장',912,NOW,level);joinDuel(s,'guest','참가자',NOW,level);startCombat(s);
+  const s=createDuel('host','방장',912,NOW,level);joinDuel(s,'guest','참가자',NOW,level);startPreparation(s);
   for(let round=0;round<5;round++){
    assert.deepEqual(s.players[0].board,s.players[1]!.board);
-   for(const side of [0,1] as Side[]){const p=s.players[side]!;personalBoard(s,side);assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots:addition(p.board)},START,`same-${side}-${round}`).ok,true);}
+   for(const side of [0,1] as Side[]){const p=s.players[side]!;personalBoard(s,side);assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots:addition(p.board)},NOW,`same-${side}-${round}`).ok,true);}
   }
   assert.equal(s.players[0].accountLevel,level);assert.equal(s.learningLevel,learningLevel(level));
  }
@@ -93,10 +93,10 @@ test('연속 승리 경험치로 계정 레벨이 오르면 다음 경기의 계
 });
 test('합성 오답에는 낮은 공용 타워 레벨이 아닌 자신의 실제 문항 난이도를 기록한다',()=>{
  for(const levels of [[1,8],[8,1],[99,1]]){
-  const s=createDuel('host','방장',17,NOW,levels[0]);joinDuel(s,'guest','참가자',NOW,levels[1]);startCombat(s);assert.equal(s.learningLevel,1);
+  const s=createDuel('host','방장',17,NOW,levels[0]);joinDuel(s,'guest','참가자',NOW,levels[1]);startPreparation(s);assert.equal(s.learningLevel,1);
   for(const side of [0,1] as Side[]){
    const p=s.players[side]!,board=[...p.board],slots=addition(board,false);
-   assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:0,slots},START,`wrong-${side}`).ok,false);
+   assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:0,slots},NOW,`wrong-${side}`).ok,false);
    assert.equal(p.wrongQuestions[0].level,learningLevel(levels[side]));assert.equal(p.wrongQuestions[0].submitted,numberText(board[slots[2]]));
    assert.equal(p.wrongQuestions[0].operation,'+');assert.equal(p.egg,0);assert.equal(p.round,0);assert.deepEqual(p.board,board);
   }

@@ -93,14 +93,13 @@ test('all ten map ids travel through offer, echoed answer, host state and guest 
 test('guest identity carries its own account level and host snapshots preserve personal addition rounds in both host orderings',async()=>{
  for(const levels of [[1,8],[8,1]] as const){
   const {host,guest,offer,answer}=await pair(DUEL_MAPS[4].id,false,levels),s=host.state!;
-  assert.equal(invitation(offer).rules,'score-5min-v6');assert.equal(invitation(answer).rules,'score-5min-v6');
+  assert.equal(invitation(offer).rules,'stock-2min-battle-3min-v7');assert.equal(invitation(answer).rules,'stock-2min-battle-3min-v7');
   assert.equal((invitation(offer).host as {accountLevel:number}).accountLevel,levels[0]);
   assert.equal(s.players[0].accountLevel,levels[0]);assert.equal(s.players[1]!.accountLevel,levels[1]);assert.equal(s.learningLevel,1);
   for(const side of [0,1] as Side[])assert.deepEqual(s.players[side]!.board,decimalBoard(s.seed,0,levels[side]));
   assert.notDeepEqual(s.players[0].board,s.players[1]!.board);assert.deepEqual(guest.state?.players.map(p=>p!.board),s.players.map(p=>p!.board));
   assert.equal((await host.send({type:'ready'})).ok,true);assert.equal((await guest.send({type:'ready'})).ok,true);
-  const combatStart=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.players.forEach(p=>p!.lastSeen=combatStart);advanceDuel(s,combatStart);
-  assert.equal(s.status,'playing');assert.equal((await host.send({type:'tick'})).ok,true);assert.equal(guest.state?.status,'playing');
+  assert.equal(s.status,'preparing');assert.equal(guest.state?.status,'preparing');
   for(let round=0;round<3;round++)for(const side of [0,1] as Side[]){
    const p=s.players[side]!,otherRound=s.players[(1-side) as Side]!.round,otherBoard=[...s.players[(1-side) as Side]!.board];
    // This wire-contract fixture skips waiting for the independent UI request throttle.
@@ -108,18 +107,25 @@ test('guest identity carries its own account level and host snapshots preserve p
    assert.equal((await active.send({type:'fuse',operation:'+',round:p.round,slots:additionSlots(p.board)!})).ok,true);
    assert.equal(p.round,round+1);assert.deepEqual(p.board,decimalBoard(s.seed,p.round,levels[side]));assert.equal(s.players[(1-side) as Side]!.round,otherRound);assert.deepEqual(s.players[(1-side) as Side]!.board,otherBoard);
    assert.deepEqual(guest.state?.players.map(player=>[player!.accountLevel,player!.round,player!.board]),s.players.map(player=>[player!.accountLevel,player!.round,player!.board]));
-   if(round===1){p.lastRequest=0;assert.equal((await active.send({type:'hatch',heroId:'hero-2-0'})).ok,true);assert.equal(p.egg,0);assert.deepEqual(guest.state?.players[side]?.board,p.board);}
+   if(round===1){p.lastRequest=0;assert.equal((await active.send({type:'hatch',heroId:'hero-2-0'})).ok,true);assert.equal(p.egg,0);assert.equal(p.heroStock?.['hero-2-0'],1);assert.equal(guest.state?.players[side]?.heroStock?.['hero-2-0'],1);assert.deepEqual(guest.state?.players[side]?.board,p.board);}
   }
+  const combatStart=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.players.forEach(p=>p!.lastSeen=combatStart);advanceDuel(s,combatStart);
+  assert.equal(s.status,'playing');assert.equal((await host.send({type:'tick'})).ok,true);assert.equal(guest.state?.status,'playing');
+  for(const side of [0,1] as Side[]){s.players[side]!.lastRequest=0;const active=side===0?host:guest;assert.ok((await active.send({type:'summon',heroId:'hero-2-0'})).ok);assert.equal(guest.state?.players[side]?.heroStock?.['hero-2-0'],0);}
+  assert.deepEqual(guest.state?.enemies,s.enemies);assert.equal(s.enemies.length,2);
  }
 });
 
-test('the host-authoritative ready exchange synchronizes both selected heroes without extra escorts',async()=>{
+test('the host-authoritative ready exchange synchronizes selected heroes and later manual summons',async()=>{
  const {host,guest}=await pair(DUEL_MAPS[4].id,true);
  assert.equal((await host.send({type:'ready',heroId:'hero-10-1'})).ok,true);
  assert.equal(host.state?.enemies.length,0,'one player being ready does not spawn units before both are ready');
  assert.equal((await guest.send({type:'ready',heroId:'hero-3-1'})).ok,true);
  assert.equal(host.state?.status,'preparing');assert.equal(guest.state?.status,'preparing');
  assert.equal(host.state?.players[0].rewardHero,'hero-10-1');assert.equal(host.state?.players[1]?.rewardHero,'hero-3-1');
+ assert.ok(host.state?.players.every(player=>!player?.rewardUsed));assert.equal(host.state?.enemies.length,0);
+ const s=host.state!,start=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.players.forEach(p=>p!.lastSeen=start);advanceDuel(s,start);await host.send({type:'tick'});
+ for(const active of [host,guest]){s.players[active.side]!.lastRequest=0;assert.ok((await active.send({type:'summon-reward'})).ok);}
  assert.ok(host.state?.players.every(player=>player?.rewardUsed));
  assert.deepEqual(guest.state?.enemies,host.state?.enemies);
  assert.deepEqual(host.state?.enemies.filter(enemy=>enemy.rewardSummon).map(enemy=>[enemy.owner,enemy.hero]),[[0,'hero-10-1'],[1,'hero-3-1']]);
@@ -180,13 +186,13 @@ test('unknown map ids in create, offer and answer are rejected before RTC descri
 test('guest snapshots accept only the agreed map and preserve the last valid state after mismatches',async()=>{
  const {host,guest,guestChannel}=await pair(DUEL_MAPS[6].id);let emitted=0;guest.onState=()=>{emitted++;};
  const snapshot=structuredClone(host.state!) as DuelState;snapshot.revision=20;
- guestChannel.receive(JSON.stringify({kind:'state',rules:'score-5min-v6',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
+ guestChannel.receive(JSON.stringify({kind:'state',rules:'stock-2min-battle-3min-v7',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
  const baseline=guest.state;
  for(const mapId of [DUEL_MAPS[7].id,undefined,'unknown-map']){
   const wrong=structuredClone(snapshot);wrong.revision=1000;wrong.mapId=mapId;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'score-5min-v6',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'stock-2min-battle-3min-v7',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
  }
- const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'score-5min-v6',id:host.id,state:fresh}));
+ const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'stock-2min-battle-3min-v7',id:host.id,state:fresh}));
  assert.equal(guest.state?.revision,21);assert.equal(guest.state?.mapId,DUEL_MAPS[6].id);assert.equal(emitted,2);
 });
 
@@ -211,7 +217,7 @@ test('fresh host snapshots clear the guest outage notice so another interruption
  for(let attempt=0;attempt<2;attempt++){
   fakePC(guest).changeConnection('disconnected');assert.equal(guest.connected,false);
   const snapshot=structuredClone(host.state!);snapshot.revision+=attempt+1;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'score-5min-v6',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'stock-2min-battle-3min-v7',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
  }
  assert.equal(messages.length,2);
 });
@@ -223,16 +229,16 @@ test('a missing map in an old guest answer cannot silently change a newly select
  assert.equal(host.mapId,DUEL_MAPS[8].id);assert.equal(host.state?.mapId,DUEL_MAPS[8].id);assert.equal(fakePC(host).remoteDescription,null);
 });
 
-test('old shared-addition and preparation clients cannot join or replace a personal-level match',async()=>{
+test('older preparation and combat rules cannot join or replace a two-phase stock match',async()=>{
  const host=peer('left'),guest=peer('right'),offer=await host.create(DUEL_MAPS[0].id);
  await assert.rejects(guest.join(changed(offer,v=>{delete v.rules;})),/새로고침/);
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5'])await assert.rejects(guest.join(changed(offer,v=>{v.rules=rules;})),/새로고침/);
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6'])await assert.rejects(guest.join(changed(offer,v=>{v.rules=rules;})),/새로고침/);
  assert.equal(fakePC(guest).remoteDescription,null);
  const answer=await guest.join(offer);await assert.rejects(host.accept(changed(answer,v=>{delete v.rules;})),/새로고침/);
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5'])await assert.rejects(host.accept(changed(answer,v=>{v.rules=rules;})),/새로고침/);
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6'])await assert.rejects(host.accept(changed(answer,v=>{v.rules=rules;})),/새로고침/);
  assert.equal(fakePC(host).remoteDescription,null);await host.accept(answer);
  const paired=await pair(DUEL_MAPS[1].id),baseline=paired.guest.state,snapshot=structuredClone(paired.host.state!);snapshot.revision+=100;
  paired.guestChannel.receive(JSON.stringify({kind:'state',id:paired.host.id,state:snapshot}));
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5'])paired.guestChannel.receive(JSON.stringify({kind:'state',rules,id:paired.host.id,state:snapshot}));
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6'])paired.guestChannel.receive(JSON.stringify({kind:'state',rules,id:paired.host.id,state:snapshot}));
  assert.equal(paired.guest.state,baseline);
 });

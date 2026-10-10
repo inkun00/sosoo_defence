@@ -1,7 +1,7 @@
-import {advanceDuel,applyDuel,createDuel,duelLevel,duelTowerLevel,duelBuildCost,canUseDuelTower,joinDuel,validDuelCell,DuelAction,DuelState,RewardLoadout,Side,DUEL_COLUMNS,DUEL_ROWS} from './duel';
+import {advanceDuel,applyDuel,createDuel,duelLevel,duelTowerLevel,canUseDuelTower,joinDuel,validDuelCell,DuelAction,DuelState,RewardLoadout,Side,DUEL_COLUMNS,DUEL_ROWS} from './duel';
 import {duelMap,duelPathDistance,duelPathPosition} from './duel-maps';
 import {ComputerMood,ComputerPortrait,ComputerOpponent,computerOpponent} from './computer-opponents';
-import {heroesAtLevel} from './heroes';
+import {heroesAtLevel,heroSpec,HeroSpec} from './heroes';
 import {TOWERS,towerPrice} from '../towers';
 import {numberText,recipe} from '../math';
 import type {PeerIdentity,Reply} from './peer';
@@ -35,7 +35,7 @@ export class ComputerPeer{
  onState:(state:DuelState,connected:boolean)=>void=()=>{};onStatus:(message:string)=>void=()=>{};
  private timer:ReturnType<typeof setInterval>|undefined;private disposed=false;private clock:()=>number;private nonce=0;
  private preparationStarted=false;private strategyStarted=false;
- private nextBuild=0;private nextFusion=0;private nextHatch=0;private answeringAt=0;private seenFlame=9000;
+ private nextBuild=0;private nextFusion=0;private nextHatch=0;private nextSummon=0;private answeringAt=0;private seenFlame=9000;
  private portrait:ComputerPortrait;private moodUntil=0;
  constructor(readonly identity:PeerIdentity,level:number,options:ComputerOptions={}){
   this.definition=computerOpponent(level);const now=options.clock?.()??Date.now(),monotonic=performance.now();
@@ -64,10 +64,10 @@ export class ComputerPeer{
   const s=this.state,p=s.players[1]!,level=duelTowerLevel(s),count=(id:string)=>p.stock[id]??0;
   if(Object.values(p.stock).reduce((a,b)=>a+b,0)>=this.definition.maxTowers)return;
   const preferences=this.preferences(),types=TOWERS.filter(t=>preferences.includes(t.id)&&canUseDuelTower(s,1,t.id)&&towerPrice(t,p.money,level,p.purchaseVariation)<=p.money&&!(t.id==='needle'&&count(t.id)>=3));
-  // Reserve affordable subtraction towers as well as a slow and a large shot.
+  // Reserve affordable finishers as well as a large shot and long-range defense.
   // Spending the whole preparation budget on unique expensive types leaves no
   // small projectiles to finish enemies whose health has a hundredth remainder.
-  const plan=['basic','double','needle','pebble','frost','catapult','basic','double','needle','pebble','basic','double'];
+  const plan=['basic','double','needle','pebble','catapult','sniper','basic','double','needle','pebble','basic','double'];
   const prepared=Object.values(p.stock).reduce((a,b)=>a+b,0),planned=this.definition.level>=8?types.find(t=>t.id===plan[prepared]):undefined;
   const pick=planned??types.sort((a,b)=>count(a.id)-count(b.id)||preferences.indexOf(a.id)-preferences.indexOf(b.id))[0];
   if(pick&&this.act({type:'prepare-quote',typeId:pick.id},now).ok){this.answeringAt=now+this.definition.thinkMs;this.mood('thinking','소수점을 맞추고 타워를 준비하고 있어요.',now,this.definition.thinkMs);}
@@ -76,19 +76,18 @@ export class ComputerPeer{
   const s=this.state,p=s.players[1]!,wave=duelLevel(s),experienced=this.definition.level>=8,max=Math.min(this.definition.maxTowers,experienced?this.definition.level+2*(wave-1):2+wave+Math.floor(this.definition.level/3));let upgrading='';
   const count=(id:string)=>p.towers.filter(t=>t.typeId===id).length;
   const priorities=[...(wave>=2&&count('needle')<2?['needle']:[]),...(count('frost')<1?['frost']:[]),...(wave>=6&&count('sniper')<1?['sniper']:[]),...(wave>=8&&count('rune')<1?['rune']:[]),...(wave>=3&&count('catapult')<1?['catapult']:[]),...(wave>=4&&count('lightning')<1?['lightning']:[]),...(wave>=5&&count('crystal')<1?['crystal']:[]),...(wave>=3&&count('frost')<2?['frost']:[]),...(wave>=5&&count('catapult')<2?['catapult']:[])];
-  // Experienced opponents replace duplicate starting cannons instead of filling
-  // every slot permanently. Prepared towers return to stock; cash purchases
-  // refund their original cost through the ordinary sell action.
+  // Experienced opponents replace duplicate starting cannons with an already
+  // prepared advanced tower. Battle coins never buy additional defense.
   if(p.towers.length>=max){
    if(this.definition.level<6||wave<3)return;
    const old=p.towers.filter(t=>experienced?['basic','double','pebble','needle'].includes(t.typeId)&&count(t.typeId)>(t.typeId==='needle'?2:1):['basic','double'].includes(t.typeId)&&count(t.typeId)>(t.typeId==='basic'?2:1)).sort((a,b)=>s.mapId?duelPathDistance(s.mapId,b.x,b.y)-duelPathDistance(s.mapId,a.x,a.y):b.x-a.x)[0];
-   const affordable=old?TOWERS.filter(t=>t.grade>=2&&canUseDuelTower(s,1,t.id)&&(p.stock[t.id]>0||duelBuildCost(s,1,t.id)<=p.money+(old.prepared?0:old.cost))):[];
+   const affordable=old?TOWERS.filter(t=>t.grade>=2&&canUseDuelTower(s,1,t.id)&&p.stock[t.id]>0):[];
    const upgrade=experienced?priorities.map(id=>affordable.find(t=>t.id===id)).find(Boolean):affordable.find(t=>!p.towers.some(o=>o.typeId===t.id));
    if(!old||!upgrade)return;
    if(!this.act({type:'sell',towerId:old.id},now).ok)return;
    upgrading=upgrade.id;
   }
-  const unlocked=TOWERS.filter(t=>canUseDuelTower(s,1,t.id)&&(p.stock[t.id]>0||duelBuildCost(s,1,t.id)<=p.money)&&!(t.id==='needle'&&p.towers.filter(x=>x.typeId==='needle').length>=3));
+  const unlocked=TOWERS.filter(t=>canUseDuelTower(s,1,t.id)&&p.stock[t.id]>0&&!(t.id==='needle'&&p.towers.filter(x=>x.typeId==='needle').length>=3));
   const preferences=this.preferences();
   const finishing=wave>=2&&count('needle')<(this.definition.level>=8?2:1)?unlocked.find(t=>t.id==='needle'):undefined;
   const stored=unlocked.filter(t=>p.stock[t.id]>0);
@@ -100,6 +99,30 @@ export class ComputerPeer{
   const cells=s.mapId?strategicDuelCells(s,1,pick.unit,pick.effect==='range'?4:3):[2,4,1,5].flatMap(y=>columns.map(x=>({x,y}))),cell=cells.find(c=>validDuelCell(s,1,c.x,c.y));if(!cell)return;
   if(this.act({type:'build',...cell,typeId:pick.id},now).ok)this.mood('cast','새 타워로 불꽃을 지킬게요!',now);
  }
+ private chooseHero(level:number):HeroSpec|undefined{
+  const p=this.state.players[1]!,heroes=heroesAtLevel(level),variant=this.definition.level<4||this.definition.level===9?0:(this.definition.level+p.solved)%3;
+  return this.definition.level>=8?(heroes.find(h=>h.effect==='enemy-slow')??heroes.find(h=>h.effect==='vitality')??heroes.find(h=>h.variant===variant)??heroes[0]):heroes.find(h=>h.variant===variant)??heroes[0];
+ }
+ private prepareHeroes(now:number){
+  const p=this.state.players[1]!,desired=this.definition.heroLevel;
+  if(p.egg>=desired&&now>=this.nextHatch){
+   const hero=this.chooseHero(p.egg);
+   if(hero&&this.act({type:'hatch',heroId:hero.id},now).ok){this.nextHatch=now+this.definition.hatchMs;this.mood('cast','부화한 영웅을 전투에 대비해 모았어요.',now);}
+  }else if(p.egg<desired&&now>=this.nextFusion){
+   this.nextFusion=now+this.definition.fusionMs;const slots=additionSlots(p.board);
+   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 돌 알을 성장시켰어요.',now);
+  }
+ }
+ private summon(now:number){
+  const s=this.state,p=s.players[1]!;
+  if(now<this.nextSummon)return;
+  // A leftover egg gets its last choice at the transition. Stored heroes then
+  // join later waves at the opponent's ordinary decision speed.
+  const leftover=p.egg>0?this.chooseHero(p.egg):undefined;
+  const stored=Object.entries(p.heroStock??{}).filter(([,n])=>n>0).map(([id])=>heroSpec(id)).filter((h):h is HeroSpec=>!!h).sort((a,b)=>b.level-a.level||a.variant-b.variant)[0];
+  const action:DuelAction|undefined=leftover?{type:'hatch',heroId:leftover.id}:stored?{type:'summon',heroId:stored.id}:p.rewardHero&&!p.rewardUsed?{type:'summon-reward'}:undefined;
+  if(action&&this.act(action,now).ok){this.nextSummon=now+this.definition.hatchMs;this.mood('cast','준비한 영웅이 출발해요!',now);}
+ }
  step(now=this.clock()){
   if(this.disposed||now<this.state.updatedAt)return;
   const s=this.state,p=s.players[1]!;s.players.forEach(player=>{if(player)player.lastSeen=now;});advanceDuel(s,now);
@@ -108,31 +131,20 @@ export class ComputerPeer{
    clearInterval(this.timer);this.timer=undefined;this.onState(s,true);return;
   }
   if(s.status==='preparing'){
-   if(!this.preparationStarted){this.preparationStarted=true;this.nextBuild=s.preparationStartedAt+1800;}
+   if(!this.preparationStarted){this.preparationStarted=true;this.nextBuild=s.preparationStartedAt+1800;this.nextFusion=s.preparationStartedAt+this.definition.fusionMs;this.nextHatch=s.preparationStartedAt+this.definition.hatchMs;}
    if(p.quote){if(now>=this.answeringAt){const q=p.quote,r=this.act({type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now);this.nextBuild=now+(this.definition.level>=8?Math.max(300,this.definition.thinkMs/4):this.definition.buildMs);if(r.ok)this.mood('cast','계산한 타워를 모아 두었어요!',now);else this.act({type:'cancel'},now);}}
    else if(now>=this.nextBuild){this.nextBuild=now+this.definition.buildMs;this.prepare(now);}
+   this.prepareHeroes(now);
    this.onState(s,true);return;
   }
   if(s.status!=='playing'){this.onState(s,true);return;}
   if(!this.strategyStarted){
-   this.strategyStarted=true;this.nextBuild=s.startedAt+1800;this.nextFusion=s.startedAt+this.definition.fusionMs;this.nextHatch=s.startedAt+this.definition.hatchMs;
+   this.strategyStarted=true;this.nextBuild=s.startedAt+1800;this.nextSummon=s.startedAt+this.definition.hatchMs;
   }
   if(p.flame<this.seenFlame){this.mood('hurt','앗! 내 불꽃까지 도착했어요.',now);this.seenFlame=p.flame;}
   else if(now>=this.moodUntil)this.mood('idle','불꽃과 몬스터를 살피고 있어요.',now);
   if(now>=this.nextBuild){const hasStock=Object.values(p.stock).some(n=>n>0);this.nextBuild=now+(this.definition.level>=8&&hasStock?Math.max(600,this.definition.thinkMs/2):this.definition.buildMs);this.build(now);}
-  if(s.status==='playing'){
-   // Advanced opponents grow their intended hero from the start. Waiting for
-   // the wave level to unlock Lv.10 would postpone it beyond this 4-minute battle.
-   const desired=this.definition.level>=8?this.definition.heroLevel:Math.min(this.definition.heroLevel,duelLevel(s)+1);
-   if(p.egg>=desired&&now>=this.nextHatch){
-    const heroes=heroesAtLevel(p.egg),variant=this.definition.level<4||this.definition.level===9?0:(this.definition.level+p.solved)%3;
-    const hero=this.definition.level>=8?(heroes.find(h=>h.effect==='enemy-slow')??heroes.find(h=>h.effect==='vitality')??heroes.find(h=>h.variant===variant)??heroes[0]):heroes.find(h=>h.variant===variant)??heroes[0];
-    if(hero&&this.act({type:'hatch',heroId:hero.id},now).ok){this.nextHatch=now+this.definition.hatchMs;this.mood('cast','돌의 영웅이 출발해요!',now);}
-   }else if(p.egg<desired&&now>=this.nextFusion){
-    const slots=additionSlots(p.board);this.nextFusion=now+this.definition.fusionMs;
-    if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 돌 알을 성장시켰어요.',now);
-   }
-  }
+  if(s.status==='playing')this.summon(now);
   this.onState(s,true);
  }
  async send(action:DuelAction):Promise<Reply>{

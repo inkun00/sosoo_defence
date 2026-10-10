@@ -19,10 +19,10 @@ function fuseSlots(s:DuelState,side:Side=0){
 }
 function fuse(s:DuelState,side:Side=0,now=s.updatedAt,slots=fuseSlots(s,side)){return applyDuel(s,side,{type:'fuse',round:s.players[side]!.round,slots,operation:'+'},now,'fuse');}
 function enemy(extra:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:100,max:100,x:3,y:3,pathDistance:3,slow:0,stun:0,hits:0,...extra};}
-function tower(s:DuelState,typeId='basic',side:Side=0){s.players[side]!.money=10000;assert.ok(applyDuel(s,side,{type:'build',typeId,x:side===0?3:20,y:2},START,'build').ok);}
+function tower(s:DuelState,typeId='basic',side:Side=0){s.players[side]!.stock[typeId]=1;assert.ok(applyDuel(s,side,{type:'build',typeId,x:side===0?3:20,y:2},START,'build').ok);}
 
-test('대전 총 시간은 준비 60초와 전투 240초이며 점수는 정수로 타격·오답 효율을 보상한다',()=>{
- assert.equal(DUEL_PREPARATION_SECONDS,60);assert.equal(DUEL_SECONDS,240);assert.equal(DUEL_TOTAL_SECONDS,300);
+test('대전 총 시간은 준비 120초와 전투 180초이며 점수는 정수로 타격·오답 효율을 보상한다',()=>{
+ assert.equal(DUEL_PREPARATION_SECONDS,120);assert.equal(DUEL_SECONDS,180);assert.equal(DUEL_TOTAL_SECONDS,300);
  assert.deepEqual([1,2,3,4,5].map(duelKillScore),[200,150,133,125,120]);
  assert.deepEqual([0,1,2,3,4].map(duelQuestionScore),[25,12,8,6,5]);
  assert.equal(duelKillScore(1000),100);assert.equal(duelQuestionScore(1000),0);
@@ -71,29 +71,30 @@ test('구조가 잘못된 요청이나 취소한 문제에는 점수가 없고 �
 });
 
 test('영웅 덧셈은 같은 판에서 다른 식을 선택해도 오답을 합산하고 다음 판부터 새로 채점한다',()=>{
- const s=playing(),p=s.players[0];p.board=[100,200,400,300,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600];
- assert.equal(fuse(s,0,START,[0,1,2]).ok,false);assert.equal(fuse(s,0,START,[1,3,2]).ok,false);
+ const s=preparing(),p=s.players[0];p.board=[100,200,400,300,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600];
+ assert.equal(fuse(s,0,NOW,[0,1,2]).ok,false);assert.equal(fuse(s,0,NOW,[1,3,2]).ok,false);
  assert.equal(p.fusionWrongAttempts,2);assert.equal(p.round,0);assert.equal(duelScore(p),0);
- assert.ok(fuse(s,0,START,[0,1,3]).ok);assert.equal(p.questionScore,8);assert.equal(p.answeredQuestions,1);assert.equal(p.fusionWrongAttempts,0);assert.equal(p.round,1);
+ assert.ok(fuse(s,0,NOW,[0,1,3]).ok);assert.equal(p.questionScore,8);assert.equal(p.answeredQuestions,1);assert.equal(p.fusionWrongAttempts,0);assert.equal(p.round,1);
  assert.ok(fuse(s).ok);assert.equal(p.questionScore,33);assert.equal(p.answeredQuestions,2);assert.equal(duelScore(s.players[1]),0);
 });
 
 test('같은 영웅 문제의 재전송과 유효하지 않은 블럭은 점수나 오답 수를 바꾸지 않는다',()=>{
- const s=playing(),p=s.players[0],round=p.round,slots=fuseSlots(s);
- assert.equal(fuse(s,0,START,[0,0,1]).ok,false);assert.equal(p.fusionWrongAttempts,0);
- assert.ok(fuse(s,0,START,slots).ok);const before=structuredClone(p);
- assert.equal(applyDuel(s,0,{type:'fuse',round,slots,operation:'+'},START,'duplicate').ok,false);assert.deepEqual(p,before);
+ const s=preparing(),p=s.players[0],round=p.round,slots=fuseSlots(s);
+ assert.equal(fuse(s,0,NOW,[0,0,1]).ok,false);assert.equal(p.fusionWrongAttempts,0);
+ assert.ok(fuse(s,0,NOW,slots).ok);const before=structuredClone(p);
+ assert.equal(applyDuel(s,0,{type:'fuse',round,slots,operation:'+'},NOW,'duplicate').ok,false);assert.deepEqual(p,before);
 });
 
 test('덧셈 합이 학습 범위를 넘어간 오답도 다음 유효한 정답의 보상을 낮춘다',()=>{
- const s=playing(),p=s.players[0];p.board=[6000,7000,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400];
- assert.equal(fuse(s,0,START,[0,1,2]).ok,false);assert.equal(p.fusionWrongAttempts,1);assert.equal(p.wrongQuestions.length,0);assert.equal(duelScore(p),0);
- assert.ok(fuse(s,0,START,[2,3,4]).ok);assert.equal(p.questionScore,12);assert.equal(p.fusionWrongAttempts,0);
+ const s=preparing(),p=s.players[0];p.board=[6000,7000,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400];
+ assert.equal(fuse(s,0,NOW,[0,1,2]).ok,false);assert.equal(p.fusionWrongAttempts,1);assert.equal(p.wrongQuestions.length,0);assert.equal(duelScore(p),0);
+ assert.ok(fuse(s,0,NOW,[2,3,4]).ok);assert.equal(p.questionScore,12);assert.equal(p.fusionWrongAttempts,0);
 });
 
 test('준비 오답과 영웅 합성 오답은 서로 다른 문제의 채점에 섞이지 않는다',()=>{
  const s=preparing(),p=s.players[0];quote(s,'expired');applyDuel(s,0,{type:'answer',nonce:'expired',answer:'0'},NOW,'wrong');
- connectedAdvance(s,START);assert.ok(fuse(s).ok);assert.equal(p.questionScore,25);assert.equal(p.answeredQuestions,1);
+ assert.ok(fuse(s).ok);assert.equal(p.questionScore,25);assert.equal(p.answeredQuestions,1);
+ connectedAdvance(s,START);assert.equal(p.questionScore,25);assert.equal(fuse(s).ok,false);
 });
 
 test('실제로 적을 제거한 마지막 타격에만 점수를 주고 더 적은 타격의 처치 점수가 높다',()=>{
@@ -155,7 +156,7 @@ test('성 파괴·기권·연결 종료는 5분 전에도 기존 승리 조건�
 });
 
 test('유한하지 않은 시간 요청은 점수와 상태를 바꾸지 않고 같은 시뮬레이션은 같은 점수를 낸다',()=>{
- const a=playing(),b=playing();for(const s of [a,b]){tower(s,'basic');s.enemies=[enemy({hp:200,max:200})];connectedAdvance(s,START+2200);assert.ok(fuse(s).ok);}
+ const a=preparing(),b=preparing();for(const s of [a,b]){assert.ok(fuse(s).ok);connectedAdvance(s,START);s.wave=10000;tower(s,'basic');s.enemies=[enemy({hp:200,max:200})];connectedAdvance(s,START+2200);}
  assert.deepEqual(a,b);assert.equal(duelScore(a.players[0]),175);
  const before=structuredClone(a);for(const now of [NaN,Infinity,-Infinity])assert.equal(fuse(a,0,now).ok,false);assert.deepEqual(a,before);
 });

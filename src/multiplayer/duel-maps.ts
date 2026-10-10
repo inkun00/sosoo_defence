@@ -58,5 +58,5 @@ export function duelPathDistance(mapId:string|undefined,x:number,y:number):numbe
  }
  return best;
 }
-/** Curve length should not grant a different amount of travel time to either side. */
-export function duelMapSpeedScale(mapId?:string){return duelMap(mapId).length/BASE_LENGTH;}
+/** Units start one cell beyond their castle, so normalize their remaining trip. */
+export function duelMapSpeedScale(mapId?:string){return (duelMap(mapId).length-1)/(BASE_LENGTH-1);}

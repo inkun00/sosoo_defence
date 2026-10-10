@@ -20,11 +20,11 @@ export class HeroSummonStream{
   // consumes the transition without celebrating a summon that happened earlier.
   const phaseTime=state.status==='preparing'?state.preparationElapsed:state.elapsed;
   const active=state.status==='preparing'||state.status==='playing';
-  // Collected heroes enter when preparation begins. Each phase owns a clock:
-  // switching to battle must not turn a minute-old entrance into a new event.
+  // Collected heroes now enter on demand in battle. Each phase owns a clock,
+  // so only a summon at the beginning of battle can cross the phase boundary.
   const samePhase=state.status===this.phase&&phaseTime>=this.phaseTime&&phaseTime-this.phaseTime<=2.4;
-  const preparationEntry=this.phase==='waiting'&&state.status==='preparing'&&phaseTime<=2.4;
-  const recent=!first&&active&&(samePhase||preparationEntry);
+  const battleEntry=this.phase==='preparing'&&state.status==='playing'&&phaseTime<=2.4;
+  const recent=!first&&active&&(samePhase||battleEntry);
   for(const owner of [0,1] as Side[]){
    const player=state.players[owner],used=!!player?.rewardUsed;
    if(recent&&!this.used[owner]&&used&&player?.rewardHero){

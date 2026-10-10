@@ -18,6 +18,11 @@ function prepare(s:DuelState):void{
  s.revision++;
 }
 function play(s:DuelState):void{s.players.forEach(p=>p!.lastSeen=now);advanceDuel(s,now);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);}
+function summon(s:DuelState):void{
+ for(const side of [0,1] as const)assert.equal(applyDuel(s,side,{type:'summon-reward'},s.updatedAt,`reward-${side}`).ok,true);
+ s.revision++;
+}
+function advance(s:DuelState,elapsed:number):void{const at=now+elapsed*1000;s.players.forEach(p=>p!.lastSeen=at);advanceDuel(s,at);}
 
 test('grade palettes and spectacle budgets grow at each two-level rank boundary',()=>{
  const expected=['일반','고급','희귀','전설','신화'];
@@ -29,17 +34,30 @@ test('grade palettes and spectacle budgets grow at each two-level rank boundary'
  assert.equal(heroSummonStyle(NaN).rank,1);assert.equal(heroSummonStyle(1000).rank,5);assert.equal(heroSummonStyle(-2).rank,1);
 });
 
-test('waiting to preparation emits the two selected collected heroes once in host and guest snapshots',()=>{
+test('preparation and battle start stay quiet, and the selected collected heroes emit once when summoned',()=>{
  const s=state(),host=new HeroSummonStream(),guest=new HeroSummonStream();
  assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
- prepare(s);const a=host.take('room',s),b=guest.take('room',structuredClone(s));assert.deepEqual(a,b);assert.equal(a.length,2);assert.equal(a[0].owner,0);assert.equal(a[0].heroId,'hero-1-0');
+ prepare(s);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);assert.equal(s.enemies.length,0);
+ play(s);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);assert.equal(s.enemies.length,0);
+ summon(s);const a=host.take('room',s),b=guest.take('room',structuredClone(s));assert.deepEqual(a,b);assert.equal(a.length,2);assert.equal(a[0].owner,0);assert.equal(a[0].heroId,'hero-1-0');
  assert.equal(a[1].owner,1);assert.equal(a[1].level,10);
  assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
- play(s);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
+ advance(s,.1);assert.deepEqual(host.take('room',s),[]);assert.deepEqual(guest.take('room',structuredClone(s)),[]);
+});
+
+test('an immediate battle summon can cross the preparation clock boundary',()=>{
+ const s=state(),stream=new HeroSummonStream();stream.take('boundary',s);prepare(s);assert.deepEqual(stream.take('boundary',s),[]);
+ play(s);summon(s);assert.equal(stream.take('boundary',s).length,2);assert.deepEqual(stream.take('boundary',s),[]);
+});
+
+test('a collected hero summoned later in battle emits when recent battle snapshots are available',()=>{
+ const s=state(),stream=new HeroSummonStream();stream.take('later',s);prepare(s);stream.take('later',s);play(s);stream.take('later',s);
+ advance(s,30);assert.deepEqual(stream.take('later',s),[]);advance(s,30.1);summon(s);
+ assert.equal(stream.take('later',s).length,2);assert.deepEqual(stream.take('later',s),[]);
 });
 
 test('ordinary hatching is excluded even when the hero matches the reserve, without extra escorts',()=>{
- const s=state(),stream=new HeroSummonStream();stream.take('room',s);prepare(s);assert.equal(stream.take('room',s).length,2);play(s);stream.take('room',s);s.players[0].egg=1;
+ const s=state(),stream=new HeroSummonStream();stream.take('room',s);prepare(s);assert.deepEqual(stream.take('room',s),[]);play(s);stream.take('room',s);summon(s);assert.equal(stream.take('room',s).length,2);s.players[0].egg=1;
  assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},now,'egg').ok,true);s.revision++;
  assert.deepEqual(stream.take('room',s),[]);
  s.players[0].egg=1;applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},now,'egg2');s.revision++;
@@ -49,24 +67,25 @@ test('ordinary hatching is excluded even when the hero matches the reserve, with
 });
 
 test('baseline, reconnect, stale revisions, expired gaps and room reset do not replay a summon',()=>{
- const s=state(),stream=new HeroSummonStream();prepare(s);assert.deepEqual(stream.take('room',s),[]);
+ const s=state(),stream=new HeroSummonStream();prepare(s);play(s);summon(s);assert.deepEqual(stream.take('room',s),[]);
  assert.deepEqual(stream.take('room',structuredClone(s)),[]);assert.deepEqual(stream.take('room',null),[]);assert.deepEqual(stream.take('room',s),[]);
- const fresh=state();stream.take('another',fresh);const old=structuredClone(fresh);prepare(fresh);assert.equal(stream.take('another',fresh).length,2);
+ const fresh=state();stream.take('another',fresh);prepare(fresh);stream.take('another',fresh);play(fresh);stream.take('another',fresh);const old=structuredClone(fresh);summon(fresh);assert.equal(stream.take('another',fresh).length,2);
  assert.deepEqual(stream.take('another',old),[]);fresh.revision++;assert.deepEqual(stream.take('another',fresh),[]);
- const late=state();stream.take('late',late);prepare(late);late.preparationElapsed=3;assert.deepEqual(stream.take('late',late),[]);late.revision++;assert.deepEqual(stream.take('late',late),[]);
- play(late);assert.deepEqual(stream.take('late',late),[],'battle transition cannot replay a consumed preparation entrance');
- const skipped=state();stream.take('skipped',skipped);prepare(skipped);play(skipped);assert.deepEqual(stream.take('skipped',skipped),[],'a missing full preparation minute is not a recent entrance');
- const retired=state();stream.take('finished',retired);prepare(retired);retired.status='finished';assert.deepEqual(stream.take('finished',retired),[]);
+ const late=state();stream.take('late',late);prepare(late);stream.take('late',late);play(late);stream.take('late',late);advance(late,3);summon(late);assert.deepEqual(stream.take('late',late),[]);late.revision++;assert.deepEqual(stream.take('late',late),[]);
+ advance(late,3.1);assert.deepEqual(stream.take('late',late),[],'a later snapshot cannot replay a consumed entrance');
+ const lateBoundary=state();stream.take('late-boundary',lateBoundary);prepare(lateBoundary);stream.take('late-boundary',lateBoundary);play(lateBoundary);advance(lateBoundary,3);summon(lateBoundary);assert.deepEqual(stream.take('late-boundary',lateBoundary),[],'an expired preparation-to-battle gap does not emit a summon');
+ const skipped=state();stream.take('skipped',skipped);prepare(skipped);play(skipped);summon(skipped);assert.deepEqual(stream.take('skipped',skipped),[],'missing the full two-minute preparation is not a recent entrance');
+ const retired=state();stream.take('finished',retired);prepare(retired);play(retired);summon(retired);retired.status='finished';assert.deepEqual(stream.take('finished',retired),[]);
 });
 
-test('a preparation snapshot without optional enemy markers still identifies both selected heroes',()=>{
- const s=state(),stream=new HeroSummonStream();stream.take('legacy',s);prepare(s);for(const enemy of s.enemies)delete enemy.rewardSummon;
+test('a battle summon snapshot without optional enemy markers still identifies both selected heroes',()=>{
+ const s=state(),stream=new HeroSummonStream();stream.take('legacy',s);prepare(s);stream.take('legacy',s);play(s);summon(s);for(const enemy of s.enemies)delete enemy.rewardSummon;
  assert.equal(stream.take('legacy',s).length,2);assert.deepEqual(stream.take('legacy',s),[]);
 });
 
 test('reserve entrance uses the curved road position for both host and guest snapshots',()=>{
  const s=state();s.mapId='storm-step';const host=new HeroSummonStream(),guest=new HeroSummonStream();host.take('curve',s);guest.take('curve',structuredClone(s));
- prepare(s);const enemy=s.enemies.find(e=>e.rewardSummon&&e.owner===0)!;enemy.pathDistance=duelPathDistance(s.mapId,2,1);enemy.x=2;enemy.y=1;
+ prepare(s);host.take('curve',s);guest.take('curve',structuredClone(s));play(s);summon(s);const enemy=s.enemies.find(e=>e.rewardSummon&&e.owner===0)!;enemy.pathDistance=duelPathDistance(s.mapId,2,1);enemy.x=2;enemy.y=1;
  const events=host.take('curve',s);assert.equal(events.length,2);assert.equal(events[0].x,2);assert.equal(events[0].y,1);assert.deepEqual(guest.take('curve',structuredClone(s)),events);
 });
 

@@ -12,9 +12,9 @@ test('타워 오답은 식·입력·정답을 남기고 반복 시 횟수를 누
  assert.ok(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},now,'ok').ok);assert.equal(s.players[0].purchases,1);assert.equal(s.players[0].wrongQuestions.length,1);assert.equal(s.players[0].stock.basic,1);assert.equal(s.players[0].towers.length,0);
 });
 test('잘못된 조작과 지난 판은 오답이 아니며 합성 오답은 실제 선택한 숫자를 기록한다',()=>{
- const s=preparation(),startedAt=startCombat(s);applyDuel(s,0,{type:'fuse',round:0,slots:[0,0,2],operation:'+'},startedAt,'dup');assert.equal(s.players[0].wrongQuestions.length,0);
- s.players[0].board=[200,300,800,...Array(13).fill(100)];applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},startedAt,'wrong');assert.equal(s.players[0].wrongQuestions[0].correct,500);assert.equal(s.players[0].wrongQuestions[0].submitted,'0.8');assert.equal(s.players[0].egg,0);
- applyDuel(s,0,{type:'fuse',round:99,slots:[0,1,2],operation:'-'},startedAt,'old');assert.equal(s.players[0].wrongQuestions.length,1);
+ const s=preparation();applyDuel(s,0,{type:'fuse',round:0,slots:[0,0,2],operation:'+'},now,'dup');assert.equal(s.players[0].wrongQuestions.length,0);
+ s.players[0].board=[200,300,800,...Array(13).fill(100)];applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},now,'wrong');assert.equal(s.players[0].wrongQuestions[0].correct,500);assert.equal(s.players[0].wrongQuestions[0].submitted,'0.8');assert.equal(s.players[0].egg,0);
+ applyDuel(s,0,{type:'fuse',round:99,slots:[0,1,2],operation:'-'},now,'old');assert.equal(s.players[0].wrongQuestions.length,1);
 });
 test('경기 시작 전 취소는 기록하지 않고 종료 후 내 계정의 문항만 추출한다',()=>{
  const waiting=createDuel('a','가',17,now);assert.equal(finishedRecord(waiting,0,id),null);

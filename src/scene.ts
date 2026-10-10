@@ -160,6 +160,8 @@ export class Field extends Phaser.Scene{
    const bar=this.add.graphics().setDepth(6);v={kind:e.kind,sprite,text,name,bar};this.visuals.set(e.id,v);
   }
   const texture='dungeon-'+MONSTERS[renderedKind].atlas;if(v.sprite.texture.key!==texture)v.sprite.stop().setTexture(texture,renderedKind+'-0').setDisplaySize(size,size);
+  const previous=e.path[e.next-1],next=e.path[e.next],dx=previous&&next?next.x-previous.x:0;
+  if(dx)v.sprite.setFlipX(dx<0);
   const bouncing=(e.recoil?.remaining??0)>0,pose=!this.reducedMotion&&bouncing?Math.sin(Math.PI*(1-e.recoil!.remaining/.6))*12:0;
   const normal=bouncing?Math.hypot(e.recoil!.vx,e.recoil!.vy):0;
   v.sprite.setPosition(e.x+(normal?e.recoil!.vx/normal*pose:0),sy+(normal?e.recoil!.vy/normal*pose:0));

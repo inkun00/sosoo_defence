@@ -51,13 +51,14 @@ test('경로 샘플은 모서리를 돌아가며 모든 맵의 대응 위치가 
  s.enemies=[e];advanceDuel(s,NOW+1000);assert.ok(Math.abs(e.x-predicted.x)<1e-8);assert.ok(Math.abs(e.y-predicted.y)<1e-8);
 });
 
-test('모든 선택 맵에서 파동이 중앙에서 출발하고 동일한 시간에 양쪽 불꽃에 도착한다',()=>{
+test('모든 선택 맵에서 파동은 아군 성에서 대칭으로 출발하고 같은 시간에 상대 불꽃에 도착한다',()=>{
  const arrivals:number[]=[];
  for(const map of DUEL_MAPS){
   const s=match(map.id);keepConnected(s,NOW+8000);assert.equal(s.enemies.length,2);assert.equal(s.enemies[0].target,0);assert.equal(s.enemies[1].target,1);
   const [a,b]=s.enemies;assert.ok(Math.abs(a.x+b.x-23)<1e-8);assert.ok(Math.abs(a.y-b.y)<1e-8);
+  assert.equal(a.owner,1);assert.equal(b.owner,0);assert.ok(a.pathDistance!>map.length-1.1);assert.ok(b.pathDistance!<1.1);
   let first=-1;
-  for(let second=9;second<=65;second++){
+  for(let second=9;second<=120;second++){
    keepConnected(s,NOW+second*1000);assert.equal(s.players[0].flame,s.players[1]!.flame,`${map.id}: 공정한 도착 판정`);
    if(first<0&&s.players[0].flame<9000){first=second;break;}
   }
@@ -93,7 +94,7 @@ test('부화와 학습지 영웅은 동반 병사 없이 양쪽 곡선 길에 �
   const s=match(map.id);for(const side of [0,1] as const){s.players[side]!.egg=10;assert.ok(applyDuel(s,side,{type:'hatch',heroId:'hero-10-1'},NOW,`h-${side}`).ok);}
   const a=s.enemies.filter(e=>e.owner===0),b=s.enemies.filter(e=>e.owner===1);assert.equal(a.length,1);assert.equal(b.length,1);assert.ok(s.enemies.every(e=>e.hero));
   for(let i=0;i<a.length;i++){assert.ok(Math.abs(a[i].x+b[i].x-23)<1e-8);assert.equal(a[i].y,b[i].y);assert.ok(Math.abs(a[i].pathDistance!+b[i].pathDistance!-map.length)<1e-8);}
-  const reward=match(map.id,'hero-10-1');for(const side of [0,1] as const){assert.equal(reward.players[side]!.rewardUsed,true);assert.equal(applyDuel(reward,side,{type:'summon-reward'},NOW,`duplicate-${side}`).ok,false);}
+  const reward=match(map.id,'hero-10-1');for(const side of [0,1] as const){assert.equal(reward.players[side]!.rewardUsed,false);assert.ok(applyDuel(reward,side,{type:'summon-reward'},NOW,`summon-${side}`).ok);assert.equal(reward.players[side]!.rewardUsed,true);assert.equal(applyDuel(reward,side,{type:'summon-reward'},NOW,`duplicate-${side}`).ok,false);}
   assert.equal(reward.enemies.filter(e=>e.rewardSummon).length,2);assert.ok(reward.enemies.every(e=>duelRoadCell(map.id,Math.round(e.x),Math.round(e.y!))));
   const left=reward.enemies.filter(e=>e.owner===0),right=reward.enemies.filter(e=>e.owner===1);
   assert.equal(left.length,1);assert.equal(right.length,1);assert.ok(reward.enemies.every(e=>e.hero));
