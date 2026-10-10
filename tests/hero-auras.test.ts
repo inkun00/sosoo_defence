@@ -95,11 +95,11 @@ test('포탑 공격속도는 동일효과 최강만 적용하고 가속과 감�
  buff.hp=weak.hp=debuff.hp=0;tick(s,.1);assert.ok(Math.abs(t.cooldown-(2-rate-.1))<1e-10);assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),[]);
 });
 
-test('체력 오라 영웅은 120초 준비 후 수동 소환 때 초기화되고 전투 전환에 중복 적용되지 않는다',()=>{
+test('체력 오라 영웅은 180초 준비 후 수동 소환 때 초기화되고 전투 전환에 중복 적용되지 않는다',()=>{
  const h=HEROES.find(hero=>hero.effect==='vitality')!,s=createDuel('a','왼쪽',12,ROOM_NOW,1,{rewardHeroes:[h.id],rewardHero:h.id});joinDuel(s,'b','오른쪽',ROOM_NOW);
  applyDuel(s,0,{type:'ready'},ROOM_NOW,'a');applyDuel(s,1,{type:'ready'},ROOM_NOW,'b');
  assert.equal(s.enemies.length,0);
- for(let i=0;i<5;i++){tick(s,20);assert.equal(s.status,'preparing');assert.equal(s.enemies.length,0);}
+ for(let i=0;i<8;i++){tick(s,20);assert.equal(s.status,'preparing');assert.equal(s.enemies.length,0);}
  tick(s,20);assert.equal(s.status,'playing');assert.equal(s.enemies.length,0);
  assert.ok(applyDuel(s,0,{type:'summon-reward'},START,'summon').ok);
  const e=s.enemies[0];assert.ok(e.hp>h.hp);assert.equal(e.max,e.hp);const hp=e.hp;

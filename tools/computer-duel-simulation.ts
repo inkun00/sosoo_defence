@@ -1,6 +1,6 @@
 import {pathToFileURL} from 'node:url';
 import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/computer-peer';
-import {DuelAction,applyDuel,duelTowerLevel,canUseDuelTower,validDuelCell,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,duelScore} from '../src/multiplayer/duel';
+import {DuelAction,applyDuel,duelTowerLevel,canUseDuelTower,validDuelCell,DUEL_TOTAL_SECONDS,duelScore} from '../src/multiplayer/duel';
 import {DUEL_MAPS} from '../src/multiplayer/duel-maps';
 import {TOWERS,towerPrice} from '../src/towers';
 import {numberText} from '../src/math';
@@ -18,7 +18,7 @@ export function simulateComputerDuel(level:number,seed:number,strategy:Strategy=
  const summonedLevels:number[][]=[[],[]],seenHeroIds=new Set<number>();
  const spentGrowth=[0,0];
  const act=(action:DuelAction)=>{const oldGrowth=p.egg,reply=applyDuel(s,0,action,now,'baseline-'+(++nonce));s.revision++;if(reply.ok&&action.type==='hatch')spentGrowth[0]+=oldGrowth-p.egg;return reply;};act({type:'ready'});
- while((s.status==='preparing'||s.status==='playing')&&now-initialNow<(DUEL_PREPARATION_SECONDS+DUEL_SECONDS+1)*1000){
+ while((s.status==='preparing'||s.status==='playing')&&now-initialNow<(DUEL_TOTAL_SECONDS+1)*1000){
   const previousMoney=p.money,previousComputerMoney=s.players[1]!.money,previousComputerGrowth=s.players[1]!.egg,previousComputerTowers=[...s.players[1]!.towers],wasPlaying=s.status==='playing';
   now+=100;peer.step(now);legalEconomy&&=s.players.every(player=>!!player&&player.money>=0&&player.escrow>=0&&Number.isSafeInteger(player.egg)&&player.egg>=0&&Object.values(player.stock).every(n=>Number.isSafeInteger(n)&&n>=0)&&player.towers.length<=14&&player.towers.filter(t=>t.typeId==='needle').length<=3&&(s.status!=='playing'||player.quote===null));
   for(const e of s.enemies)if(e.hero&&!seenHeroIds.has(e.id)){seenHeroIds.add(e.id);summonedLevels[e.owner].push(e.level);}
@@ -69,5 +69,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const matches=seeds.map(seed=>simulateComputerDuel(i+1,seed));return {level:i+1,computerWins:matches.filter(m=>m.winner===1).length,playerWins:matches.filter(m=>m.winner===0).length,draws:matches.filter(m=>m.winner===null).length,matches};
  });
  const maps=DUEL_MAPS.map(map=>({mapId:map.id,name:map.name,matches:Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id))}));
- console.log(JSON.stringify({description:'2분 동안 실제 뺄셈 정답으로 타워를 비축하고 덧셈 정답마다 성장량 1을 제한 없이 모은다. 0코인에서 시작한 3분 전투 중 준비한 타워만 배치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
+ console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 덧셈 정답마다 성장량 1을 제한 없이 모은다. 0코인에서 시작한 3분 전투 중 준비한 타워만 배치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
 }

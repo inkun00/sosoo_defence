@@ -82,7 +82,7 @@ async function send(action:DuelAction){
 function back(){const url=new URL(location.href);url.searchParams.set('mode','adventure');url.searchParams.delete('emulator');location.assign(url.href);}
 function bind(id:string,fn:()=>unknown){document.getElementById(id)?.addEventListener('click',fn);}
 function settings(fromLobby=false,fromComputer=false){
- show('settings',`<h2>게임 설정</h2><div id="settings-audio"></div><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><p class="duel-warning">총 5분: 문제풀이 2분 + 전투 3분. 준비 중에는 타워 구입 뺄셈과 영웅 성장 덧셈을 자유롭게 골라 풀어요. 타워를 비축하고 덧셈 정답마다 성장량 +1을 계속 모아요. 전투 중에는 비축 타워를 배치하고 영웅 레벨만큼 성장량을 소모해 원하는 때 소환해요. 낮은 레벨 여러 명 또는 높은 레벨 한 명을 고를 수 있고, 남은 성장량은 보존돼요. 특별 수집 영웅은 성장량 없이 전투 중 한 번 소환해요. 타워는 회수해서 다시 배치할 수 있어요. 몬스터는 아군 성에서 출발하고 시간이 갈수록 자주, 높은 레벨로 등장해요. 시간 종료 시 총점이 높은 쪽이 승리하고, 동점이면 무승부예요. 몬스터 처치마다 기본 ${DUEL_KILL_BASE_SCORE}점에 ${DUEL_KILL_EFFICIENCY_SCORE} ÷ 타격 수의 소수점 이하를 버린 보너스를 더해요. 문제 정답마다 ${DUEL_QUESTION_BASE_SCORE} ÷ (오답 횟수 + 1)의 소수점 이하를 버린 점수를 얻어요. 적은 타격과 적은 오답일수록 점수가 높아요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
+ show('settings',`<h2>게임 설정</h2><div id="settings-audio"></div><label class="setting"><span>몬스터 피격 뺄셈식 <small id="setting-equations-state">${hitEquationsEnabled()?'ON':'OFF'}</small></span><input id="setting-hit-equations" type="checkbox" role="switch" ${hitEquationsEnabled()?'checked':''}></label><p>설정은 같은 브라우저에 저장돼요. 대전은 설정을 열어도 계속 진행돼요.</p><p class="duel-warning">총 6분: 문제풀이 3분 + 전투 3분. 준비 중에는 타워 구입 뺄셈과 영웅 성장 덧셈을 자유롭게 골라 풀어요. 타워를 비축하고 덧셈 정답마다 성장량 +1을 계속 모아요. 전투 중에는 비축 타워를 배치하고 영웅 레벨만큼 성장량을 소모해 원하는 때 소환해요. 낮은 레벨 여러 명 또는 높은 레벨 한 명을 고를 수 있고, 남은 성장량은 보존돼요. 특별 수집 영웅은 성장량 없이 전투 중 한 번 소환해요. 타워는 회수해서 다시 배치할 수 있어요. 몬스터는 아군 성에서 출발하고 시간이 갈수록 자주, 높은 레벨로 등장해요. 시간 종료 시 총점이 높은 쪽이 승리하고, 동점이면 무승부예요. 몬스터 처치마다 기본 ${DUEL_KILL_BASE_SCORE}점에 ${DUEL_KILL_EFFICIENCY_SCORE} ÷ 타격 수의 소수점 이하를 버린 보너스를 더해요. 문제 정답마다 ${DUEL_QUESTION_BASE_SCORE} ÷ (오답 횟수 + 1)의 소수점 이하를 버린 점수를 얻어요. 적은 타격과 적은 오답일수록 점수가 높아요.</p><button class="duel-primary" id="settings-back">${fromLobby?'대기실로':'대전으로'}</button>`);
  settingsAudioControls=mountGameAudioControls(document.getElementById('settings-audio')!,{variant:'settings',getState:()=>({sfx:sound.sfx,music:sound.music}),change:changeAudio});
  document.getElementById('setting-hit-equations')!.onchange=()=>{const enabled=(document.getElementById('setting-hit-equations') as HTMLInputElement).checked;setHitEquationsEnabled(enabled);document.getElementById('setting-equations-state')!.textContent=enabled?'ON':'OFF';};
  bind('settings-back',()=>fromComputer?computerScreen():fromLobby?lobby():close());
@@ -114,7 +114,7 @@ function startComputer(level:number,mapId=selectedMapId){
  if(progressLoading){status('계정 레벨을 불러오는 중이에요. 잠시 뒤 다시 눌러 주세요.');return;}
  if(peer instanceof HostPeer&&state&&(state.status==='preparing'||state.status==='playing'))return;
  disposeRoom();sound.resume();const local=new ComputerPeer({uid:user.uid,name:(user.displayName||'나의 수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},level,{mapId});
- peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='게임 시작 후 2분 동안 타워를 비축하고 영웅 성장량을 모아요. 이어지는 전투 3분 동안 성장량을 나눠 소환하고 타워를 배치해요.';lastRound=0;
+ peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='게임 시작 후 3분 동안 타워를 비축하고 영웅 성장량을 모아요. 이어지는 전투 3분 동안 성장량을 나눠 소환하고 타워를 배치해요.';lastRound=0;
  local.onState=(s,c)=>{if(peer!==local)return;state=s;connected=c;const p=s.players[0];if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();if(s.status==='finished'&&recorded!==local.id){void saveFinished();result();}};
  close();
 }
@@ -260,7 +260,7 @@ async function startWithCollectedHero(){
  if(!p.rewardRoster.length){await send({type:'ready'});return;}
  const book=loadWorkbook(),roster=new Set(p.rewardRoster);
  book.collection=book.collection.filter(hero=>roster.has(hero.heroId));
- show('collection',`<p class="eyebrow">수집 영웅 · 전투 중 1회 소환</p><h2>전투 중 소환할 영웅을 선택하세요</h2><p>먼저 2분 동안 타워와 영웅을 준비해요. 고른 수집 영웅은 후반부 전투에서 원하는 때 소환할 수 있어요.</p>${collectionHTML(p.rewardHero,false,book,{mode:'deployment'})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
+ show('collection',`<p class="eyebrow">수집 영웅 · 전투 중 1회 소환</p><h2>전투 중 소환할 영웅을 선택하세요</h2><p>먼저 3분 동안 타워와 영웅을 준비해요. 고른 수집 영웅은 후반부 전투에서 원하는 때 소환할 수 있어요.</p>${collectionHTML(p.rewardHero,false,book,{mode:'deployment'})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
  const entryPeer=peer,entryHeading=content.querySelector('h2');
  bind('deployment-back',close);
  content.querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(button=>button.onclick=async()=>{
@@ -289,7 +289,7 @@ function result(){
  }
  const won=state?.winner===side,draw=state?.winner===null,record=state&&peer?finishedRecord(state,side,peer.id):null;show('result',`<p class="eyebrow">호스트 직접 연결 · 대전 종료</p><h2>${draw?'무승부':won?'대전 승리!':'대전 종료 · 패배'}</h2><p id="result-reason"></p><div id="duel-result-scores" class="duel-warning"></div><p>남은 불꽃 ${numberText(state?.players[side]?.flame??0)} · 경험치 +${record?matchExperience(record):0}</p><p id="result-save"></p><div id="result-wrong"></div><div class="duel-row"><button id="retry-save">기록 저장 다시 시도</button><button class="duel-primary" id="result-lobby">새 대전 준비</button></div>`);document.getElementById('result-reason')!.textContent=state?.reason||'';document.getElementById('result-save')!.textContent=record?saveMessage:'대전 시작 전 종료된 방은 승패·경험치에 포함하지 않아요.';showResultScores();
  const root=document.getElementById('result-wrong')!;for(const q of record?.wrongQuestions??[]){const p=document.createElement('p');p.textContent=wrongText(q);root.append(p);}bind('retry-save',saveFinished);bind('result-lobby',()=>{disposeRoom();lobby();});}
-scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;if(state.status!=='playing'){status('2분 동안 타워를 비축하고 영웅 성장량을 모아요. 전투가 시작되면 배치와 소환을 할 수 있어요.');return;}
+scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;if(state.status!=='playing'){status('3분 동안 타워를 비축하고 영웅 성장량을 모아요. 전투가 시작되면 배치와 소환을 할 수 있어요.');return;}
  const tower=p.towers.find(t=>t.x===x&&t.y===y);if(tower){selectedTower=tower.id;selectedType='';refresh();return;}
  if(selectedType){if(!canPurchaseDuelTower(state)){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}if(!validDuelCell(state,side,x,y)){status('내 쪽 빈 바닥에 설치해요. 길에는 지을 수 없어요.');scene.preview(x,y);return;}await send({type:'build',x,y,typeId:selectedType});}
 };

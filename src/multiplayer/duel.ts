@@ -15,7 +15,7 @@ export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRos
 export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fromX?:number;fromY?:number;owner:Side;enemyId:number;x:number;y?:number;before:number;unit:number;after:number;effect:string;shielded?:boolean;}
 export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:number;createdAt:number;startedAt:number;preparationStartedAt:number;preparationElapsed:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'preparing'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'summon';heroId:string}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
-export const DUEL_PREPARATION_SECONDS=120,DUEL_SECONDS=180,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=17600;
+export const DUEL_PREPARATION_SECONDS=180,DUEL_SECONDS=180,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=17600;
 export const DUEL_KILL_BASE_SCORE=100,DUEL_KILL_EFFICIENCY_SCORE=100,DUEL_QUESTION_BASE_SCORE=25;
 /** Every kill rewards defense; fewer hits and fewer wrong answers add more points. */
 export function duelKillScore(hits:number){return DUEL_KILL_BASE_SCORE+Math.floor(DUEL_KILL_EFFICIENCY_SCORE/Math.max(1,Math.floor(Number.isFinite(hits)?hits:1)));}
@@ -49,7 +49,7 @@ export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLe
 export function duelSide(s:DuelState,uid:string):Side{const i=s.players.findIndex(p=>p?.uid===uid);if(i<0)throw Error('이 대전에 참가한 계정이 아니에요.');return i as Side;}
 function note(s:DuelState,text:string){s.log.push(text);s.log=s.log.slice(-6);}
 function end(s:DuelState,winner:Side|null,reason:string){s.status='finished';s.winner=winner;s.reason=reason;note(s,reason);}
-function endByScore(s:DuelState){const [a,b]=s.players as [DuelPlayer,DuelPlayer],left=duelScore(a),right=duelScore(b);s.elapsed=DUEL_SECONDS;end(s,left===right?null:left>right?0:1,`5분 종료 · 점수 ${left} : ${right}${left===right?' · 무승부':' · 높은 점수로 승부를 결정했어요.'}`);}
+function endByScore(s:DuelState){const [a,b]=s.players as [DuelPlayer,DuelPlayer],left=duelScore(a),right=duelScore(b);s.elapsed=DUEL_SECONDS;end(s,left===right?null:left>right?0:1,`${DUEL_TOTAL_SECONDS/60}분 종료 · 점수 ${left} : ${right}${left===right?' · 무승부':' · 높은 점수로 승부를 결정했어요.'}`);}
 function owns(side:Side,x:number){return side===0?x>=1&&x<=10:x>=13&&x<=22;}
 export function validDuelCell(s:DuelState,side:Side,x:number,y:number){
  const p=s.players[side];return !!p&&Number.isInteger(x)&&Number.isInteger(y)&&owns(side,x)&&y>=0&&y<DUEL_ROWS&&!duelRoadCell(s.mapId,x,y)&&!p.towers.some(t=>t.x===x&&t.y===y);
@@ -161,7 +161,7 @@ export function advanceDuel(s:DuelState,now:number){
   if(s.preparationElapsed>=DUEL_PREPARATION_SECONDS){
    s.status='playing';s.startedAt=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.updatedAt=s.startedAt;s.elapsed=0;s.wave=0;
    for(const p of s.players){if(!p)continue;p.money=0;p.escrow=0;p.quote=null;}
-   note(s,'2분 문제풀이 완료 · 3분 동안 모은 타워를 배치하고 영웅을 소환해요!');
+   note(s,'3분 문제풀이 완료 · 3분 동안 모은 타워를 배치하고 영웅을 소환해요!');
    syncHeroAuras(s);
   }
  }
@@ -262,11 +262,11 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(readyTogether){
    s.status='preparing';s.preparationStartedAt=now;s.preparationElapsed=0;s.updatedAt=now;
    for(const a of s.players)if(a)a.lastSeen=now;
-   note(s,'양쪽 준비 완료 · 2분 동안 타워 구매 문제와 영웅 성장 문제를 자유롭게 풀어요!');
+   note(s,'양쪽 준비 완료 · 3분 동안 타워 구매 문제와 영웅 성장 문제를 자유롭게 풀어요!');
   }
   return ok('준비했어요.');
  }
- if(!['playing','preparing'].includes(s.status))return bad('게임을 시작하면 2분 동안 타워와 영웅 문제를 풀어요.');
+ if(!['playing','preparing'].includes(s.status))return bad('게임을 시작하면 3분 동안 타워와 영웅 문제를 풀어요.');
  if(action.type==='cancel'){release(p);return ok('구매를 취소했어요.');}
  if(action.type==='prepare-quote'||action.type==='quote'){
   if(s.status!=='preparing')return bad('전투 중에는 문제를 풀지 않고 타워를 바로 설치해요.');
@@ -286,7 +286,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   p.purchases++;awardQuestion(p,p.towerWrongAttempts??q.wrongAttempts??0);p.towerWrongAttempts=0;note(s,`${p.name}: ${numberText(q.before)} − ${numberText(q.cost)} = ${numberText(q.before-q.cost)} · ${type.name} +1`);release(p);return ok('정답! 설치할 타워를 한 개 모았어요.');
  }
  if(action.type==='build'){
-  if(s.status!=='playing')return bad('2분 문제풀이가 끝나면 모은 타워를 설치할 수 있어요.');
+  if(s.status!=='playing')return bad('3분 문제풀이가 끝나면 모은 타워를 설치할 수 있어요.');
   const type=towerType(action.typeId);
   if(!type||!canUseDuelTower(s,side,action.typeId))return bad('전반부에 모아 둔 타워만 설치할 수 있어요.');
   if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽의 비어 있는 바닥에 설치해요.');

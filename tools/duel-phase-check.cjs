@@ -64,8 +64,10 @@ async function cell(page,x,y){
    await page.waitForFunction(()=>JSON.parse(document.getElementById('landscape-proof').textContent||'{}').screenReady);
    await page.evaluate(()=>{const scene=window.__duelPhaseTest.scene,original=scene.onAction;window.__duelPhaseClicks=[];scene.onAction=key=>{window.__duelPhaseClicks.push({key,x:scene.input.activePointer.x,y:scene.input.activePointer.y});return original(key);};});
    await page.evaluate(()=>{const p=window.__duelPhaseTest.peer.state.players[0];p.rewardRoster=['hero-3-2'];p.rewardHero='hero-3-2';window.__duelPhaseTest.scene.redraw();});
+   await check(page,label+' waiting clock shows full six minutes',()=>{const ui=window.__duelPhaseTest.scene.ui;return ui.getByName('duel-total-timer').text==='06:00'&&ui.getByName('duel-phase-timer').text==='문제 3분 + 전투 3분';});
    await control(page,'ready');
    await check(page,label+' preparation started',()=>window.__duelPhaseTest.peer.state.status==='preparing');
+   await check(page,label+' preparation starts with three minutes and six total',()=>{const api=window.__duelPhaseTest;api.advancePreparation(0);return api.peer.state.preparationElapsed===0&&api.scene.ui.getByName('duel-total-timer').text==='06:00'&&api.scene.ui.getByName('duel-phase-timer').text==='문제풀이 03:00';});
    await check(page,label+' preparation starts with 17.6 coins',()=>window.__duelPhaseTest.peer.state.players[0].money===17600);
    await check(page,label+' hero addition available',()=>window.__duelPhaseTest.scene.controls.has('fuse')&&[...window.__duelPhaseTest.scene.controls].some(([id,c])=>id.startsWith('block:')&&c.enabled));
    await check(page,label+' preparation only accumulates growth',()=>!window.__duelPhaseTest.scene.controls.has('hatch'));
@@ -92,10 +94,12 @@ async function cell(page,x,y){
    await recipe(page);
    await check(page,label+' growth above ten keeps addition enabled and clamps egg artwork',()=>{const api=window.__duelPhaseTest;return api.peer.state.players[0].egg===12&&api.scene.ui.list.some(o=>o.texture?.key==='duel-eggs'&&o.frame?.name==='egg-10');});
    await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[0].egg=6;api.scene.redraw();});
+   await check(page,label+' after two minutes preparation still has one minute',()=>{const api=window.__duelPhaseTest;api.advancePreparation(120);return api.peer.state.status==='preparing'&&api.peer.state.preparationElapsed===120&&api.scene.controls.has('fuse')&&api.scene.ui.getByName('duel-total-timer').text==='04:00'&&api.scene.ui.getByName('duel-phase-timer').text==='문제풀이 01:00';});
    // Preserve accumulated growth and cancel an unfinished tower question at the boundary.
    await control(page,'type:basic');
    await page.evaluate(()=>window.__duelPhaseTest.advanceToBattle());
    await check(page,label+' battle hides all question controls',()=>window.__duelPhaseTest.peer.state.status==='playing'&&!window.__duelPhaseTest.scene.controls.has('fuse')&&![...window.__duelPhaseTest.scene.controls.keys()].some(id=>id.startsWith('block:'))&&!window.__duelPhaseTest.peer.state.players[0].quote);
+   await check(page,label+' three minute boundary starts three minute battle',()=>{const api=window.__duelPhaseTest;return api.peer.state.preparationElapsed===180&&api.peer.state.status==='playing'&&api.scene.ui.getByName('duel-total-timer').text==='03:00'&&api.scene.ui.getByName('duel-phase-timer').text==='전투 03:00';});
    assert.equal(await page.locator('.duel-purchase-panel').isVisible(),false);
    await check(page,label+' accumulated growth preserved for battle',()=>window.__duelPhaseTest.peer.state.players[0].egg===6&&Object.values(window.__duelPhaseTest.peer.state.players[0].heroStock??{}).every(count=>count===0));
    await page.screenshot({path:path.join(output,label+'-battle.png')});

@@ -20,7 +20,7 @@ function startFixture(){
   const reply=applyDuel(state,owner,{type:'ready'},fixtureClock,'preview-ready-'+(++nonce));
   if(!reply.ok)throw Error(reply.message);
  }
- // Addition belongs to the two-minute preparation; this fixture starts there.
+ // Addition belongs to the three-minute preparation; this fixture starts there.
  if(state.status!=='preparing')throw Error('문제풀이 준비 단계가 시작되지 않았어요.');
  side=0;slots=[];
 }

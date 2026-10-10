@@ -21,8 +21,8 @@ function fuse(s:DuelState,side:Side=0,now=s.updatedAt,slots=fuseSlots(s,side)){r
 function enemy(extra:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:100,max:100,x:3,y:3,pathDistance:3,slow:0,stun:0,hits:0,...extra};}
 function tower(s:DuelState,typeId='basic',side:Side=0){s.players[side]!.stock[typeId]=1;assert.ok(applyDuel(s,side,{type:'build',typeId,x:side===0?3:20,y:2},START,'build').ok);}
 
-test('대전 총 시간은 준비 120초와 전투 180초이며 점수는 정수로 타격·오답 효율을 보상한다',()=>{
- assert.equal(DUEL_PREPARATION_SECONDS,120);assert.equal(DUEL_SECONDS,180);assert.equal(DUEL_TOTAL_SECONDS,300);
+test('대전 총 시간은 준비 180초와 전투 180초이며 점수는 정수로 타격·오답 효율을 보상한다',()=>{
+ assert.equal(DUEL_PREPARATION_SECONDS,180);assert.equal(DUEL_SECONDS,180);assert.equal(DUEL_TOTAL_SECONDS,360);
  assert.deepEqual([1,2,3,4,5].map(duelKillScore),[200,150,133,125,120]);
  assert.deepEqual([0,1,2,3,4].map(duelQuestionScore),[25,12,8,6,5]);
  assert.equal(duelKillScore(1000),100);assert.equal(duelQuestionScore(1000),0);
@@ -36,11 +36,11 @@ test('양쪽 점수와 통계는 0에서 시작하고 이전 상태의 누락 �
  assert.equal(duelScore({combatScore:125,questionScore:33}),158);
 });
 
-test('문제풀이가 포함된 5분 경계 직전에는 진행 중이고 정확한 경계에 점수로 끝난다',()=>{
+test('문제풀이가 포함된 6분 경계 직전에는 진행 중이고 정확한 경계에 점수로 끝난다',()=>{
  const s=preparing();s.wave=10000;connectedAdvance(s,START-1);assert.equal(s.status,'preparing');
  connectedAdvance(s,START);s.wave=10000;assert.equal(s.status,'playing');assert.equal(s.elapsed,0);
  connectedAdvance(s,END-1);assert.equal(s.status,'playing');assert.ok(Math.abs(s.elapsed-(DUEL_SECONDS-.001))<1e-6);
- connectedAdvance(s,END);assert.equal(s.status,'finished');assert.equal(s.elapsed,DUEL_SECONDS);assert.equal(s.winner,null);assert.match(s.reason,/5분 종료.*점수 0 : 0.*무승부/);
+ connectedAdvance(s,END);assert.equal(s.status,'finished');assert.equal(s.elapsed,DUEL_SECONDS);assert.equal(s.winner,null);assert.match(s.reason,/6분 종료.*점수 0 : 0.*무승부/);
 });
 
 test('타워 문제는 정답에만 점수를 주고 누적 오답에 따라 보상이 줄어든다',()=>{
@@ -140,7 +140,7 @@ test('마지막 제한 시간 안의 실제 처치 점수까지 합산하고 종
  connectedAdvance(s,END+10000);assert.equal(s.players[0].combatScore,200);assert.equal(s.players[0].kills,1);
 });
 
-test('정확한 5분 경계 이후 직접 도착한 합성·설치 요청도 점수나 게임 상태를 바꿀 수 없다',()=>{
+test('정확한 6분 경계 이후 직접 도착한 합성·설치 요청도 점수나 게임 상태를 바꿀 수 없다',()=>{
  for(const late of [0,1,60000]){
   const s=playing(),p=s.players[0];p.questionScore=100;p.money=10000;s.players.forEach(a=>a!.lastSeen=END+late);
   assert.equal(fuse(s,0,END+late).ok,false);assert.equal(s.status,'finished');assert.equal(p.questionScore,100);assert.equal(p.answeredQuestions,0);assert.equal(s.winner,0);assert.equal(s.elapsed,DUEL_SECONDS);
@@ -148,7 +148,7 @@ test('정확한 5분 경계 이후 직접 도착한 합성·설치 요청도 점
  }
 });
 
-test('성 파괴·기권·연결 종료는 5분 전에도 기존 승리 조건으로 끝난다',()=>{
+test('성 파괴·기권·연결 종료는 6분 전에도 기존 승리 조건으로 끝난다',()=>{
  const destroyed=playing();destroyed.players[0].questionScore=1000;destroyed.players[0].flame=1000;destroyed.enemies=[enemy({pathDistance:.001,x:.001})];connectedAdvance(destroyed,START+100);
  assert.equal(destroyed.winner,1);assert.match(destroyed.reason,/불꽃이 파괴/);
  const quit=playing();quit.players[0].questionScore=1000;applyDuel(quit,0,{type:'surrender'},START,'quit');assert.equal(quit.winner,1);

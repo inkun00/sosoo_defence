@@ -17,7 +17,7 @@ test('출전 선택은 보유 특별 영웅만 표시하고 준비 후 원하는
  assert.match(html,/data-collection-hero="hero-1-0"/);
  assert.doesNotMatch(html,/data-collection-hero="hero-8-2"/);
  assert.match(html,/이 영웅으로 출전 · 2회 획득/);
- assert.match(html,/2분 동안 문제를 푼 뒤, 3분 전투에서 원하는 때 직접 소환/);
+ assert.match(html,/3분 동안 문제를 푼 뒤, 3분 전투에서 원하는 때 직접 소환/);
  assert.match(html,/세 효과를 함께 발동/);
  assert.doesNotMatch(html,/collection-chances|영웅이 바로 등장/);
 });
@@ -25,7 +25,7 @@ test('출전 선택은 보유 특별 영웅만 표시하고 준비 후 원하는
 test('준비 후 수집 화면은 기존 선택과 비활성 상태를 유지하며 새 출전 규칙을 안내한다',()=>{
  const html=collectionHTML(book.selectedHero,true,book);
  assert.match(html,/data-mode="collection"/);
- assert.match(html,/2분 준비 후 3분 전투에서 원하는 때 직접 소환/);
+ assert.match(html,/3분 준비 후 3분 전투에서 원하는 때 직접 소환/);
  assert.match(html,/data-collection-hero="hero-1-0"[^>]+aria-pressed="true" disabled/);
  assert.match(html,/data-collection-hero="hero-8-2"[^>]+aria-pressed="false" disabled/);
  assert.match(html,/레벨별 영웅 등장 확률/);

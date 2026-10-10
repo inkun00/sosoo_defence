@@ -40,7 +40,7 @@ test('준비 중 타워 문제와 영웅 성장 문제를 함께 풀되 부화�
  assert.ok(s.enemies.every(e=>e.owner===0&&e.target===1&&e.pathDistance===1));
 });
 
-test('120초 경계에서는 덧셈을 거부하고 남은 성장량은 전투에서 선택해 사용한다',()=>{
+test('180초 경계에서는 덧셈을 거부하고 남은 성장량은 전투에서 선택해 사용한다',()=>{
  const s=preparing(),p=s.players[0];assert.equal(fuse(s).ok,true);assert.equal(p.egg,1);
  s.players.forEach(player=>player!.lastSeen=START);
  assert.equal(fuse(s,START).ok,false);assert.equal(s.status,'playing');assert.equal(p.egg,1);assert.equal(p.solved,1);
@@ -77,7 +77,7 @@ test('legacy summon은 재고를 먼저 하나 소모하고 hatch 및 이후 sum
  const before=structuredClone(s);assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-2-0'},START,'empty').ok,false);assert.deepEqual(s,before);
 });
 
-test('시작을 누른 양쪽이 준비되면 공동 120초 문제풀이가 시작된다',()=>{
+test('시작을 누른 양쪽이 준비되면 공동 180초 문제풀이가 시작된다',()=>{
  const s=createDuel('a','왼쪽',17,NOW);joinDuel(s,'b','오른쪽',NOW);
  assert.equal(canPurchaseDuelTower(s),false);
  applyDuel(s,0,{type:'ready'},NOW,'r1');assert.equal(s.status,'waiting');
@@ -118,33 +118,44 @@ test('타워 선택 후 가격 뺄셈 정답마다 설치 대신 비축이 한 �
  assert.equal(applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},NOW,'repeat').ok,false);
 });
 
+test('이전 마감인 120초에도 타워 정답과 영웅 성장 정답을 받고 전투·소환은 멈춰 있다',()=>{
+ const s=preparing(),p=s.players[0],twoMinutes=NOW+120000;connectedAdvance(s,twoMinutes);
+ assert.equal(s.status,'preparing');assert.equal(s.preparationElapsed,120);assert.equal(s.elapsed,0);assert.equal(s.startedAt,0);
+ assert.equal(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},twoMinutes,'after-120').ok,true);const q=p.quote!;assert.equal(q.expires,START);
+ assert.equal(applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},twoMinutes,'tower-after-120').ok,true);assert.equal(p.stock.basic,1);
+ assert.equal(fuse(s,twoMinutes).ok,true);assert.equal(p.egg,1);assert.equal(p.answeredQuestions,2);
+ assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},twoMinutes,'no-early-hatch').ok,false);assert.equal(p.egg,1);assert.equal(s.enemies.length,0);assert.equal(s.wave,0);assert.equal(s.shots.length,0);
+ connectedAdvance(s,START-1);assert.equal(fuse(s,START-1).ok,true);assert.equal(p.egg,2);assert.equal(s.status,'preparing');
+ s.players.forEach(player=>player!.lastSeen=START);assert.equal(fuse(s,START).ok,false);assert.equal(p.egg,2);assert.equal(s.status,'playing');
+});
+
 test('준비 중에는 설치와 전투가 멈추고 타워 선택에는 좌표가 필요 없다',()=>{
  const s=preparing();reserve(s);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},NOW,'build').ok,false);
  s.players[0].egg=1;
  assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,'hatch').ok,false);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[0].heroStock,{});
- connectedAdvance(s,NOW+119999);
- assert.equal(s.status,'preparing');assert.equal(s.preparationElapsed,119.999);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
+ connectedAdvance(s,START-1);
+ assert.equal(s.status,'preparing');assert.equal(s.preparationElapsed,DUEL_PREPARATION_SECONDS-.001);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
  assert.equal(s.enemies.length,0);assert.equal(s.shots.length,0);assert.equal(s.players[0].towers.length,0);assert.equal(s.players[0].stock.basic,1);
 });
 
-test('120초가 끝나면 양쪽 코인과 열린 견적을 비우고 전투 시간 0부터 시작한다',()=>{
+test('180초가 끝나면 양쪽 코인과 열린 견적을 비우고 전투 시간 0부터 시작한다',()=>{
  const s=preparing();reserve(s);
  assert.equal(applyDuel(s,1,{type:'prepare-quote',typeId:'double'},NOW+55000,'open').ok,true);
  s.players[0].escrow=777;s.players[1]!.escrow=333;
  connectedAdvance(s,START);
- assert.equal(s.status,'playing');assert.equal(s.preparationElapsed,120);assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
+ assert.equal(s.status,'playing');assert.equal(s.preparationElapsed,180);assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
  assert.ok(s.players.every(p=>p?.money===0&&p.escrow===0&&p.quote===null));
  assert.equal(s.players[0].stock.basic,1);assert.deepEqual(s.players[1]!.stock,{});assert.equal(s.enemies.length,0);
 });
 
-test('호스트 틱이 늦게 도착해도 120초 경계 이후 시간만 전투에 반영한다',()=>{
+test('호스트 틱이 늦게 도착해도 180초 경계 이후 시간만 전투에 반영한다',()=>{
  const s=preparing();connectedAdvance(s,START+2000);
  assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.ok(Math.abs(s.elapsed-2)<1e-8);assert.equal(s.wave,0);
  connectedAdvance(s,START+8000);assert.equal(s.enemies.length,2);assert.equal(s.wave,1);
 });
 
-test('120초 경계에 도착한 정답은 비축을 추가하지 않는다',()=>{
+test('180초 경계에 도착한 정답은 비축을 추가하지 않는다',()=>{
  const s=preparing();applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},NOW,'late');const q=s.players[0].quote!;
  s.players.forEach(p=>p!.lastSeen=START);
  const result=applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},START,'late-answer');
@@ -238,7 +249,7 @@ test('상위 비축 타워는 전투 레벨과 관계없이 배치하고 레벨�
  assert.equal(p.money,99999);
 });
 
-test('준비 중 다시 시작하거나 취소를 반복해도 120초 마감과 예산은 늘어나지 않는다',()=>{
+test('준비 중 다시 시작하거나 취소를 반복해도 180초 마감과 예산은 늘어나지 않는다',()=>{
  const s=preparing(),p=s.players[0];
  for(let i=0;i<10;i++){
   assert.equal(applyDuel(s,0,{type:'ready'},NOW+i*100,'ready-again').ok,false);
