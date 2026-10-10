@@ -2,12 +2,17 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import {PDFDocument,PDFArray,PDFDict,PDFName,PDFNumber,PDFRawStream,decodePDFRawStream} from 'pdf-lib';
-import {worksheetImagePdf,worksheetPdfName} from '../src/worksheet-pdf';
+import {worksheetImagePdf,worksheetPdfName,downloadWorksheetPdf} from '../src/worksheet-pdf';
+import {worksheetPages} from '../src/worksheet-view';
+import {generateWorksheet} from '../src/worksheet';
 import {runAccountAction} from '../src/page-access';
 
 const identity={id:'ab12-cd34-ef56-7890',createdAt:1700000000000};
 const jpeg=sharp({create:{width:56,height:79,channels:3,background:'#fffaf0'}}).jpeg().toBuffer();
 const dataURL=(bytes:Buffer)=>'data:image/jpeg;base64,'+bytes.toString('base64');
+let worksheetSeed=19;
+const sheet={...generateWorksheet({version:1,counts:{},seen:{}},4,identity.id,identity.createdAt,()=>{worksheetSeed=(Math.imul(worksheetSeed,1664525)+1013904223)>>>0;return worksheetSeed/4294967296;}),codeHash:'a'.repeat(64)};
+const nicknames=['가나다라마바사아자차카타파하가나다라마바','ABCDEFGHIJKLMNOPQRST',Array.from('한글Hero<&"\'/\\:|?*😊_!?추가').slice(0,20).join('')];
 function pending(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r;});return {promise,resolve};}
 
 type Matrix=[number,number,number,number,number,number];
@@ -76,6 +81,70 @@ test('PDF filenames normalize worksheet identifiers and remove unsafe path chara
  assert.equal(worksheetPdfName({...identity,id:'../\\:*?"<>|'}),'소수디펜스_학습지_WORKSHEET.pdf');
  for(const id of [identity.id,'short1','abc_def-123','a/b:c*d?e"f<g>h|i']){
   assert.match(worksheetPdfName({...identity,id}),/^소수디펜스_학습지_[A-Z0-9]+\.pdf$/);
+ }
+});
+
+test('worksheet nickname is escaped as text without changing the saved questions or cipher',()=>{
+ const before=JSON.stringify(sheet),nickname='<img src=x>&"\'',html=worksheetPages(sheet,'  '+nickname+'  ');
+ assert.ok(html.includes('<span class="ws-nickname"><b>닉네임</b> &lt;img src=x&gt;&amp;&quot;&#39;</span>'));
+ assert.ok(!html.includes('<img src=x>'),'nickname cannot add an HTML element');
+ assert.ok(!html.includes('이름 ______________'));
+ assert.equal((html.match(/class="ws-sheet"/g)||[]).length,1);
+ assert.equal((html.match(/data-question=/g)||[]).length,20);
+ assert.equal(JSON.stringify(sheet),before,'nickname remains outside persisted worksheet data');
+ assert.equal(worksheetPages(sheet),worksheetPages(sheet,' \t\n '),'anonymous previews retain the original output');
+ assert.ok(worksheetPages(sheet).includes('이름 ______________'));
+});
+
+test('20-character Korean, English and special nicknames retain one A4 page and Unicode PDF metadata',async()=>{
+ for(const nickname of nicknames){
+  assert.equal(Array.from(nickname).length,20);
+  const html=worksheetPages(sheet,nickname);
+  assert.equal((html.match(/class="ws-sheet"/g)||[]).length,1);
+  assert.equal((html.match(/data-question=/g)||[]).length,20);
+  const pdf=await PDFDocument.load(await (await worksheetImagePdf(dataURL(await jpeg),identity,' '+nickname+' ')).arrayBuffer());
+  assert.equal(pdf.getPages().length,1);
+  const page=pdf.getPages()[0];
+  assert.ok(Math.abs(page.getWidth()-210*72/25.4)<.02);
+  assert.ok(Math.abs(page.getHeight()-297*72/25.4)<.02);
+  assert.equal(pdf.getTitle(),'소수 디펜스 · 오답 풀이 연습 학습지 · 닉네임 '+nickname);
+  assert.equal(pdf.getSubject(),'훈련서 AB12CD34 · 닉네임 '+nickname);
+  assert.equal(pdf.getAuthor(),nickname,'Korean, emoji and punctuation round-trip through PDF metadata');
+  assert.equal(pdf.getCreationDate()?.getTime(),identity.createdAt);
+ }
+});
+
+test('nickname filenames retain Unicode names while excluding Windows paths and controls',()=>{
+ assert.equal(worksheetPdfName(identity,'  별의 수호자 😊  '),'소수디펜스_학습지_별의 수호자 😊_AB12CD34.pdf');
+ assert.equal(worksheetPdfName(identity,'../\\:*?"<>|\u0000\u001f\u007f\u009f'),'소수디펜스_학습지_..__AB12CD34.pdf');
+ assert.equal(worksheetPdfName(identity,'수호자.  '),'소수디펜스_학습지_수호자_AB12CD34.pdf');
+ assert.equal(worksheetPdfName(identity,'...'),'소수디펜스_학습지_닉네임_AB12CD34.pdf');
+ assert.equal(worksheetPdfName(identity,' \t\n '),worksheetPdfName(identity));
+ for(const nickname of [...nicknames,'CON','AUX','NUL','LPT1','../some/file','C:\\users\\name','a\u0000b\u001fc\u007fd\u009f']){
+  const filename=worksheetPdfName(identity,nickname);
+  assert.ok(filename.endsWith('_AB12CD34.pdf'));
+  assert.ok(!/[<>:"/\\|?*\u0000-\u001f\u007f-\u009f]/.test(filename),filename);
+  assert.ok(!/[ .]$/.test(filename));
+ }
+});
+
+test('download uses the nickname filename and releases its temporary URL',()=>{
+ const previousDocument=Object.getOwnPropertyDescriptor(globalThis,'document'),previousCreate=URL.createObjectURL,previousRevoke=URL.revokeObjectURL,previousTimeout=globalThis.setTimeout;
+ const blob=new Blob(['pdf'],{type:'application/pdf'}),calls:string[]=[],link={href:'',download:'',click(){calls.push('click');},remove(){calls.push('remove');}};
+ let release:()=>void=()=>assert.fail('URL release was not scheduled');
+ Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:(tag:string)=>{assert.equal(tag,'a');return link;},body:{append:(element:unknown)=>{assert.equal(element,link);calls.push('append');}}}});
+ URL.createObjectURL=value=>{assert.equal(value,blob);return 'blob:worksheet-test';};
+ URL.revokeObjectURL=value=>{assert.equal(value,'blob:worksheet-test');calls.push('revoke');};
+ globalThis.setTimeout=((callback:()=>void,delay:number)=>{assert.equal(delay,60000);release=callback;return 1;}) as unknown as typeof setTimeout;
+ try{
+  downloadWorksheetPdf(blob,identity,'닉네임<&😊');
+  assert.equal(link.href,'blob:worksheet-test');
+  assert.equal(link.download,worksheetPdfName(identity,'닉네임<&😊'));
+  assert.deepEqual(calls,['append','click','remove']);
+  release();assert.deepEqual(calls,['append','click','remove','revoke']);
+ }finally{
+  if(previousDocument)Object.defineProperty(globalThis,'document',previousDocument);else Reflect.deleteProperty(globalThis,'document');
+  URL.createObjectURL=previousCreate;URL.revokeObjectURL=previousRevoke;globalThis.setTimeout=previousTimeout;
  }
 });
 

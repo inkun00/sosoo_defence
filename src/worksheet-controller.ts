@@ -11,24 +11,29 @@ import {runAccountAction} from './page-access';
 import './game.css';
 import './collection-styles';
 import './worksheet.css';
-const app=document.getElementById('app')!,params=new URLSearchParams(location.search);let sheet:Worksheet|null=null,busy=false;
+const app=document.getElementById('app')!,params=new URLSearchParams(location.search);let sheet:Worksheet|null=null,busy=false,nickname='';
+let nicknameResolve:((value:string|null)=>void)|null=null;
 const accountUid=auth?.currentUser?.uid??null;let accessRevoked=false;
 function hasAccountAccess(){return !accessRevoked&&!!accountUid&&auth?.currentUser?.uid===accountUid;}
-function revokeAccess(){if(accessRevoked)return;accessRevoked=true;sheet=null;busy=false;void requestAccountLogin('worksheet').then(()=>location.reload());}
+function revokeAccess(){if(accessRevoked)return;accessRevoked=true;finishNickname(null);sheet=null;busy=false;void requestAccountLogin('worksheet').then(()=>location.reload());}
 app.innerHTML='<main class="workbook"><header class="workbook-header"><div><p>소수의 성 · 수호자의 훈련소</p><h1>학습지 풀기</h1></div><a class="workbook-home" href="/">시작 화면</a></header><div class="workbook-toolbar"><button id="ws-print" disabled>학습지 저장</button><a id="ws-upload" class="workbook-upload" href="https://samboard.vivasam.com/studentEntry/?brdId=brd-0RW0G1KB2QCGK" target="_blank" rel="noopener noreferrer">학습지 올리기</a><button id="ws-new" disabled>새 학습지 출력</button><button id="ws-collection">내 수집 영웅</button><label>훈련서 선택 <select id="ws-select" disabled></select></label></div><p id="ws-focus"></p><p class="workbook-feedback" id="ws-status" role="status" aria-live="polite">학습 기록으로 문항을 준비하고 있어요…</p><section class="workbook-unlock"><div><p class="ws-eyebrow">20개 정답으로 해독한 여섯 글자</p><h2>특별 영웅의 암호 입력</h2><p>룬 지도의 암호 1~6을 순서대로 입력해요. 학습지 한 장당 보상은 한 번이며, 아직 없는 특별 영웅 한 명을 얻어요. 서로 다른 학습지 세 장의 암호를 제출하면 특별 영웅 세 명을 중복 없이 얻어요. 특별 영웅은 세 효과를 함께 발동해요.</p></div><form id="ws-code-form"><label for="ws-code">6자리 알파벳 암호</label><div><input id="ws-code" name="code" maxlength="6" pattern="[A-Za-z]{6}" placeholder="ABCDEF" autocomplete="off" autocapitalize="characters" spellcheck="false" required disabled><button id="ws-redeem" disabled>특별 영웅 깨우기</button></div></form></section><div id="ws-pages"></div><div class="workbook-dialog hidden" id="ws-dialog" role="dialog" aria-modal="true" aria-label="수집 영웅"><div class="workbook-card hero-collection-dialog"><button id="ws-close" aria-label="닫기">×</button><div id="ws-dialog-body"></div></div></div></main>';
 const $=(id:string)=>document.getElementById(id)!;let previous:HTMLElement|null=null;
 function feedback(text:string){if(hasAccountAccess())$('ws-status').textContent=text;}
-function render(){if(!hasAccountAccess()||!sheet)return;const book=loadWorkbook(),complete=worksheetHeroLevelChances(book.collection.map(c=>c.heroId)).every(n=>n===0);$('ws-pages').innerHTML=worksheetPages(sheet);$('ws-focus').textContent='이번 훈련의 연습 유형 · '+worksheetFocus(sheet);const select=$('ws-select') as HTMLSelectElement;select.replaceChildren();for(const s of [...book.sheets].reverse()){const o=document.createElement('option');o.value=s.id;o.textContent=s.id.slice(0,8).toUpperCase()+' · '+new Date(s.createdAt).toLocaleDateString('ko-KR')+(s.claimedHero?' · 보상 받음':' · 도전 중');o.selected=s.id===sheet.id;select.append(o);}select.disabled=busy;($('ws-print') as HTMLButtonElement).disabled=busy;($('ws-new') as HTMLButtonElement).disabled=busy;($('ws-code') as HTMLInputElement).disabled=busy||!!sheet.claimedHero||complete;($('ws-redeem') as HTMLButtonElement).disabled=busy||!!sheet.claimedHero||complete;$('ws-redeem').textContent=complete?'특별 영웅 수집 완료':'특별 영웅 깨우기';
+function render(){if(!hasAccountAccess()||!sheet)return;const book=loadWorkbook(),complete=worksheetHeroLevelChances(book.collection.map(c=>c.heroId)).every(n=>n===0);$('ws-pages').innerHTML=worksheetPages(sheet,nickname);$('ws-focus').textContent='이번 훈련의 연습 유형 · '+worksheetFocus(sheet);const select=$('ws-select') as HTMLSelectElement;select.replaceChildren();for(const s of [...book.sheets].reverse()){const o=document.createElement('option');o.value=s.id;o.textContent=s.id.slice(0,8).toUpperCase()+' · '+new Date(s.createdAt).toLocaleDateString('ko-KR')+(s.claimedHero?' · 보상 받음':' · 도전 중');o.selected=s.id===sheet.id;select.append(o);}select.disabled=busy;($('ws-print') as HTMLButtonElement).disabled=busy;($('ws-new') as HTMLButtonElement).disabled=busy;($('ws-collection') as HTMLButtonElement).disabled=busy;($('ws-code') as HTMLInputElement).disabled=busy||!!sheet.claimedHero||complete;($('ws-redeem') as HTMLButtonElement).disabled=busy||!!sheet.claimedHero||complete;$('ws-redeem').textContent=complete?'특별 영웅 수집 완료':'특별 영웅 깨우기';
  if(complete)feedback('영웅 30종을 모두 모았어요. 새로운 영웅 보상은 없지만 학습지는 계속 풀고 저장할 수 있어요.');
  else if(sheet.claimedHero)feedback('이 훈련서는 '+worksheetHeroSpec(sheet.claimedHero)!.name+'의 보상을 받았어요. 새 학습지를 출력하면 아직 없는 특별 영웅을 얻을 수 있어요.');
  const url=new URL(location.href);url.searchParams.set('id',sheet.id);history.replaceState(null,'',url.href);
 }
 async function savePdf(){
  if(!hasAccountAccess()||!sheet||busy)return;
- const selected=sheet;busy=true;render();
- const page=$('ws-pages').querySelector<HTMLElement>('.ws-sheet');
+ const selected=sheet,returnFocus=document.activeElement as HTMLElement|null;busy=true;render();
  let message='';
  try{
+  const entered=await requestNickname();
+  if(entered===null){message='닉네임 입력을 취소해서 학습지를 저장하지 않았어요.';return;}
+  if(!hasAccountAccess()||sheet?.id!==selected.id){message='학습지가 변경되어 저장을 취소했어요. 다시 눌러 주세요.';return;}
+  nickname=entered;render();
+  const page=$('ws-pages').querySelector<HTMLElement>('.ws-sheet');
   if(!page)throw Error('학습지를 먼저 준비해 주세요.');
   const canSave=()=>hasAccountAccess()&&sheet?.id===selected.id&&page.isConnected;
   let exporter!:typeof import('./worksheet-pdf'),image='',pdf:Blob|null=null;
@@ -37,27 +42,44 @@ async function savePdf(){
    async()=>{exporter=await import('./worksheet-pdf');},
    ()=>document.fonts.ready,
    async()=>{image=await exporter.worksheetPageImage(page);},
-   async()=>{pdf=await exporter.worksheetImagePdf(image,selected);},
-  ],()=>{if(pdf)exporter.downloadWorksheetPdf(pdf,selected);});
+   async()=>{pdf=await exporter.worksheetImagePdf(image,selected,entered);},
+  ],()=>{if(pdf)exporter.downloadWorksheetPdf(pdf,selected,entered);});
   if(!saved){message='학습지가 변경되어 저장을 취소했어요. 다시 눌러 주세요.';return;}
   message='학습지 PDF 다운로드를 시작했어요. 내려받은 파일에서 A4 한 쪽을 확인하세요.';
   const url=new URL(location.href);url.searchParams.delete('print');history.replaceState(null,'',url.href);
  }catch(error){console.error('Worksheet PDF export failed',error);message='PDF 저장에 실패했어요. 학습지 저장을 다시 눌러 주세요.';}
- finally{busy=false;render();if(message)feedback(message);}
+ finally{busy=false;render();if(message)feedback(message);if(hasAccountAccess()){const target=returnFocus?.isConnected&&returnFocus!==document.body&&returnFocus!==document.documentElement&&(returnFocus.tabIndex>=0||returnFocus.isContentEditable)&&!returnFocus.matches(':disabled')?returnFocus:$('ws-print');target.focus();}}
 }
-function open(html:string){if(!hasAccountAccess())return;previous=document.activeElement as HTMLElement;$('ws-dialog-body').innerHTML=html;$('ws-dialog-body').scrollTop=0;$('ws-dialog').classList.remove('hidden');for(const node of Array.from(document.querySelectorAll<HTMLElement>('.workbook > :not(.workbook-dialog)')))node.inert=true;$('ws-close').focus();}
-function close(){if(!hasAccountAccess())return;$('ws-dialog').classList.add('hidden');for(const node of Array.from(document.querySelectorAll<HTMLElement>('.workbook > :not(.workbook-dialog)')))node.inert=false;(previous?.isConnected?previous:$('ws-collection')).focus();}
-function collection(){if(!hasAccountAccess())return;open('<p class="ws-eyebrow">훈련으로 깨어난 특별 영웅 · 세 효과 동시 발동</p><h2>내 수집 영웅</h2>'+collectionHTML());bindSelection();}
+function open(html:string,purpose='collection'){if(!hasAccountAccess())return;const dialog=$('ws-dialog');if(dialog.classList.contains('hidden'))previous=document.activeElement as HTMLElement;dialog.dataset.purpose=purpose;dialog.setAttribute('aria-label',purpose==='nickname'?'학습지 저장 닉네임 입력':'수집 영웅');const card=dialog.querySelector('.workbook-card')!;card.classList.toggle('worksheet-nickname-card',purpose==='nickname');card.classList.toggle('hero-collection-dialog',purpose!=='nickname');$('ws-dialog-body').innerHTML=html;$('ws-dialog-body').scrollTop=0;dialog.classList.remove('hidden');for(const node of Array.from(document.querySelectorAll<HTMLElement>('.workbook > :not(.workbook-dialog)')))node.inert=true;$('ws-close').focus();}
+function hideDialog(restoreFocus=true){$('ws-dialog').classList.add('hidden');for(const node of Array.from(document.querySelectorAll<HTMLElement>('.workbook > :not(.workbook-dialog)')))node.inert=false;if(restoreFocus&&hasAccountAccess())(previous?.isConnected?previous:$('ws-collection')).focus();}
+function finishNickname(value:string|null){const resolve=nicknameResolve;if(!resolve)return;nicknameResolve=null;hideDialog(false);resolve(value);}
+function requestNickname(){
+ return new Promise<string|null>(resolve=>{
+  nicknameResolve=resolve;
+  open('<p class="ws-eyebrow">학습지 PDF 저장</p><h2 id="ws-nickname-title">학습지에 넣을 닉네임</h2><form id="ws-nickname-form" novalidate><label for="ws-nickname">닉네임 <span>필수</span></label><input id="ws-nickname" name="nickname" type="text" required maxlength="40" autocomplete="nickname" aria-describedby="ws-nickname-help ws-nickname-error"><p id="ws-nickname-help">1~20글자로 입력해요. 닉네임이 학습지에 함께 출력돼요.</p><p id="ws-nickname-error" role="alert" aria-live="polite"></p><div class="ws-nickname-actions"><button id="ws-nickname-confirm" type="submit">확인 · PDF 저장</button><button id="ws-nickname-cancel" type="button">취소</button></div></form>','nickname');
+  const input=$('ws-nickname') as HTMLInputElement,error=$('ws-nickname-error');input.value=nickname||auth?.currentUser?.displayName||'';
+  input.oninput=()=>{input.setCustomValidity('');input.removeAttribute('aria-invalid');error.textContent='';};
+  $('ws-nickname-form').onsubmit=event=>{
+   event.preventDefault();if(!hasAccountAccess()){finishNickname(null);return;}
+   const value=input.value.trim(),invalid=!value?'닉네임을 입력해 주세요.':Array.from(value).length>20?'닉네임은 20글자까지 입력할 수 있어요.':'';
+   if(invalid){input.setCustomValidity(invalid);input.setAttribute('aria-invalid','true');error.textContent=invalid;input.focus();return;}
+   finishNickname(value);
+  };
+  $('ws-nickname-cancel').onclick=()=>finishNickname(null);input.focus();input.select();
+ });
+}
+function close(){if(nicknameResolve){finishNickname(null);return;}if(hasAccountAccess())hideDialog();}
+function collection(){if(!hasAccountAccess()||busy)return;open('<p class="ws-eyebrow">훈련으로 깨어난 특별 영웅 · 세 효과 동시 발동</p><h2>내 수집 영웅</h2>'+collectionHTML());bindSelection();}
 function bindSelection(){$('ws-dialog-body').querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(b=>b.onclick=async()=>{if(!hasAccountAccess())return;try{await selectWorksheetHero(b.dataset.collectionHero!);collection();}catch(e){feedback((e as Error).message);}});}
 async function fresh(){if(!hasAccountAccess()||busy)return;busy=true;render();feedback('최근 학습 기록으로 새 20문항을 만들고 있어요…');try{const prepared=await getOrCreateWorksheet(loadSave().level,true);if(!hasAccountAccess())return;sheet=prepared;($('ws-code') as HTMLInputElement).value='';busy=false;render();await savePdf();}catch(e){busy=false;render();feedback((e as Error).message);}}
 $('ws-print').onclick=()=>void savePdf();$('ws-new').onclick=()=>void fresh();$('ws-collection').onclick=collection;$('ws-close').onclick=close;
-$('ws-select').onchange=()=>{if(!hasAccountAccess())return;sheet=loadWorkbook().sheets.find(s=>s.id===($('ws-select') as HTMLSelectElement).value)??sheet;($('ws-code') as HTMLInputElement).value='';feedback('선택한 훈련서의 6자리 암호를 입력해요.');render();};
+$('ws-select').onchange=()=>{if(!hasAccountAccess()||busy)return;sheet=loadWorkbook().sheets.find(s=>s.id===($('ws-select') as HTMLSelectElement).value)??sheet;($('ws-code') as HTMLInputElement).value='';feedback('선택한 훈련서의 6자리 암호를 입력해요.');render();};
 $('ws-code-form').onsubmit=async e=>{e.preventDefault();if(!hasAccountAccess()||!sheet||busy)return;busy=true;render();try{const sheetId=sheet.id,result=await redeemWorksheet(sheetId,($('ws-code') as HTMLInputElement).value);if(!hasAccountAccess())return;sheet=loadWorkbook().sheets.find(s=>s.id===sheetId)!;feedback('암호 해독 성공! 특별 영웅 '+result.hero.name+'을 얻었어요.');open('<p class="ws-eyebrow">봉인이 풀렸다 · 새로운 특별 영웅</p>'+heroRevealHTML(result.hero,result.copies)+'<p class="collection-note">대전 전에 수집 영웅 하나를 골라요. 3분 준비 후 3분 전투에서 원하는 때 직접 소환해 세 효과를 함께 발동해요. 돌 알로 부화한 영웅과 함께 사용할 수 있어요.</p>');$('ws-equip').onclick=async()=>{if(!hasAccountAccess())return;try{await selectWorksheetHero(result.hero.id);collection();}catch(error){feedback((error as Error).message);}};}catch(error){feedback((error as Error).message);}finally{busy=false;render();}};
-$('ws-dialog').onclick=e=>{if(e.target===$('ws-dialog'))close();};$('ws-dialog').addEventListener('keydown',e=>{if(e.key==='Escape')close();else if(e.key==='Tab'){const controls=Array.from($('ws-dialog').querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));const first=controls[0],last=controls.at(-1)!;if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+$('ws-dialog').onclick=e=>{if(e.target===$('ws-dialog'))close();};$('ws-dialog').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Tab'){const controls=Array.from($('ws-dialog').querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],[tabindex]:not([tabindex="-1"])')).filter(node=>node.getClientRects().length>0);const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first&&last){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last&&first){e.preventDefault();first.focus();}}});
 window.addEventListener('storage',e=>{if(hasAccountAccess()&&e.key==='decimal-workbook-v1'&&sheet){sheet=loadWorkbook().sheets.find(s=>s.id===sheet!.id)??sheet;render();}});
 async function importCloudLearning(){if(!navigator.onLine||!hasAccountAccess())return;try{const {loadLearningHistory}=await import('./multiplayer/record-store');if(!hasAccountAccess())return;const rows=await loadLearningHistory(accountUid!);if(hasAccountAccess())importLearningRecords(rows);}catch{/* Saved local learning remains available while the cloud is offline. */}}
 async function init(){if(!hasAccountAccess()){revokeAccess();return;}try{await importCloudLearning();if(!hasAccountAccess())return;sheet=params.has('id')?loadWorkbook().sheets.find(s=>s.id===params.get('id'))??null:null;if(!sheet){const prepared=await getOrCreateWorksheet(loadSave().level,params.get('print')==='1');if(!hasAccountAccess())return;sheet=prepared;}feedback('연습이 필요한 유형을 중심으로 20문항을 준비했어요. 같은 쪽의 룬 지도와 암호 칸으로 여섯 글자를 해독해요.');render();if(params.get('print')==='1')await savePdf();}catch(e){if(!hasAccountAccess())return;feedback((e as Error).message);($('ws-new') as HTMLButtonElement).disabled=false;}}
 const stopAuthWatch=auth?onAuthStateChanged(auth,value=>{if(!value||value.uid!==accountUid)revokeAccess();}):undefined;
-window.addEventListener('pagehide',()=>stopAuthWatch?.(),{once:true});
+window.addEventListener('pagehide',()=>{finishNickname(null);stopAuthWatch?.();},{once:true});
 window.addEventListener('beforeprint',()=>{if(!hasAccountAccess())revokeAccess();});
 void init();

@@ -4,12 +4,18 @@ import type {Worksheet} from './worksheet';
 
 type WorksheetIdentity=Pick<Worksheet,'id'|'createdAt'>;
 const shortId=(sheet:WorksheetIdentity)=>sheet.id.replace(/[^a-z0-9]/gi,'').slice(0,8).toUpperCase()||'WORKSHEET';
-export function worksheetPdfName(sheet:WorksheetIdentity){return '소수디펜스_학습지_'+shortId(sheet)+'.pdf';}
+export function worksheetPdfName(sheet:WorksheetIdentity,nickname=''){
+ const name=nickname.trim();
+ // Keep nicknames readable while excluding Windows path and control characters.
+ const safeName=name.replace(/[<>:"/\\|?*\u0000-\u001f\u007f-\u009f]+/g,'_').replace(/[ .]+$/,'')||'닉네임';
+ return '소수디펜스_학습지_'+(name?safeName+'_':'')+shortId(sheet)+'.pdf';
+}
 
-export async function worksheetImagePdf(jpeg:string,sheet:WorksheetIdentity):Promise<Blob>{
- const pdf=await PDFDocument.create();
- pdf.setTitle('소수 디펜스 · 오답 풀이 연습 학습지');
- pdf.setSubject('훈련서 '+shortId(sheet));
+export async function worksheetImagePdf(jpeg:string,sheet:WorksheetIdentity,nickname=''):Promise<Blob>{
+ const pdf=await PDFDocument.create(),name=nickname.trim(),label=name?' · 닉네임 '+name:'';
+ pdf.setTitle('소수 디펜스 · 오답 풀이 연습 학습지'+label);
+ pdf.setSubject('훈련서 '+shortId(sheet)+label);
+ if(name)pdf.setAuthor(name);
  pdf.setCreator('소수 디펜스');
  pdf.setCreationDate(new Date(sheet.createdAt));
  const image=await pdf.embedJpg(jpeg),page=pdf.addPage(PageSizes.A4);
@@ -50,8 +56,8 @@ export async function worksheetPageImage(page:HTMLElement):Promise<string>{
  }finally{holder.remove();}
 }
 
-export function downloadWorksheetPdf(blob:Blob,sheet:WorksheetIdentity){
+export function downloadWorksheetPdf(blob:Blob,sheet:WorksheetIdentity,nickname=''){
  const url=URL.createObjectURL(blob),link=document.createElement('a');
- link.href=url;link.download=worksheetPdfName(sheet);document.body.append(link);
+ link.href=url;link.download=worksheetPdfName(sheet,nickname);document.body.append(link);
  try{link.click();}finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 }

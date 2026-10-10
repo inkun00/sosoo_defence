@@ -49,6 +49,23 @@ html:has(.workbook),body:has(.workbook),#app:has(.workbook){height:auto;min-heig
 
 .workbook-upload{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;white-space:nowrap}
 
+.workbook .worksheet-nickname-card{width:min(540px,100%);max-height:calc(100dvh - 48px);padding:28px}
+.worksheet-nickname-card h2{margin:8px 42px 18px 0;font-size:24px;line-height:1.35}
+#ws-nickname-form label{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:16px;font-weight:700}
+#ws-nickname-form label span{font-size:12px;color:#ffd18a}
+#ws-nickname{width:100%;min-height:50px;padding:10px 12px;background:#0e1623;color:#ffe6a7;border:1px solid #ae986f;border-radius:5px;font:inherit;font-size:18px}
+#ws-nickname[aria-invalid="true"]{border-color:#ffb2a5}
+#ws-nickname-help,#ws-nickname-error{font-size:14px;line-height:1.5;margin:8px 0}
+#ws-nickname-help{color:#d0c6b4}
+#ws-nickname-error{color:#ffb2a5;min-height:21px}
+.ws-nickname-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.ws-nickname-actions button{min-width:0;min-height:46px}
+#ws-nickname-confirm{background:linear-gradient(#ad742b,#684516);border-color:#e3b264}
+.ws-nickname{font-weight:700;white-space:normal;overflow-wrap:anywhere}
+.ws-nickname b{margin-right:4px}
+@media(max-width:600px){.workbook-dialog[data-purpose="nickname"]{padding:16px}.workbook .worksheet-nickname-card{padding:22px;max-height:calc(100dvh - 32px)}.worksheet-nickname-card h2{font-size:22px}.ws-nickname-actions button{font-size:14px;padding-inline:8px}}
+@media(orientation:landscape) and (max-height:600px){.workbook-dialog[data-purpose="nickname"]{padding:12px}.workbook .worksheet-nickname-card{padding:20px;max-height:calc(100dvh - 24px)}.worksheet-nickname-card h2{font-size:22px;margin-bottom:12px}#ws-nickname{min-height:46px}#ws-nickname-help,#ws-nickname-error{margin-block:6px}.ws-nickname-actions{margin-top:10px}}
+
 /* Screen previews reflow; print and the isolated PDF export keep the A4 layout. */
 @media screen{
  .workbook:not(.ws-export){padding-inline:clamp(12px,2vw,26px)}
