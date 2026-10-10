@@ -141,7 +141,7 @@ export class GameUI extends Phaser.Scene{
    this.text(b.container,-43,20,unlocked?numberText(cost)+' 코인':`${t.unlock}단계 해금`,17,'#f0c583').setOrigin(0,.5);
    this.controls.get('type:'+t.id)!.label=`${t.name}, ${GRADE_NAMES[t.grade]}, 공격력 ${numberText(t.unit)}, ${numberText(cost)} 코인`;
   });
-  this.text(this.shop,1135,600,m.canBuild?'준비 중에만 설치 · 인접하면 열 간섭':'전투 중 설치 불가 · 발사 조절 가능',12,'#b8b0a4').setOrigin(.5);
+  this.text(this.shop,1135,600,m.canBuild?'준비 중에만 설치 · 빈 칸에 자유 배치':'전투 중 설치 불가 · 발사 조절 가능',12,'#b8b0a4').setOrigin(.5);
   this.button(this.shop,'shop-page:prev',1055,633,64,56,'◀',s.shopPage>0,'button_brown',22);
   this.button(this.shop,'cancel',1135,633,80,56,s.mode.kind==='tower'?'취소':`${s.shopPage+1} / 2`,s.mode.kind==='tower','button_brown',16);
   this.button(this.shop,'shop-page:next',1215,633,64,56,'▶',s.shopPage<1,'button_brown',22);
@@ -222,7 +222,7 @@ export class GameUI extends Phaser.Scene{
    this.button(this.dock,'wall-cancel',710,760,468,56,'완료 · 남은 성벽 보관',true,'button_brown',23);
   }else if(t){
    this.towerIcon(this.dock,472,729,t.typeId,68);
-   this.fitText(this.text(this.dock,520,710,`${towerType(t.typeId)!.name} · ${numberText(t.unit)} · 재장전 ${m.reloadTime(t).toFixed(1)}초${m.reloadFactor(t)>1?' (열 간섭)':''}`,21,C.cream).setOrigin(0,.5),446);
+   this.fitText(this.text(this.dock,520,710,`${towerType(t.typeId)!.name} · ${numberText(t.unit)} · 재장전 ${m.reloadTime(t).toFixed(1)}초`,21,C.cream).setOrigin(0,.5),446);
    this.text(this.dock,520,750,'전투 중 자동 공격',19,C.muted).setOrigin(0,.5);
    this.button(this.dock,'sell',870,750,184,58,'회수 '+numberText(t.cost),!['won','review','lost'].includes(m.phase),'button_brown',18);
   }else if(s.selectedWall){

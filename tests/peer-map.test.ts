@@ -93,7 +93,7 @@ test('all ten map ids travel through offer, echoed answer, host state and guest 
 test('guest identity carries its own account level and host snapshots preserve personal addition rounds in both host orderings',async()=>{
  for(const levels of [[1,8],[8,1]] as const){
   const {host,guest,offer,answer}=await pair(DUEL_MAPS[4].id,false,levels),s=host.state!;
-  assert.equal(invitation(offer).rules,'worksheet-heroes-triple-effects-v8');assert.equal(invitation(answer).rules,'worksheet-heroes-triple-effects-v8');
+  assert.equal(invitation(offer).rules,'hero-growth-17-6-v9');assert.equal(invitation(answer).rules,'hero-growth-17-6-v9');
   assert.equal((invitation(offer).host as {accountLevel:number}).accountLevel,levels[0]);
   assert.equal(s.players[0].accountLevel,levels[0]);assert.equal(s.players[1]!.accountLevel,levels[1]);assert.equal(s.learningLevel,1);
   for(const side of [0,1] as Side[])assert.deepEqual(s.players[side]!.board,decimalBoard(s.seed,0,levels[side]));
@@ -107,11 +107,11 @@ test('guest identity carries its own account level and host snapshots preserve p
    assert.equal((await active.send({type:'fuse',operation:'+',round:p.round,slots:additionSlots(p.board)!})).ok,true);
    assert.equal(p.round,round+1);assert.deepEqual(p.board,decimalBoard(s.seed,p.round,levels[side]));assert.equal(s.players[(1-side) as Side]!.round,otherRound);assert.deepEqual(s.players[(1-side) as Side]!.board,otherBoard);
    assert.deepEqual(guest.state?.players.map(player=>[player!.accountLevel,player!.round,player!.board]),s.players.map(player=>[player!.accountLevel,player!.round,player!.board]));
-   if(round===1){p.lastRequest=0;assert.equal((await active.send({type:'hatch',heroId:'hero-2-0'})).ok,true);assert.equal(p.egg,0);assert.equal(p.heroStock?.['hero-2-0'],1);assert.equal(guest.state?.players[side]?.heroStock?.['hero-2-0'],1);assert.deepEqual(guest.state?.players[side]?.board,p.board);}
+   if(round===1){p.lastRequest=0;assert.equal((await active.send({type:'hatch',heroId:'hero-2-0'})).ok,false);assert.equal(p.egg,2);assert.deepEqual(p.heroStock,{});assert.equal(guest.state?.players[side]?.egg,2);assert.deepEqual(guest.state?.players[side]?.board,p.board);}
   }
   const combatStart=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.players.forEach(p=>p!.lastSeen=combatStart);advanceDuel(s,combatStart);
   assert.equal(s.status,'playing');assert.equal((await host.send({type:'tick'})).ok,true);assert.equal(guest.state?.status,'playing');
-  for(const side of [0,1] as Side[]){s.players[side]!.lastRequest=0;const active=side===0?host:guest;assert.ok((await active.send({type:'summon',heroId:'hero-2-0'})).ok);assert.equal(guest.state?.players[side]?.heroStock?.['hero-2-0'],0);}
+  for(const side of [0,1] as Side[]){s.players[side]!.lastRequest=0;const active=side===0?host:guest;assert.ok((await active.send({type:'summon',heroId:'hero-2-0'})).ok);assert.equal(s.players[side]!.egg,1);assert.equal(guest.state?.players[side]?.egg,1);}
   assert.deepEqual(guest.state?.enemies,s.enemies);assert.equal(s.enemies.length,2);
  }
 });
@@ -130,6 +130,29 @@ test('the host-authoritative ready exchange synchronizes selected heroes and lat
  assert.deepEqual(guest.state?.enemies,host.state?.enemies);
  assert.deepEqual(host.state?.enemies.filter(enemy=>enemy.rewardSummon).map(enemy=>[enemy.owner,enemy.hero]),[[0,'hero-10-1'],[1,'hero-3-1']]);
  assert.equal(host.state?.enemies.length,2);assert.equal(host.state?.enemies.filter(enemy=>!enemy.hero).length,0);
+});
+
+test('both peers synchronize six growth points spent as three low heroes or one high hero',async()=>{
+ const {host,guest}=await pair(DUEL_MAPS[3].id),s=host.state!;
+ await host.send({type:'ready'});await guest.send({type:'ready'});
+ assert.deepEqual(s.players.map(p=>p!.money),[17600,17600]);
+ for(let round=0;round<6;round++)for(const side of [0,1] as Side[]){
+  const p=s.players[side]!,active=side===0?host:guest;p.lastRequest=0;
+  assert.ok((await active.send({type:'fuse',operation:'+',round:p.round,slots:additionSlots(p.board)!})).ok);
+ }
+ assert.deepEqual(guest.state!.players.map(p=>p!.egg),[6,6]);
+ const start=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;
+ s.players.forEach(p=>p!.lastSeen=start);advanceDuel(s,start);await host.send({type:'tick'});
+ s.players[0].lastRequest=0;assert.equal((await host.send({type:'summon',heroId:'hero-7-0'})).ok,false);
+ assert.equal(s.players[0].egg,6);assert.equal(guest.state!.players[0].egg,6);
+ for(const remaining of [4,2,0]){
+  s.players[0].lastRequest=0;assert.ok((await host.send({type:'summon',heroId:'hero-2-0'})).ok);
+  assert.equal(s.players[0].egg,remaining);assert.equal(guest.state!.players[0].egg,remaining);
+ }
+ s.players[1]!.lastRequest=0;assert.ok((await guest.send({type:'summon',heroId:'hero-6-1'})).ok);
+ assert.deepEqual(s.players.map(p=>p!.egg),[0,0]);assert.deepEqual(guest.state!.players.map(p=>p!.egg),[0,0]);
+ assert.deepEqual(s.enemies.map(e=>[e.owner,e.hero]),[[0,'hero-2-0'],[0,'hero-2-0'],[0,'hero-2-0'],[1,'hero-6-1']]);
+ assert.deepEqual(guest.state!.enemies,s.enemies);
 });
 
 test('host scoring survives private wrong-record filtering and both peers receive the same timeout winner',async()=>{
@@ -186,13 +209,13 @@ test('unknown map ids in create, offer and answer are rejected before RTC descri
 test('guest snapshots accept only the agreed map and preserve the last valid state after mismatches',async()=>{
  const {host,guest,guestChannel}=await pair(DUEL_MAPS[6].id);let emitted=0;guest.onState=()=>{emitted++;};
  const snapshot=structuredClone(host.state!) as DuelState;snapshot.revision=20;
- guestChannel.receive(JSON.stringify({kind:'state',rules:'worksheet-heroes-triple-effects-v8',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
+ guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-growth-17-6-v9',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
  const baseline=guest.state;
  for(const mapId of [DUEL_MAPS[7].id,undefined,'unknown-map']){
   const wrong=structuredClone(snapshot);wrong.revision=1000;wrong.mapId=mapId;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'worksheet-heroes-triple-effects-v8',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-growth-17-6-v9',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
  }
- const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'worksheet-heroes-triple-effects-v8',id:host.id,state:fresh}));
+ const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-growth-17-6-v9',id:host.id,state:fresh}));
  assert.equal(guest.state?.revision,21);assert.equal(guest.state?.mapId,DUEL_MAPS[6].id);assert.equal(emitted,2);
 });
 
@@ -217,7 +240,7 @@ test('fresh host snapshots clear the guest outage notice so another interruption
  for(let attempt=0;attempt<2;attempt++){
   fakePC(guest).changeConnection('disconnected');assert.equal(guest.connected,false);
   const snapshot=structuredClone(host.state!);snapshot.revision+=attempt+1;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'worksheet-heroes-triple-effects-v8',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'hero-growth-17-6-v9',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
  }
  assert.equal(messages.length,2);
 });
@@ -229,16 +252,16 @@ test('a missing map in an old guest answer cannot silently change a newly select
  assert.equal(host.mapId,DUEL_MAPS[8].id);assert.equal(host.state?.mapId,DUEL_MAPS[8].id);assert.equal(fakePC(host).remoteDescription,null);
 });
 
-test('older preparation and combat rules cannot join or replace a worksheet multi-effect match',async()=>{
+test('older preparation and combat rules cannot join or replace a banked hero-growth match',async()=>{
  const host=peer('left'),guest=peer('right'),offer=await host.create(DUEL_MAPS[0].id);
  await assert.rejects(guest.join(changed(offer,v=>{delete v.rules;})),/새로고침/);
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7'])await assert.rejects(guest.join(changed(offer,v=>{v.rules=rules;})),/새로고침/);
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8'])await assert.rejects(guest.join(changed(offer,v=>{v.rules=rules;})),/새로고침/);
  assert.equal(fakePC(guest).remoteDescription,null);
  const answer=await guest.join(offer);await assert.rejects(host.accept(changed(answer,v=>{delete v.rules;})),/새로고침/);
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7'])await assert.rejects(host.accept(changed(answer,v=>{v.rules=rules;})),/새로고침/);
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8'])await assert.rejects(host.accept(changed(answer,v=>{v.rules=rules;})),/새로고침/);
  assert.equal(fakePC(host).remoteDescription,null);await host.accept(answer);
  const paired=await pair(DUEL_MAPS[1].id),baseline=paired.guest.state,snapshot=structuredClone(paired.host.state!);snapshot.revision+=100;
  paired.guestChannel.receive(JSON.stringify({kind:'state',id:paired.host.id,state:snapshot}));
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7'])paired.guestChannel.receive(JSON.stringify({kind:'state',rules,id:paired.host.id,state:snapshot}));
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8'])paired.guestChannel.receive(JSON.stringify({kind:'state',rules,id:paired.host.id,state:snapshot}));
  assert.equal(paired.guest.state,baseline);
 });

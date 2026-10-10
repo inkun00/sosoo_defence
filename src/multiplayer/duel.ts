@@ -10,11 +10,12 @@ export interface DuelTower{id:number;typeId:string;x:number;y:number;unit:number
 export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;y?:number;pathDistance?:number;slow:number;stun:number;hits:number;rewardSummon?:boolean;sourceHeroId?:string;vitalityBaseMax?:number;vitalityBonus?:number;vitalitySpent?:number;shieldSpent?:number;}
 export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;purpose?:'preparation';wrongAttempts?:number;}
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
+// egg is cumulative growth spent on battle summons; heroStock is legacy stock.
 export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;stock:Record<string,number>;heroStock?:Record<string,number>;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];combatScore?:number;questionScore?:number;kills?:number;answeredQuestions?:number;towerWrongAttempts?:number;fusionWrongAttempts?:number;}
 export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fromX?:number;fromY?:number;owner:Side;enemyId:number;x:number;y?:number;before:number;unit:number;after:number;effect:string;shielded?:boolean;}
 export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:number;createdAt:number;startedAt:number;preparationStartedAt:number;preparationElapsed:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'preparing'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'summon';heroId:string}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
-export const DUEL_PREPARATION_SECONDS=120,DUEL_SECONDS=180,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=8800;
+export const DUEL_PREPARATION_SECONDS=120,DUEL_SECONDS=180,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=17600;
 export const DUEL_KILL_BASE_SCORE=100,DUEL_KILL_EFFICIENCY_SCORE=100,DUEL_QUESTION_BASE_SCORE=25;
 /** Every kill rewards defense; fewer hits and fewer wrong answers add more points. */
 export function duelKillScore(hits:number){return DUEL_KILL_BASE_SCORE+Math.floor(DUEL_KILL_EFFICIENCY_SCORE/Math.max(1,Math.floor(Number.isFinite(hits)?hits:1)));}
@@ -237,12 +238,17 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(s.enemies.length+1>100)return bad('길이 붐벼요. 잠시 뒤 소환해 주세요.');
   summonReward(s,side,hero);syncHeroAuras(s);return ok(`${hero.name} 출발! 다음 대전에서도 선택할 수 있어요.`);
  }
- if(action.type==='summon'){
-  if(s.status!=='playing')return bad('전투가 시작되면 모아 둔 영웅을 원하는 때에 소환해요.');
-  const hero=heroSpec(action.heroId);if(!hero||(p.heroStock?.[hero.id]??0)<1)return bad('모아 둔 영웅을 선택해 주세요.');
+ if(action.type==='summon'||action.type==='hatch'){
+  if(s.status!=='playing')return bad('준비 중에는 성장량을 모아요. 전투에서 원하는 레벨의 영웅을 소환해요.');
+  const hero=heroSpec(action.heroId);if(!hero)return bad('소환할 영웅을 다시 선택해 주세요.');
+  // Older matches may still contain prepared heroes. A legacy summon uses
+  // exactly one stock unit; hatching always spends only the selected level.
+  const stored=action.type==='summon'&&(p.heroStock?.[hero.id]??0)>=1;
+  if(!stored&&(!Number.isSafeInteger(p.egg)||p.egg<hero.level))return bad(`성장량이 부족해요. Lv.${hero.level} 영웅은 성장량 ${hero.level}이 필요해요.`);
   const length=duelMap(s.mapId).length;
   if(!spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:length-1))return bad('길이 붐벼요. 잠시 뒤 소환해 주세요.');
-  p.heroStock![hero.id]--;syncHeroAuras(s);note(s,`${p.name} · ${hero.name} Lv.${hero.level} 소환!`);return ok(`${hero.name}이 아군 성에서 출발했어요.`);
+  if(stored)p.heroStock![hero.id]--;else p.egg-=hero.level;
+  syncHeroAuras(s);note(s,`${p.name} · ${hero.name} Lv.${hero.level} 소환!`);return ok(`${hero.name}이 아군 성에서 출발했어요. 남은 성장량 ${p.egg}`);
  }
  if(action.type==='ready'){
   if(s.status!=='waiting')return bad('이미 대전이 시작됐어요.');
@@ -256,7 +262,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(readyTogether){
    s.status='preparing';s.preparationStartedAt=now;s.preparationElapsed=0;s.updatedAt=now;
    for(const a of s.players)if(a)a.lastSeen=now;
-   note(s,'양쪽 준비 완료 · 2분 동안 타워 구매와 영웅 부화 문제를 자유롭게 풀어요!');
+   note(s,'양쪽 준비 완료 · 2분 동안 타워 구매 문제와 영웅 성장 문제를 자유롭게 풀어요!');
   }
   return ok('준비했어요.');
  }
@@ -299,26 +305,14 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  if(action.type==='fuse'){
   // Keep the runtime check for network messages from older clients.
   if(action.operation!=='+')return bad('영웅 알은 덧셈으로 만들어요. 두 블럭의 합을 골라 주세요.');
-  if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모아 둔 영웅을 소환해요.');
-  if(p.egg>=10)return bad('알은 10레벨이에요. 먼저 부화시켜 주세요.');
+  if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 성장량으로 영웅을 소환해요.');
   if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==3||new Set(action.slots).size!==3||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15))return bad('서로 다른 블럭 세 개를 다시 골라요.');
   const [a,b,c]=action.slots.map(i=>p.board[i]);
   // Mistakes belong to the whole board round, even if the player changes operands.
   if(![a,b,c].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');
   if(!learningValue(a+b)){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');}
   if(!recipe(a,b,c,'+')){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
-  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 알 ${p.egg}레벨 · 지금 부화하거나 더 성장시켜요.`);
- }
- if(action.type==='hatch'){
-  const hero=heroSpec(action.heroId);
-  if(!hero||p.egg<1||hero.level!==p.egg)return bad('현재 알 레벨의 영웅을 골라 주세요.');
-  if(s.status==='preparing'){
-   (p.heroStock??={})[hero.id]=(p.heroStock[hero.id]??0)+1;p.egg=0;note(s,`${p.name} · ${hero.name} Lv.${hero.level} 비축!`);return ok(`${hero.name}을 모았어요. 전투에서 원하는 때에 소환해요.`);
-  }
-  const length=duelMap(s.mapId).length;
-  if(!spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:length-1))return bad('길이 붐벼요. 잠시 뒤 부화해 주세요.');
-  syncHeroAuras(s);
-  p.egg=0;note(s,`${p.name} · ${hero.name} Lv.${hero.level} 부화!`);return ok(`${hero.name}이 상대 불꽃을 향해 출발했어요.`);
+  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 성장량 ${p.egg} · 전투에서 선택한 레벨만큼 사용해요.`);
  }
  return bad('지원하지 않는 조작이에요.');
 }

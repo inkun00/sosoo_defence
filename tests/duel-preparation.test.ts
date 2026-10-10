@@ -21,27 +21,26 @@ function fuse(s:DuelState,now=NOW){
  throw Error('No addition recipe');
 }
 
-test('준비 중 타워 문제를 열어 둔 채 영웅 문제와 부화를 선택하고 같은 영웅을 여러 개 모은다',()=>{
+test('준비 중 타워 문제와 영웅 성장 문제를 함께 풀되 부화와 소환은 전투까지 기다린다',()=>{
  const s=preparing(),p=s.players[0];
  assert.equal(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},NOW,'tower').ok,true);const quote=p.quote!;
  assert.equal(fuse(s).ok,true);assert.equal(p.egg,1);assert.equal(p.quote,quote);
- assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,'hero-1').ok,true);assert.equal(p.egg,0);assert.equal(s.enemies.length,0);
- assert.equal(fuse(s).ok,true);assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,'hero-2').ok,true);
- assert.equal(p.heroStock?.['hero-1-0'],2);assert.equal(p.quote,quote);
+ const before=structuredClone(s);
+ for(const type of ['hatch','summon'] as const){assert.equal(applyDuel(s,0,{type,heroId:'hero-1-0'},NOW,type).ok,false);assert.deepEqual(s,before);}
+ assert.equal(fuse(s).ok,true);assert.equal(p.egg,2);assert.deepEqual(p.heroStock,{});assert.equal(p.quote,quote);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:quote.nonce,answer:numberText(quote.before-quote.cost)},NOW,'tower-answer').ok,true);
- assert.equal(p.stock.basic,1);assert.equal(p.heroStock?.['hero-1-0'],2);assert.equal(p.answeredQuestions,3);
- assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-1-0'},NOW,'early').ok,false);assert.equal(p.heroStock?.['hero-1-0'],2);
+ assert.equal(p.stock.basic,1);assert.equal(p.egg,2);assert.equal(p.answeredQuestions,3);
  connectedAdvance(s,START);assert.equal(s.enemies.length,0);
- assert.equal(fuse(s,START).ok,false);assert.equal(p.egg,0);assert.equal(p.heroStock?.['hero-1-0'],2);
+ assert.equal(fuse(s,START).ok,false);assert.equal(p.egg,2);assert.deepEqual(p.heroStock,{});
  for(let remaining=1;remaining>=0;remaining--){
-  assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-1-0'},START,`summon-${remaining}`).ok,true);
-  assert.equal(p.heroStock?.['hero-1-0'],remaining);assert.equal(s.enemies.length,2-remaining);
+  assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},START,`hatch-${remaining}`).ok,true);
+  assert.equal(p.egg,remaining);assert.deepEqual(p.heroStock,{});assert.equal(s.enemies.length,2-remaining);
  }
- assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-1-0'},START,'empty').ok,false);assert.equal(s.enemies.length,2);
+ assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},START,'empty').ok,false);assert.equal(s.enemies.length,2);
  assert.ok(s.enemies.every(e=>e.owner===0&&e.target===1&&e.pathDistance===1));
 });
 
-test('120초 경계에서는 덧셈을 거부하고 남은 알은 전투에서 선택해 소환한다',()=>{
+test('120초 경계에서는 덧셈을 거부하고 남은 성장량은 전투에서 선택해 사용한다',()=>{
  const s=preparing(),p=s.players[0];assert.equal(fuse(s).ok,true);assert.equal(p.egg,1);
  s.players.forEach(player=>player!.lastSeen=START);
  assert.equal(fuse(s,START).ok,false);assert.equal(s.status,'playing');assert.equal(p.egg,1);assert.equal(p.solved,1);
@@ -49,12 +48,33 @@ test('120초 경계에서는 덧셈을 거부하고 남은 알은 전투에서 �
  assert.deepEqual(p.heroStock,{});assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-2'},START,'duplicate').ok,false);
 });
 
-test('영웅 재고가 없는 이전 상태와 길이 가득 찬 상태는 영웅 소환 자원을 소모하지 않는다',()=>{
+test('선택 실패와 100명 제한은 성장량·legacy 재고를 보존하고 한 자리에서 소환을 재시도할 수 있다',()=>{
  const s=playing(),p=s.players[0];delete p.heroStock;
  assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-1-0'},START,'legacy').ok,false);assert.equal(p.heroStock,undefined);
- p.heroStock={'hero-1-0':1};p.egg=1;s.enemies=Array.from({length:100},(_,id)=>({id:1000+id,owner:0,target:1,hero:null,level:1,hp:500,max:500,x:1,y:3,pathDistance:1,slow:0,stun:0,hits:0}));
- assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-1-0'},START,'crowded').ok,false);assert.equal(p.heroStock['hero-1-0'],1);
- assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},START,'crowded-egg').ok,false);assert.equal(p.egg,1);assert.equal(s.enemies.length,100);
+ p.egg=2;
+ for(const heroId of ['unknown','hero-11-0','hero-3-0'])for(const type of ['hatch','summon'] as const){const before=structuredClone(s);assert.equal(applyDuel(s,0,{type,heroId},START,'invalid').ok,false);assert.deepEqual(s,before);}
+ p.heroStock={'hero-1-0':1};s.enemies=Array.from({length:100},(_,id)=>({id:1000+id,owner:0,target:1,hero:null,level:1,hp:500,max:500,x:1,y:3,pathDistance:1,slow:0,stun:0,hits:0}));
+ for(const type of ['hatch','summon'] as const){const before=structuredClone(s);assert.equal(applyDuel(s,0,{type,heroId:'hero-1-0'},START,'crowded').ok,false);assert.deepEqual(s,before);}
+ s.enemies.pop();assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},START,'retry').ok,true);assert.equal(p.egg,1);assert.equal(p.heroStock['hero-1-0'],1);assert.equal(s.enemies.length,100);
+ s.enemies.pop();assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-1-0'},START,'legacy-retry').ok,true);assert.equal(p.egg,1);assert.equal(p.heroStock['hero-1-0'],0);assert.equal(s.enemies.length,100);
+});
+
+test('누적 성장량 6은 레벨 2 세 명 또는 레벨 6 한 명으로 배분하며 자기 진영만 사용한다',()=>{
+ for(const levels of [[2,2,2],[6]]){
+  const s=preparing(),p=s.players[0];for(let i=0;i<6;i++)assert.equal(fuse(s).ok,true);connectedAdvance(s,START);
+  assert.equal(p.egg,6);const other=structuredClone(s.players[1]);let remaining=6;
+  for(const level of levels){assert.equal(applyDuel(s,0,{type:'hatch',heroId:`hero-${level}-1`},START,'spend').ok,true);remaining-=level;assert.equal(p.egg,remaining);assert.deepEqual(s.players[1],other);}
+  assert.equal(s.enemies.length,levels.length);assert.deepEqual(s.enemies.map(e=>e.level),levels);assert.ok(s.enemies.every(e=>e.owner===0&&e.target===1&&e.pathDistance===1));assert.deepEqual(p.heroStock,{});
+ }
+});
+
+test('legacy summon은 재고를 먼저 하나 소모하고 hatch 및 이후 summon은 성장량만 차감한다',()=>{
+ const s=playing(),p=s.players[0];p.egg=6;p.heroStock={'hero-2-0':1};
+ assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-2-0'},START,'growth-first').ok,true);assert.equal(p.egg,4);assert.equal(p.heroStock['hero-2-0'],1);
+ assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-2-0'},START,'stock-first').ok,true);assert.equal(p.egg,4);assert.equal(p.heroStock['hero-2-0'],0);
+ assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-2-0'},START,'growth-fallback').ok,true);assert.equal(p.egg,2);assert.equal(p.heroStock['hero-2-0'],0);
+ delete p.heroStock;assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-2-0'},START,'no-stock-field').ok,true);assert.equal(p.egg,0);assert.equal(p.heroStock,undefined);assert.equal(s.enemies.length,4);
+ const before=structuredClone(s);assert.equal(applyDuel(s,0,{type:'summon',heroId:'hero-2-0'},START,'empty').ok,false);assert.deepEqual(s,before);
 });
 
 test('시작을 누른 양쪽이 준비되면 공동 120초 문제풀이가 시작된다',()=>{
@@ -102,7 +122,7 @@ test('준비 중에는 설치와 전투가 멈추고 타워 선택에는 좌표�
  const s=preparing();reserve(s);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},NOW,'build').ok,false);
  s.players[0].egg=1;
- assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,'hatch').ok,true);assert.equal(s.players[0].heroStock?.['hero-1-0'],1);
+ assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,'hatch').ok,false);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[0].heroStock,{});
  connectedAdvance(s,NOW+119999);
  assert.equal(s.status,'preparing');assert.equal(s.preparationElapsed,119.999);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
  assert.equal(s.enemies.length,0);assert.equal(s.shots.length,0);assert.equal(s.players[0].towers.length,0);assert.equal(s.players[0].stock.basic,1);

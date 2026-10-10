@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {DuelScene,type DuelView} from '../src/multiplayer/scene';
-import {advanceDuel,applyDuel,createDuel,duelHeroLearningLevel,joinDuel,DUEL_PREPARATION_SECONDS,type DuelState,type Side} from '../src/multiplayer/duel';
+import {applyDuel,createDuel,duelHeroLearningLevel,joinDuel,type DuelState,type Side} from '../src/multiplayer/duel';
 import {additionSlots} from '../src/multiplayer/computer-peer';
 import {learningDescription} from '../src/multiplayer/decimal-boards';
 import {numberText} from '../src/math';
@@ -20,11 +20,8 @@ function startFixture(){
   const reply=applyDuel(state,owner,{type:'ready'},fixtureClock,'preview-ready-'+(++nonce));
   if(!reply.ok)throw Error(reply.message);
  }
- // The fixture's controlled clock completes the ordinary one-minute preparation.
- fixtureClock+=DUEL_PREPARATION_SECONDS*1000;
- for(const p of state.players)p!.lastSeen=fixtureClock;
- advanceDuel(state,fixtureClock);
- if(state.status!=='playing')throw Error('준비 시간이 끝나도 전투가 시작되지 않았어요.');
+ // Addition belongs to the two-minute preparation; this fixture starts there.
+ if(state.status!=='preparing')throw Error('문제풀이 준비 단계가 시작되지 않았어요.');
  side=0;slots=[];
 }
 startFixture();
@@ -33,17 +30,17 @@ const scene=new DuelScene(():DuelView=>({state,side,room:'개인 레벨 확인',
 
 function updateProof(){
  const p=state.players[side]!;
- $('status').textContent=`${loaded?'실제 DuelScene 표시 완료':'실제 대전 이미지 로딩 중'} · ${side===0?'호스트':'참가자'} 계정 Lv.${p.accountLevel} → 내 학습 Lv.${duelHeroLearningLevel(p)} · 합성 회차 ${p.round} · 영웅 알 Lv.${p.egg}`;
+ $('status').textContent=`${loaded?'실제 DuelScene 표시 완료':'실제 대전 이미지 로딩 중'} · ${side===0?'호스트':'참가자'} 계정 Lv.${p.accountLevel} → 내 학습 Lv.${duelHeroLearningLevel(p)} · 합성 회차 ${p.round} · 영웅 성장량 ${p.egg}`;
  $('equation').textContent=equation;
  $('proof').replaceChildren(...([0,1] as Side[]).map(owner=>{
   const player=state.players[owner]!,level=duelHeroLearningLevel(player),row=document.createElement('span');
   row.dataset.side=String(owner);row.dataset.accountLevel=String(player.accountLevel);row.dataset.learningLevel=String(level);row.dataset.round=String(player.round);row.dataset.egg=String(player.egg);
-  row.textContent=`${owner===0?'호스트':'참가자'} · 계정 Lv.${player.accountLevel} / 학습 Lv.${level} · ${learningDescription(level)} · 회차 ${player.round} · 알 ${player.egg}\n블럭: ${player.board.map(n=>numberText(n)).join(' · ')}`;
+  row.textContent=`${owner===0?'호스트':'참가자'} · 계정 Lv.${player.accountLevel} / 학습 Lv.${level} · ${learningDescription(level)} · 회차 ${player.round} · 성장량 ${player.egg}\n블럭: ${player.board.map(n=>numberText(n)).join(' · ')}`;
   return row;
  }));
  for(const owner of [0,1] as Side[]){const button=$(`${owner===0?'host':'guest'}-view`) as HTMLButtonElement;button.textContent=`${owner===0?'호스트':'참가자'} Lv.${state.players[owner]!.accountLevel} 시점`;button.setAttribute('aria-pressed',String(side===owner));}
  ($('reverse-levels') as HTMLButtonElement).textContent=reversed?'호스트 Lv.1 · 참가자 Lv.8로 새 대전':'호스트 Lv.8 · 참가자 Lv.1로 새 대전';
- ($('correct-fuse') as HTMLButtonElement).disabled=!loaded||p.egg>=10;
+ ($('correct-fuse') as HTMLButtonElement).disabled=!loaded||state.status!=='preparing';
  if(scene.ready)game.scale.refresh();
 }
 function refresh(){scene.redraw();updateProof();}
@@ -52,6 +49,7 @@ function fuse(selected:number[]){
  const beforeBoard=JSON.stringify(other.board),beforeRound=other.round,beforeEgg=other.egg;
  const [a,b,c]=selected.map(index=>p.board[index]);
  fixtureClock+=500;
+ for(const player of state.players)if(player)player.lastSeen=fixtureClock;
  const reply=applyDuel(state,side,{type:'fuse',round:p.round,slots:selected,operation:'+'},fixtureClock,'preview-fuse-'+(++nonce));
  const unchanged=beforeBoard===JSON.stringify(other.board)&&beforeRound===other.round&&beforeEgg===other.egg;
  if(!unchanged)throw Error('한 플레이어의 합성이 상대 블럭이나 알을 변경했어요.');

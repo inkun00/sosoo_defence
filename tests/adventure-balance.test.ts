@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {Defense} from '../src/model';
+import {Defense,CASTLE_HEALTH} from '../src/model';
 import {LEVELS} from '../src/levels';
 import type {Difficulty} from '../src/difficulty';
 import {numberText} from '../src/math';
@@ -33,12 +33,15 @@ test('3단계 표준은 준비금을 남겨도 세 개의 불완전한 타워 �
  const m=automatic(3,'standard','catapult@1,3;basic@11,5;needle@13,6');
  assert.equal(m.phase,'lost');assert.equal(m.castle,0);assert.ok(m.level.budget-m.towers.reduce((sum,t)=>sum+t.cost,0)>3000);
 });
-test('4~5단계 표준 혼합 구성은 성벽 없이 클리어하지만 배치에 따라 성 체력을 소모한다',()=>{
+test('4~5단계 표준 혼합 구성은 인접 타워의 정상 재장전으로 성벽 없이 무손실 방어한다',()=>{
  for(const [stage,formation] of [
   [4,'catapult@2,6;catapult@3,6;frost@2,5;basic@13,4;pebble@13,6;needle@13,3'],
   [5,'catapult@2,6;catapult@7,4;crystal@2,5;basic@8,4;pebble@13,3;needle@13,4'],
  ] as const){
   const m=automatic(stage,'standard',formation);
-  assert.equal(m.phase,'won');assert.ok(m.goals.every(goal=>goal.done));assert.ok(m.castle>0&&m.castle<5);
+  assert.equal(m.phase,'won');assert.ok(m.goals.every(goal=>goal.done));assert.equal(m.castle,CASTLE_HEALTH);
+  assert.equal(m.leaks,0);assert.equal(m.kills,m.enemyCount);assert.equal(m.enemies.length,0);assert.equal(m.wallPlacements,0);
+  assert.ok(m.towers.some(t=>m.towers.some(other=>other!==t&&Math.abs(other.x-t.x)<=1&&Math.abs(other.y-t.y)<=1)),'혼합 구성에 바로 이웃한 타워가 포함된다');
+  assert.ok(m.towers.every(t=>m.reloadFactor(t)===1),'이웃한 타워도 정상 재장전 간격을 유지한다');
  }
 });

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import {artURL} from '../src/art';
 import {DuelScene,DuelView} from '../src/multiplayer/scene';
 import {DuelAction,validDuelCell,advanceDuel,DUEL_PREPARATION_SECONDS} from '../src/multiplayer/duel';
 import {ComputerPeer} from '../src/multiplayer/computer-peer';
@@ -9,7 +8,7 @@ import {numberText} from '../src/math';
 import {observeGameScreen,duelScreenLayout} from '../src/responsive-game';
 import {mountGameAudioControls} from '../src/game-audio-controls';
 import {Sound} from '../src/audio';
-import {heroesAtLevel} from '../src/multiplayer/heroes';
+import {bindHeroGrowthPicker,heroGrowthPickerHTML} from '../src/multiplayer/hero-growth-picker';
 import '../src/game.css';
 import '../src/multiplayer/multiplayer.css';
 const requested=new URL(location.href).searchParams.get('map'),mapId=isDuelMapId(requested)?requested:DEFAULT_DUEL_MAP_ID;
@@ -30,9 +29,13 @@ const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:in
 const panel=mountPurchasePanel(document.getElementById('field')!,send);
 const heroDialog=document.createElement('div');heroDialog.className='modal hidden';heroDialog.setAttribute('role','dialog');heroDialog.setAttribute('aria-modal','true');heroDialog.setAttribute('aria-label','부화할 영웅 선택');document.getElementById('app')!.append(heroDialog);
 function closeHeroes(){heroDialog.classList.add('hidden');scene.input.enabled=true;refresh();}
-function chooseHero(){const p=peer.state.players[0];if(!p.egg)return;const preparing=peer.state.status==='preparing';heroDialog.dataset.phase=peer.state.status;heroDialog.innerHTML=`<div class="duel-card"><h2>영웅 알 Lv.${p.egg} · ${preparing?'영웅 비축':'영웅 소환'}</h2><div class="hero-grid">${heroesAtLevel(p.egg).map(hero=>`<button class="hero-card" data-hero="${hero.id}"><span class="hero-crop" style="background-image:url('${artURL(hero.sheet)}');background-position:0% ${hero.row*50}%"></span><strong>${hero.name}</strong><small>${hero.description}</small><span class="duel-gold">${preparing?'비축':'소환'} ▶</span></button>`).join('')}</div><button data-close-heroes>닫기</button></div>`;heroDialog.classList.remove('hidden');scene.input.enabled=false;heroDialog.querySelector<HTMLButtonElement>('[data-close-heroes]')!.onclick=closeHeroes;heroDialog.querySelectorAll<HTMLButtonElement>('[data-hero]').forEach(button=>button.onclick=async()=>{const reply=await send({type:'hatch',heroId:button.dataset.hero!});if(reply.ok)closeHeroes();});}
+function chooseHero(level=1,feedback=''){
+ const p=peer.state.players[0];if(peer.state.status!=='playing')return;heroDialog.dataset.phase='playing';heroDialog.innerHTML=`<div class="duel-card"><h2>성장량으로 영웅 선택 · 소환</h2>${heroGrowthPickerHTML(p.egg,level)}<p data-feedback role="status"></p><button data-close-heroes>전장으로 · 닫기</button></div>`;heroDialog.classList.remove('hidden');scene.input.enabled=false;
+ heroDialog.querySelector<HTMLElement>('[data-feedback]')!.textContent=feedback;heroDialog.querySelector<HTMLButtonElement>('[data-close-heroes]')!.onclick=closeHeroes;
+ bindHeroGrowthPicker(heroDialog,next=>chooseHero(next),async heroId=>{const reply=await send({type:'hatch',heroId});if(reply.ok&&peer.state.status==='playing')chooseHero(level,reply.message);});
+}
 observeGameScreen(game,document.getElementById('field')!,layout=>{scene.setScreenLayout(layout);shopPage=Math.min(shopPage,scene.shopPageCount-1);panel.setScreenLayout(layout,scene.getPurchaseArea());scene.redraw();},duelScreenLayout);
-function refresh(){const s=peer.state,p=s.players[0],opponent=s.players[1]!;if(s.status==='playing'&&heroDialog.dataset.phase==='preparing'&&!heroDialog.classList.contains('hidden')){closeHeroes();return;}panel.sync(s.status==='preparing'?p.quote:null,busy,heroDialog.classList.contains('hidden'));scene.redraw();document.getElementById('proof')!.textContent=`${s.status} · 준비 ${Math.ceil(Math.max(0,DUEL_PREPARATION_SECONDS-s.preparationElapsed))}초 · 전투 ${s.elapsed.toFixed(1)}초 · 코인 ${numberText(p.money)} · 비축 타워 ${Object.values(p.stock).reduce((a,b)=>a+b,0)} · 비축 영웅 ${Object.values(p.heroStock??{}).reduce((a,b)=>a+b,0)} · 설치 ${p.towers.length} · 상대 비축 ${Object.values(opponent.stock).reduce((a,b)=>a+b,0)} · 상대 설치 ${opponent.towers.length} · 몬스터 ${s.enemies.length}`;}
+function refresh(){const s=peer.state,p=s.players[0],opponent=s.players[1]!;if(s.status!=='playing'&&!heroDialog.classList.contains('hidden')){closeHeroes();return;}panel.sync(s.status==='preparing'?p.quote:null,busy,heroDialog.classList.contains('hidden'));scene.redraw();document.getElementById('proof')!.textContent=`${s.status} · 준비 ${Math.ceil(Math.max(0,DUEL_PREPARATION_SECONDS-s.preparationElapsed))}초 · 전투 ${s.elapsed.toFixed(1)}초 · 코인 ${numberText(p.money)} · 비축 타워 ${Object.values(p.stock).reduce((a,b)=>a+b,0)} · 영웅 성장량 ${p.egg} · 설치 ${p.towers.length} · 상대 비축 ${Object.values(opponent.stock).reduce((a,b)=>a+b,0)} · 상대 설치 ${opponent.towers.length} · 몬스터 ${s.enemies.length}`;}
 async function send(action:DuelAction){busy=true;refresh();try{const reply=await peer.send(action);message=reply.message;if(reply.ok&&action.type==='fuse')slots=[];panel.feedback(message);return reply;}finally{busy=false;refresh();}}
 scene.onAction=async key=>{
  if(key.startsWith('type:')){if(peer.state.players[0].quote){message='비축 문제를 풀거나 취소해 주세요.';refresh();return;}selectedType=key.slice(5);selectedTower=0;if(peer.state.status==='preparing')void send({type:'prepare-quote',typeId:selectedType});else refresh();return;}

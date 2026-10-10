@@ -46,9 +46,9 @@ export class Defense{
  start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');if(this.pendingPurchase)return this.notice('열린 설치 문제를 풀거나 취소한 뒤 방어를 시작해요.');this.phase='playing';this.emit({type:'notice',message:'타워 준비 완료! 전투 중에는 자동으로 공격해요. 몬스터의 체력 변화를 살펴보세요.'});return true;}return false;}
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
  get canBuild(){return this.phase==='ready';}
- // Adjacent towers are legal. Shared heat slows reload, leaving damage exact.
- reloadFactor(c:Cell){const nearby=this.towers.filter(t=>t!==c&&Math.abs(t.x-c.x)<=1&&Math.abs(t.y-c.y)<=1).length;return 1+Math.min(2,nearby*Math.min(.4,(this.level.id-1)*.05));}
- reloadTime(t:Tower){return towerType(t.typeId)!.cooldown*this.reloadFactor(t);}
+ // Adjacent towers keep their normal firing interval at every stage.
+ reloadFactor(_c:Cell){return 1;}
+ reloadTime(t:Tower){return towerType(t.typeId)!.cooldown;}
  candidate(c:Cell,wall=false):Set<string>|null{
   if(!Number.isInteger(c.x)||!Number.isInteger(c.y)||c.x<0||c.y<0||c.x>=COLS||c.y>=ROWS||key(c)===key(this.map.start)||key(c)===key(this.map.end)||this.blocks.has(key(c))||this.towers.some(t=>key(t)===key(c))||this.walls.some(w=>key(w)===key(c)))return null;
   if(this.enemies.some(e=>Math.hypot(e.x-world(c).x,e.y-world(c).y)<TILE*.8))return null;

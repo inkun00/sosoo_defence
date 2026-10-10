@@ -29,5 +29,5 @@ test('후반에는 같은 혼합 타워를 한곳에 몰거나 기본 포탑만 
  assert.deepEqual(cluster.towers.map(t=>t.typeId),spread.towers.map(t=>t.typeId));
  assert.equal(cluster.money,spread.level.budget-cluster.towers.reduce((sum,t)=>sum+t.cost,0));
  assert.ok(spam.towers.length>spread.towers.length,'타워 수만 늘려도 통과하지 못한다');
- assert.ok(cluster.towers.some(t=>cluster.reloadFactor(t)>1));
+ assert.ok(cluster.towers.every(t=>cluster.reloadFactor(t)===1),'밀집 배치에서도 타워의 재장전 간격은 늘어나지 않는다');
 });

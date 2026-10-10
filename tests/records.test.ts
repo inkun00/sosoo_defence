@@ -1,15 +1,16 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {createDuel,joinDuel,applyDuel,advanceDuel,DUEL_PREPARATION_SECONDS,DuelState} from '../src/multiplayer/duel';
 import {finishedRecord,validRecord,emptyProgress,progressAfter,accountLevel,matchExperience,MatchRecord} from '../src/multiplayer/records';
+import {numberText} from '../src/math';
 const now=Date.now(),id='aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
 const record=():MatchRecord=>({version:1,matchId:id,hostUid:'a',guestUid:'b',side:0,outcome:'win',endedAt:now,duration:30,solved:2,purchases:1,wrongQuestions:[]});
 function preparation(){const s=createDuel('a','가',17,now);joinDuel(s,'b','나',now);assert.ok(applyDuel(s,0,{type:'ready'},now,'r0').ok);assert.ok(applyDuel(s,1,{type:'ready'},now,'r1').ok);assert.equal(s.status,'preparing');return s;}
 function startCombat(s:DuelState){const startedAt=now+DUEL_PREPARATION_SECONDS*1000;s.players.forEach(p=>p!.lastSeen=startedAt);advanceDuel(s,startedAt);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);return startedAt;}
 test('타워 오답은 식·입력·정답을 남기고 반복 시 횟수를 누적한다',()=>{
- const s=preparation();assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},now,'q').ok);
+ const s=preparation();assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},now,'q').ok);const q=s.players[0].quote!;
  applyDuel(s,0,{type:'answer',nonce:'q',answer:'0'},now,'w');applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.6'},now,'w2');
- assert.equal(s.players[0].wrongQuestions.length,1);assert.deepEqual(s.players[0].wrongQuestions[0],{id:'q',kind:'tower',a:8800,b:100,operation:'-',submitted:'8.6',correct:8700,level:1,elapsed:0,attempts:2});assert.equal(s.players[0].money,8800);
- assert.ok(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},now,'ok').ok);assert.equal(s.players[0].purchases,1);assert.equal(s.players[0].wrongQuestions.length,1);assert.equal(s.players[0].stock.basic,1);assert.equal(s.players[0].towers.length,0);
+ assert.equal(s.players[0].wrongQuestions.length,1);assert.deepEqual(s.players[0].wrongQuestions[0],{id:'q',kind:'tower',a:q.before,b:q.cost,operation:'-',submitted:'8.6',correct:q.before-q.cost,level:1,elapsed:0,attempts:2});assert.equal(s.players[0].money,17600);
+ assert.ok(applyDuel(s,0,{type:'answer',nonce:'q',answer:numberText(q.before-q.cost)},now,'ok').ok);assert.equal(s.players[0].money,17600-q.cost);assert.equal(s.players[0].purchases,1);assert.equal(s.players[0].wrongQuestions.length,1);assert.equal(s.players[0].stock.basic,1);assert.equal(s.players[0].towers.length,0);
 });
 test('잘못된 조작과 지난 판은 오답이 아니며 합성 오답은 실제 선택한 숫자를 기록한다',()=>{
  const s=preparation();applyDuel(s,0,{type:'fuse',round:0,slots:[0,0,2],operation:'+'},now,'dup');assert.equal(s.players[0].wrongQuestions.length,0);

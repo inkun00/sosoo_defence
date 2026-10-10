@@ -77,6 +77,19 @@ test('기존 군집 동반 병사는 제거되고 수집 소환과 알 부화는
  assert.equal(applyDuel(s,0,{type:'summon-reward'},NOW,'duplicate').ok,false);
 });
 
+test('성장량으로 같은 일반 영웅을 여러 번 소환해도 단일 효과만 적용되고 수집 소환은 별도 세 효과다',()=>{
+ const s=createDuel('a','왼쪽',17,ROOM_NOW,1,{rewardHeroes:['hero-1-0'],rewardHero:'hero-1-0'});joinDuel(s,'b','오른쪽',ROOM_NOW);
+ applyDuel(s,0,{type:'ready'},ROOM_NOW,'a');applyDuel(s,1,{type:'ready'},ROOM_NOW,'b');s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);
+ const p=s.players[0],unit=enemy({pathDistance:1.5}),opponent=enemy({id:91,owner:1,target:0,pathDistance:1.5}),t:DuelTower={id:1,typeId:'basic',x:1,y:2,unit:100,cost:0,enabled:true,cooldown:1};s.enemies=[unit,opponent];p.egg=3;
+ for(let i=0;i<2;i++)assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},NOW,`normal-${i}`).ok,true);
+ assert.equal(p.egg,1);assert.equal(p.rewardUsed,false);assert.equal(s.enemies.filter(e=>e.hero).length,2);assert.ok(s.enemies.filter(e=>e.hero).every(e=>!e.rewardSummon));
+ assert.deepEqual(activeDuelHeroEffects(s,unit),['haste']);assert.deepEqual(activeDuelHeroEffects(s,opponent),[]);assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),[]);assert.equal(unit.hp,1000);assert.equal(unit.max,1000);
+ assert.ok(Math.abs(duelEnemyPosition(s,unit,1).x-(1.5+.249*1.1))<1e-12,'동일 가속 두 개가 중첩되지 않는다');
+ assert.equal(applyDuel(s,0,{type:'summon-reward'},NOW,'reward').ok,true);assert.equal(p.egg,1);assert.equal(p.rewardUsed,true);
+ assert.deepEqual(activeDuelHeroEffects(s,unit),['haste','vitality']);assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),['tower-haste']);assert.deepEqual(activeDuelHeroEffects(s,opponent),[]);assert.equal(unit.hp,1100);assert.equal(unit.max,1100);
+ assert.equal(applyDuel(s,0,{type:'summon-reward'},NOW,'reward-again').ok,false);assert.equal(p.egg,1);
+});
+
 test('굽은 맵의 실제 이동에도 같은 가속 배율과 맵 길이 보정이 적용된다',()=>{
  const s=match('moon-meander'),unit=enemy({pathDistance:2}),leader=hero('haste',false,{pathDistance:3});s.enemies=[unit,leader];
  const speed=(.24+.009)*1.1*duelMapSpeedScale(s.mapId);

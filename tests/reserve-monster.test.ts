@@ -36,14 +36,14 @@ test('선택한 수집 영웅은 준비 중 대기하고 전투에서 원하는 
  assert.equal(s.enemies.length,2);assert.equal(JSON.parse(JSON.stringify(s)).enemies[0].rewardSummon,true);assert.equal(room().players[0].rewardUsed,false);
 });
 
-test('수집 소환과 준비 비축 영웅은 각각 한 명만 출전하며 소환 표식을 구별한다',()=>{
+test('수집 소환과 성장량 소환은 자원을 별도로 쓰며 같은 ID의 소환 표식을 구별한다',()=>{
  const s=room();assert.ok(applyDuel(s,0,{type:'ready',heroId:'hero-10-1'},ROOM_NOW,'left').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'right').ok);
- s.players[0].egg=10;assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-10-1'},ROOM_NOW,'reserve').ok);
- assert.equal(s.enemies.length,0);assert.equal(s.players[0].heroStock?.['hero-10-1'],1);startCombat(s);
- assert.ok(applyDuel(s,0,{type:'summon-reward'},START,'reward').ok);const money=s.players[0].money;
- assert.ok(applyDuel(s,0,{type:'summon',heroId:'hero-10-1'},START,'stock').ok);
+ s.players[0].egg=12;assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-10-1'},ROOM_NOW,'early').ok,false);
+ assert.equal(s.enemies.length,0);assert.deepEqual(s.players[0].heroStock,{});startCombat(s);
+ assert.ok(applyDuel(s,0,{type:'summon-reward'},START,'reward').ok);const money=s.players[0].money;assert.equal(s.players[0].egg,12);
+ assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-10-1'},START,'growth').ok);
  assert.equal(s.enemies.length,2);assert.equal(s.enemies[0].rewardSummon,true);assert.equal(s.enemies[1].rewardSummon,undefined);assert.ok(s.enemies.every(e=>e.hero&&!e.sourceHeroId));
- assert.equal(s.players[0].heroStock?.['hero-10-1'],0);assert.equal(s.players[0].money,money);assert.equal(s.players[0].rewardUsed,true);
+ assert.equal(s.players[0].egg,2);assert.deepEqual(s.players[0].heroStock,{});assert.equal(s.players[0].money,money);assert.equal(s.players[0].rewardUsed,true);
 });
 
 test('선택 생략은 이전 선택을 유지하며 없을 때 첫 보유 영웅을 대기시킨다',()=>{

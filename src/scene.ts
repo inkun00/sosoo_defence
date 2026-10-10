@@ -111,7 +111,6 @@ export class Field extends Phaser.Scene{
    this.towerArt.set(t.id,{root,base,pivot,head,angle,recoilTime:old?.recoilTime??0});
    if(!this.knownTowerIds.has(t.id)&&!this.reducedMotion){root.setScale(0);this.tweens.add({targets:root,scale:1,duration:280,ease:'Back.easeOut'});}this.knownTowerIds.add(t.id);
    const text=this.label(xy.x,xy.y+28,decimal(t.unit,this.model.level.digits),20,'#ffe4a3');text.setBackgroundColor('#15171eea');this.towersView?.add(text);
-   if(this.model.reloadFactor(t)>1){const heat=this.label(xy.x,xy.y+47,'열×'+this.model.reloadFactor(t).toFixed(2),11,'#ffc56b');heat.setBackgroundColor('#15171eea');this.towersView?.add(heat);}
    const status=this.add.image(xy.x+22,xy.y-32,'dungeon-icons',t.enabled?'play':'pause').setDisplaySize(18,18);this.towersView?.add(status);
   }
   this.layoutSignature=this.signature();if(this.mode.kind==='wall'&&this.model.pendingWall)this.hover(this.model.pendingWall);else if(this.selected){const t=this.model.towers.find(t=>t.id===this.selected);if(t)this.hover(t);}
@@ -120,13 +119,13 @@ export class Field extends Phaser.Scene{
  focusCell(c:Cell){this.cursor={...c};this.hover(c);}
  hover(c:Cell){
   this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);
-  // Show range and optional heat while choosing a legal location.
+  // Show range while choosing a legal location.
   this.overlay.clear();if(this.mode.kind!=='inspect'){this.overlay.lineStyle(1,0xe1d1aa,.15);for(let x=0;x<=COLS;x++)this.overlay.lineBetween(OX+x*TILE,OY,OX+x*TILE,OY+ROWS*TILE);for(let y=0;y<=ROWS;y++)this.overlay.lineBetween(OX,OY+y*TILE,OX+COLS*TILE,OY+y*TILE);}if(c.x<0||c.x>=COLS||c.y<0||c.y>=ROWS)return;this.cursor={...c};
   if(this.mode.kind==='wall'){this.drawWallPreview(this.model.pendingWall??this.model.previewWall(c));return;}
   const selected=this.model.towers.find(t=>t.id===this.selected),xy=world(selected??this.selectedWall??c);
   if(this.selectedWall&&this.mode.kind==='inspect')this.overlay.lineStyle(3,0xffe7a2).strokeRoundedRect(xy.x-26,xy.y-26,52,52,8);
   if(this.mode.kind==='tower'||selected){const effect=selected?.effect??this.mode.effect,radius=effect==='range'?LONG_TOWER_RANGE:TOWER_RANGE;this.overlay.fillStyle(EFFECTS[effect].color,.11).fillCircle(xy.x,xy.y,radius);this.overlay.lineStyle(2,EFFECTS[effect].color,.7).strokeCircle(xy.x,xy.y,radius);}
-  if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c);this.overlay.lineStyle(3,valid?(this.model.reloadFactor(c)>1?0xffbd55:0xfaf2d6):0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
+  if(this.mode.kind!=='inspect'){const valid=this.model.candidate(c);this.overlay.lineStyle(3,valid?0xfaf2d6:0xbe5c48,.9).strokeRoundedRect(world(c).x-26,world(c).y-26,52,52,8);}
  }
  clearWallPreview(){this.overlay?.clear();this.wallGhost?.setVisible(false);this.wallGhostLabel?.setVisible(false);}
  private drawWallPreview(preview:WallPreview){

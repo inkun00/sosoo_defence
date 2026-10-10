@@ -35,7 +35,7 @@ export class ComputerPeer{
  onState:(state:DuelState,connected:boolean)=>void=()=>{};onStatus:(message:string)=>void=()=>{};
  private timer:ReturnType<typeof setInterval>|undefined;private disposed=false;private clock:()=>number;private nonce=0;
  private preparationStarted=false;private strategyStarted=false;
- private nextBuild=0;private nextFusion=0;private nextHatch=0;private nextSummon=0;private answeringAt=0;private seenFlame=9000;
+ private nextBuild=0;private nextFusion=0;private nextSummon=0;private answeringAt=0;private seenFlame=9000;
  private portrait:ComputerPortrait;private moodUntil=0;
  constructor(readonly identity:PeerIdentity,level:number,options:ComputerOptions={}){
   this.definition=computerOpponent(level);const now=options.clock?.()??Date.now(),monotonic=performance.now();
@@ -104,21 +104,17 @@ export class ComputerPeer{
   return this.definition.level>=8?(heroes.find(h=>h.effect==='enemy-slow')??heroes.find(h=>h.effect==='vitality')??heroes.find(h=>h.variant===variant)??heroes[0]):heroes.find(h=>h.variant===variant)??heroes[0];
  }
  private prepareHeroes(now:number){
-  const p=this.state.players[1]!,desired=this.definition.heroLevel;
-  if(p.egg>=desired&&now>=this.nextHatch){
-   const hero=this.chooseHero(p.egg);
-   if(hero&&this.act({type:'hatch',heroId:hero.id},now).ok){this.nextHatch=now+this.definition.hatchMs;this.mood('cast','부화한 영웅을 전투에 대비해 모았어요.',now);}
-  }else if(p.egg<desired&&now>=this.nextFusion){
+  const p=this.state.players[1]!;
+  if(now>=this.nextFusion){
    this.nextFusion=now+this.definition.fusionMs;const slots=additionSlots(p.board);
-   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 돌 알을 성장시켰어요.',now);
+   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 영웅 성장량을 모았어요.',now);
   }
  }
  private summon(now:number){
   const s=this.state,p=s.players[1]!;
   if(now<this.nextSummon)return;
-  // A leftover egg gets its last choice at the transition. Stored heroes then
-  // join later waves at the opponent's ordinary decision speed.
-  const leftover=p.egg>0?this.chooseHero(p.egg):undefined;
+  // Spend only the chosen level, keeping the rest for later waves.
+  const leftover=p.egg>0?this.chooseHero(Math.min(10,this.definition.heroLevel,p.egg)):undefined;
   const stored=Object.entries(p.heroStock??{}).filter(([,n])=>n>0).map(([id])=>heroSpec(id)).filter((h):h is HeroSpec=>!!h).sort((a,b)=>b.level-a.level||a.variant-b.variant)[0];
   const action:DuelAction|undefined=leftover?{type:'hatch',heroId:leftover.id}:stored?{type:'summon',heroId:stored.id}:p.rewardHero&&!p.rewardUsed?{type:'summon-reward'}:undefined;
   if(action&&this.act(action,now).ok){this.nextSummon=now+this.definition.hatchMs;this.mood('cast','준비한 영웅이 출발해요!',now);}
@@ -131,7 +127,7 @@ export class ComputerPeer{
    clearInterval(this.timer);this.timer=undefined;this.onState(s,true);return;
   }
   if(s.status==='preparing'){
-   if(!this.preparationStarted){this.preparationStarted=true;this.nextBuild=s.preparationStartedAt+1800;this.nextFusion=s.preparationStartedAt+this.definition.fusionMs;this.nextHatch=s.preparationStartedAt+this.definition.hatchMs;}
+   if(!this.preparationStarted){this.preparationStarted=true;this.nextBuild=s.preparationStartedAt+1800;this.nextFusion=s.preparationStartedAt+this.definition.fusionMs;}
    if(p.quote){if(now>=this.answeringAt){const q=p.quote,r=this.act({type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now);this.nextBuild=now+(this.definition.level>=8?Math.max(300,this.definition.thinkMs/4):this.definition.buildMs);if(r.ok)this.mood('cast','계산한 타워를 모아 두었어요!',now);else this.act({type:'cancel'},now);}}
    else if(now>=this.nextBuild){this.nextBuild=now+this.definition.buildMs;this.prepare(now);}
    this.prepareHeroes(now);

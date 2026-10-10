@@ -62,7 +62,7 @@ test('Lv.1과 Lv.8은 방장 순서와 상관없이 자신의 덧셈 판을 유�
   for(const side of [0,1] as Side[])personalBoard(s,side);
  }
 });
-test('합성 순서가 달라도 각자의 새 판과 부화 뒤의 재사용은 계정 레벨에 맞고 오래된 요청은 상태를 보존한다',()=>{
+test('합성 순서가 달라도 각자의 판은 계정 레벨에 맞으며 준비 부화·오래된 요청을 거부한다',()=>{
  for(const levels of [[1,8],[8,1]]){
   const s=createDuel('host','방장',918,NOW,levels[0]);joinDuel(s,'guest','참가자',NOW,levels[1]);startPreparation(s);
   for(let turn=0;turn<7;turn++)for(const side of (turn%2?[1,0]:[0,1]) as Side[]){
@@ -71,9 +71,11 @@ test('합성 순서가 달라도 각자의 새 판과 부화 뒤의 재사용은
    assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots:[slots[0],slots[0],slots[2]]},NOW,`invalid-${side}-${turn}`).ok,false);assert.deepEqual(p,before);
    assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots},NOW,`valid-${side}-${turn}`).ok,true);
    assert.equal(p.round,before.round+1);assert.equal(p.egg,before.egg+1);assert.deepEqual(other,otherBefore);personalBoard(s,side);personalBoard(s,(1-side) as Side);
-   if(p.egg===3){const board=[...p.board],round=p.round;assert.equal(applyDuel(s,side,{type:'hatch',heroId:'hero-3-0'},NOW,`hatch-${side}-${turn}`).ok,true);assert.equal(p.egg,0);assert.equal(p.round,round);assert.deepEqual(p.board,board);personalBoard(s,side);}
+   if(p.egg===3){const beforeHatch=structuredClone(s);assert.equal(applyDuel(s,side,{type:'hatch',heroId:'hero-3-0'},NOW,`hatch-${side}-${turn}`).ok,false);assert.deepEqual(s,beforeHatch);personalBoard(s,side);}
   }
-  assert.equal(s.players[0].solved,7);assert.equal(s.players[1]!.solved,7);assert.equal(s.players[0].egg,1);assert.equal(s.players[1]!.egg,1);
+  assert.equal(s.players[0].solved,7);assert.equal(s.players[1]!.solved,7);assert.equal(s.players[0].egg,7);assert.equal(s.players[1]!.egg,7);
+  s.players.forEach(p=>p!.lastSeen=START);advanceDuel(s,START);
+  for(const side of [0,1] as Side[]){const p=s.players[side]!,board=[...p.board],round=p.round;assert.equal(applyDuel(s,side,{type:'hatch',heroId:'hero-3-0'},START,`combat-${side}`).ok,true);assert.equal(p.egg,4);assert.equal(p.round,round);assert.deepEqual(p.board,board);personalBoard(s,side);}
  }
 });
 test('같은 계정 레벨은 같은 순서에서 동일한 판이며 10을 넘는 계정의 덧셈은 10단계·두 자리 소수로 제한된다',()=>{

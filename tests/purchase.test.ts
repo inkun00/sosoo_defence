@@ -111,12 +111,34 @@ test('모든 타워의 모든 변형 가격은 다음 단계에서 오르고 보
  }
 });
 
-test('이웃한 칸에도 설치하고 점유된 칸만 거부하며 열 간섭은 재장전만 늦춘다',()=>{
+test('이웃한 칸에도 설치하고 점유된 칸만 거부하며 재장전은 고유 간격을 유지한다',()=>{
  const m=new Defense(LEVELS[9]);
  for(const c of [{x:1,y:3},{x:2,y:3},{x:2,y:2}]){assert.ok(m.requestPurchase(c,'basic'));const q=m.pendingPurchase!;assert.ok(m.answerPurchase(numberText(q.before-q.cost)));}
  assert.equal(m.candidate({x:1,y:3}),null);assert.equal(m.requestPurchase({x:1,y:3},'double'),false);
- assert.equal(m.reloadFactor(m.towers[0]),1.8);assert.equal(m.reloadTime(m.towers[0]),3.6);assert.ok(m.towers.every(t=>t.unit===100));
- m.sellTower(m.towers[1].id);assert.equal(m.reloadFactor(m.towers[0]),1.4);assert.ok(m.candidate({x:2,y:3}));
+ assert.ok(m.towers.every(t=>m.reloadFactor(t)===1&&m.reloadTime(t)===towerType(t.typeId)!.cooldown&&t.unit===100));
+ m.sellTower(m.towers[1].id);assert.equal(m.reloadFactor(m.towers[0]),1);assert.equal(m.reloadTime(m.towers[0]),2);assert.ok(m.candidate({x:2,y:3}));
+});
+
+test('모든 단계와 타워는 이웃 수와 배치 간격에 관계없이 같은 재장전 시간을 갖는다',()=>{
+ for(const level of LEVELS)for(const type of TOWERS.filter(t=>t.unlock<=level.id)){
+  const m=new Defense(level),target:Tower={id:1,typeId:type.id,x:5,y:3,unit:type.unit,effect:type.effect,enabled:true,cooldown:0,cost:0};
+  m.towers=[target];const isolated=m.reloadTime(target);
+  for(let y=2;y<=4;y++)for(let x=4;x<=6;x++)if(x!==target.x||y!==target.y)m.towers.push({...target,id:m.towers.length+1,x,y});
+  assert.equal(m.reloadFactor(target),1,`${level.id} ${type.id}`);assert.equal(m.reloadTime(target),isolated);assert.equal(isolated,type.cooldown);
+  m.towers.slice(1).forEach(t=>{t.x+=8;t.y+=4;});assert.equal(m.reloadTime(target),isolated);
+ }
+});
+
+test('인접 타워가 있어도 실제 발사는 떨어진 타워와 같은 기본 재장전 간격을 지킨다',()=>{
+ const run=(neighbor:boolean)=>{
+  const m=new Defense(LEVELS[9]),base=towerType('basic')!,target:Tower={id:100,typeId:base.id,x:5,y:3,unit:base.unit,effect:base.effect,enabled:true,cooldown:0,cost:0};
+  m.towers=[target,{...target,id:101,x:neighbor?6:12,enabled:false}];m.spawn();
+  const e=m.enemies[0];Object.assign(e,world({x:5,y:4}),{hp:10000,max:10000,stun:100,next:1});
+  assert.ok(m.start());const fired:number[]=[];
+  for(let step=0;step<62;step++){m.step(.1);for(const event of m.events)if(event.type==='shot'&&(event.data as {towerId:number}).towerId===target.id)fired.push(Number(m.elapsed.toFixed(1)));m.events=[];}
+  assert.equal(e.hp,10000-fired.length*base.unit);return fired;
+ };
+ const isolated=run(false),adjacent=run(true);assert.deepEqual(adjacent,isolated);assert.deepEqual(isolated,[.1,2.1,4.1,6.1]);
 });
 test('모험에서는 전투·일시정지 중 설치를 거부하고 열린 견적이 있으면 시작하지 않는다',()=>{
  const m=new Defense(LEVELS[3]);m.requestPurchase({x:1,y:3},'basic');let q=m.pendingPurchase!;m.answerPurchase(numberText(q.before-q.cost));

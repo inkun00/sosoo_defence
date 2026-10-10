@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,duelLevel,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
+import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,duelLevel,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_START_MONEY,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
 import {duelMap} from '../src/multiplayer/duel-maps';
 import {HEROES} from '../src/multiplayer/heroes';import {recipe,numberText} from '../src/math';
 const NOW=220000,PREP_NOW=NOW-DUEL_PREPARATION_SECONDS*1000;
@@ -34,7 +34,7 @@ test('준비 문제는 취소할 때도 바뀌고 오답 재시도와 상대의 
   const q=p.quote!,formula=`${q.before}-${q.cost}`;assert.notEqual(formula,previous);previous=formula;formulas.add(formula);
   assert.equal(applyDuel(s,0,{type:'answer',nonce,answer:'0'},PREP_NOW,`wrong-${i}`).ok,false);assert.equal(p.quote,q);
   applyDuel(s,0,{type:'cancel'},PREP_NOW,`cancel-${i}`);
-  assert.equal(p.money,8800);assert.equal(s.players[1]!.purchaseVariation,undefined);assert.equal(p.towers.length,0);
+  assert.equal(p.money,DUEL_START_MONEY);assert.equal(s.players[1]!.purchaseVariation,undefined);assert.equal(p.towers.length,0);
  }
  assert.ok(formulas.size>=3);
 });
@@ -43,7 +43,7 @@ test('준비 종료 뒤에는 전투 보상을 점수로만 반영하고 설치 
  assert.equal(s.players[0].money,0);assert.ok((s.players[0].combatScore??0)>0);assert.equal(s.players[0].escrow,0);assert.equal(s.enemies.length,0);assert.ok(s.elapsed>0);
  const money=s.players[0].money;assert.equal(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},s.updatedAt,'forged').ok,false);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].money,money);
 });
-test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 정답만 알 레벨을 올린다',()=>{
+test('양쪽 풀이 속도가 달라도 같은 번호의 문제판을 받으며 정답만 성장량을 올린다',()=>{
  const s=preparation(),initial=[...s.players[0].board];assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,1);assert.deepEqual(s.players[1]!.board,initial);assert.ok(solve(s,1).ok);assert.deepEqual(s.players[0].board,s.players[1]!.board);
  for(const p of s.players){assert.equal(p!.egg,1);assert.equal(p!.solved,1);assert.equal(p!.round,1);}
  const before=JSON.stringify(s.players[0]);assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},PREP_NOW,'stale').ok,false);assert.equal(JSON.stringify(s.players[0]),before);
@@ -63,12 +63,15 @@ test('양쪽의 올바른 뺄셈 합성 요청도 거부하고 모든 플레이�
   assert.equal(result.ok,false);assert.match(result.message,/덧셈/);assert.deepEqual(s.players,before);
  }
 });
-test('연속 정답으로 최고 10레벨 알 한 개만 성장하고 부화는 현재 레벨 영웅 한 마리다',()=>{
- const s=preparation();for(let i=0;i<10;i++)assert.ok(solve(s,0).ok);assert.equal(s.players[0].egg,10);const board=[...s.players[0].board];assert.equal(solve(s,0).ok,false);assert.deepEqual(s.players[0].board,board);
- assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-1-0'},PREP_NOW,'wrong').ok,false);assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-10-0'},PREP_NOW,'right').ok);assert.equal(s.enemies.length,0);assert.equal(s.players[0].heroStock?.['hero-10-0'],1);assert.equal(s.players[0].egg,0);assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-10-0'},PREP_NOW,'duplicate').ok,false);
- s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.ok(applyDuel(s,0,{type:'summon',heroId:'hero-10-0'},NOW,'summon').ok);assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].target,1);assert.equal(s.enemies[0].hp,HEROES.find(h=>h.id==='hero-10-0')!.hp);
+test('연속 정답 성장량은 10을 넘어 누적되고 12에서 레벨 10 소환 후 남은 2를 다시 쓴다',()=>{
+ const s=preparation(),p=s.players[0];for(let i=0;i<12;i++)assert.ok(solve(s,0).ok);assert.equal(p.egg,12);assert.equal(p.solved,12);assert.equal(p.answeredQuestions,12);assert.equal(p.round,12);assert.deepEqual(p.heroStock,{});
+ const before=structuredClone(s);assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-10-0'},PREP_NOW,'early').ok,false);assert.deepEqual(s,before);
+ s.players.forEach(player=>player!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(p.egg,12);
+ assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-10-0'},NOW,'high').ok);assert.equal(p.egg,2);assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].target,1);assert.equal(s.enemies[0].hp,HEROES.find(h=>h.id==='hero-10-0')!.hp);
+ const lowBefore=structuredClone(s);assert.equal(applyDuel(s,0,{type:'hatch',heroId:'hero-3-0'},NOW,'too-high').ok,false);assert.deepEqual(s,lowBefore);
+ assert.ok(applyDuel(s,0,{type:'hatch',heroId:'hero-2-0'},NOW,'remaining').ok);assert.equal(p.egg,0);assert.equal(s.enemies.length,2);assert.deepEqual(p.heroStock,{});
 });
-test('특수효과 영웅은 알 한 개를 소비하고 동반 병사 없이 한 명만 출전한다',()=>{
+test('특수효과 영웅은 선택한 레벨만큼 성장량을 소비하고 동반 병사 없이 한 명만 출전한다',()=>{
  const s=match();s.players[1]!.egg=10;assert.ok(applyDuel(s,1,{type:'hatch',heroId:'hero-10-1'},NOW,'h').ok);assert.equal(s.enemies.filter(e=>e.hero).length,1);assert.equal(s.enemies.length,1);assert.ok(s.enemies.every(e=>e.owner===1&&e.target===0));assert.equal(s.players[1]!.egg,0);
 });
 test('이동 가속은 같은 편에게 적용되고 기존 영웅별 감속 저항은 제거된다',()=>{
