@@ -2,7 +2,7 @@ import {towerType,towerPrice,parseMoney,PurchaseVariation} from '../towers';
 import {heroSpec,worksheetHeroSpec,heroEffectStats,HeroEffect,HeroSpec} from './heroes';
 import {hit,numberText,recipe,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
-import {decimalBoard,learningLevel,normalizedAccountLevel} from './decimal-boards';
+import {decimalBoard,normalizedAccountLevel} from './decimal-boards';
 import {duelMap,duelMapSpeedScale,duelPathDistance,duelPathPosition,duelRoadCell} from './duel-maps';
 export {decimalBoard} from './decimal-boards';
 export type Side=0|1;
@@ -23,7 +23,7 @@ export function duelQuestionScore(wrongAttempts:number){return Math.floor(DUEL_Q
 export function duelScore(p:Pick<DuelPlayer,'combatScore'|'questionScore'>|null|undefined){return (p?.combatScore??0)+(p?.questionScore??0);}
 function awardQuestion(p:DuelPlayer,wrongAttempts:number){p.questionScore=(p.questionScore??0)+duelQuestionScore(wrongAttempts);p.answeredQuestions=(p.answeredQuestions??0)+1;}
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor((Math.max(0,s.elapsed)+1e-8)/(DUEL_SECONDS/10)));}
-export function duelHeroLearningLevel(p:Pick<DuelPlayer,'accountLevel'>){return learningLevel(p.accountLevel??1);}
+export function duelHeroLearningLevel(p:Pick<DuelPlayer,'solved'>){const solved=Number.isSafeInteger(p.solved)&&p.solved>=0?p.solved:0;return Math.min(4,Math.floor(solved/5)+1);}
 export function duelTowerLevel(s:DuelState){return s.status==='preparing'?Math.min(10,s.learningLevel??1):duelLevel(s);}
 export function canPurchaseDuelTower(s:DuelState){return s.status==='preparing'||s.status==='playing';}
 export function canUseDuelTower(s:DuelState,side:Side,typeId:string){
@@ -35,8 +35,8 @@ export function duelBuildCost(s:DuelState,side:Side,typeId:string){
  if(s.status==='playing')return (p.stock?.[typeId]??0)>0?0:Infinity;
  return towerPrice(type,p.money,duelTowerLevel(s),p.purchaseVariation);
 }
-// Tower preparation shares one room level; hero addition uses each player's account level.
-function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!worksheetHeroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},heroStock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({accountLevel:personalLevel})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
+// Tower preparation shares one room level; hero addition follows each player's correct-answer count.
+function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!worksheetHeroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},heroStock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({solved:0})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1,loadout:RewardLoadout={},mapId?:string):DuelState{duelMap(mapId);return {version:1,seed,...(mapId===undefined?{}:{mapId}),learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,preparationStartedAt:0,preparationElapsed:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel,loadout),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
 export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLevel=1,loadout:RewardLoadout={}){
  if(s.players.some(p=>p?.uid===uid))return;

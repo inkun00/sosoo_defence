@@ -46,9 +46,10 @@ test('대전 준비의 큰 지갑·계산 중 별도 적립·취소에서도 한
 });
 
 test('대전에서 합이 10 이상인 오답 조합은 재료·알을 유지하고 범위 밖 복습 문항을 만들지 않는다',()=>{
- const preparationStartedAt=100000,s=preparation(preparationStartedAt,10),now=startCombat(s,preparationStartedAt);
+ const preparationStartedAt=100000,s=preparation(preparationStartedAt,10);
  s.players[0].board=[9000,8000,7000,...Array(13).fill(100)];
- assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},now,'w').ok,false);
+ assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},preparationStartedAt,'w').ok,false);
  assert.equal(s.players[0].wrongQuestions.length,0);assert.equal(s.players[0].egg,0);assert.equal(s.players[0].round,0);
+ assert.equal(s.players[0].solved,0);const now=startCombat(s,preparationStartedAt);
  for(let tick=1;tick<=300;tick++){const time=now+tick*1000;s.players.forEach(p=>p!.lastSeen=time);advanceDuel(s,time);assert.ok(s.enemies.every(e=>learningValue(e.hp)&&learningValue(e.max)));}
 });

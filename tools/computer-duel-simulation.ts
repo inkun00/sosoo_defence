@@ -1,6 +1,6 @@
 import {pathToFileURL} from 'node:url';
 import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/computer-peer';
-import {DuelAction,applyDuel,duelTowerLevel,canUseDuelTower,validDuelCell,DUEL_TOTAL_SECONDS,duelScore} from '../src/multiplayer/duel';
+import {DuelAction,applyDuel,duelTowerLevel,duelHeroLearningLevel,canUseDuelTower,validDuelCell,DUEL_TOTAL_SECONDS,duelScore} from '../src/multiplayer/duel';
 import {DUEL_MAPS} from '../src/multiplayer/duel-maps';
 import {TOWERS,towerPrice} from '../src/towers';
 import {numberText} from '../src/math';
@@ -61,7 +61,7 @@ export function simulateComputerDuel(level:number,seed:number,strategy:Strategy=
   }
  }
  const growthConserved=playerPreparedGrowth===spentGrowth[0]+p.egg&&computerPreparedGrowth===spentGrowth[1]+s.players[1]!.egg;
- const result={level,seed,strategy,mapId:s.mapId??'legacy-straight',status:s.status,winner:s.winner,reason:s.reason,playerScore:duelScore(p),computerScore:duelScore(s.players[1]!),playerCombatScore:p.combatScore??0,computerCombatScore:s.players[1]!.combatScore??0,playerQuestionScore:p.questionScore??0,computerQuestionScore:s.players[1]!.questionScore??0,preparationSeconds:s.preparationElapsed,seconds:Math.round(s.elapsed),totalSeconds:Math.round((now-initialNow)/1000),zeroCombatCoins,legalEconomy,noBattleFusion,growthConserved,playerPrepared,computerPrepared,playerPreparedGrowth,computerPreparedGrowth,playerGrowthRemaining:p.egg,computerGrowthRemaining:s.players[1]!.egg,playerSpentGrowth:spentGrowth[0],computerSpentGrowth:spentGrowth[1],playerSummonedLevels:summonedLevels[0],computerSummonedLevels:summonedLevels[1],playerStockPlaced,computerStockPlaced,playerCashBuilt,computerCashBuilt,playerEarned,computerEarned,waves:s.wave,computerHatched,traversedBend,playerFlame:p.flame,computerFlame:s.players[1]!.flame,playerPurchased:p.purchases,computerSolved:s.players[1]!.solved,computerPurchased:s.players[1]!.purchases};peer.dispose();return result;
+ const result={level,seed,strategy,mapId:s.mapId??'legacy-straight',status:s.status,winner:s.winner,reason:s.reason,playerScore:duelScore(p),computerScore:duelScore(s.players[1]!),playerCombatScore:p.combatScore??0,computerCombatScore:s.players[1]!.combatScore??0,playerQuestionScore:p.questionScore??0,computerQuestionScore:s.players[1]!.questionScore??0,preparationSeconds:s.preparationElapsed,seconds:Math.round(s.elapsed),totalSeconds:Math.round((now-initialNow)/1000),zeroCombatCoins,legalEconomy,noBattleFusion,growthConserved,playerPrepared,computerPrepared,playerPreparedGrowth,computerPreparedGrowth,playerGrowthRemaining:p.egg,computerGrowthRemaining:s.players[1]!.egg,playerSpentGrowth:spentGrowth[0],computerSpentGrowth:spentGrowth[1],playerSummonedLevels:summonedLevels[0],computerSummonedLevels:summonedLevels[1],playerStockPlaced,computerStockPlaced,playerCashBuilt,computerCashBuilt,playerEarned,computerEarned,waves:s.wave,computerHatched,traversedBend,playerFlame:p.flame,computerFlame:s.players[1]!.flame,playerPurchased:p.purchases,computerSolved:s.players[1]!.solved,playerHeroLearningStage:duelHeroLearningLevel(p),computerHeroLearningStage:duelHeroLearningLevel(s.players[1]!),computerPurchased:s.players[1]!.purchases};peer.dispose();return result;
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
@@ -69,5 +69,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const matches=seeds.map(seed=>simulateComputerDuel(i+1,seed));return {level:i+1,computerWins:matches.filter(m=>m.winner===1).length,playerWins:matches.filter(m=>m.winner===0).length,draws:matches.filter(m=>m.winner===null).length,matches};
  });
  const maps=DUEL_MAPS.map(map=>({mapId:map.id,name:map.name,matches:Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id))}));
- console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 덧셈 정답마다 성장량 1을 제한 없이 모은다. 0코인에서 시작한 3분 전투 중 준비한 타워만 배치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
+ console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 덧셈 정답마다 성장량 1을 제한 없이 모은다. 영웅 덧셈은 계정 레벨과 무관하게 정답 0·5·10·15개에 따라 1·2·3·4단계로 진행한다. 0코인에서 시작한 3분 전투 중 준비한 타워만 배치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
 }

@@ -5,7 +5,7 @@ import {duelMap,isDuelMapId} from './duel-maps';
 export interface PeerIdentity{uid:string;name:string;accountLevel?:number;rewardHeroes?:string[];rewardHero?:string|null;}
 export interface Reply{ok:boolean;message:string;}
 interface Invitation{v:1;kind:'offer'|'answer';id:string;host:PeerIdentity;sdp:RTCSessionDescriptionInit;mapId?:string;rules?:string;}
-const DUEL_RULES='preparation-3min-growth-v10';
+const DUEL_RULES='hero-addition-progress-v11';
 const GRACE=45000;
 function randomId(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const hex=Array.from(b,n=>n.toString(16).padStart(2,'0')).join('');return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;}
 function encode(v:Invitation){const bytes=new TextEncoder().encode(JSON.stringify(v));return 'SDS1.'+btoa(String.fromCharCode(...bytes));}

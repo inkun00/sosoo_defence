@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ComputerPeer,additionSlots,strategicDuelCells} from '../src/multiplayer/computer-peer';
 import {COMPUTER_OPPONENTS,computerOpponent} from '../src/multiplayer/computer-opponents';
-import {DUEL_START_MONEY,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_TOTAL_SECONDS,FLAME_MAX,duelBuildCost,applyDuel,createDuel,joinDuel,advanceDuel,canPurchaseDuelTower,validDuelCell} from '../src/multiplayer/duel';
+import {DUEL_START_MONEY,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_TOTAL_SECONDS,FLAME_MAX,duelBuildCost,applyDuel,createDuel,joinDuel,advanceDuel,canPurchaseDuelTower,validDuelCell,duelHeroLearningLevel} from '../src/multiplayer/duel';
 import {DUEL_MAPS,duelRoadCell} from '../src/multiplayer/duel-maps';
 import {decimalBoard} from '../src/multiplayer/decimal-boards';
 import {numberText,recipe} from '../src/math';
@@ -16,41 +16,59 @@ async function prepareTower(peer:ComputerPeer,typeId='basic'){
  assert.ok((await peer.send({type:'answer',nonce:quote.nonce,answer:numberText(quote.before-quote.cost)})).ok);
 }
 
-test('컴퓨터 상대 10명은 동일한 시작 예산·불꽃을 받고 자신의 레벨로 덧셈을 푼다',()=>{
+test('컴퓨터 상대 10명은 타워 난이도를 유지하며 동일한 예산·불꽃과 1단계 영웅 덧셈으로 시작한다',()=>{
  assert.equal(DUEL_START_MONEY,8800*2,'온라인과 CPU 양쪽의 준비 예산은 기존의 두 배다');
  assert.equal(COMPUTER_OPPONENTS.length,10);assert.equal(new Set(COMPUTER_OPPONENTS.map(o=>o.id)).size,10);
  for(let level=1;level<=10;level++){
   const {peer}=local(level),s=peer.state;
   assert.equal(peer.definition.level,level);assert.equal(s.learningLevel,level);assert.equal(s.status,'waiting');assert.equal(s.players[1]!.ready,true);
   assert.equal(s.players[0].accountLevel,1);assert.equal(s.players[1]!.accountLevel,level);
-  assert.deepEqual(s.players[0].board,decimalBoard(912,0,1));assert.deepEqual(s.players[1]!.board,decimalBoard(912,0,level));assert.ok(s.players.every(p=>p!.money===DUEL_START_MONEY&&p!.flame===FLAME_MAX&&stockTotal(p!.stock)===0));
+  assert.deepEqual(s.players[0].board,decimalBoard(912,0,1));assert.deepEqual(s.players[1]!.board,s.players[0].board);assert.ok(s.players.every(p=>duelHeroLearningLevel(p!)===1&&p!.money===DUEL_START_MONEY&&p!.flame===FLAME_MAX&&stockTotal(p!.stock)===0));
   const slots=additionSlots(s.players[1]!.board)!;assert.ok(slots);assert.equal(new Set(slots).size,3);assert.ok(recipe(...slots.map(i=>s.players[1]!.board[i]) as [number,number,number],'+'));
   assert.ok(s.players[0].board.every(n=>n%10===0));peer.dispose();
  }
  assert.equal(computerOpponent(-10).level,1);assert.equal(computerOpponent(99).level,10);
 });
 
-test('초급 대 고급 CPU와 고급 대 초급 CPU 모두 각자의 학습 레벨로 성장량을 모으고 전투에서 레벨 비용을 쓴다',async()=>{
+test('계정 레벨이 달라도 같은 첫 덧셈으로 성장량을 모으고 전투에서 선택한 레벨 비용을 쓴다',async()=>{
  for(const [humanLevel,cpuLevel]of [[1,8],[8,1],[27,8]]){
   const f=local(cpuLevel,humanLevel),peer=f.peer,s=peer.state,p=s.players[0],cpu=s.players[1]!;
   assert.equal(peer.identity.accountLevel,humanLevel);assert.equal(p.accountLevel,humanLevel);assert.equal(cpu.accountLevel,cpuLevel);
   assert.equal(s.learningLevel,cpuLevel,'타워 준비 난이도는 선택한 CPU 레벨을 유지한다');
-  assert.deepEqual(p.board,decimalBoard(912,0,humanLevel));assert.deepEqual(cpu.board,decimalBoard(912,0,cpuLevel));assert.notDeepEqual(p.board,cpu.board);
+  assert.deepEqual(p.board,decimalBoard(912,0,1));assert.deepEqual(cpu.board,p.board);
   await peer.send({type:'ready'});assert.equal(s.status,'preparing');
   for(let round=0;round<4;round++){
    const cpuBefore=structuredClone(cpu),board=[...p.board],slots=additionSlots(board)!;assert.ok(slots);
    assert.equal((await peer.send({type:'fuse',operation:'+',round:p.round,slots})).ok,true);
-   assert.equal(p.round,round+1);assert.deepEqual(p.board,decimalBoard(912,p.round,humanLevel));assert.ok(p.board.every(n=>n%10===0));assert.deepEqual(cpu,cpuBefore);
+   assert.equal(p.round,round+1);assert.deepEqual(p.board,decimalBoard(912,p.round,1));assert.ok(p.board.every(n=>n%100===0));assert.deepEqual(cpu,cpuBefore);
    if(round===1){const before=[...p.board];assert.equal((await peer.send({type:'hatch',heroId:'hero-2-0'})).ok,false);assert.equal(p.egg,2);assert.deepEqual(p.board,before);assert.equal(stockTotal(p.heroStock??{}),0);assert.equal(s.enemies.length,0);}
   }
   assert.equal(p.accountLevel,humanLevel);f.run(peer.definition.fusionMs+100);assert.ok(cpu.solved>=1);
-  assert.deepEqual(cpu.board,decimalBoard(912,cpu.round,cpuLevel));assert.deepEqual(p.board,decimalBoard(912,p.round,humanLevel));
+  assert.deepEqual(cpu.board,decimalBoard(912,cpu.round,duelHeroLearningLevel(cpu)));assert.deepEqual(p.board,decimalBoard(912,p.round,1));
   f.run(DUEL_PREPARATION_SECONDS*1000-(f.now-s.preparationStartedAt));assert.equal(p.egg,4);assert.equal(stockTotal(p.heroStock??{}),0);
   assert.ok((await peer.send({type:'hatch',heroId:'hero-2-0'})).ok);assert.equal(p.egg,2);
   assert.ok((await peer.send({type:'hatch',heroId:'hero-2-1'})).ok);assert.equal(p.egg,0);assert.equal(s.enemies.filter(e=>e.owner===0&&e.hero).length,2);peer.dispose();
  }
  const peer=new ComputerPeer({uid:'student',name:'수호자'},8,{seed:912,clock:()=>100000,autoTick:false});
  assert.equal(peer.identity.accountLevel,undefined);assert.equal(peer.state.players[0].accountLevel,1);assert.deepEqual(peer.state.players[0].board,decimalBoard(912,0,1));peer.dispose();
+});
+
+test('CPU의 영웅 덧셈은 개인 정답 5·10·15개 경계에서 진급하고 사람의 진도와 성장량을 섞지 않는다',async()=>{
+ const f=local(10,27),s=f.peer.state,p=s.players[0],cpu=s.players[1]!;await f.peer.send({type:'ready'});
+ const humanBoard=[...p.board],boundaries=new Map([[4,1],[5,2],[9,2],[10,3],[14,3],[15,4]]);
+ for(let count=1;count<=15;count++){
+  f.run(f.peer.definition.fusionMs);assert.equal(cpu.solved,count);assert.equal(cpu.egg,count);assert.equal(cpu.round,count);
+  const stage=boundaries.get(count);if(stage){
+   assert.equal(duelHeroLearningLevel(cpu),stage);assert.deepEqual(cpu.board,decimalBoard(912,count,stage),`CPU 정답 ${count}개 뒤 ${stage}단계 판`);
+   const slots=additionSlots(cpu.board)!,a=cpu.board[slots[0]],b=cpu.board[slots[1]],hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10,tenths=Math.floor(a/100)%10+Math.floor(b/100)%10;
+   assert.equal(hundredths>=10||tenths+Math.floor(hundredths/10)>=10,stage===2||stage===4,`${stage}단계의 CPU 정답은 정해진 받아올림 규칙을 지킨다`);
+   if(stage<=2)assert.ok(cpu.board.every(n=>n%100===0));else assert.ok(cpu.board.every(n=>n%10===0)&&cpu.board.some(n=>n%100!==0));
+  }
+  assert.equal(duelHeroLearningLevel(p),1);assert.equal(p.solved,0);assert.equal(p.egg,0);assert.deepEqual(p.board,humanBoard);assert.equal(s.learningLevel,10);assert.equal(cpu.accountLevel,10);assert.equal(p.accountLevel,27);
+ }
+ const cpuBefore=structuredClone(cpu);
+ for(let count=1;count<=5;count++){assert.ok((await f.peer.send({type:'fuse',round:p.round,operation:'+',slots:additionSlots(p.board)!})).ok);assert.equal(p.egg,count);}
+ assert.equal(duelHeroLearningLevel(p),2);assert.deepEqual(p.board,decimalBoard(912,5,2));assert.deepEqual(cpu,cpuBefore);assert.equal(duelHeroLearningLevel(cpu),4);assert.equal(stockTotal(cpu.heroStock??{}),0);assert.equal(s.enemies.length,0);f.peer.dispose();
 });
 
 test('컴퓨터 대전은 준비 버튼을 누르기 전 구매·문제풀이·선행 설치를 막는다',async()=>{
