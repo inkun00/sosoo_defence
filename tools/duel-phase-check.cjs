@@ -9,11 +9,16 @@ const errors=[],checks=[],retries=[];
 let screens=0;
 let currentPage,currentLabel;
 async function check(page,name,fn){assert.ok(await page.evaluate(fn),name);checks.push(name);}
+async function revealCanvasPoint(page,x,y){
+ await page.evaluate(({x,y})=>{const viewport=document.getElementById('duel-viewport');if(!viewport)return;const canvas=document.querySelector('canvas'),box=canvas.getBoundingClientRect(),outer=viewport.getBoundingClientRect();viewport.scrollTo({left:viewport.scrollLeft+box.left+x*box.width/canvas.width-outer.left-viewport.clientWidth/2,top:viewport.scrollTop+box.top+y*box.height/canvas.height-outer.top-viewport.clientHeight/2});},{x,y});
+ await page.waitForTimeout(80);
+}
 async function control(page,id){
  for(let attempt=0;attempt<2;attempt++){
   await page.waitForFunction(id=>window.__duelPhaseTest.scene.input.enabled&&window.__duelPhaseTest.scene.controls.get(id)?.enabled,id);
   const before=await page.evaluate(()=>window.__duelPhaseClicks.length);
   const c=await page.evaluate(id=>{const c=window.__duelPhaseTest.scene.controls.get(id);return{x:c.x,y:c.y};},id);
+  await revealCanvasPoint(page,c.x,c.y);
   const canvas=page.locator('canvas'),box=await canvas.boundingBox(),size=await canvas.evaluate(e=>({width:e.width,height:e.height}));
   const x=box.x+c.x*box.width/size.width,y=box.y+c.y*box.height/size.height;
   await page.evaluate(({id,x,y,c,attempt})=>{window.__duelPhaseRequests??=[];window.__duelPhaseRequests.push({id,x,y,c,attempt});},{id,x,y,c,attempt});
@@ -45,8 +50,9 @@ async function recipe(page){
  await page.waitForFunction(round=>window.__duelPhaseTest.peer.state.players[0].round===round+1&&window.__duelPhaseTest.view().slots.length===0,planned.round,{timeout:3000});
 }
 async function cell(page,x,y){
- const canvas=page.locator('canvas'),box=await canvas.boundingBox(),size=await canvas.evaluate(e=>({width:e.width,height:e.height}));
  const boardY=await page.evaluate(()=>window.__duelPhaseTest.scene.boardY);
+ await revealCanvasPoint(page,37+(x+.5)*38,boardY+(y+.5)*38);
+ const canvas=page.locator('canvas'),box=await canvas.boundingBox(),size=await canvas.evaluate(e=>({width:e.width,height:e.height}));
  await page.mouse.click(box.x+(37+(x+.5)*38)*box.width/size.width,box.y+(boardY+(y+.5)*38)*box.height/size.height);
  await page.waitForTimeout(260);
 }
@@ -103,10 +109,10 @@ async function cell(page,x,y){
    await check(page,label+' preparation has unused wallet outside the displayed calculation before boundary',()=>{const p=window.__duelPhaseTest.peer.state.players[0];return p.money>0&&p.quote&&p.quote.wallet>p.quote.before&&p.stock.basic===1;});
    // Current preparation quotes keep the full wallet in money. Inject legacy escrow only to verify it is discarded too.
    await page.evaluate(()=>{const players=window.__duelPhaseTest.peer.state.players;players[0].escrow=333;players[1].escrow=666;});
-   await page.evaluate(()=>window.__duelPhaseTest.advanceToBattle());
+   const battleBoundary=await page.evaluate(()=>{const api=window.__duelPhaseTest;api.advanceToBattle();return{preparationElapsed:api.peer.state.preparationElapsed,status:api.peer.state.status,preparation:api.scene.ui.getByName('duel-preparation-timer').text,battle:api.scene.ui.getByName('duel-battle-timer').text,preparationActive:api.scene.ui.getByName('duel-preparation-timer').getData('active'),battleActive:api.scene.ui.getByName('duel-battle-timer').getData('active')};});
    await check(page,label+' battle hides all question controls',()=>window.__duelPhaseTest.peer.state.status==='playing'&&!window.__duelPhaseTest.scene.controls.has('fuse')&&![...window.__duelPhaseTest.scene.controls.keys()].some(id=>id.startsWith('block:'))&&!window.__duelPhaseTest.peer.state.players[0].quote);
    await check(page,label+' battle starts both players at zero coins and escrow with quotes closed',()=>window.__duelPhaseTest.peer.state.players.every(p=>p&&p.money===0&&p.escrow===0&&p.quote===null));
-   await check(page,label+' boundary completes preparation and starts active three-minute battle clock',()=>{const api=window.__duelPhaseTest;return api.peer.state.preparationElapsed===180&&api.peer.state.status==='playing'&&api.scene.ui.getByName('duel-preparation-timer').text==='준비시간 00:00'&&api.scene.ui.getByName('duel-battle-timer').text==='진행시간 03:00'&&!api.scene.ui.getByName('duel-preparation-timer').getData('active')&&api.scene.ui.getByName('duel-battle-timer').getData('active');});
+   assert.deepEqual(battleBoundary,{preparationElapsed:180,status:'playing',preparation:'준비시간 00:00',battle:'진행시간 03:00',preparationActive:false,battleActive:true});checks.push(label+' boundary completes preparation and starts active three-minute battle clock');
    assert.equal(await page.locator('.duel-purchase-panel').isVisible(),false);
    await check(page,label+' accumulated growth and reserved tower preserved for battle',()=>window.__duelPhaseTest.peer.state.players[0].egg===6&&window.__duelPhaseTest.peer.state.players[0].stock.basic===1&&Object.values(window.__duelPhaseTest.peer.state.players[0].heroStock??{}).every(count=>count===0));
    await check(page,label+' zero coins disable an unreserved tower while reserved tower stays enabled',()=>{const scene=window.__duelPhaseTest.scene;return scene.controls.get('type:basic')?.enabled&&!scene.controls.get('type:double')?.enabled;});

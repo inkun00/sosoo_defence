@@ -5,12 +5,13 @@ import {ComputerPeer} from '../src/multiplayer/computer-peer';
 import {DUEL_MAPS,DEFAULT_DUEL_MAP_ID,isDuelMapId} from '../src/multiplayer/duel-maps';
 import {mountPurchasePanel} from '../src/multiplayer/purchase-panel';
 import {numberText} from '../src/math';
-import {observeGameScreen,duelScreenLayout} from '../src/responsive-game';
+import {observeDuelScreen,duelScreenDisplayLayout} from '../src/responsive-game';
 import {mountGameAudioControls} from '../src/game-audio-controls';
 import {Sound} from '../src/audio';
 import {bindHeroGrowthPicker,heroGrowthPickerHTML} from '../src/multiplayer/hero-growth-picker';
 import '../src/game.css';
 import '../src/multiplayer/multiplayer.css';
+import '../src/multiplayer/duel-theme.css';
 const requested=new URL(location.href).searchParams.get('map'),mapId=isDuelMapId(requested)?requested:DEFAULT_DUEL_MAP_ID;
 const mapChoice=document.getElementById('preview-map') as HTMLSelectElement;
 for(const map of DUEL_MAPS){const option=document.createElement('option');option.value=map.id;option.textContent=map.name;mapChoice.append(option);}mapChoice.value=mapId;
@@ -24,8 +25,9 @@ const sound=new Sound(),audioControls=mountGameAudioControls(document.getElement
  change:(kind,enabled)=>{sound.resume();if(kind==='sfx')sound.sfx=enabled;else sound.setMusic(enabled);}
 });
 scene.onSound=(type,towerTypeId)=>sound.play(type,towerTypeId);
-const initialField=document.getElementById('field')!.getBoundingClientRect(),initialLayout=duelScreenLayout(initialField.width,initialField.height);scene.setScreenLayout(initialLayout);
-const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:initialLayout.height,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},audio:{noAudio:true}});
+const field=document.getElementById('field')!,viewport=document.getElementById('duel-viewport')!,initialViewport=viewport.getBoundingClientRect(),initialLayout=duelScreenDisplayLayout(initialViewport.width,initialViewport.height);scene.setScreenLayout(initialLayout);
+field.style.width=`${initialLayout.width*initialLayout.scale}px`;field.style.height=`${initialLayout.height*initialLayout.scale}px`;
+const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:initialLayout.height,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},input:{touch:{capture:false}},audio:{noAudio:true}});
 const panel=mountPurchasePanel(document.getElementById('field')!,send);
 const heroDialog=document.createElement('div');heroDialog.className='modal hidden';heroDialog.setAttribute('role','dialog');heroDialog.setAttribute('aria-modal','true');heroDialog.setAttribute('aria-label','부화할 영웅 선택');document.getElementById('app')!.append(heroDialog);
 function closeHeroes(){heroDialog.classList.add('hidden');scene.input.enabled=true;refresh();}
@@ -34,7 +36,7 @@ function chooseHero(level=1,feedback=''){
  heroDialog.querySelector<HTMLElement>('[data-feedback]')!.textContent=feedback;heroDialog.querySelector<HTMLButtonElement>('[data-close-heroes]')!.onclick=closeHeroes;
  bindHeroGrowthPicker(heroDialog,next=>chooseHero(next),async heroId=>{const reply=await send({type:'hatch',heroId});if(reply.ok&&peer.state.status==='playing')chooseHero(level,reply.message);});
 }
-observeGameScreen(game,document.getElementById('field')!,layout=>{scene.setScreenLayout(layout);shopPage=Math.min(shopPage,scene.shopPageCount-1);panel.setScreenLayout(layout,scene.getPurchaseArea());scene.redraw();},duelScreenLayout);
+observeDuelScreen(game,viewport,field,layout=>{scene.setScreenLayout(layout);shopPage=Math.min(shopPage,scene.shopPageCount-1);panel.setScreenLayout(layout,scene.getPurchaseArea());scene.redraw();});
 function refresh(){const s=peer.state,p=s.players[side]!,opponent=s.players[(1-side) as Side]!;if(s.status!=='playing'&&!heroDialog.classList.contains('hidden')){closeHeroes();return;}panel.sync(s.status==='preparing'?p.quote:null,busy,heroDialog.classList.contains('hidden'));scene.redraw();document.getElementById('proof')!.textContent=`${s.status} · 준비 ${Math.ceil(Math.max(0,DUEL_PREPARATION_SECONDS-s.preparationElapsed))}초 · 전투 ${s.elapsed.toFixed(1)}초 · 코인 ${numberText(p.money)} · 비축 타워 ${Object.values(p.stock).reduce((a,b)=>a+b,0)} · 영웅 성장량 ${p.egg} · 설치 ${p.towers.length} · 상대 비축 ${Object.values(opponent.stock).reduce((a,b)=>a+b,0)} · 상대 설치 ${opponent.towers.length} · 몬스터 ${s.enemies.length}`;}
 async function send(action:DuelAction){busy=true;refresh();try{const reply=side===0?await peer.send(action):applyDuel(peer.state,side,action,Math.max(Date.now(),peer.state.updatedAt),'preview-guest-'+(++fixtureNonce));if(side===1)peer.state.revision++;message=reply.message;if(reply.ok&&action.type==='fuse')slots=[];panel.feedback(message);return reply;}finally{busy=false;refresh();}}
 scene.onAction=async key=>{
@@ -61,7 +63,7 @@ function advancePreparation(seconds:number){
  const now=Math.max(Date.now(),s.updatedAt);s.preparationStartedAt=now-seconds*1000;s.updatedAt=now;for(const p of s.players)if(p){p.lastSeen=now;if(p.quote)p.quote.expires=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;}advanceDuel(s,now);refresh();return s;
 }
 Object.assign(window,{__duelPhaseTest:{peer,scene,view,send,advancePreparation,advanceToBattle(){return advancePreparation(DUEL_PREPARATION_SECONDS);},selectSide(owner:Side){peer.dispose();side=owner;selectedType='';selectedTower=0;shopPage=0;slots=[];refresh();}}});
-game.events.once('ready',()=>game.scale.refresh());
+game.events.once('ready',()=>{game.canvas.style.touchAction='pan-x pan-y';game.scale.refresh();});
 const geometry=document.createElement('output');geometry.id='landscape-proof';geometry.className='sr-only';document.getElementById('app')!.append(geometry);
-const geometryTimer=setInterval(()=>{if(!scene.ready)return;const p=peer.state.players[side]!,field=document.getElementById('field')!.getBoundingClientRect(),canvas=document.querySelector('canvas')!,box=canvas.getBoundingClientRect(),expected=duelScreenLayout(field.width,field.height);const screenReady=canvas.height===expected.height&&Math.abs(box.width-1280*expected.scale)<2&&Math.abs(box.height-expected.height*expected.scale)<2;geometry.textContent=JSON.stringify({viewport:[innerWidth,innerHeight],side,screenReady,canvasHeight:canvas.height,phase:peer.state.status,money:p.money,stock:p.stock,heroStock:p.heroStock,towers:p.towers.length,egg:p.egg,heroQuestion:p.heroQuestion,board:p.board,slots,quote:p.quote,purchaseArea:scene.getPurchaseArea(),controls:[...scene.controls].map(([id,c])=>({id,...c,run:undefined}))});},150);
+const geometryTimer=setInterval(()=>{if(!scene.ready)return;const p=peer.state.players[side]!,viewport=document.getElementById('duel-viewport')!.getBoundingClientRect(),canvas=document.querySelector('canvas')!,box=canvas.getBoundingClientRect(),expected=duelScreenDisplayLayout(viewport.width,viewport.height);const screenReady=canvas.height===expected.height&&Math.abs(box.width-1280*expected.scale)<2&&Math.abs(box.height-expected.height*expected.scale)<2;geometry.textContent=JSON.stringify({viewport:[innerWidth,innerHeight],side,screenReady,canvasHeight:canvas.height,phase:peer.state.status,money:p.money,stock:p.stock,heroStock:p.heroStock,towers:p.towers.length,egg:p.egg,heroQuestion:p.heroQuestion,board:p.board,slots,quote:p.quote,purchaseArea:scene.getPurchaseArea(),controls:[...scene.controls].map(([id,c])=>({id,...c,run:undefined}))});},150);
 window.addEventListener('pagehide',()=>{clearInterval(geometryTimer);peer.dispose();panel.dispose();audioControls.dispose();sound.dispose();game.destroy(true);});

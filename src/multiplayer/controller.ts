@@ -1,5 +1,5 @@
 import {mountPurchasePanel} from './purchase-panel';
-import {duelScreenLayout,observeGameScreen} from '../responsive-game';
+import {duelScreenDisplayLayout,observeDuelScreen} from '../responsive-game';
 import {artURL} from '../art';
 import Phaser from 'phaser';
 import {onAuthStateChanged,User} from 'firebase/auth';
@@ -38,7 +38,7 @@ import './duel-theme.css';
 import './computer-opponents.css';
 import './map-picker.css';
 const app=document.getElementById('app')!;
-app.innerHTML=`<div class="duel-world" aria-hidden="true"><div class="duel-world-art"></div><div class="duel-world-shade"></div><div class="duel-world-glow"></div><div class="duel-world-embers"></div></div><header class="duel-hall-header"><a href="/?mode=title" aria-label="소수 디펜스 시작 화면으로"><img class="duel-hall-logo" src="${artURL('title-wordmark-v1')}" alt="" width="1200" height="297" decoding="async"></a></header><main id="game-shell"><div id="field"></div></main><div id="duel-controls" class="sr-only"></div><p id="duel-state" class="sr-only"></p><p id="duel-notice" class="sr-only" role="status" aria-live="polite"></p><div id="duel-dialog" class="modal hidden" role="dialog" aria-modal="true"><div class="duel-card"><div id="duel-content"></div></div></div>`;
+app.innerHTML=`<div class="duel-world" aria-hidden="true"><div class="duel-world-art"></div><div class="duel-world-shade"></div><div class="duel-world-glow"></div><div class="duel-world-embers"></div></div><header class="duel-hall-header"><a href="/?mode=title" aria-label="소수 디펜스 시작 화면으로"><img class="duel-hall-logo" src="${artURL('title-wordmark-v1')}" alt="" width="1200" height="297" decoding="async"></a></header><main id="game-shell"><div id="duel-viewport" class="duel-screen-viewport" role="region" aria-label="1:1 대전 전장 · 스크롤로 전체 화면 보기"><div id="field"></div></div></main><div id="duel-controls" class="sr-only"></div><p id="duel-state" class="sr-only"></p><p id="duel-notice" class="sr-only" role="status" aria-live="polite"></p><div id="duel-dialog" class="modal hidden" role="dialog" aria-modal="true"><div class="duel-card"><div id="duel-content"></div></div></div>`;
 const dialog=document.getElementById('duel-dialog')!,content=document.getElementById('duel-content')!,notice=document.getElementById('duel-notice')!;
 let user:User|null=null,state:DuelState|null=null,side:Side=0,room='',selectedType='',shopPage=0,slots:number[]=[],selectedTower=0,message='',busy=false,connected=true,dialogKind='',lastRound=-1;
 let peer:HostPeer|ComputerPeer|null=null,offerCode='',answerCode='',progress:Progress=emptyProgress(),recorded='',saveMessage='',progressLoading=false;
@@ -63,11 +63,12 @@ document.addEventListener('click',e=>{if((e.target as HTMLElement).closest('butt
 const view=():DuelView=>({state,side,room,selectedType,shopPage,slots,selectedTower,message,busy,connected,computer:peer instanceof ComputerPeer?peer.opponent:undefined});
 const scene=new DuelScene(view);
 scene.onSound=(type,towerTypeId)=>sound.play(type,towerTypeId);
-const field=document.getElementById('field')!,fieldBox=field.getBoundingClientRect(),initialLayout=duelScreenLayout(fieldBox.width,fieldBox.height);scene.setScreenLayout(initialLayout);
-const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:initialLayout.height,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
-game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수 디펜스 1:1: 준비시간과 진행시간, 상단 호스트 전장의 오른쪽에서 왼쪽으로 이동하는 몬스터와 하단 참가자 전장의 왼쪽에서 오른쪽으로 이동하는 몬스터, 점수와 불꽃, 남은 코인, 타워, 고정 덧셈식의 정답 블록과 영웅 성장량');game.canvas.tabIndex=0;});
+const field=document.getElementById('field')!,viewport=document.getElementById('duel-viewport')!,viewportBox=viewport.getBoundingClientRect(),initialLayout=duelScreenDisplayLayout(viewportBox.width,viewportBox.height);scene.setScreenLayout(initialLayout);
+field.style.width=`${initialLayout.width*initialLayout.scale}px`;field.style.height=`${initialLayout.height*initialLayout.scale}px`;
+const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:1280,height:initialLayout.height,scene:[scene],backgroundColor:'#111216',scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},input:{touch:{capture:false}},render:{antialias:true},audio:{noAudio:true}});
+game.events.once('ready',()=>{game.canvas.style.touchAction='pan-x pan-y';game.canvas.setAttribute('aria-label','소수 디펜스 1:1: 준비시간과 진행시간, 상단 호스트 전장의 오른쪽에서 왼쪽으로 이동하는 몬스터와 하단 참가자 전장의 왼쪽에서 오른쪽으로 이동하는 몬스터, 점수와 불꽃, 남은 코인, 타워, 고정 덧셈식의 정답 블록과 영웅 성장량');game.canvas.tabIndex=0;});
 const purchasePanel=mountPurchasePanel(field,action=>send(action));purchasePanel.setScreenLayout(initialLayout,scene.getPurchaseArea());
-observeGameScreen(game,field,layout=>{scene.setScreenLayout(layout);shopPage=Math.min(shopPage,scene.shopPageCount-1);purchasePanel.setScreenLayout(layout,scene.getPurchaseArea());},duelScreenLayout);
+observeDuelScreen(game,viewport,field,layout=>{scene.setScreenLayout(layout);shopPage=Math.min(shopPage,scene.shopPageCount-1);purchasePanel.setScreenLayout(layout,scene.getPurchaseArea());});
 let messageTimer:ReturnType<typeof setTimeout>|undefined;
 function status(text:string){message=text;notice.textContent=text;purchasePanel.feedback(text);const e=content.querySelector<HTMLElement>('[data-feedback]');if(e)e.textContent=text;clearTimeout(messageTimer);messageTimer=setTimeout(()=>{message='';refresh();},5000);refresh();}
 function refresh(){purchasePanel.sync(state?.status==='preparing'?state.players[side]?.quote:null,busy,dialog.classList.contains('hidden'));const status=state?room+state.status:'';if(status!==audioStatus){audioStatus=status;if(state?.status==='playing')sound.play('start');else if(state?.status==='finished')sound.play(state.winner===side?'victory':'defeat');}const flame=state?.players[side]?.flame??9000;if(flame<audioFlame)sound.play('leak');audioFlame=flame;sound.setTrack(state?.status==='playing'?(state.elapsed>=DUEL_SECONDS-60?'boss':'battle'):state?.status==='finished'?(state.winner===side?'victory':'defeat'):'title');if(state&&sound.sfx)void sound.preloadTowerShots([...new Set(state.players.flatMap(player=>player?.towers.map(t=>t.typeId)??[]))]);scene.redraw();}

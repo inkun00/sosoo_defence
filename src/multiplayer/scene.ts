@@ -39,6 +39,8 @@ export class DuelScene extends Phaser.Scene{
  private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
  private screenLayout:GameScreenLayout={width:1280,height:1104,compact:false,scale:1,pixelWidth:1280,pixelHeight:1104};
  private blockPage=0;private heroPage=0;
+ private lastTouchAt=-Infinity;
+ private acceptsMouse(p:Phaser.Input.Pointer){const source=(p.event as MouseEvent&{sourceCapabilities?:{firesTouchEvents:boolean}|null}).sourceCapabilities;return source?!source.firesTouchEvents:performance.now()-this.lastTouchAt>=800;}
  private hitBounds={left:X+4,right:X+24*T-4,top:136,bottom:132+DUEL_BATTLE_ROWS*T-4};
  private get minimumTouch(){return Math.max(this.screenLayout.compact?68:56,Math.ceil(44/this.screenLayout.scale));}
  private get boardY(){return this.screenLayout.compact?this.minimumTouch+45:132;}
@@ -71,7 +73,18 @@ export class DuelScene extends Phaser.Scene{
   for(const effect of ['muzzle','defeat'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
   const egg=this.textures.get('duel-eggs'),source=egg.getSourceImage();for(let i=0;i<10;i++){const x=Math.round(i%5*source.width/5),y=Math.round(Math.floor(i/5)*source.height/2);egg.add('egg-'+(i+1),0,x,y,Math.round((i%5+1)*source.width/5)-x,Math.round(source.height/2));}
   this.terrain=this.add.container(0,0);this.units=this.add.container(0,0);this.guides=this.add.graphics().setDepth(8);this.ui=this.add.container(0,0).setDepth(10);this.hitEquations=new HitEquationPopups(this,this.hitBounds);this.heroSummonEffects=new HeroSummonEffects(this,{left:X,right:X+24*T,top:this.boardY,bottom:this.boardY+DUEL_BATTLE_ROWS*T},this.reduced);this.ready=true;this.redraw();
-  this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.x>=X&&p.x<X+24*T&&p.y>=this.boardY&&p.y<this.boardY+DUEL_BATTLE_ROWS*T)this.onCell(Math.floor((p.x-X)/T),Math.floor((p.y-this.boardY)/T));});
+  const cell=(p:Phaser.Input.Pointer)=>{if(p.x>=X&&p.x<X+24*T&&p.y>=this.boardY&&p.y<this.boardY+DUEL_BATTLE_ROWS*T)this.onCell(Math.floor((p.x-X)/T),Math.floor((p.y-this.boardY)/T));};
+  this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.wasTouch)this.lastTouchAt=performance.now();else if(this.acceptsMouse(p))cell(p);});
+  // Touch scrolls the enlarged view. Commit taps only after release so a swipe
+  // cannot select a problem, summon a hero or place a tower along the way.
+  this.input.on('pointerup',(p:Phaser.Input.Pointer)=>{
+   if(!p.wasTouch)return;this.lastTouchAt=performance.now();
+   if(p.wasCanceled||p.getDistance()*this.screenLayout.scale>10)return;
+   for(const control of this.controls.values())if(p.x>=control.x-control.w/2&&p.x<=control.x+control.w/2&&p.y>=control.y-control.h/2&&p.y<=control.y+control.h/2){
+    if(p.downX>=control.x-control.w/2&&p.downX<=control.x+control.w/2&&p.downY>=control.y-control.h/2&&p.downY<=control.y+control.h/2)control.run();return;
+   }
+   cell(p);
+  });
   this.input.on('pointermove',(p:Phaser.Input.Pointer)=>this.preview(Math.floor((p.x-X)/T),Math.floor((p.y-this.boardY)/T)));
  }
  private text(g:Phaser.GameObjects.Container,x:number,y:number,value:string,size=20,color='#f6ecdf',center=true){
@@ -84,7 +97,7 @@ export class DuelScene extends Phaser.Scene{
  private panel(g:Phaser.GameObjects.Container,x:number,y:number,w:number,h:number,active=false){const tex=active?'ui-button_red':'ui-panel_brown';const o=this.game.renderer.type===Phaser.WEBGL?this.add.nineslice(x,y,tex,undefined,w,h,14,14,14,14):this.add.image(x,y,tex).setDisplaySize(w,h);g.add(o);return o;}
  private button(key:string,x:number,y:number,w:number,h:number,label:string,enabled=true,active=false,size=19){
   const c=this.add.container(x,y);this.ui.add(c);this.panel(c,0,0,w,h,active);this.text(c,0,0,label,size);c.setAlpha(enabled?1:.5);
-  const run=()=>{if(enabled)this.onAction(key);};const zone=this.add.zone(0,0,w,h).setInteractive({useHandCursor:enabled});c.add(zone);zone.on('pointerdown',run);
+  const run=()=>{if(enabled)this.onAction(key);};const zone=this.add.zone(0,0,w,h).setInteractive({useHandCursor:enabled});c.add(zone);zone.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(!p.wasTouch&&this.acceptsMouse(p))run();});
   this.controls.set(key,{x,y,w,h,enabled,label,run});return c;
  }
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}

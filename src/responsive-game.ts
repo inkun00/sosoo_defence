@@ -24,6 +24,37 @@ export function duelScreenLayout(pixelWidth:number,pixelHeight:number):GameScree
  return {...layout,compact,height,scale:Math.min(w/1280,h/height)};
 }
 
+/** Enlarge the fitted duel by 30%; scrolling keeps its full composition reachable. */
+export function duelScreenDisplayLayout(pixelWidth:number,pixelHeight:number):GameScreenLayout{
+ const layout=duelScreenLayout(pixelWidth,pixelHeight);
+ return {...layout,scale:layout.scale*1.3};
+}
+
+/** Measure the scroll viewport, never the enlarged field, so resizing cannot feed back. */
+export function observeDuelScreen(game:Phaser.Game,viewport:HTMLElement,field:HTMLElement,changed:(layout:GameScreenLayout)=>void){
+ let previous='',disposed=false;
+ const resize=()=>{
+  if(disposed)return;
+  const box=viewport.getBoundingClientRect();
+  if(!Number.isFinite(box.width)||!Number.isFinite(box.height)||box.width<=0||box.height<=0)return;
+  const layout=duelScreenDisplayLayout(box.width,box.height),signature=[layout.pixelWidth,layout.pixelHeight,layout.height].join(':');
+  if(signature===previous)return;previous=signature;
+  field.style.width=layout.width*layout.scale+'px';field.style.height=layout.height*layout.scale+'px';
+  field.dataset.screenLayout=layout.compact?'compact':'standard';
+  // FIT must read the newly enlarged parent before it recomputes the canvas size.
+  if(game.isBooted)game.scale.getParentBounds();
+  if(game.isBooted&&(game.scale.width!==layout.width||game.scale.height!==layout.height))game.scale.setGameSize(layout.width,layout.height);
+  changed(layout);if(game.isBooted)game.scale.refresh();
+ };
+ const ready=()=>{previous='';resize();};
+ const scroll=()=>{if(!disposed&&game.isBooted)game.scale.updateBounds();};
+ const observer=new ResizeObserver(resize);observer.observe(viewport);
+ window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
+ viewport.addEventListener('scroll',scroll,{passive:true});game.events.on('ready',ready);
+ const dispose=()=>{if(disposed)return;disposed=true;observer.disconnect();window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);viewport.removeEventListener('scroll',scroll);game.events.off('ready',ready);game.events.off('destroy',dispose);};
+ game.events.once('destroy',dispose);resize();return dispose;
+}
+
 /** Follow both rotation and browser chrome changes without recreating the game. */
 export function observeGameScreen(game:Phaser.Game,field:HTMLElement,changed:(layout:GameScreenLayout)=>void,screenLayout=gameScreenLayout){
  let previous='',disposed=false;
