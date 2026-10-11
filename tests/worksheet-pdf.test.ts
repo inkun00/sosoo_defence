@@ -92,7 +92,8 @@ test('worksheet nickname is escaped as text without changing the saved questions
  assert.equal((html.match(/class="ws-sheet"/g)||[]).length,1);
  assert.equal((html.match(/data-question=/g)||[]).length,20);
  assert.equal(JSON.stringify(sheet),before,'nickname remains outside persisted worksheet data');
- assert.equal(worksheetPages(sheet),worksheetPages(sheet,' \t\n '),'anonymous previews retain the original output');
+ const anonymousHTML=(nickname='')=>worksheetPages(sheet,nickname).replace(/hero-clip-\d+-/g,'hero-clip-');
+ assert.equal(anonymousHTML(),anonymousHTML(' \t\n '),'anonymous previews retain the original output apart from unique SVG clip identifiers');
  assert.ok(worksheetPages(sheet).includes('이름 ______________'));
 });
 

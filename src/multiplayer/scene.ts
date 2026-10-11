@@ -9,6 +9,7 @@ import {duelCountdown,formatDuelClock} from './duel-clock';
 import {duelMap,duelRoadCell,duelLaneOffset,DUEL_LANE_ROWS,DUEL_BATTLE_ROWS} from './duel-maps';
 import {HEROES,WORKSHEET_HEROES,heroSpec,worksheetHeroSpec,heroesAtLevel} from './heroes';
 import {heroSummonStyle} from '../hero-summon-style';
+import {HERO_SPRITE_CELL,drawHeroSpriteAtlas} from '../hero-sprite';
 import {HitEquationPopups} from '../hit-equations';
 import {learningDescription} from './decimal-boards';
 import {AmbientProps} from '../ambient-props';
@@ -295,12 +296,15 @@ export class DuelScene extends Phaser.Scene{
  }
  private ensureHero(level:number,reward=false){
   const assetLevel=reward?0:level,key=reward?'worksheet-heroes':'heroes-'+level;if(this.textures.exists(key)||this.loadingHeroes.has(assetLevel)||performance.now()<(this.heroRetry.get(assetLevel)??0))return;this.loadingHeroes.add(assetLevel);
-  const event='filecomplete-image-'+key,complete=()=>{this.load.off('loaderror',failed);const texture=this.textures.get(key),source=texture.getSourceImage();
-   for(let row=0;row<3;row++)for(let frame=0;frame<4;frame++){const y=Math.round(row*source.height/3),end=Math.round((row+1)*source.height/3),id=reward?'worksheet-hero-'+row:`hero-${level}-${row}`;texture.add(`${id}-${frame}`,0,Math.round(frame*source.width/4),y,Math.round(source.width/4),end-y);}
+  const sourceKey=key+'-source',sheet=reward?'worksheet-heroes-v1':`heroes-level-${level}-v1`;
+  const event='filecomplete-image-'+sourceKey,complete=()=>{this.load.off('loaderror',failed);const source=this.textures.get(sourceKey).getSourceImage() as HTMLImageElement,texture=this.textures.createCanvas(key,HERO_SPRITE_CELL*4,HERO_SPRITE_CELL*3)!;
+   drawHeroSpriteAtlas(texture.getContext(),sheet,source);
+   for(let row=0;row<3;row++)for(let frame=0;frame<4;frame++){const id=reward?'worksheet-hero-'+row:`hero-${level}-${row}`;texture.add(`${id}-${frame}`,0,frame*HERO_SPRITE_CELL,row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL);}
+   texture.refresh();this.textures.remove(sourceKey);
    for(const h of reward?WORKSHEET_HEROES.slice(0,3):heroesAtLevel(level)){const animation=reward?'worksheet-hero-'+h.variant:h.id;this.anims.create({key:animation,frames:Array.from({length:4},(_,i)=>({key,frame:animation+'-'+i})),frameRate:5,repeat:-1});}this.loadingHeroes.delete(assetLevel);this.syncEnemies();
   };
-  const failed=(file:Phaser.Loader.File)=>{if(file.key!==key)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingHeroes.delete(assetLevel);this.heroRetry.set(assetLevel,performance.now()+30000);};
-  this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(key,artURL(reward?'worksheet-heroes-v1':`heroes-level-${level}-v1`));if(!this.load.isLoading())this.load.start();
+  const failed=(file:Phaser.Loader.File)=>{if(file.key!==sourceKey)return;this.load.off(event,complete);this.load.off('loaderror',failed);this.loadingHeroes.delete(assetLevel);this.heroRetry.set(assetLevel,performance.now()+30000);};
+  this.load.once(event,complete);this.load.on('loaderror',failed);this.load.image(sourceKey,artURL(sheet));if(!this.load.isLoading())this.load.start();
  }
  private syncEnemies(){const s=this.view().state,live=new Set(s?.enemies.map(e=>e.id));for(const [id,v]of this.enemies)if(!live.has(id)){v.sprite.destroy();v.hp.destroy();v.name.destroy();v.effects.destroy();v.halo?.destroy();this.enemies.delete(id);}
   for(const e of s?.enemies??[]){let v=this.enemies.get(e.id);const reward=e.rewardSummon===true,hero=e.hero?(reward?worksheetHeroSpec(e.hero):heroSpec(e.hero)):null,kind:MonsterKind=e.level>=8?'king':e.level>=6?'crystal':e.level>=4?'golem':e.level>=2?'beetle':'slime',size=hero?(reward?56+hero.level*2.8:44+hero.level*2.6):39+e.level*1.4;

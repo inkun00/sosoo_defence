@@ -36,7 +36,7 @@
 .collection-card .collection-equip{font-size:10px;color:var(--hero-accent);margin:0;border-top:1px solid #9b80485c;padding-top:7px;align-self:end}
 .collection-portrait{position:relative;display:grid;place-items:center;align-self:stretch;filter:drop-shadow(0 3px 5px #0008)}
 .collection-portrait:before{content:"";position:absolute;inset:14% 5%;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--hero-color) 27%,transparent),transparent 65%);pointer-events:none}
-.collection-art{display:block;flex:none;width:142px;height:127px;background-size:400% 300%;background-repeat:no-repeat;animation:collection-idle 1.2s steps(1,end) infinite}
+.collection-art{display:block;flex:none;width:142px;height:127px}
 .collection-empty{grid-column:1/-1;min-height:210px;padding:20px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse,#b978ff12,transparent 65%)}
 .collection-empty-rune{color:#d5a9ff;font-size:48px;filter:drop-shadow(0 0 16px #aa6bef)}
 .collection-empty p{font-size:13px!important;color:#c2b79e}
@@ -59,7 +59,6 @@
 .hero-reveal h2{margin:2px 0 10px!important;color:var(--hero-accent)}
 .hero-reveal p{margin:5px 0;line-height:1.6;font-size:14px}
 :is(.workbook,.hero-collection-preview) .hero-reveal button{margin:18px 0 12px;background:transparent var(--menu-art) center/100% 150% no-repeat!important;border:0!important;border-radius:0;min-height:65px;color:#ffe5b4;padding:12px 38px;font:700 15px 'Malgun Gothic',sans-serif}
-@keyframes collection-idle{0%,24%{background-position:0% var(--hero-row)}25%,49%{background-position:33.333% var(--hero-row)}50%,74%{background-position:66.667% var(--hero-row)}75%,100%{background-position:100% var(--hero-row)}}
 @keyframes hero-materialize{from{opacity:0;transform:translateY(-30px) scale(.65);filter:brightness(2.5) drop-shadow(0 0 28px var(--hero-color))}to{opacity:1;transform:none}}
 @keyframes hero-column{0%{opacity:0;transform:scaleX(.1)}25%{opacity:.75;transform:scaleX(1)}100%{opacity:.12}}
 @keyframes hero-ring{from{opacity:0;transform:scale(.25)}40%{opacity:1}to{opacity:.7;transform:scale(1)}}

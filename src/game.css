@@ -4,3 +4,9 @@
 #game-shell{position:fixed;inset:0;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow:hidden}
 #field{width:100%;height:100%;min-width:0;min-height:0}
 @media(orientation:landscape) and (max-height:600px){.modal{padding:8px max(8px,env(safe-area-inset-right)) 8px max(8px,env(safe-area-inset-left))}.modal-card{max-height:calc(100dvh - 16px);padding:16px 24px}.modal h2{font-size:23px;margin-bottom:12px}.modal p,.help-list{font-size:15px}.setting{padding:12px 4px;font-size:18px}}
+/* Audited hero masks are shared with the battle atlas. */
+.hero-sprite{display:block;width:100%;height:100%;overflow:hidden}
+.hero-sprite-animated .hero-sprite-frame{opacity:0;animation:hero-sprite-pose 1.2s linear infinite;animation-delay:calc(var(--hero-frame)*.3s)}
+@keyframes hero-sprite-pose{0%,24.999%{opacity:1}25%,100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.hero-sprite-animated .hero-sprite-frame{animation:none;opacity:0}.hero-sprite-animated .hero-sprite-frame:first-of-type{opacity:1}}
+@media print{.hero-sprite-animated .hero-sprite-frame{animation:none;opacity:0}.hero-sprite-animated .hero-sprite-frame:first-of-type{opacity:1}}

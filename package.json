@@ -6,6 +6,7 @@
   "scripts": {
     "optimize:assets": "node tools/optimize-assets.mjs",
     "check:assets": "node tools/check-assets.mjs",
+    "check:heroes": "node tools/audit-hero-sprites.mjs --check",
     "check:bundle": "node tools/check-bundle.mjs",
     "report:payload": "node tools/report-payload.mjs",
     "predev": "npm run optimize:assets",

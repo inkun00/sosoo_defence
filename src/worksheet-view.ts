@@ -1,4 +1,4 @@
-import {artURL} from './art';
+import {heroSpriteHTML} from './hero-sprite';
 import {Worksheet,WorksheetQuestion} from './worksheet';
 import {decimal,numberText,precision} from './math';
 import {kindLabel} from './learning';
@@ -8,7 +8,7 @@ const text=(value:number)=>value%1000===0?String(value/1000):numberText(value);
 const escapeHTML=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 function header(s:Worksheet,nickname:string){
  const name=nickname.trim(),identity=name?'<span class="ws-nickname"><b>닉네임</b> '+escapeHTML(name)+'</span>':'이름 ______________';
- return '<header class="ws-header"><div><p class="ws-eyebrow">소수 디펜스 · 수호자의 훈련소</p><h1>오답 풀이 연습 학습지</h1><p class="ws-meta">'+identity+'  4학년 ___반 ___번 · '+new Date(s.createdAt).toLocaleDateString('ko-KR')+'</p></div><div class="ws-emblem"><span class="ws-guide" aria-hidden="true" style="background-image:url('+artURL('worksheet-heroes-v1')+')"></span><span class="ws-egg" aria-hidden="true"></span><b>1 / 1</b></div></header><div class="ws-mission">훈련서 '+shortId(s)+' · 20개의 정답으로 봉인된 돌 알을 깨워라!</div>';
+ return '<header class="ws-header"><div><p class="ws-eyebrow">소수 디펜스 · 수호자의 훈련소</p><h1>오답 풀이 연습 학습지</h1><p class="ws-meta">'+identity+'  4학년 ___반 ___번 · '+new Date(s.createdAt).toLocaleDateString('ko-KR')+'</p></div><div class="ws-emblem">'+heroSpriteHTML('worksheet-heroes-v1',0,'ws-guide')+'<span class="ws-egg" aria-hidden="true"></span><b>1 / 1</b></div></header><div class="ws-mission">훈련서 '+shortId(s)+' · 20개의 정답으로 봉인된 돌 알을 깨워라!</div>';
 }
 function numberline(d:number[]){
  const [start,step,index]=d,left=20,right=160,divisions=10,tickX=(i:number)=>left+(right-left)*i/divisions;

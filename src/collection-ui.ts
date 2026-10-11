@@ -1,9 +1,9 @@
-import {artURL} from './art';
+import {heroSpriteHTML} from './hero-sprite';
 import {loadWorkbook,worksheetHeroLevelChances,Workbook} from './worksheet-store';
 import {worksheetHeroSpec,HeroSpec,HeroEffect,heroEffectStats} from './multiplayer/heroes';
 import {heroSummonStyle} from './hero-summon-style';
 
-export function heroArt(h:HeroSpec){h=worksheetHeroSpec(h.id)??h;return '<span class="collection-art" aria-hidden="true" style="--hero-row:'+h.row*50+'%;background-image:url('+artURL(h.sheet)+');background-position:0% '+h.row*50+'%"></span>';}
+export function heroArt(h:HeroSpec){h=worksheetHeroSpec(h.id)??h;return heroSpriteHTML(h.sheet,h.row,'collection-art',true);}
 function rankStyle(h:HeroSpec){const s=heroSummonStyle(h.level);return '--hero-color:'+s.cssColor+';--hero-accent:'+s.cssAccent+';--hero-rank:'+s.rank;}
 function abilityHTML(h:HeroSpec){
  const {amount,radius,shieldHits}=heroEffectStats(h.level),percent=Math.round(amount*100);

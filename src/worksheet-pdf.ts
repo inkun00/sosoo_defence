@@ -35,13 +35,16 @@ export async function worksheetPageImage(page:HTMLElement):Promise<string>{
   // artwork ourselves so a failed request cannot create an incomplete PDF.
   await Promise.all(['.ws-guide','.ws-egg'].map(async selector=>{
    const source=page.querySelector<HTMLElement>(selector),target=snapshot.querySelector<HTMLElement>(selector);
-   const url=source&&getComputedStyle(source).backgroundImage.match(/url\(["']?([^"')]+)["']?\)/)?.[1];
+   const sourceImage=source?.querySelector<SVGImageElement>('image[href]'),targetImages=target?.querySelectorAll<SVGImageElement>('image[href]');
+   const url=sourceImage?.getAttribute('href')||(source&&getComputedStyle(source).backgroundImage.match(/url\(["']?([^"')]+)["']?\)/)?.[1]);
    if(!target||!url)throw Error('학습지 그림을 찾지 못했어요.');
    const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw Error('학습지 그림을 불러오지 못했어요.');
    const blob=await response.blob(),data=await new Promise<string>((resolve,reject)=>{
     const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);
    });
-   const artwork=new Image();artwork.src=data;await artwork.decode();target.style.backgroundImage='url("'+data+'")';
+   const artwork=new Image();artwork.src=data;await artwork.decode();
+   if(targetImages?.length)targetImages.forEach(image=>image.setAttribute('href',data));
+   else target.style.backgroundImage='url("'+data+'")';
   }));
   const svg=await toSvg(snapshot,{width,height,backgroundColor:'#fffaf0',
    // The worksheet uses system fonts. Avoid embedding unrelated game webfonts.
