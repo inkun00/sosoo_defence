@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import atlas from './ambient-atlas.json';
+import {drawStationaryAmbientAtlas} from './ambient-animation';
 
 export type AmbientKind=keyof typeof atlas;
 export const AMBIENT_TEXTURES=Object.values(atlas).map(spec=>spec.texture);
@@ -21,8 +22,10 @@ export function scaledAmbientAtlas(kind:AmbientKind,width:number,height:number){
  return {...spec,sourceWidth:width,sourceHeight:height,canvasWidth,canvasHeight,frames};
 }
 
-// Source PNGs stay untouched. Trim offsets align the stationary stone base
-// of every generated frame to one shared canvas, so only the magic/fire moves.
+export function ambientTexture(kind:AmbientKind){return 'dungeon-'+atlas[kind].texture+(kind==='torch'?'':'-stationary');}
+
+// Source PNGs stay untouched. Portal and flame frames share the exact same
+// stone image, while only their inner energy comes from the animated source.
 export function registerAmbientFrames(scene:Phaser.Scene){
  for(const kind of Object.keys(atlas) as AmbientKind[]){
   const texture=scene.textures.get('dungeon-'+atlas[kind].texture),source=texture.getSourceImage();
@@ -31,8 +34,22 @@ export function registerAmbientFrames(scene:Phaser.Scene){
    const name=kind+'-'+i;if(texture.has(name))return;
    texture.add(name,0,f.x,f.y,f.width,f.height)?.setTrim(spec.canvasWidth,spec.canvasHeight,f.offsetX,f.offsetY,f.width,f.height);
   });
+  const renderedKey=ambientTexture(kind);
+  if(kind!=='torch'&&!scene.textures.exists(renderedKey)){
+   try{
+    const rendered=scene.textures.createCanvas(renderedKey,spec.canvasWidth*3,spec.canvasHeight*3);
+    if(rendered){
+     drawStationaryAmbientAtlas(rendered.getContext(),kind,source as HTMLImageElement,spec);
+     spec.frames.forEach((_,i)=>rendered.add(kind+'-'+i,0,i%3*spec.canvasWidth,Math.floor(i/3)*spec.canvasHeight,spec.canvasWidth,spec.canvasHeight));
+     rendered.refresh();
+    }
+   }catch{if(scene.textures.exists(renderedKey))scene.textures.remove(renderedKey);}
+  }
+  // A canvas failure holds the original first pose instead of reintroducing
+  // the full-body loop. No network request or extra animation clock is needed.
+  const canAnimate=scene.textures.exists(renderedKey),animationTexture=canAnimate?renderedKey:'dungeon-'+spec.texture;
   const key='ambient-'+kind;
-  if(!scene.anims.exists(key))scene.anims.create({key,frames:spec.frames.map((_,i)=>({key:'dungeon-'+spec.texture,frame:kind+'-'+i})),frameRate:spec.fps,repeat:-1});
+  if(canAnimate&&!scene.anims.exists(key))scene.anims.create({key,frames:spec.frames.map((_,i)=>({key:animationTexture,frame:kind+'-'+i})),frameRate:spec.fps,repeat:-1});
  }
 }
 
@@ -45,9 +62,10 @@ export class AmbientProps{
   this.sprites.clear();
  }
  add(parent:Phaser.GameObjects.Container,id:string,kind:AmbientKind,x:number,y:number,width:number,height:number){
-  const spec=atlas[kind],sprite=this.scene.add.sprite(x,y,'dungeon-'+spec.texture,kind+'-0').setDisplaySize(width,height).setName('ambient-'+id);
+  const key=ambientTexture(kind),texture=this.scene.textures.exists(key)?key:'dungeon-'+atlas[kind].texture;
+  const sprite=this.scene.add.sprite(x,y,texture,kind+'-0').setDisplaySize(width,height).setName('ambient-'+id);
   parent.add(sprite);this.sprites.set(id,sprite);
-  if(!this.reducedMotion){sprite.play({key:'ambient-'+kind,startFrame:this.phases.get(id)??0});if(this.paused)sprite.anims.pause();}
+  if(texture===key&&!this.reducedMotion&&this.scene.anims.exists('ambient-'+kind)){sprite.play({key:'ambient-'+kind,startFrame:this.phases.get(id)??0});if(this.paused)sprite.anims.pause();}
   return sprite;
  }
  setPaused(paused:boolean){
