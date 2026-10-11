@@ -136,6 +136,6 @@ npm run check:bundle
 
 일반 몬스터와 영웅은 모두 아군 성에서 출발합니다. 일반 웨이브는 전투 시작 8초 후부터 등장하고 간격은 8.4초에서 약 3초까지 짧아집니다. 대전 레벨은 전투 18초마다 올라 최고 10입니다. 체력보다 큰 공격은 무효이고 정확히 0으로 만들어야 처치됩니다.
 
-경기는 **준비 3분과 전투 3분을 합해 최대 6분**입니다. 준비 시계와 전투 시계는 각각 03:00에서 시작하며 현재 단계의 남은 시간을 따로 표시합니다. 불꽃이 파괴되면 즉시 끝나며 시간 종료 시 총점으로 승패를 정합니다. 처치 점수는 `100 + floor(100 / 타격 횟수)`, 문제 정답 점수는 `floor(25 / (오답 횟수 + 1))`입니다. 쉴드에 막힌 공격도 처치 타격 횟수에 포함합니다. 총점이 같으면 무승부이며 체력으로 동점을 가르지 않습니다. 기권·로그아웃은 패배, 연결 중단은 45초 대기합니다. 서로 다른 규칙의 클라이언트를 막기 위해 연결 규칙 `split-phase-zero-coins-v13`을 사용하므로 양쪽 모두 새로고침 후 새 방을 만듭니다. 설정의 몬스터 피격 뺄셈식 ON/OFF와 1인 모험 저장은 유지합니다.
+경기는 **준비 3분과 전투 3분을 합해 최대 6분**입니다. 준비와 전투는 각각 03:00에서 시작하며 화면에는 현재 단계의 남은 시간을 한 줄로 표시합니다. 불꽃이 파괴되면 즉시 끝나며 시간 종료 시 총점으로 승패를 정합니다. 처치 점수는 `100 + floor(100 / 타격 횟수)`, 문제 정답 점수는 `floor(25 / (오답 횟수 + 1))`입니다. 쉴드에 막힌 공격도 처치 타격 횟수에 포함합니다. 총점이 같으면 무승부이며 체력으로 동점을 가르지 않습니다. 기권·로그아웃은 패배, 연결 중단은 45초 대기합니다. 서로 다른 규칙의 클라이언트를 막기 위해 연결 규칙 `split-phase-zero-coins-v13`을 사용하므로 양쪽 모두 새로고침 후 새 방을 만듭니다. 설정의 몬스터 피격 뺄셈식 ON/OFF와 1인 모험 저장은 유지합니다.
 
 공식 문서: [인증된 callable 함수](https://firebase.google.com/docs/functions/callable), [예약 함수](https://firebase.google.com/docs/functions/schedule-functions), [WebRTC 연결과 ICE](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Connectivity), [RTCDataChannel](https://developer.mozilla.org/en-US/docs/Web/API/RTCDataChannel), [Firebase 트랜잭션](https://firebase.google.com/docs/firestore/manage-data/transactions).

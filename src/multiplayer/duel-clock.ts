@@ -7,6 +7,9 @@ export interface DuelClocks{
  preparationActive:boolean;battleActive:boolean;
  preparationState:DuelClockState;battleState:DuelClockState;
 }
+export interface DuelCountdown{
+ seconds:number;state:DuelClockState;phase:'preparation'|'battle';
+}
 
 function elapsedWithin(value:number,total:number){return Number.isNaN(value)?0:Math.max(0,Math.min(total,value));}
 // Authoritative ticks accumulate fractional seconds; do not display an extra
@@ -22,6 +25,14 @@ export function duelClocks(state:DuelClockInput|null|undefined):DuelClocks{
  const enteredBattle=state.preparationElapsed>=DUEL_PREPARATION_SECONDS||state.elapsed>0;
  // A complete state means the phase has ended, even if surrender left time on it.
  return {...clocks,preparationSeconds:enteredBattle?0:remaining(DUEL_PREPARATION_SECONDS,state.preparationElapsed),battleSeconds:enteredBattle?remaining(DUEL_SECONDS,state.elapsed):DUEL_SECONDS,preparationState:enteredBattle||state.preparationElapsed>0?'complete':'waiting',battleState:enteredBattle?'complete':'waiting'};
+}
+
+/** Show only the current phase; a finished match has no time left to play. */
+export function duelCountdown(state:DuelClockInput|null|undefined):DuelCountdown{
+ const clocks=duelClocks(state);
+ const phase=!state||state.status==='waiting'||state.status==='preparing'?'preparation':'battle';
+ if(state?.status==='finished')return {seconds:0,state:'complete',phase};
+ return phase==='preparation'?{seconds:clocks.preparationSeconds,state:clocks.preparationState,phase}:{seconds:clocks.battleSeconds,state:clocks.battleState,phase};
 }
 
 export function formatDuelClock(seconds:number):string{

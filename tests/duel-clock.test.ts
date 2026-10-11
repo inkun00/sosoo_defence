@@ -1,12 +1,37 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {duelClocks,formatDuelClock,type DuelClockInput} from '../src/multiplayer/duel-clock';
+import {duelClocks,duelCountdown,formatDuelClock,type DuelClockInput} from '../src/multiplayer/duel-clock';
 import {advanceDuel,applyDuel,createDuel,joinDuel,DUEL_PREPARATION_SECONDS,DUEL_SECONDS} from '../src/multiplayer/duel';
 
 const state=(status:DuelClockInput['status'],preparationElapsed=0,elapsed=0):DuelClockInput=>({status,preparationElapsed,elapsed});
 test('준비 전에는 준비 3분·전투 3분을 각각 대기 상태로 표시한다',()=>{
  const expected={preparationSeconds:180,battleSeconds:180,preparationActive:false,battleActive:false,preparationState:'waiting',battleState:'waiting'};
  for(const input of [undefined,null,state('waiting'),state('waiting',45,30)])assert.deepEqual(duelClocks(input),expected);
+});
+
+test('한 줄 시계는 대기·준비에서 준비 잔량을 표시하고 전투 진입 때 새 3분을 표시한다',()=>{
+ for(const input of [undefined,null,state('waiting'),state('waiting',45,30)])assert.deepEqual(duelCountdown(input),{seconds:180,state:'waiting',phase:'preparation'});
+ for(const [elapsed,seconds]of [[0,180],[60,120],[120,60],[179.999,1],[180,0]])assert.deepEqual(duelCountdown(state('preparing',elapsed,70)),{seconds,state:'active',phase:'preparation'});
+ for(const [elapsed,seconds]of [[0,180],[60,120],[120,60],[179.999,1],[180,0]])assert.deepEqual(duelCountdown(state('playing',180,elapsed)),{seconds,state:'active',phase:'battle'});
+ assert.equal(formatDuelClock(duelCountdown(state('preparing',179.999)).seconds),'00:01');
+ assert.equal(formatDuelClock(duelCountdown(state('playing',180,0)).seconds),'03:00');
+});
+
+test('한 줄 시계는 언제 종료해도 00:00이며 기존 두 시계의 중도 종료 잔량은 보존한다',()=>{
+ for(const input of [state('finished'),state('finished',70.2),state('finished',180,42.2),state('finished',180,180)]){
+  assert.deepEqual(duelCountdown(input),{seconds:0,state:'complete',phase:'battle'});
+  assert.equal(formatDuelClock(duelCountdown(input).seconds),'00:00');
+ }
+ assert.equal(duelClocks(state('finished',70.2)).preparationSeconds,110);
+ assert.equal(duelClocks(state('finished',180,42.2)).battleSeconds,138);
+});
+
+test('한 줄 시계의 수치 경계와 소수 틱 반올림은 기존 단계 시계를 따른다',()=>{
+ for(const elapsed of [-Infinity,-1,NaN,0,59.999,60-1e-10,60-1e-6,179.999,180,181,Infinity]){
+  const prep=state('preparing',elapsed),battle=state('playing',180,elapsed);
+  assert.equal(duelCountdown(prep).seconds,duelClocks(prep).preparationSeconds);
+  assert.equal(duelCountdown(battle).seconds,duelClocks(battle).battleSeconds);
+ }
 });
 
 test('준비 동안 준비 시계만 줄고 전투 시계는 3분을 유지한다',()=>{
@@ -54,4 +79,15 @@ test('실제 대전의 준비·전투·기권 단계에서도 두 시계는 실�
  tick(now+45000);const stopped=structuredClone(s);assert.equal(duelClocks(s).preparationSeconds,DUEL_PREPARATION_SECONDS-45);applyDuel(stopped,0,{type:'surrender'},stopped.updatedAt,'quit-prep');assert.equal(duelClocks(stopped).preparationSeconds,135);assert.equal(duelClocks(stopped).battleSeconds,DUEL_SECONDS);assert.equal(duelClocks(stopped).preparationActive,false);
  tick(now+DUEL_PREPARATION_SECONDS*1000);assert.equal(duelClocks(s).preparationSeconds,0);assert.equal(duelClocks(s).battleSeconds,DUEL_SECONDS);assert.equal(duelClocks(s).battleActive,true);
  tick(now+(DUEL_PREPARATION_SECONDS+12)*1000);applyDuel(s,0,{type:'surrender'},s.updatedAt,'quit-battle');const final=duelClocks(s);assert.equal(final.preparationSeconds,0);assert.equal(final.battleSeconds,168);assert.equal(final.preparationActive||final.battleActive,false);
+});
+
+test('실제 준비 종료는 한 줄 시계를 새 3분으로 바꾸고 기권 직후 0초로 종료한다',()=>{
+ const now=100000,s=createDuel('a','호스트',17,now);joinDuel(s,'b','참가자',now);
+ assert.deepEqual(duelCountdown(s),{seconds:180,state:'waiting',phase:'preparation'});
+ applyDuel(s,0,{type:'ready'},now,'a');applyDuel(s,1,{type:'ready'},now,'b');
+ const tick=(at:number)=>{s.players.forEach(p=>p!.lastSeen=at);advanceDuel(s,at);};
+ tick(now+120000);assert.deepEqual(duelCountdown(s),{seconds:60,state:'active',phase:'preparation'});
+ tick(now+DUEL_PREPARATION_SECONDS*1000);assert.deepEqual(duelCountdown(s),{seconds:180,state:'active',phase:'battle'});
+ tick(now+(DUEL_PREPARATION_SECONDS+12)*1000);assert.equal(duelCountdown(s).seconds,168);
+ applyDuel(s,0,{type:'surrender'},s.updatedAt,'quit');assert.deepEqual(duelCountdown(s),{seconds:0,state:'complete',phase:'battle'});
 });
