@@ -288,7 +288,7 @@ function heroBook(fromLobby=false,level=1,feedback=''){
 }
 function rewardCollection(fromLobby=true){
  const p=state?.players[side],frozen=!!state&&(state.status!=='waiting'||!!p?.ready),selected=p?.rewardHero??selectedWorksheetHero();
- show('collection',`<p class="eyebrow">학습지 보상 · 대전당 한 번</p><h2>전투 중 소환할 수집 영웅 선택</h2>${frozen?'<p>준비를 마쳤어요. 선택은 다음 대전 전에 바꿀 수 있어요.</p>':''}${collectionHTML(selected,frozen)}<p data-feedback role="status"></p><div class="duel-row"><button id="collection-back">${fromLobby?'대기실로':'대전으로'}</button><a href="/?mode=worksheet" target="_blank" rel="noopener">학습지 · 암호 입력 ↗</a></div>`);
+ show('collection',`<h2>수집한 영웅</h2>${frozen?'<p>준비를 마쳤어요. 선택은 다음 대전 전에 바꿀 수 있어요.</p>':''}${collectionHTML(selected,frozen,loadWorkbook(),{showDetails:false})}<p data-feedback role="status"></p><div class="duel-row"><button id="collection-back">${fromLobby?'대기실로':'대전으로'}</button><a href="/?mode=worksheet" target="_blank" rel="noopener">학습지 · 암호 입력 ↗</a></div>`);
  bind('collection-back',()=>fromLobby?lobby():close());content.querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(b=>b.onclick=async()=>{if(frozen||busy)return;try{const id=b.dataset.collectionHero!;if(peer&&state){const reply=await send({type:'select-reward',heroId:id});if(!reply?.ok)return;}await selectWorksheetHero(id);rewardCollection(fromLobby);}catch(e){status(errorText(e));}});
 }
 async function startWithCollectedHero(){
@@ -296,7 +296,7 @@ async function startWithCollectedHero(){
  if(!p.rewardRoster.length){await send({type:'ready'});return;}
  const book=loadWorkbook(),roster=new Set(p.rewardRoster);
  book.collection=book.collection.filter(hero=>roster.has(hero.heroId));
- show('collection',`<p class="eyebrow">수집 영웅 · 전투 중 1회 소환</p><h2>전투 중 소환할 영웅을 선택하세요</h2>${collectionHTML(p.rewardHero,false,book,{mode:'deployment'})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
+ show('collection',`<h2>수집한 영웅</h2>${collectionHTML(p.rewardHero,false,book,{mode:'deployment',showDetails:false})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
  const entryPeer=peer,entryHeading=content.querySelector('h2');
  bind('deployment-back',close);
  content.querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(button=>button.onclick=async()=>{
