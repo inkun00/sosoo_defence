@@ -3,6 +3,7 @@ import {Defense,Event as BattleEvent,WALL_DURABILITY} from './model';
 import {Effect,EFFECTS,LEVELS,FINAL_STAGE} from './levels';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {Save} from './save';
+import {campaignVisibleTotal,campaignTotal} from './campaign-score';
 import {Mode} from './scene';
 import {FIELD_X,FIELD_Y,GAME_WIDTH,GAME_HEIGHT} from './layout';
 import {MONSTERS,monsterKind} from './monsters';
@@ -88,13 +89,13 @@ export class GameUI extends Phaser.Scene{
   this.moneyText.setText(numberText(m.money,m.level.digits)).setScale(1);if(this.moneyText.width>196)this.moneyText.setScale(196/this.moneyText.width);const time=Math.max(0,Math.ceil(m.duration-m.elapsed)),timerWidth=this.screenLayout?.compact?90:103;this.timerText.setText(time===0&&['playing','paused'].includes(m.phase)?'추가 방어':`${String(Math.floor(time/60)).padStart(2,'0')}:${String(time%60).padStart(2,'0')}`).setScale(1);if(this.timerText.width>timerWidth)this.timerText.setScale(timerWidth/this.timerText.width);
   this.healthIcons.forEach((heart,i)=>heart.setAlpha(i<m.castle?1:.2));
   this.castleText?.setText(`${m.castle}/5`);
-  this.waveText.setText(`방어 ${m.kills} / ${m.enemyCount} · ${DIFFICULTIES[m.difficulty].name} · ${m.phase==='ready'?'준비':m.phase==='paused'?'정지':m.phase==='won'?'성공':m.phase==='review'?'목표 연습':m.phase==='lost'?'재도전':'진행'}`);
+  this.fitText(this.waveText.setText(`방어 ${m.kills}/${m.enemyCount} · ${s.save.started?'누적':'연습'} ${campaignVisibleTotal(s.save,m).toLocaleString('ko-KR')}점`).setName('adventure-score').setScale(1),218,22);
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
   const shopSig=[s.towerTypeId,s.shopPage,s.selected,s.selectedWall?.x,s.selectedWall?.y,s.mode.kind,m.money,m.level.id,m.phase,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length,m.walls.map(w=>`${w.id}:${w.durability}`)].join('|');
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
   const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.walls.map(w=>`${w.id}:${w.durability}`),m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
-  const popupSig=[s.panel,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level:'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
+  const popupSig=[s.panel,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level+':'+m.score+':'+campaignTotal(s.save):'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
   if(force||popupSig!==this.signatures[2]){this.signatures[2]=popupSig;this.drawPopup();}
   this.onControls(this.controls);
  }
@@ -321,12 +322,19 @@ export class GameUI extends Phaser.Scene{
   const s=this.getState(),m=s.model,won=m.phase==='won',review=m.phase==='review';this.modalFrame(won?'소수의 성을 지켰어요!':review?'성은 지켰어요! 학습 목표를 연습해요':'성 체력 5개가 모두 소진됐어요',940,650);
   [0,1,2].forEach(i=>{const star=this.add.image(562+i*78,214,'dungeon-icons','star').setDisplaySize(64,64).setAlpha(won&&i<m.stars?1:.24);this.popup.add(star);if(won&&i<m.stars&&!this.reducedMotion)this.tweens.add({targets:star,angle:{from:-20,to:0},scaleX:{from:star.scaleX*.2,to:star.scaleX},scaleY:{from:star.scaleY*.2,to:star.scaleY},delay:200+i*130,duration:450,ease:'Back.easeOut'});});
   this.text(this.popup,640,275,`성 체력 ${m.castle}/5   ·   ${m.kills}마리 방어   ·   유효 타격 ${m.successfulHits}회`,24).setOrigin(.5);
+  this.text(this.popup,640,307,`이번 단계 ${m.score.toLocaleString('ko-KR')}점 · 누적 ${campaignTotal(s.save).toLocaleString('ko-KR')}점`,21,'#ffdf9b').setName('adventure-result-score').setOrigin(.5);
   m.goals.forEach((g,i)=>this.text(this.popup,265,333+i*42,`${g.done?'✓':'○'}  ${g.label}`,22,g.done?'#8bd3a0':'#dfb28e',740));
   this.text(this.popup,640,523,`벽돌 ${m.bricks.length}개 · 남은 성벽 ${m.inventory.walls}개 보관! 내구도도 유지돼요.`,20,'#f0c583').setOrigin(.5);
   this.text(this.popup,640,568,won?'방어와 학습 목표를 모두 달성했어요.':review?'패배가 아니에요. ○ 표시된 목표를 연습하면 다음 단계가 열려요.':'타워의 위치와 발사 순서를 바꾸어 같은 웨이브에 다시 도전해요.',21,'#bdb5a9').setOrigin(.5);
-  this.button(this.popup,'retry',450,641,284,68,'같은 단계 다시',true,'button_brown',25);
   const final=won&&m.level.id===FINAL_STAGE;
-  this.button(this.popup,final?'home':won?'next':'levels',815,641,284,68,final?'시작 화면':won?'다음 단계 ▶':'단계 지도',true,'button_red',25);
+  if(final){
+   this.button(this.popup,'retry',350,641,254,68,'다시 도전',true,'button_brown',24);
+   this.button(this.popup,'hall',640,641,254,68,'명예의 전당',true,'button_red',24);
+   this.button(this.popup,'home',930,641,254,68,'시작 화면',true,'button_brown',24);
+  }else{
+   this.button(this.popup,'retry',450,641,284,68,'같은 단계 다시',true,'button_brown',25);
+   this.button(this.popup,won?'next':'levels',815,641,284,68,won?'다음 단계 ▶':'단계 지도',true,'button_red',25);
+  }
  }
  private drawMenu(){
   if(this.screenLayout?.compact){

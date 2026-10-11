@@ -89,6 +89,30 @@
           "queryScope": "COLLECTION"
         }
       ]
+    },
+    {
+      "collectionGroup": "adventureHall",
+      "fieldPath": "*",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "adventureHall",
+      "fieldPath": "score",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "adventureRuns",
+      "fieldPath": "*",
+      "indexes": []
     }
   ]
 }

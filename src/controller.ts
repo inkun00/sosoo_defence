@@ -5,6 +5,8 @@ import {Field} from './scene';
 import {GameUI,Panel,UIState,Control} from './ui';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
+import {recordStageScore,campaignCompletion,campaignVisibleTotal} from './campaign-score';
+import type {AdventureHallPresentation} from './adventure-hall-ui';
 import {Sound} from './audio';
 import {adventureMusicTrack} from './music';
 import {mountGameAudioControls,type GameAudioKind} from './game-audio-controls';
@@ -33,7 +35,7 @@ app.innerHTML=`<main id="game-shell" aria-label="소수의 성 디펜스 게임"
 const $=(id:string)=>document.getElementById(id)!;
 const tutorialMode=new URLSearchParams(location.search).get('mode')==='tutorial';
 let tutorial=tutorialMode?new TutorialSession():undefined;
-const savedAdventure=loadSave(),save=tutorial?{...savedAdventure,level:1,resumeStage:1,stars:Array(FINAL_STAGE).fill(0),inventory:tutorial.model.inventory,difficulty:'practice' as const,started:false,campaignCompleted:false}:savedAdventure;
+const savedAdventure=loadSave(),save=tutorial?{...savedAdventure,level:1,resumeStage:1,stars:Array(FINAL_STAGE).fill(0),inventory:tutorial.model.inventory,difficulty:'practice' as const,started:false,campaignCompleted:false,scoreProgress:undefined}:savedAdventure;
 const sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);let movie=false;
 let tutorialGuide:ReturnType<typeof mountTutorialGuide>|undefined;
 function savePreferences(){return writeSave(tutorial?{...loadSave(),sfx:save.sfx,music:save.music}:save);}
@@ -59,6 +61,7 @@ const field=new Field(model);const learningSession=crypto.randomUUID();let learn
 let bossFinale=new BossFinaleFlow();
 const bossIntroFlow=new BossIntroFlow();
 let bossIntroPresentation:BossIntroPresentation|undefined,bossIntroToken=bossIntroFlow.enter(model.level.id,!!tutorial);
+let hallPresentation:AdventureHallPresentation|undefined,hallOpening=false,hallToken=0;
 if(bossIntroFlow.held){movie=true;field.presentationHeld=true;}
 function purchaseLearning(outcome:'wrong'|'help'|'correct',q=model.pendingPurchase){if(q&&!tutorial)recordLearning({a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'},outcome,learningSession+':purchase:'+learningQuestion);}
 const state=():UIState=>({model,save,unit,effect,selected,selectedWall,brickPage,speed,mode:field.mode,panel,slots,fusionOperation,equation,hint,message,towerTypeId,shopPage,purchaseInput,purchaseMessage,purchaseHelp});
@@ -83,13 +86,13 @@ function update(){
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
  if(!tutorial&&!finaleHeld&&['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
-  if(model.phase==='won'){save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
+  if(model.phase==='won'){recordStageScore(save,model);save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
   if(model.phase!=='review'&&!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
-  if(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated){movie=true;sound.setPaused(true);void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();});}
+  if(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated){movie=true;sound.setPaused(true);const owner=model;void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();if(owner===model)void showAdventureHall();});}
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
- $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 돈 ${numberText(model.money,model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/${model.enemyCount}, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
+ $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 누적 점수 ${campaignVisibleTotal(save,model)}점, 이번 단계 ${model.score}점, 돈 ${numberText(model.money,model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/${model.enemyCount}, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
  updateTutorialGuide();
 }
 function finalBossImpact(x:number,y:number){
@@ -112,6 +115,25 @@ function startBossIntro(){
  bossIntroPresentation=playBossIntro(save,finish);
 }
 function notify(text:string){message=text;$('accessible-notice').textContent=text;ui.notify(text);}
+async function showAdventureHall(){
+ if(tutorial||movie||hallPresentation||hallOpening)return;
+ const owner=model,token=++hallToken,resumeBattle=model.phase==='playing',completion=campaignCompletion(save)??undefined;
+ if(resumeBattle)model.togglePause();
+ hallOpening=true;movie=true;field.presentationHeld=true;field.input.enabled=false;update();
+ const restore=()=>{if(token!==hallToken||owner!==model)return;hallOpening=false;hallPresentation=undefined;movie=false;field.presentationHeld=false;field.input.enabled=!panel&&$('modal').classList.contains('hidden');if(resumeBattle&&model.phase==='paused'&&!document.hidden)model.togglePause();update();};
+ try{
+  const {openAdventureHall}=await import('./adventure-hall-ui');
+  if(token!==hallToken||owner!==model)return;
+  hallOpening=false;
+  hallPresentation=openAdventureHall({completion,nickname:save.scoreProgress?.nickname,onClose:restore,onRegistered:(result,nickname)=>{
+   const progress=save.scoreProgress;
+   if(token!==hallToken||!progress||progress.runId!==completion?.runId)return;
+   progress.nickname=nickname;progress.registeredScore=result.score;
+   if(!writeSave(save))notify('이 브라우저에서는 등록 정보를 보관할 수 없어요.');
+  }});
+ }catch{restore();notify('명예의 전당을 열지 못했어요. 연결을 확인하고 다시 눌러 주세요.');}
+}
+function cancelAdventureHall(){hallToken++;hallOpening=false;const view=hallPresentation;hallPresentation=undefined;view?.close();}
 function nextWallCell(){return model.path()?.find(c=>model.previewWall(c).valid);}
 function beginWallPlacement(){
  // Transfer the forge's pause ownership without briefly restarting combat.
@@ -145,6 +167,7 @@ function closeHTML(){
 }
 function stage(n:number){
  if(tutorial){restartTutorial();return;}
+ cancelAdventureHall();
  settingsAudioControls?.dispose();settingsAudioControls=undefined;
  if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
  bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroFlow.cancel();movie=false;
@@ -196,6 +219,7 @@ function action(key:string){
   case 'pause':if(field.mode.kind==='wall')notify('성벽을 놓거나 ‘완료 · 남은 성벽 보관’을 누르면 전투가 이어져요.');else model.togglePause();break;
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{const url=new URL(location.href);url.searchParams.set('mode','duel');location.assign(url.href);break;}
+  case 'hall':void showAdventureHall();break;
   case 'home':{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.delete('mode');location.assign(url.href);break;}
   case 'tutorial':if(tutorial)restartTutorial();else{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','tutorial');location.assign(url.href);}break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
@@ -330,6 +354,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
 window.addEventListener('pagehide',()=>{
+ cancelAdventureHall();
  const introHeld=bossIntroFlow.held;
  bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroToken=null;bossIntroFlow.cancel();
  // A page restored from the browser cache must not retain an invisible input lock.

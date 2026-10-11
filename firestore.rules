@@ -7,6 +7,12 @@ service cloud.firestore {
   match /decimalLobbyOwners/{uid} { allow read, write: if false; }
   match /decimalLobbyLimits/{uid} { allow read, write: if false; }
   match /decimalRelayLimits/{uid} { allow read, write: if false; }
+  // Solo rankings are public only through the callable's limited projection.
+  // Stage score receipts and account identifiers never reach the public list.
+  match /adventureHall/{uid} {
+   allow read, write: if false;
+   match /adventureRuns/{runId} { allow read, write: if false; }
+  }
   match /decimalUsers/{uid} {
    allow get: if request.auth != null && request.auth.uid == uid;
    allow list, create, update, delete: if false;

@@ -8,6 +8,8 @@ import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LO
 import {drawWallRecipe} from './wall-recipe-store';
 import type {WallRecipe} from './wall-recipes';
 import {bossSpellAt,type BossSpellState} from './boss-spells';
+import {campaignKillScore,campaignQuestionScore} from './campaign-score';
+import {CASTLE_HEALTH} from './adventure-constants';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;recoil?:{vx:number;vy:number;remaining:number};wallCooldown?:number;}
@@ -19,7 +21,8 @@ export interface WallPreview extends Cell{valid:boolean;message:string;}
 export interface WallImpact{wallId:number;enemyId:number;kind:MonsterKind;durability:number;dx:number;dy:number;force:number;}
 export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'wall-impact'|'wall-break'|'leak'|'boss-warning'|'boss-cast';message:string;x?:number;y?:number;color?:string;data?:unknown;}
 export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
-export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8;
+export {CASTLE_HEALTH} from './adventure-constants';
+export const STAGE_DURATION=120,FIRST_SPAWN_DELAY=8;
 export const BOSS_AURA_RADIUS=3*TILE,BOSS_AURA_SPEED=1.25,BOSS_AURA_SLOW=.8,BOSS_AURA_STUN=2;
 export {DEFAULT_SPAWN_INTERVAL as SPAWN_INTERVAL} from './difficulty';
 export class Defense{
@@ -28,6 +31,9 @@ export class Defense{
  private nextId=1;private randomState=17;private droppedRecipe=0;private brickRecipe:WallRecipe|null=null;
  private carriedWalls=0;
  private announcedBossSpells=new Set<string>();
+ combatScore=0;questionScore=0;answeredQuestions=0;
+ readonly killHits:number[]=[];readonly purchaseWrongAttempts:number[]=[];readonly fusionWrongAttempts:number[]=[];
+ private pendingPurchaseMistakes=0;private pendingFusionMistakes=0;
  private storedWallHealth:number[]=[];wallPlacements=0;
  bossDefeated=false;bossSpawned=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
@@ -36,6 +42,7 @@ export class Defense{
  constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.storedWallHealth=Array.from({length:inventory.walls},(_,i)=>{const hp=inventory.wallDurabilities?.[i];return hp===1||hp===2?hp:WALL_DURABILITY;});this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  path(blocks=this.blocks,start=this.map.start){return route(blocks,start,this.map.end);}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
+ get score(){return this.combatScore+this.questionScore;}
  get bossAuraSource():Enemy|null{
   if(this.level.id!==11||this.level.boss?.kind!=='wizard')return null;
   return this.enemies.find(e=>e.kind==='wizard'&&e.hp>0&&e.next<e.path.length)??null;
@@ -97,8 +104,12 @@ export class Defense{
   const q=this.pendingPurchase;if(!q)return false;const type=towerType(q.typeId)!;
   if(this.money!==q.wallet||!this.canPurchase(q,type)){this.pendingPurchase=null;return this.notice('돈이나 설치할 칸이 바뀌었어요. 타워를 다시 선택해 주세요.');}
   const answer=parseMoney(text);if(answer===null)return this.notice('소수점을 사용해 남는 코인을 적어 주세요. 최대 소수 두 자리까지 입력해요.');
-  if(answer!==q.before-q.cost)return this.notice('아직 맞지 않아요. 소수점을 맞추고 같은 자리끼리 다시 빼 보세요.');
+  if(answer!==q.before-q.cost){this.pendingPurchaseMistakes=Math.min(10000,this.pendingPurchaseMistakes+1);return this.notice('아직 맞지 않아요. 소수점을 맞추고 같은 자리끼리 다시 빼 보세요.');}
   const blocks=this.candidate(q)!;this.money=q.wallet-q.cost;this.blocks=blocks;this.purchases++;this.purchaseAnswers++;
+  // A preparation can award only one tower-limit set of questions. Selling,
+  // cancelling and buying again cannot manufacture unlimited ranking points.
+  if(this.purchaseWrongAttempts.length<this.balance.towerLimit){this.purchaseWrongAttempts.push(this.pendingPurchaseMistakes);this.questionScore+=campaignQuestionScore(this.pendingPurchaseMistakes);this.answeredQuestions++;}
+  this.pendingPurchaseMistakes=0;
   this.towers.push({x:q.x,y:q.y,id:this.nextId++,typeId:type.id,unit:type.unit,effect:type.effect,enabled:true,cooldown:0,cost:q.cost});this.pendingPurchase=null;
   this.emit({type:'money',message:`${numberText(q.before,q.digits)} − ${numberText(q.cost,q.digits)} = ${numberText(answer,q.digits)} · ${type.name} 설치`,data:{reason:'purchase',grade:type.grade,borrowing:q.borrowing}});return true;
  }
@@ -112,8 +123,10 @@ export class Defense{
   if(ids.length!==3||new Set(ids).size!==3)return this.notice('서로 다른 벽돌 세 개를 골라 주세요.');
   const b=ids.map(id=>this.bricks.find(b=>b.id===id));if(b.some(b=>!b))return this.notice('벽돌을 다시 골라 주세요.');
   const [a,c,d]=b as Brick[];
-  if(!recipe(a.value,c.value,d.value,'+'))return this.notice('왼쪽 두 벽돌의 합이 오른쪽 벽돌과 같아야 해요. 소수점을 맞춰 생각해 보세요.');
+  if(!recipe(a.value,c.value,d.value,'+')){this.pendingFusionMistakes=Math.min(10000,this.pendingFusionMistakes+1);return this.notice('왼쪽 두 벽돌의 합이 오른쪽 벽돌과 같아야 해요. 소수점을 맞춰 생각해 보세요.');}
   this.bricks=this.bricks.filter(b=>!ids.includes(b.id));this.fusions++;this.storedWallHealth.push(WALL_DURABILITY);
+  if(this.fusionWrongAttempts.length<this.balance.wallLimit){this.fusionWrongAttempts.push(this.pendingFusionMistakes);this.questionScore+=campaignQuestionScore(this.pendingFusionMistakes);this.answeredQuestions++;}
+  this.pendingFusionMistakes=0;
   this.emit({type:'wall',message:`${numberText(a.value,this.level.digits)} + ${numberText(c.value,this.level.digits)} = ${numberText(d.value,this.level.digits)} · 성벽 +1`,data:{operation:'+'}});return true;
  }
  get wallStock(){return this.storedWallHealth.length;}
@@ -165,6 +178,8 @@ export class Defense{
   ...(this.level.boss?[{label:`최종 보스 저주 마법사 ${numberText(this.level.boss.hp)} → 0`,done:this.bossDefeated}]:[])
  ];}
  damage(e:Enemy,t:Tower){
+  // A defeated or escaped enemy cannot be scored again by a stale target.
+  if(e.hp<=0||e.next>=e.path.length)return;
   const before=e.hp,r=hit(before,t.unit);
   if(!r.valid){this.invalidHits++;this.emit({type:'invalid',message:'공격력이 남은 체력보다 커요',x:e.x,y:e.y});return;}
   if(Math.floor(before/100)%10<Math.floor(t.unit/100)%10)this.borrowTenths++;
@@ -178,7 +193,7 @@ export class Defense{
   if(!r.killed)return;
   if(this.level.id===10&&e.kind==='warden'){this.bossDefeated=true;this.emit({type:'notice',message:'균열의 돌왕의 힘이 정확히 0이 되었어요! 이제 저주 마법사에게 맞서요.'});}
   if(this.level.boss?.kind===e.kind){this.bossDefeated=true;this.emit({type:'notice',message:'저주 마법사의 힘이 정확히 0이 되었어요! 남은 몬스터를 막아 세상을 구해요.'});}
-  this.kills++;const earn=reward(e.max,e.hits,this.level.units,this.level.id);
+  this.kills++;this.killHits.push(e.hits);this.combatScore+=campaignKillScore(e.hits);const earn=reward(e.max,e.hits,this.level.units,this.level.id);
   // Each three-drop group has a new, correct addition recipe.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);
   if(brickDrop){const slot=this.droppedRecipe%3;if(slot===0)this.brickRecipe=drawWallRecipe(this.level.id,Math.floor(this.droppedRecipe/3));const value=this.brickRecipe![slot];this.droppedRecipe++;this.bricks.push({id:this.nextId++,value});this.emit({type:'brick',message:`${MONSTERS[e.kind].name}이 ${decimal(value,this.level.digits)} 벽돌을 남겼어요!`,x:e.x,y:e.y});}
