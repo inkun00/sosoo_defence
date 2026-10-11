@@ -3,6 +3,7 @@ import {duelMap,duelPathDistance,duelPathPosition} from './duel-maps';
 import {duelLaneOffset} from './duel-maps';
 import type {DecimalAdditionQuestion} from './decimal-boards';
 import {ComputerMood,ComputerPortrait,ComputerOpponent,computerOpponent} from './computer-opponents';
+import {ComputerDialogue,ComputerDialogueEvent} from './computer-dialogue';
 import {heroesAtLevel,heroSpec,HeroSpec} from './heroes';
 import {TOWERS,towerPrice} from '../towers';
 import {numberText,learningValue} from '../math';
@@ -36,8 +37,8 @@ export class ComputerPeer{
  onState:(state:DuelState,connected:boolean)=>void=()=>{};onStatus:(message:string)=>void=()=>{};
  private timer:ReturnType<typeof setInterval>|undefined;private disposed=false;private clock:()=>number;private nonce=0;
  private preparationStarted=false;private strategyStarted=false;
- private nextBuild=0;private nextFusion=0;private nextSummon=0;private answeringAt=0;private seenFlame=9000;
- private portrait:ComputerPortrait;private moodUntil=0;
+ private nextBuild=0;private nextFusion=0;private nextSummon=0;private answeringAt=0;private seenFlames:[number,number];
+ private portrait:ComputerPortrait;private moodUntil=0;private nextPhraseAt=0;private dialogue:ComputerDialogue;private resultShown=false;
  constructor(readonly identity:PeerIdentity,level:number,options:ComputerOptions={}){
   this.definition=computerOpponent(level);const now=options.clock?.()??Date.now(),monotonic=performance.now();
   this.clock=options.clock??(()=>now+performance.now()-monotonic);
@@ -47,15 +48,25 @@ export class ComputerPeer{
   joinDuel(this.state,'computer-'+this.definition.id,this.definition.name,now,this.definition.level);
   // Tower preparation keeps the selected CPU challenge; hero additions follow each player's correct answers in this match.
   this.state.learningLevel=this.definition.level;
-  this.portrait={level:this.definition.level,id:this.definition.id,name:this.definition.name,mood:'idle',phrase:'준비되면 불꽃을 지켜 볼까요?',moodSince:now};
+  this.dialogue=new ComputerDialogue(seed);this.seenFlames=[this.state.players[0].flame,this.state.players[1]!.flame];
+  this.portrait={level:this.definition.level,id:this.definition.id,name:this.definition.name,mood:'idle',phrase:this.dialogue.next('waiting'),moodSince:now};this.moodUntil=now+7000;
   this.act({type:'ready'},now);
   if(options.autoTick!==false)this.timer=setInterval(()=>this.step(),100);
  }
  get opponent():ComputerPortrait{return {...this.portrait};}
- private mood(mood:ComputerMood,phrase:string,now:number,duration=1900){
-  if(this.portrait.mood==='hurt'&&now<this.moodUntil&&!['hurt','victory','defeat'].includes(mood))return;
-  if(this.portrait.mood===mood&&this.portrait.phrase===phrase)return;
-  this.portrait={...this.portrait,mood,phrase,moodSince:now};this.moodUntil=now+duration;
+ private mood(mood:ComputerMood,event:ComputerDialogueEvent,now:number,duration=1900,force=false){
+  const reacting=['hurt','victory'].includes(this.portrait.mood)&&now<this.moodUntil;
+  if(!force&&reacting&&mood!=='hurt')return;
+  // Repeated impacts keep the reaction alive without changing speech every tick.
+  if(!force&&this.portrait.mood===mood&&now<this.nextPhraseAt){this.moodUntil=Math.max(this.moodUntil,now+duration);return;}
+  this.portrait={...this.portrait,mood,phrase:this.dialogue.next(event),moodSince:now};this.moodUntil=now+duration;this.nextPhraseAt=now+3500;
+ }
+ private finish(now:number){
+  if(!this.resultShown){
+   this.resultShown=true;const winner=this.state.winner;
+   this.mood(winner===1?'victory':winner===0?'defeat':'idle',winner===1?'victory':winner===0?'defeat':'draw',now,Infinity,true);
+  }
+  clearInterval(this.timer);this.timer=undefined;
  }
  private act(action:DuelAction,now:number):Reply{
   const r=applyDuel(this.state,1,action,now,'cpu-'+(++this.nonce));this.state.revision++;return r;
@@ -71,7 +82,7 @@ export class ComputerPeer{
   const plan=['basic','double','needle','pebble','catapult','sniper','basic','double','needle','pebble','basic','double'];
   const prepared=Object.values(p.stock).reduce((a,b)=>a+b,0),planned=this.definition.level>=8?types.find(t=>t.id===plan[prepared]):undefined;
   const pick=planned??types.sort((a,b)=>count(a.id)-count(b.id)||preferences.indexOf(a.id)-preferences.indexOf(b.id))[0];
-  if(pick&&this.act({type:'prepare-quote',typeId:pick.id},now).ok){this.answeringAt=now+this.definition.thinkMs;this.mood('thinking','소수점을 맞추고 타워를 준비하고 있어요.',now,this.definition.thinkMs);}
+  if(pick&&this.act({type:'prepare-quote',typeId:pick.id},now).ok){this.answeringAt=now+this.definition.thinkMs;this.mood('thinking','towerQuestion',now,this.definition.thinkMs);}
  }
  private build(now:number){
   const s=this.state,p=s.players[1]!,wave=duelLevel(s),experienced=this.definition.level>=8,max=Math.min(this.definition.maxTowers,experienced?this.definition.level+2*(wave-1):2+wave+Math.floor(this.definition.level/3));let upgrading='';
@@ -97,7 +108,7 @@ export class ComputerPeer{
   // Large projectiles strike first; hundredth finishers wait near the flame.
   // Otherwise a tiny early hit can make a later large projectile invalid.
   const cell=strategicDuelCells(s,1,pick.unit,pick.effect==='range'?4:3).find(c=>validDuelCell(s,1,c.x,c.y));if(!cell)return;
-  if(this.act({type:'build',...cell,typeId:pick.id},now).ok)this.mood('cast','새 타워로 불꽃을 지킬게요!',now);
+  if(this.act({type:'build',...cell,typeId:pick.id},now).ok)this.mood('cast','build',now);
  }
  private chooseHero(level:number):HeroSpec|undefined{
   const p=this.state.players[1]!,heroes=heroesAtLevel(level),variant=this.definition.level<4||this.definition.level===9?0:(this.definition.level+p.solved)%3;
@@ -107,7 +118,7 @@ export class ComputerPeer{
   const p=this.state.players[1]!;
   if(now>=this.nextFusion){
    this.nextFusion=now+this.definition.fusionMs;const slots=additionSlots(p.heroQuestion,p.board);
-   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 영웅 소환석을 모았어요.',now);
+   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','stones',now);
   }
  }
  private summon(now:number){
@@ -117,28 +128,32 @@ export class ComputerPeer{
   const leftover=p.egg>0?this.chooseHero(Math.min(10,this.definition.heroLevel,p.egg)):undefined;
   const stored=Object.entries(p.heroStock??{}).filter(([,n])=>n>0).map(([id])=>heroSpec(id)).filter((h):h is HeroSpec=>!!h).sort((a,b)=>b.level-a.level||a.variant-b.variant)[0];
   const action:DuelAction|undefined=leftover?{type:'hatch',heroId:leftover.id}:stored?{type:'summon',heroId:stored.id}:p.rewardHero&&!p.rewardUsed?{type:'summon-reward'}:undefined;
-  if(action&&this.act(action,now).ok){this.nextSummon=now+this.definition.hatchMs;this.mood('cast','준비한 영웅이 출발해요!',now);}
+  if(action&&this.act(action,now).ok){this.nextSummon=now+this.definition.hatchMs;this.mood('cast','summon',now);}
  }
  step(now=this.clock()){
   if(this.disposed||now<this.state.updatedAt)return;
   const s=this.state,p=s.players[1]!;s.players.forEach(player=>{if(player)player.lastSeen=now;});advanceDuel(s,now);
   if(s.status==='finished'){
-   this.mood(s.winner===1?'victory':s.winner===0?'defeat':'idle',s.winner===1?'내 불꽃을 지켜 냈어요!':s.winner===0?'멋진 전략이에요. 다시 겨뤄요!':'두 불꽃 모두 잘 지켰어요.',now,Infinity);
-   clearInterval(this.timer);this.timer=undefined;this.onState(s,true);return;
+   this.finish(now);this.onState(s,true);return;
   }
   if(s.status==='preparing'){
    if(!this.preparationStarted){this.preparationStarted=true;this.nextBuild=s.preparationStartedAt+1800;this.nextFusion=s.preparationStartedAt+this.definition.fusionMs;}
-   if(p.quote){if(now>=this.answeringAt){const q=p.quote,r=this.act({type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now);this.nextBuild=now+(this.definition.level>=8?Math.max(300,this.definition.thinkMs/4):this.definition.buildMs);if(r.ok)this.mood('cast','계산한 타워를 모아 두었어요!',now);else this.act({type:'cancel'},now);}}
+   if(p.quote){if(now>=this.answeringAt){const q=p.quote,r=this.act({type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now);this.nextBuild=now+(this.definition.level>=8?Math.max(300,this.definition.thinkMs/4):this.definition.buildMs);if(r.ok)this.mood('cast','towerReady',now);else this.act({type:'cancel'},now);}}
    else if(now>=this.nextBuild){this.nextBuild=now+this.definition.buildMs;this.prepare(now);}
    this.prepareHeroes(now);
+   if(now>=this.moodUntil)this.mood('idle','waiting',now,7000);
    this.onState(s,true);return;
   }
-  if(s.status!=='playing'){this.onState(s,true);return;}
+  if(s.status!=='playing'){if(now>=this.moodUntil)this.mood('idle','waiting',now,7000);this.onState(s,true);return;}
   if(!this.strategyStarted){
    this.strategyStarted=true;this.nextBuild=s.startedAt+1800;this.nextSummon=s.startedAt+this.definition.hatchMs;
   }
-  if(p.flame<this.seenFlame){this.mood('hurt','앗! 내 불꽃까지 도착했어요.',now);this.seenFlame=p.flame;}
-  else if(now>=this.moodUntil)this.mood('idle','불꽃과 몬스터를 살피고 있어요.',now);
+  const humanFlame=s.players[0].flame,cpuHit=p.flame<this.seenFlames[1],humanHit=humanFlame<this.seenFlames[0];
+  this.seenFlames=[humanFlame,p.flame];
+  // Protecting its own damaged castle takes priority when both castles are hit.
+  if(cpuHit)this.mood('hurt','hurt',now,2400);
+  else if(humanHit)this.mood('victory','celebrate',now,2400);
+  else if(now>=this.moodUntil)this.mood('idle','aggressive',now,7000);
   if(now>=this.nextBuild){const hasStock=Object.values(p.stock).some(n=>n>0);this.nextBuild=now+(this.definition.level>=8&&hasStock?Math.max(600,this.definition.thinkMs/2):this.definition.buildMs);this.build(now);}
   if(s.status==='playing')this.summon(now);
   this.onState(s,true);
@@ -147,7 +162,7 @@ export class ComputerPeer{
   if(this.disposed)throw Error('컴퓨터 대전을 마쳤어요.');
   const now=this.clock();this.step(now);const p=this.state.players[0];p.lastSeen=now;
   const reply=applyDuel(this.state,0,action,now,'local-'+(++this.nonce));this.state.revision++;
-  if(this.state.status==='finished'){this.mood(this.state.winner===1?'victory':this.state.winner===0?'defeat':'idle',this.state.winner===1?'다음에 다시 겨뤄요!':'멋진 전략이에요!',now,Infinity);clearInterval(this.timer);this.timer=undefined;}
+  if(this.state.status==='finished')this.finish(now);
   this.onState(this.state,true);return reply;
  }
  dispose(){this.disposed=true;clearInterval(this.timer);this.timer=undefined;this.onState=()=>{};this.onStatus=()=>{};}

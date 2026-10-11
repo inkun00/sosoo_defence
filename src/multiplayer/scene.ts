@@ -14,7 +14,7 @@ import {HitEquationPopups} from '../hit-equations';
 import {AmbientProps} from '../ambient-props';
 import {playTowerProjectile,clearTowerProjectiles} from '../tower-projectiles';
 import {DuelShotStream} from './shot-stream';
-import type {ComputerView} from './opponent-portrait';
+import {OpponentPortrait,type ComputerView} from './opponent-portrait';
 import {HeroSummonStream} from './hero-summon-stream';
 import {HeroSummonEffects} from './hero-summon-effects';
 import {DuelHeroEffectBadges,loadDuelHeroEffectBadges,registerDuelHeroEffectBadges} from './hero-effect-badges';
@@ -33,6 +33,7 @@ export class DuelScene extends Phaser.Scene{
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  private hitEquations?:HitEquationPopups;
  private ambient?:AmbientProps;
+ private opponentPortrait?:OpponentPortrait;
  private heroSummonStream=new HeroSummonStream();private heroSummonEffects?:HeroSummonEffects;
  private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
  private screenLayout:GameScreenLayout={width:1280,height:800,compact:false,scale:1,pixelWidth:1280,pixelHeight:800};
@@ -61,8 +62,9 @@ export class DuelScene extends Phaser.Scene{
  preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));loadDuelHeroEffectBadges(this);}
  create(){
   registerDungeon(this);registerDuelHeroEffectBadges(this);
-  this.events.once('shutdown',()=>{this.clearShotEffects();this.shotStream.reset();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();for(const enemy of this.enemies.values()){enemy.effects.destroy();enemy.halo?.destroy();}this.enemies.clear();for(const tower of this.towerViews.values())tower.effects.destroy();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
+  this.events.once('shutdown',()=>{this.opponentPortrait?.destroy();this.opponentPortrait=undefined;this.clearShotEffects();this.shotStream.reset();this.heroSummonEffects?.destroy();this.heroSummonEffects=undefined;this.heroSummonStream.reset();for(const enemy of this.enemies.values()){enemy.effects.destroy();enemy.halo?.destroy();}this.enemies.clear();for(const tower of this.towerViews.values())tower.effects.destroy();this.towerViews.clear();this.signature='';this.uiSignature='';this.revision=-1;this.ready=false;});
   this.ambient=new AmbientProps(this,this.reduced);
+  this.opponentPortrait=new OpponentPortrait(this,this.reduced);
   for(const kind of MONSTER_KINDS.filter(k=>this.textures.exists('dungeon-'+MONSTERS[k].atlas)))for(const [name,start]of [['walk',0],['frozen',8]] as const)this.anims.create({key:kind+'-'+name,frames:Array.from({length:4},(_,i)=>({key:'dungeon-'+MONSTERS[kind].atlas,frame:kind+'-'+(start+i)})),frameRate:5,repeat:-1});
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
@@ -95,7 +97,7 @@ export class DuelScene extends Phaser.Scene{
   this.controls.set(key,{x,y,w,h,enabled,label,run});return c;
  }
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}
- redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];if(s?.status!=='playing')this.guides.clear();if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
+ redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];this.opponentPortrait?.setPosition(X+24*T+4,this.boardY+(DUEL_LANE_ROWS+.5)*T);this.opponentPortrait?.sync(v.computer);if(s?.status!=='playing')this.guides.clear();if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
   const compact=this.screenLayout.compact,height=this.screenLayout.height,touch=this.minimumTouch,headerHeight=76;
   const headerButtonWidth=Math.max(115,touch),settingsWidth=Math.max(80,touch),leaveX=compact?1266-headerButtonWidth/2:1200,lobbyX=compact?leaveX-headerButtonWidth-8:1070,settingsX=compact?lobbyX-(headerButtonWidth+settingsWidth)/2-8:963,headerInfoRight=compact?settingsX-settingsWidth/2-10:980;
   const titleX=compact?headerInfoRight*.14:136,roomX=compact?headerInfoRight*.38:359,budgetX=compact?headerInfoRight*.62:615,clockX=compact?headerInfoRight*.88:850,clock=duelCountdown(s);
@@ -201,7 +203,6 @@ export class DuelScene extends Phaser.Scene{
    const y=row+duelLaneOffset(side),cx=X+(x+.5)*T,cy=this.boardY+(y+.5)*T;if(duelRoadCell(s?.mapId,x,y,side))this.terrain.add(this.add.image(cx,cy,'dungeon-terrain','path').setDisplaySize(T,T));
    else{grid.lineStyle(1,side===0?0x55aec3:0xe2a569,.22).strokeRect(cx-T/2,cy-T/2,T,T);}
   }grid.fillStyle(0x101825,.97).fillRect(X,this.boardY+DUEL_LANE_ROWS*T,24*T,T).lineStyle(2,0xbca476,.75).lineBetween(X,this.boardY+(DUEL_LANE_ROWS+.5)*T,X+24*T,this.boardY+(DUEL_LANE_ROWS+.5)*T);this.terrain.add(grid);
-  this.text(this.terrain,493,this.boardY+(DUEL_LANE_ROWS+.5)*T,'상단 ← 오른쪽 성에서 왼쪽 성으로  ·  하단 → 왼쪽 성에서 오른쪽 성으로',14,'#e2cda4').setBackgroundColor('#101825').setName('duel-lane-divider');
   // Joined stone tiles keep every turn readable and leave the surrounding
   // floor clear for towers. Outline only the exposed road edges, not its seams.
   const route=this.add.graphics();route.lineStyle(2,0xbaa17a,.48);
@@ -331,7 +332,7 @@ export class DuelScene extends Phaser.Scene{
   const p=s.players[v.side],type=towerType(v.selectedType);if(!p||!type||v.busy||!canUseDuelTower(s,v.side,type.id)||!(p.stock?.[type.id]>0)&&p.money<duelBuildCost(s,v.side,type.id)||p.towers.length>=14||type.unit===10&&p.towers.filter(t=>t.unit===10).length>=3)return;
   if(x>=0&&x<24&&y>=0&&y<DUEL_BATTLE_ROWS)this.guides.lineStyle(3,validDuelCell(s,v.side,x,y)?0xffdf94:0xdd6c50).strokeRect(X+x*T+2,this.boardY+y*T+2,T-4,T-4);
  }
- update(_time:number,delta:number){const view=this.view(),s=view.state;this.heroSummonEffects?.update();if(!s)return;const smooth=1-Math.exp(-delta/100);
+ update(_time:number,delta:number){const view=this.view(),s=view.state;this.opponentPortrait?.sync(view.computer);this.heroSummonEffects?.update();if(!s)return;const smooth=1-Math.exp(-delta/100);
   // Predict movement between host snapshots for smooth art; HP and outcomes
   // always come from the host. Prediction stops during a connection outage.
   const age=s.status==='playing'&&view.connected?Math.min(1.5,(performance.now()-this.receivedAt)/1000):0;
