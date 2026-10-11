@@ -7,6 +7,7 @@ export function imageProfile(name){
  if(name.startsWith('heroes-level-'))return {...profile,width:768};
  if(name==='worksheet-heroes-v1')return {...profile,width:768};
  if(name.startsWith('hero-effect-'))return {...profile,width:96,quality:88,trim:true};
+ if(name.startsWith('account-badge-level-'))return {...profile,width:192,quality:86,trim:true};
  if(name.startsWith('cpu-opponent-'))return {...profile,width:768};
  if(name==='hero-collection-panel-v1')return {...profile,width:1152,quality:82};
  if(name==='hero-collection-card-v1')return {...profile,width:384,quality:84};

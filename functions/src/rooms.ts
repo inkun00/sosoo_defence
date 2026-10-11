@@ -3,6 +3,7 @@ import {getFirestore} from 'firebase-admin/firestore';
 import {onCall,HttpsError} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {ROOM_LIFETIME,ROOM_LEASE,roomOptions,validRoomId,publicRoom} from '../../src/multiplayer/rooms';
+import {normalizeProgress} from '../../src/multiplayer/records';
 const db=()=>getFirestore(),lobby=()=>db().collection('decimalLobby'),secret=(id:string)=>db().doc(`decimalLobbyPrivate/${id}`),owner=(uid:string)=>db().doc(`decimalLobbyOwners/${uid}`);
 function invitation(code:unknown,kind:'offer'|'answer',id:string,uid:string){
  if(typeof code!=='string'||code.length>24000||!code.startsWith('SDS1.'))throw new HttpsError('invalid-argument','접속 정보가 올바르지 않아요.');
@@ -42,7 +43,7 @@ export const duelRoom=onCall({region:'asia-northeast3',maxInstances:10,minInstan
    const [old,own,profile]=await Promise.all([tx.get(ref),tx.get(owner(uid)),tx.get(db().doc(`decimalUsers/${uid}`))]);
    if(old.exists)throw new HttpsError('already-exists','이미 등록된 방이에요.');
    const previous=own.data();if(previous?.expiresAt>now)throw new HttpsError('failed-precondition','이전에 만든 방을 닫고 새 방을 만들어 주세요.');
-   const metadata={title:options.title,hostName:v.host.name,hostUid:uid,level:profile.data()?.progress?.level||1,protected:options.protected,internet:options.internet,createdAt:now,expiresAt:now+ROOM_LIFETIME,guestUntil:0};
+   const metadata={title:options.title,hostName:v.host.name,hostUid:uid,level:normalizeProgress(profile.data()?.progress).level,protected:options.protected,internet:options.internet,createdAt:now,expiresAt:now+ROOM_LIFETIME,guestUntil:0};
    tx.set(ref,metadata);tx.set(privateRef,{hostUid:uid,offer:d.offer,salt,passwordHash,expiresAt:metadata.expiresAt,guestUid:'',guestUntil:0,claim:'',answer:''});tx.set(owner(uid),{id:d.id,expiresAt:metadata.expiresAt});
    return {now,room:publicRoom(d.id,metadata,now)};
   });

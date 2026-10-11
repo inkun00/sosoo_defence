@@ -1,0 +1,131 @@
+{
+  "generator": "OpenAI built-in image_gen tool",
+  "generatedAt": "2026-10-12",
+  "transparentBackground": true,
+  "assets": [
+    {
+      "level": 1,
+      "path": "public/assets/dungeon/account-badge-level-1-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-feaabf2e-84ef-4691-81f0-fed42bb0ecee.png"
+    },
+    {
+      "level": 2,
+      "path": "public/assets/dungeon/account-badge-level-2-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-94b21528-db66-4900-a1cb-e1fbf701321b.png"
+    },
+    {
+      "level": 3,
+      "path": "public/assets/dungeon/account-badge-level-3-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-4fbc86f9-6e44-460e-b63d-98f5ac0aae81.png"
+    },
+    {
+      "level": 4,
+      "path": "public/assets/dungeon/account-badge-level-4-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-7c5ae5d6-8185-4615-9ba2-0e55e03810f0.png"
+    },
+    {
+      "level": 5,
+      "path": "public/assets/dungeon/account-badge-level-5-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-e6760b6f-f41b-44d5-a079-98b391529a77.png"
+    },
+    {
+      "level": 6,
+      "path": "public/assets/dungeon/account-badge-level-6-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-2ef06b77-3c6f-433e-be17-9652f002d0be.png"
+    },
+    {
+      "level": 7,
+      "path": "public/assets/dungeon/account-badge-level-7-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-e2879c01-57ec-455d-ae3e-67d883a37feb.png"
+    },
+    {
+      "level": 8,
+      "path": "public/assets/dungeon/account-badge-level-8-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-35e5e835-7912-4196-b71f-9a557d2143d2.png"
+    },
+    {
+      "level": 9,
+      "path": "public/assets/dungeon/account-badge-level-9-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-3034561f-3794-4c65-94ae-0ffc2d9188ab.png"
+    },
+    {
+      "level": 10,
+      "path": "public/assets/dungeon/account-badge-level-10-v1.png",
+      "sourcePath": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-f781ad21-a98c-4615-b370-d9b4851293d5.png"
+    }
+  ],
+  "generationPrompts": [
+    {
+      "level": 1,
+      "file": "assets/dungeon/account-badge-level-1-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 1 of 10: extremely simple dark iron kite shield, plain thick forged rim, a single small amber flame engraving at center. NO crown, wings, gems, leaves or elaborate ornament. Modest beginner badge, clearly simplest in the series."
+    },
+    {
+      "level": 2,
+      "file": "assets/dungeon/account-badge-level-2-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 2 of 10: simple burnished bronze kite shield, double bronze rim, two tiny rivets, a small raised warm gold flame medallion at center. Only one short decorative chevron underneath; no wings, crown or gems. Slightly richer than beginner."
+    },
+    {
+      "level": 3,
+      "file": "assets/dungeon/account-badge-level-3-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 3 of 10: polished silver kite shield with narrow bronze-gold trim and four small rivets, bright gold central flame insignia, a small three-point pedestal below. Restrained elegant intermediate badge; no crown or large wings."
+    },
+    {
+      "level": 4,
+      "file": "assets/dungeon/account-badge-level-4-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 4 of 10: polished silver shield with gold scalloped rim, centered gold guardian flame, one emerald jewel above, a short pair of laurel sprigs curling around the lower third. Controlled moderate ornament; no giant wings."
+    },
+    {
+      "level": 5,
+      "file": "assets/dungeon/account-badge-level-5-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 5 of 10: substantial gold-rimmed steel shield, central amber flame on deep blue enamel, a sapphire jewel above, small gold laurel wreath embracing both sides and three little gold rays below. Noticeably prestigious but not yet crowned."
+    },
+    {
+      "level": 6,
+      "file": "assets/dungeon/account-badge-level-6-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 6 of 10: royal golden shield with central flame relief, two short symmetrical metallic feather wings on the sides, ruby jewel above, small gold three-point crown, engraved scrollwork along rim. More ornament than level 5, all details clean and readable."
+    },
+    {
+      "level": 7,
+      "file": "assets/dungeon/account-badge-level-7-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 7 of 10: ornate gold shield with luminous flame emblem on violet enamel, longer symmetrical gold wings, a five-point gold crown inset with amethyst, double laurel lower wreath and small suspended jewel. Rich prestigious high level."
+    },
+    {
+      "level": 8,
+      "file": "assets/dungeon/account-badge-level-8-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 8 of 10: very ornate imperial gold shield, luminous flame carved into dark sapphire enamel, two stacked pairs of broad metallic feather wings, five-point jewel-set crown, a bright diamond center accent, engraved filigree and laurel flourishes. Luxurious, grander than level 7."
+    },
+    {
+      "level": 9,
+      "file": "assets/dungeon/account-badge-level-9-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 9 of 10: magnificent radiant gold phoenix-like flame shield crest, large layered golden wings, seven-point jeweled crown with ruby and sapphire gems, elaborate interlocking filigree, layered laurel wreath and warm restrained golden rays. Highly elaborate near-master badge, sharp silhouette without background."
+    },
+    {
+      "level": 10,
+      "file": "assets/dungeon/account-badge-level-10-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent account level badge icon for an existing Korean medieval fantasy tower-defense game. Primary request: ONE badge only, centered, front-facing symmetrical heraldic emblem; strong readable silhouette, chunky beveled metals, painterly polished 3D game UI art, forged dark steel and warm burnished gold with a guardian-flame motif. Create a consistent progression family from simple level1 to spectacular level10; this image is the specified level only. Composition: square canvas, badge fills 78 percent of width and 82 percent of height, 9 percent clear transparent safety margin on every side; no cropping. Lighting: soft upper-left key light, warm amber highlights, dark beveled shadows confined to the object, richly textured crisp edges. Background: truly transparent RGBA, absolutely no floor, scenery, backdrop or painted checkerboard. Text: NONE; do not draw any numbers, rank letters, labels or watermarks because actual level text is rendered by the game. No character faces, no unrelated objects, no outline border around canvas. Level 10 of 10: supreme legendary imperial guardian-flame crest, exceptionally lavish radiant gold and platinum shield with luminous amber flame center and diamond surround, three layered pairs of sweeping phoenix wings, monumental seven-point royal crown studded with ruby emerald sapphire amethyst, intricate gold filigree, full double laurel wreath and faceted hanging crystal. Clearly most elaborate and spectacular of all ten, masterwork quality. A few crisp restrained glow accents only, every physical ornament fits within canvas."
+    }
+  ],
+  "framingEdits": [
+    {
+      "level": 6,
+      "path": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-88fe49dc-18b7-444a-9a82-6552c6a724b4.png",
+      "prompt": "Use case: precise-object-edit. Input image 1 is the edit target: a finished account-level heraldic badge icon. Change ONLY the framing and transparent safety margin. Preserve the exact shield, flame motif, crown, jewel colors, laurel, wing design, detail, proportions, light direction and painterly 3D metal style. Fit the ENTIRE emblem, including every outer wing feather tip and low ornament, within the square canvas at about 78 percent of canvas width and 82 percent of height. Center it and leave at least 9 percent completely transparent blank padding on all four sides. Any feather tip touching the current left/right edge must be complete and comfortably inside the new margin. Do not crop any part, do not change the badge's ornament rank, and do not add new objects, letters, numbers or background. Actual transparent RGBA background, no painted checkerboard, scenery or solid-color background."
+    },
+    {
+      "level": 7,
+      "path": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-7265d027-0616-4e44-a962-9b3e6f0c61ae.png",
+      "prompt": "Use case: precise-object-edit. Input image 1 is the edit target: a finished account-level heraldic badge icon. Change ONLY the framing and transparent safety margin. Preserve the exact shield, flame motif, crown, jewel colors, laurel, wing design, detail, proportions, light direction and painterly 3D metal style. Fit the ENTIRE emblem, including every outer wing feather tip and low ornament, within the square canvas at about 78 percent of canvas width and 82 percent of height. Center it and leave at least 9 percent completely transparent blank padding on all four sides. Any feather tip touching the current left/right edge must be complete and comfortably inside the new margin. Do not crop any part, do not change the badge's ornament rank, and do not add new objects, letters, numbers or background. Actual transparent RGBA background, no painted checkerboard, scenery or solid-color background."
+    },
+    {
+      "level": 9,
+      "path": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-a3438895-c289-4874-85f6-46716b66bab7.png",
+      "prompt": "Edit this existing level 9 medieval fantasy game account badge. Change ONLY the framing: show the ENTIRE emblem and every crown point and wing feather fully within a square transparent canvas. The current top crown point is cut by the top edge: complete its pointed tip and position it inside the canvas. Preserve this exact rank design, its flame/phoenix motif, materials, gemstones, colors, symmetry and rich painterly 3D style. Scale the emblem uniformly smaller to occupy at most 78% of the canvas width and 82% of the canvas height, with a clearly empty transparent border of at least 9% on ALL FOUR sides. No part may touch or cross the canvas edge. No new symbols, no letters or numbers, no floor, no backdrop. Deliver one centered standalone badge with actual transparent RGBA background."
+    },
+    {
+      "level": 10,
+      "path": "C:\\Users\\user\\.codex\\generated_images\\01a1230f-3f2c-7121-a583-bec935b6287a\\exec-eacf72de-c93e-4ea3-9e5a-dc75631019c1.png",
+      "prompt": "Edit this existing level 10 medieval fantasy game account badge. Change ONLY the framing: show the ENTIRE emblem and every crown point and wing feather fully within a square transparent canvas. The current top crown point is cut by the top edge: complete its pointed tip and position it inside the canvas. Preserve this exact rank design, its flame/phoenix motif, materials, gemstones, colors, symmetry and rich painterly 3D style. Scale the emblem uniformly smaller to occupy at most 78% of the canvas width and 82% of the canvas height, with a clearly empty transparent border of at least 9% on ALL FOUR sides. No part may touch or cross the canvas edge. No new symbols, no letters or numbers, no floor, no backdrop. Deliver one centered standalone badge with actual transparent RGBA background."
+    }
+  ]
+}

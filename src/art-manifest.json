@@ -1,4 +1,154 @@
 {
+  "account-badge-level-1-v1": {
+    "url": "/assets/dungeon/account-badge-level-1-v1.88dcae901f78.webp",
+    "sourceHash": "f12cc331fb879d745a5c63a81b0fbacd73bf46be4c9f3d4913313725e98b7dd9",
+    "width": 192,
+    "height": 233,
+    "sourceBytes": 1803887,
+    "bytes": 15878,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-10-v1": {
+    "url": "/assets/dungeon/account-badge-level-10-v1.74207b6e23c8.webp",
+    "sourceHash": "397f8402fefb239d415722462bb7d76e7a944b2f7d5f5f17e988b1dbf368d7da",
+    "width": 192,
+    "height": 195,
+    "sourceBytes": 1995631,
+    "bytes": 22946,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-2-v1": {
+    "url": "/assets/dungeon/account-badge-level-2-v1.76670402ece5.webp",
+    "sourceHash": "e04bfd408fc9cd762302d76555b566dc0f2acd2bf177e207e23040cdd5639a85",
+    "width": 192,
+    "height": 219,
+    "sourceBytes": 1816711,
+    "bytes": 17002,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-3-v1": {
+    "url": "/assets/dungeon/account-badge-level-3-v1.db96c0f00061.webp",
+    "sourceHash": "e1cb993390978749bdf4cdb1ca07fc97429ad2eb24f822add7a60b790b2a7216",
+    "width": 192,
+    "height": 243,
+    "sourceBytes": 1737399,
+    "bytes": 17364,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-4-v1": {
+    "url": "/assets/dungeon/account-badge-level-4-v1.99c95eed471d.webp",
+    "sourceHash": "ff6a8c77d1b370e4ea26a787936b1fdfb47ba4ee16f86c2b5c98a5e59df83ab6",
+    "width": 192,
+    "height": 221,
+    "sourceBytes": 1852829,
+    "bytes": 18830,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-5-v1": {
+    "url": "/assets/dungeon/account-badge-level-5-v1.ea456579ed91.webp",
+    "sourceHash": "c16fe756bc6c33df64a8db9e445ec537e29838c5b3b17abd6876838844dce733",
+    "width": 192,
+    "height": 194,
+    "sourceBytes": 2130175,
+    "bytes": 21008,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-6-v1": {
+    "url": "/assets/dungeon/account-badge-level-6-v1.cb1a781fba46.webp",
+    "sourceHash": "e0641a0806d81f1905d029b38fdb2b605bba2de1d218a711e911f342414e0da1",
+    "width": 192,
+    "height": 173,
+    "sourceBytes": 1527313,
+    "bytes": 17146,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-7-v1": {
+    "url": "/assets/dungeon/account-badge-level-7-v1.f16ef463e06c.webp",
+    "sourceHash": "ff6321e5c60eb18ed323f74a1398ab959ea858d17f4ee87ec0dbb2cb5abb12ec",
+    "width": 192,
+    "height": 185,
+    "sourceBytes": 1655783,
+    "bytes": 22558,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-8-v1": {
+    "url": "/assets/dungeon/account-badge-level-8-v1.c59f6f38232e.webp",
+    "sourceHash": "75bdbb5ab44400eeed29d85abed5a04ee90391ca6e5e0d0da1939cdafbf74b01",
+    "width": 192,
+    "height": 189,
+    "sourceBytes": 2523734,
+    "bytes": 24602,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
+  "account-badge-level-9-v1": {
+    "url": "/assets/dungeon/account-badge-level-9-v1.dc3af022f09c.webp",
+    "sourceHash": "88aceb4f56ba7f0cf464d4d91cb16f93c88171496fb6bb02837e3dc14833fda3",
+    "width": 192,
+    "height": 201,
+    "sourceBytes": 2046008,
+    "bytes": 24840,
+    "encoding": {
+      "quality": 86,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 192,
+      "trim": true
+    }
+  },
   "adventure-map-v1": {
     "url": "/assets/dungeon/adventure-map-v1.9aabc9f50126.webp",
     "sourceHash": "f0bad260301fbea905589c4cc76b84db52df254626905a35033791da4bb616d0",

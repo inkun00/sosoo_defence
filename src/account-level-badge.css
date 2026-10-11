@@ -1,0 +1,12 @@
+.account-level-badge{display:inline-flex;align-items:center;justify-content:center;flex:none;vertical-align:middle;width:36px;height:36px}
+.account-level-badge img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 3px #0008)}
+.account-level-badge-medium{width:64px;height:64px}.account-level-badge-large{width:90px;height:90px}
+.account-level-badge-fallback{display:grid;place-items:center;width:75%;height:75%;border:1px solid #c39a56;border-radius:50%;color:#ffe0a0;background:#20232d;font:bold 15px 'Malgun Gothic',sans-serif}
+.account-profile{display:flex;align-items:center;gap:14px;margin:14px 0;color:#e9d5b4;min-width:0}
+.account-profile-info{display:flex;flex-direction:column;gap:4px;min-width:0}.account-profile-info strong{color:#ffe7b5;font-size:18px;overflow-wrap:anywhere}.account-profile-info span{font-size:13px;color:#cbbda5}
+.duel-card .account-xp-result{display:flex;align-items:center;gap:15px;margin:16px 0;padding:12px 15px;border:1px solid #cda46068;background:linear-gradient(110deg,#8559233b,#151d2b80);border-radius:5px}
+.account-xp-detail{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}.account-xp-detail strong{color:#ffdc95;font-size:21px}.account-xp-detail span{font-size:13px;color:#ded0b8}.account-xp-detail .account-level-up{color:#a6eddf;font-weight:700}
+.account-xp-track{height:6px;border-radius:4px;background:#101723;overflow:hidden;margin-top:3px;max-width:400px}.account-xp-track>span{display:block;height:100%;background:linear-gradient(90deg,#b78139,#ffd885);width:var(--account-xp-fill,0%)}
+.leaderboard-level-cell{display:inline-flex;align-items:center;justify-content:flex-end;gap:5px;white-space:nowrap}.leaderboard-level-cell .account-level-badge{width:32px;height:32px}
+@media(max-width:650px){.account-profile{gap:9px}.account-profile-info strong{font-size:16px}.account-profile-info span{font-size:12px}.account-level-badge-medium{width:52px;height:52px}.account-level-badge-large{width:70px;height:70px}.duel-card .account-xp-result{gap:10px;padding:10px}.account-xp-detail strong{font-size:18px}.account-xp-detail span{font-size:12px}.leaderboard-level-cell{gap:2px}.leaderboard-level-cell .account-level-badge{width:25px;height:25px}}
+@media(orientation:landscape) and (max-height:600px){.account-profile{margin:9px 0}.account-level-badge-medium{width:44px;height:44px}.account-level-badge-large{width:58px;height:58px}.duel-card .account-xp-result{margin:10px 0}}

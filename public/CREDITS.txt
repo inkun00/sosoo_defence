@@ -243,3 +243,14 @@ flame-loop-v1 castle as the visual reference. Source PNGs and alpha preserved:
 assets/dungeon/castle-hit-v1.png and assets/dungeon/castle-collapse-v1.png.
 Optimized WebP atlases power health-triggered feedback in adventure and duel.
 Exact prompts: licenses/castle-damage-v1-prompts.json (source-only).
+
+ACCOUNT LEVEL BADGES (2026-10-12)
+Ten original transparent medieval fantasy rank emblems generated individually
+with the built-in OpenAI image_gen tool for this game. The progression starts
+with a plain iron flame shield and ends with an ornate gold-and-platinum crest,
+jeweled crown, layered wings and laurel. Full source PNGs are preserved as
+assets/dungeon/account-badge-level-1-v1.png through account-badge-level-10-v1.png.
+Framing repairs for complete wings and crown tips also use image_gen.
+The game uses trimmed 192-pixel WebP icons; level labels are rendered in code.
+Exact generation and framing prompts: licenses/account-badges-v1-prompts.json
+(source-only, excluded from deployment).
