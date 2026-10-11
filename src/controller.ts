@@ -25,6 +25,7 @@ import {recordLearning} from './learning';
 import {TutorialSession} from './tutorial';
 import {mountTutorialGuide,type TutorialTargetRect} from './tutorial-guide';
 import {goToMainMenu} from './navigation';
+import {GameMotion,navigateWithMotion} from './game-motion';
 import './game.css';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
@@ -38,6 +39,7 @@ const tutorialMode=new URLSearchParams(location.search).get('mode')==='tutorial'
 let tutorial=tutorialMode?new TutorialSession():undefined;
 const savedAdventure=loadSave(),save=tutorial?{...savedAdventure,level:1,resumeStage:1,stars:Array(FINAL_STAGE).fill(0),inventory:tutorial.model.inventory,difficulty:'practice' as const,started:false,campaignCompleted:false,scoreProgress:undefined}:savedAdventure;
 const sound=new Sound();sound.sfx=save.sfx;sound.setMusic(save.music);let movie=false;
+const motion=new GameMotion();let stageSerial=0;
 let tutorialGuide:ReturnType<typeof mountTutorialGuide>|undefined;
 function savePreferences(){return writeSave(tutorial?{...loadSave(),sfx:save.sfx,music:save.music}:save);}
 let settingsAudioControls:ReturnType<typeof mountGameAudioControls>|undefined;
@@ -89,6 +91,7 @@ function update(){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
   if(model.phase==='won'){recordStageScore(save,model);save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;
+  if(!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated))void motion.play(model.phase==='won'?'victory':model.phase==='review'?'review':'defeat',{title:model.phase==='won'?'단계 승리':model.phase==='review'?'성을 지켰어요':'다시 도전해요',subtitle:`${model.level.id}단계 · ${model.score.toLocaleString('ko-KR')}점`,key:`${stageSerial}:result`});
   if(model.phase!=='review'&&!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
   if(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated){movie=true;sound.setPaused(true);const owner=model;void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();if(owner===model)void showAdventureHall();});}
  }
@@ -154,27 +157,31 @@ function setPanel(next:Panel,resumeBattle=false){
  if(!panel){resumeAfterPanel=resumeBattle||model.phase==='playing';if(model.phase==='playing')model.togglePause();}
  panel=next;field.input.enabled=false;message='';update();
 }
-function closePanel(){if(panel==='purchase')model.cancelPurchase();if(panel==='forge')tutorial?.closeForge();panel=null;field.input.enabled=true;if(resumeAfterPanel&&model.phase==='paused')model.togglePause();resumeAfterPanel=false;update();}
+function closePanel(){if(panel==='purchase')model.cancelPurchase();if(panel==='forge')tutorial?.closeForge();const wasOpen=!!panel;panel=null;field.input.enabled=true;if(resumeAfterPanel&&model.phase==='paused')model.togglePause();resumeAfterPanel=false;update();if(wasOpen)motion.reveal($('field'));}
 function openHTML(content:string){
  settingsAudioControls?.dispose();settingsAudioControls=undefined;
  resumeAfterHTML=model.phase==='playing'||resumeAfterPanel;
  if(model.phase==='playing')model.togglePause();resumeAfterPanel=false;panel=null;field.input.enabled=false;
  $('modal-body').innerHTML=content;$('modal').classList.remove('hidden');$('modal-close').focus();update();
+ motion.reveal($('modal').querySelector<HTMLElement>('.modal-card')!);
 }
 function closeHTML(){
  if($('modal').classList.contains('hidden'))return;
  settingsAudioControls?.dispose();settingsAudioControls=undefined;
  $('modal').classList.add('hidden');field.input.enabled=true;if(resumeAfterHTML&&model.phase==='paused')model.togglePause();resumeAfterHTML=false;update();document.querySelector('canvas')?.focus();
+ motion.reveal($('field'));
 }
 function stage(n:number){
  if(tutorial){restartTutorial();return;}
  cancelAdventureHall();
+ motion.clear();stageSerial++;
  settingsAudioControls?.dispose();settingsAudioControls=undefined;
  if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
  bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroFlow.cancel();movie=false;
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
  save.resumeStage=n;save.started=true;writeSave(save);
  bossFinale=new BossFinaleFlow();model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);bossIntroToken=bossIntroFlow.enter(n);movie=bossIntroFlow.held;field.presentationHeld=movie;if(field.input)field.input.enabled=!movie;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();startBossIntro();
+ if(!movie)void motion.play('stage',{title:`${n}단계 · ${model.level.name}`,subtitle:model.map.name,key:`${stageSerial}:entry`});
 }
 function event(ev:BattleEvent){
  // Damage and learning state update immediately; impact audio follows the flight.
@@ -201,7 +208,7 @@ function settings(){
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
- if(key==='home'){persistInventory();sound.setMusic(false);goToMainMenu();return;}
+ if(key==='home'){motion.clear();persistInventory();sound.setMusic(false);goToMainMenu();return;}
  if(movie)return;
  if(tutorial&&!tutorialActionAllowed(key)){notify('아래 안내의 순서대로 먼저 연습해요.');return;}
  sound.resume();sound.play('ui');
@@ -217,12 +224,12 @@ function action(key:string){
  else if(key.startsWith('brick:')){const id=+key.split(':')[1],i=slots.indexOf(null);if(i<0)notify('슬롯을 눌러 비운 뒤 다른 벽돌을 골라요.');else if(!slots.includes(id)&&model.bricks.some(b=>b.id===id)){slots[i]=id;message='';}}
  else if(key.startsWith('stage:')){const n=+key.split(':')[1];if(n<=save.level)stage(n);}
  else switch(key){
-  case 'start':if(tutorial?tutorial.start():model.start()){field.mode.kind='inspect';field.clearWallPreview();sound.play('start');}break;
+  case 'start':if(tutorial?tutorial.start():model.start()){field.mode.kind='inspect';field.clearWallPreview();sound.play('start');void motion.play('battle',{title:'방어 시작',subtitle:model.level.name,key:`${stageSerial}:battle`});}break;
   case 'pause':if(field.mode.kind==='wall')notify('성벽을 놓거나 ‘완료 · 남은 성벽 보관’을 누르면 전투가 이어져요.');else model.togglePause();break;
   case 'speed':speed=speed===1?2:1;break;
-  case 'online':{const url=new URL(location.href);url.searchParams.set('mode','duel');location.assign(url.href);break;}
+  case 'online':{motion.clear();const url=new URL(location.href);url.searchParams.set('mode','duel');navigateWithMotion(url.href);break;}
   case 'hall':void showAdventureHall();break;
-  case 'tutorial':if(tutorial)restartTutorial();else{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','tutorial');location.assign(url.href);}break;
+  case 'tutorial':if(tutorial)restartTutorial();else{motion.clear();persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','tutorial');navigateWithMotion(url.href);}break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
   case 'cancel':field.mode.kind='inspect';break;
   case 'inspect-back':selected=0;selectedWall=null;field.selected=undefined;field.selectedWall=undefined;field.mode.kind='inspect';break;
@@ -276,6 +283,7 @@ function tutorialNext(){
 function restartTutorial(){
  if(!tutorial)return;
  tutorial.dispose();tutorial=new TutorialSession();model=tutorial.model;
+ motion.clear();stageSerial++;
  settingsAudioControls?.dispose();settingsAudioControls=undefined;$('modal').classList.add('hidden');
  resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;panel=null;
  slots=[null,null,null];selected=0;selectedWall=null;brickPage=0;shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;fusionOperation='+';
@@ -342,9 +350,9 @@ field.onPurchase=(c,id)=>{if(movie)return;if(model.requestPurchase(c,id)){learni
 const originalUpdate=field.update.bind(field);field.update=(time:number,delta:number)=>originalUpdate(time,delta*speed);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,height:GAME_HEIGHT,backgroundColor:'#111216',scene:[field,ui],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
 startBossIntro();
-if(tutorial){tutorialGuide=mountTutorialGuide(app,{next:tutorialNext,restart:restartTutorial,exit:()=>action('home'),adventure:()=>{sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','adventure');location.assign(url.href);}});updateTutorialGuide();}
+if(tutorial){tutorialGuide=mountTutorialGuide(app,{next:tutorialNext,restart:restartTutorial,exit:()=>action('home'),adventure:()=>{motion.clear();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','adventure');navigateWithMotion(url.href);}});updateTutorialGuide();}
 observeGameScreen(game,$('field'),layout=>{field.setScreenLayout(layout);ui.setScreenLayout(layout);shopPage=Math.min(shopPage,ui.shopPageCount-1);ui.refresh(true);updateTutorialGuide();});
-game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');});
+game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');if(!movie&&!tutorial)void motion.play('entry',{title:'모험 시작',subtitle:`${model.level.id}단계 · ${model.level.name}`,key:`${stageSerial}:entry`});});
 $('modal-close').onclick=closeHTML;$('modal').onclick=e=>{if(e.target===$('modal'))closeHTML();};
 document.addEventListener('keydown',e=>{
  if(movie)return;
@@ -355,6 +363,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
 window.addEventListener('pagehide',()=>{
+ motion.dispose();
  cancelAdventureHall();
  const introHeld=bossIntroFlow.held;
  bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroToken=null;bossIntroFlow.cancel();

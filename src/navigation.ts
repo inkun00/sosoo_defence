@@ -8,5 +8,8 @@ export function mainMenuURL(href:string):string {
 }
 
 export function goToMainMenu(target:Pick<Location,'href'|'assign'>=window.location):void {
- target.assign(mainMenuURL(target.href));
+ const url=mainMenuURL(target.href);
+ if(typeof window!=='undefined'&&target===window.location){
+  void import('./game-motion').then(({navigateWithMotion})=>navigateWithMotion(url)).catch(()=>target.assign(url));
+ }else target.assign(url);
 }

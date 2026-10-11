@@ -1,7 +1,18 @@
 import {pageRequest,openAuthorizedPage} from './page-access';
 import {reloadOnCachedRestore} from './page-lifecycle';
+import {navigateWithMotion} from './game-motion';
 reloadOnCachedRestore(window,()=>location.reload());
 const request=pageRequest(location.search);
+// Keep native new-tab/modified clicks, external links, and downloads intact.
+document.addEventListener('click',event=>{
+ if(event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+ const link=(event.target as Element)?.closest<HTMLAnchorElement>('a[href]');
+ if(!link||link.target==='_blank'||link.hasAttribute('download'))return;
+ const url=new URL(link.href),mode=url.searchParams.get('mode');
+ if(url.origin===location.origin&&url.pathname===location.pathname&&['title','adventure','tutorial','duel','worksheet'].includes(mode??'')){
+  event.preventDefault();navigateWithMotion(url.href);
+ }
+});
 async function withWorkbook(load:()=>Promise<unknown>){
  const {syncWorkbook}=await import('./worksheet-store');
  await syncWorkbook();

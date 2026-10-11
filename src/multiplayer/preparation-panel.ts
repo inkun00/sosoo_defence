@@ -6,7 +6,7 @@ import {duelCountdown,formatDuelClock} from './duel-clock';
 import {mountPreparationSkin} from './preparation-skin';
 import './preparation-panel.css';
 
-interface PreparationPanelOptions{onVisibilityChange?:()=>void;}
+interface PreparationPanelOptions{onVisibilityChange?:()=>void;onViewChange?:(view:HTMLElement)=>void;}
 interface ActionReply{ok:boolean;message?:string;}
 
 const TOWER_EFFECTS={
@@ -47,7 +47,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
  const answerButtons=Array.from(root.querySelectorAll<HTMLButtonElement>('[data-answer-index]')),towerButtons=Array.from(root.querySelectorAll<HTMLButtonElement>('.duel-preparation-tower'));
  const feedbackElement=find('[data-preparation-feedback]'),confirm=find<HTMLButtonElement>('[data-preparation-confirm]');
  let state:DuelState|null=null,side:Side=0,identity='',preparationKey='',roundKey='',quoteNonce='',tab:'heroes'|'towers'='heroes',selected:number|null=null;
- let intent=false,suspended=false,busy=false,pending=false,disposed=false,visibilityQueued=false,returnFocus:HTMLElement|null=null;
+ let intent=false,suspended=false,busy=false,pending=false,disposed=false,visibilityQueued=false,changingTab=false,returnFocus:HTMLElement|null=null;
  const player=()=>state?.players[side];
  const active=()=>state?.status==='preparing'&&!!player();
  const blocked=()=>busy||pending||!active();
@@ -63,7 +63,8 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   const p=player();if(!p||!active()){updateVisibility();return;}
   const q=p.quote;if(q)tab='towers';
   heroes.hidden=tab!=='heroes';towers.hidden=tab!=='towers';shop.hidden=!!q;purchase.hidden=!q;
-  card.dataset.preparationView=tab==='heroes'?'heroes':q?'purchase':'shop';
+  const view=tab==='heroes'?'heroes':q?'purchase':'shop',viewChanged=card.dataset.preparationView!==view;
+  card.dataset.preparationView=view;
   for(const button of [heroesTab,towersTab]){const chosen=button.dataset.preparationTab===tab;button.setAttribute('aria-selected',String(chosen));button.tabIndex=chosen?0:-1;button.disabled=blocked();}
   const clock=duelCountdown(state);find('[data-preparation-clock]').textContent=formatDuelClock(clock.seconds);find('[data-preparation-clock]').setAttribute('aria-label',`준비 남은 시간 ${clock.seconds}초`);
   find('[data-preparation-money]').textContent=`코인 ${numberText(p.money+p.escrow)}`;
@@ -87,7 +88,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   }
   if(q){if(quoteNonce!==q.nonce){quoteNonce=q.nonce;input.value='';feedback('');}find('[data-preparation-tower-name]').textContent=`${towerType(q.typeId)?.name??'타워'} · 남는 코인을 계산해요`;find('[data-preparation-equation]').textContent=`${numberText(q.before,q.digits??2)} − ${numberText(q.cost,q.digits??2)} = ?`;}
   else quoteNonce='';
-  purchase.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button').forEach(element=>element.disabled=blocked());root.setAttribute('aria-busy',String(busy||pending));skin.sync();updateVisibility();
+  purchase.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button').forEach(element=>element.disabled=blocked());root.setAttribute('aria-busy',String(busy||pending));skin.sync();if(viewChanged&&!root.hidden&&!changingTab)options.onViewChange?.(tab==='heroes'?heroes:q?purchase:shop);updateVisibility();
  };
  const perform=async(action:DuelAction):Promise<ActionReply|undefined>=>{
   if(blocked())return;pending=true;render();
@@ -103,7 +104,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   button.addEventListener('click',event=>{const source=event as MouseEvent&{pointerType?:string;sourceCapabilities?:{firesTouchEvents:boolean}|null};if(event.detail>0&&(source.pointerType==='touch'||source.sourceCapabilities?.firesTouchEvents)&&!touchStarted){event.preventDefault();return;}touchStarted=false;void action();});
  };
  const showHeroes=async()=>{
-  if(blocked())return;if(player()?.quote){const result=await perform({type:'cancel'});if(result?.ok===false||player()?.quote)return;}tab='heroes';feedback('');render();heroesTab.focus({preventScroll:true});
+  if(blocked())return;if(player()?.quote){changingTab=true;let result:ActionReply|undefined;try{result=await perform({type:'cancel'});}finally{changingTab=false;}if(result?.ok===false||player()?.quote)return;}tab='heroes';feedback('');render();heroesTab.focus({preventScroll:true});
  };
  bindClick(heroesTab,showHeroes);bindClick(towersTab,()=>{if(blocked())return;tab='towers';feedback('');render();});
  bindClick(find<HTMLButtonElement>('[data-preparation-cancel]'),showHeroes);
