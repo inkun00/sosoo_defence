@@ -152,7 +152,7 @@ export class DuelScene extends Phaser.Scene{
   const area=this.getPurchaseArea(),touch=area.minimumTouch,columns=this.compactBlockColumns,dense=columns<8,perPage=columns*2,boardWidth=dense?columns*(touch+6)+20:columns*(touch+2)+12,forgeLeft=8+boardWidth+6,forgeWidth=982-boardWidth-6;
   const rowHeight=Math.max(touch,Math.min(92,(area.height-25)/2)),firstY=area.y+21+rowHeight/2,secondY=firstY+rowHeight+4;
   this.panel(this.ui,8+boardWidth/2,area.y+area.height/2,boardWidth,area.height);this.panel(this.ui,forgeLeft+forgeWidth/2,area.y+area.height/2,forgeWidth,area.height);
-  const stage=p?duelHeroLearningLevel(p):1,solved=p?.solved??0,progress=stage<4?`다음 단계까지 정답 ${5-solved%5}개`:'최고 단계 유지';
+  const stage=p?duelHeroLearningLevel(p):1,solved=p?.solved??0;
   this.text(this.ui,8+boardWidth/2,area.y+12,`문제 ${stage}단계 · 정답 ${solved}개`,19,'#ffca7e').setName('duel-hero-stage');
   const board=p?.board??Array(16).fill(0),start=this.blockPage*perPage,cellWidth=(boardWidth-12)/columns;
   board.slice(start,start+perPage).forEach((n,index)=>{const i=start+index;this.button('block:'+i,14+cellWidth*(index%columns+.5),index<columns?firstY:secondY,cellWidth-2,rowHeight,p?numberText(n):'?',!!p&&s?.status==='preparing'&&!v.busy&&!v.slots.includes(i),v.slots.includes(i),Math.max(26,touch*.35));});
@@ -163,7 +163,7 @@ export class DuelScene extends Phaser.Scene{
   if(p)this.controls.get('slot:0')!.label=`제시된 덧셈 ${numberText(p.heroQuestion.a)} 더하기 ${numberText(p.heroQuestion.b)}의 정답 ${v.slots[0]===undefined?'선택 전':numberText(p.board[v.slots[0]])} · 선택 해제`;
   const growth=p?.egg??0,eggX=forgeLeft+45;this.ui.add(this.add.image(eggX,secondY,'duel-eggs','egg-'+Math.max(1,Math.min(10,growth))).setDisplaySize(45,Math.min(76,rowHeight)).setAlpha(growth?1:.3));
   const infoWidth=forgeWidth-95-(dense?touch+10:0),infoX=forgeLeft+90+infoWidth/2;
-  this.text(this.ui,infoX,secondY-23,`영웅 성장량 ${growth}`,19,'#ffca7e');const nextStage=this.text(this.ui,infoX,secondY,progress,15,'#c1b7aa').setName('duel-hero-progress');nextStage.setScale(Math.min(1,infoWidth/Math.max(1,nextStage.width)));const description=this.text(this.ui,infoX,secondY+23,learningDescription(stage),15,'#a3e9dd').setName('duel-hero-description');description.setScale(Math.min(1,infoWidth/Math.max(1,description.width)));
+  const stones=this.text(this.ui,infoX,secondY,`영웅 소환석 ${growth}개`,19,'#ffca7e').setName('duel-hero-summon-stones').setData('count',growth);stones.setScale(Math.min(1,infoWidth/Math.max(1,stones.width)));
   if(dense)this.button('blocks:page',forgeLeft+forgeWidth-touch/2-5,secondY,touch,rowHeight,`${this.blockPage+1}/${this.blockPageCount} ▶`,true,false,20);
  }
  private drawPreparation(p:DuelPlayer,v:DuelView){
@@ -177,7 +177,7 @@ export class DuelScene extends Phaser.Scene{
   this.button('slot:0',654,area.y+174,205,touch,v.slots[0]!==undefined?numberText(p.board[v.slots[0]]):'정답 블록 선택',!v.busy,false,27);this.controls.get('slot:0')!.label=`제시된 덧셈 ${numberText(p.heroQuestion.a)} 더하기 ${numberText(p.heroQuestion.b)}의 정답 ${v.slots[0]===undefined?'선택 전':numberText(p.board[v.slots[0]])} · 선택 해제`;
   this.button('fuse',880,area.y+174,174,touch,'정답 확인',v.slots.length===1&&!v.busy,true,22);
   const growth=p.egg;this.ui.add(this.add.image(551,area.y+261,'duel-eggs','egg-'+Math.max(1,Math.min(10,growth))).setDisplaySize(53,84).setAlpha(growth?1:.3));
-  this.text(this.ui,775,area.y+244,`영웅 성장량 ${growth}`,19,'#ffca7e');
+  this.text(this.ui,775,area.y+261,`영웅 소환석 ${growth}개`,19,'#ffca7e').setName('duel-hero-summon-stones').setData('count',growth);
  }
  private drawBattleReserve(p:DuelPlayer,v:DuelView){
   const area=this.getPurchaseArea(),compact=this.screenLayout.compact,touch=area.minimumTouch,mainWidth=670,sideLeft=690,sideWidth=300;
