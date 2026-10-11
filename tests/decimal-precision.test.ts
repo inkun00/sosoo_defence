@@ -47,7 +47,7 @@ test('preparation quotes at every learning level use exact hundredths and subtra
    assert.ok(decimals(`${numberText(q.before,q.digits)} − ${numberText(q.cost,q.digits)} = ${numberText(q.before-q.cost,q.digits)}`));
    applyDuel(s,0,{type:'cancel'},preparationStartedAt,'cancel');
   }
-  const now=startCombat(s,preparationStartedAt);assert.equal(s.players[0].money,0);
+  const now=startCombat(s,preparationStartedAt);assert.equal(s.players[0].money,9980);
   s.players[0].board=[1300,700,600,...Array(13).fill(100)];
   const board=[...s.players[0].board];
   assert.equal(applyDuel(s,0,{type:'fuse',operation:'-',round:0,slots:[0,1,2]},now,'sub').ok,false);

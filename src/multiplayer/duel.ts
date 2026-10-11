@@ -1,21 +1,21 @@
 import {towerType,towerPrice,parseMoney,PurchaseVariation} from '../towers';
 import {heroSpec,worksheetHeroSpec,heroEffectStats,HeroEffect,HeroSpec} from './heroes';
-import {hit,numberText,recipe,purchaseCoins,learningValue} from '../math';
+import {hit,numberText,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
-import {decimalBoard,normalizedAccountLevel} from './decimal-boards';
-import {duelMap,duelMapSpeedScale,duelPathDistance,duelPathPosition,duelRoadCell} from './duel-maps';
-export {decimalBoard} from './decimal-boards';
+import {decimalBoard,decimalQuestion,normalizedAccountLevel,DecimalAdditionQuestion} from './decimal-boards';
+import {duelMap,duelMapSpeedScale,duelPathDistance,duelPathPosition,duelRoadCell,duelLaneOffset,DUEL_LANE_ROWS,DUEL_BATTLE_ROWS} from './duel-maps';
+export {decimalBoard,decimalQuestion} from './decimal-boards';
 export type Side=0|1;
 export interface DuelTower{id:number;typeId:string;x:number;y:number;unit:number;cost:number;enabled:boolean;cooldown:number;prepared?:boolean;}
 export interface DuelEnemy{id:number;owner:Side;target:Side;hero:string|null;level:number;hp:number;max:number;x:number;y?:number;pathDistance?:number;slow:number;stun:number;hits:number;rewardSummon?:boolean;sourceHeroId?:string;vitalityBaseMax?:number;vitalityBonus?:number;vitalitySpent?:number;shieldSpent?:number;}
 export interface Quote{x:number;y:number;typeId:string;before:number;wallet:number;cost:number;digits:number;nonce:string;expires:number;purpose?:'preparation';wrongAttempts?:number;}
 export interface RewardLoadout{rewardHeroes?:string[];rewardHero?:string|null;}
 // egg is cumulative growth spent on battle summons; heroStock is legacy stock.
-export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;stock:Record<string,number>;heroStock?:Record<string,number>;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];combatScore?:number;questionScore?:number;kills?:number;answeredQuestions?:number;towerWrongAttempts?:number;fusionWrongAttempts?:number;}
+export interface DuelPlayer{uid:string;name:string;accountLevel:number;rewardRoster:string[];rewardHero:string|null;rewardUsed:boolean;ready:boolean;flame:number;money:number;escrow:number;stock:Record<string,number>;heroStock?:Record<string,number>;egg:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];round:number;purchaseVariation?:PurchaseVariation;heroQuestion:DecimalAdditionQuestion;board:number[];towers:DuelTower[];quote:Quote|null;lastSeen:number;lastRequest:number;lastHeartbeat:number;recent:string[];combatScore?:number;questionScore?:number;kills?:number;answeredQuestions?:number;towerWrongAttempts?:number;fusionWrongAttempts?:number;}
 export interface DuelShot{id:number;time:number;towerId:number;typeId?:string;fromX?:number;fromY?:number;owner:Side;enemyId:number;x:number;y?:number;before:number;unit:number;after:number;effect:string;shielded?:boolean;}
 export interface DuelState{version:1;seed:number;mapId?:string;learningLevel:number;createdAt:number;startedAt:number;preparationStartedAt:number;preparationElapsed:number;updatedAt:number;elapsed:number;wave:number;nextId:number;revision:number;status:'waiting'|'preparing'|'playing'|'finished';buildAfterStart?:boolean;players:[DuelPlayer,DuelPlayer|null];enemies:DuelEnemy[];shots:DuelShot[];winner:Side|null;reason:string;log:string[];}
 export type DuelAction={type:'ready';heroId?:string|null}|{type:'tick'}|{type:'select-reward';heroId:string|null}|{type:'summon-reward'}|{type:'summon';heroId:string}|{type:'prepare-quote';typeId:string}|{type:'build';x:number;y:number;typeId:string}|{type:'quote';x:number;y:number;typeId:string}|{type:'answer';nonce:string;answer:string}|{type:'cancel'}|{type:'toggle';towerId:number}|{type:'sell';towerId:number}|{type:'fuse';round:number;slots:number[];operation:'+'}|{type:'hatch';heroId:string}|{type:'surrender'};
-export const DUEL_PREPARATION_SECONDS=180,DUEL_SECONDS=180,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=7,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=17600;
+export const DUEL_PREPARATION_SECONDS=180,DUEL_SECONDS=180,DUEL_TOTAL_SECONDS=DUEL_PREPARATION_SECONDS+DUEL_SECONDS,DUEL_COLUMNS=24,DUEL_ROWS=DUEL_BATTLE_ROWS,DUEL_ROAD=3,FLAME_MAX=9000,DUEL_START_MONEY=17600;
 export const DUEL_KILL_BASE_SCORE=100,DUEL_KILL_EFFICIENCY_SCORE=100,DUEL_QUESTION_BASE_SCORE=25;
 /** Every kill rewards defense; fewer hits and fewer wrong answers add more points. */
 export function duelKillScore(hits:number){return DUEL_KILL_BASE_SCORE+Math.floor(DUEL_KILL_EFFICIENCY_SCORE/Math.max(1,Math.floor(Number.isFinite(hits)?hits:1)));}
@@ -27,56 +27,57 @@ export function duelHeroLearningLevel(p:Pick<DuelPlayer,'solved'>){const solved=
 export function duelTowerLevel(s:DuelState){return s.status==='preparing'?Math.min(10,s.learningLevel??1):duelLevel(s);}
 export function canPurchaseDuelTower(s:DuelState){return s.status==='preparing'||s.status==='playing';}
 export function canUseDuelTower(s:DuelState,side:Side,typeId:string){
- const p=s.players[side],type=towerType(typeId);return !!p&&!!type&&(s.status==='preparing'||s.status==='playing'&&(p.stock?.[typeId]??0)>0);
+ const p=s.players[side],type=towerType(typeId);return !!p&&!!type&&(s.status==='preparing'||s.status==='playing'&&duelBuildCost(s,side,typeId)<=p.money);
 }
-/** Battle placement consumes only the stock earned during preparation. */
+/** Battle placement uses prepared stock first, then the remaining coins. */
 export function duelBuildCost(s:DuelState,side:Side,typeId:string){
  const p=s.players[side],type=towerType(typeId);if(!p||!type)return Infinity;
- if(s.status==='playing')return (p.stock?.[typeId]??0)>0?0:Infinity;
+ if(s.status==='playing'&&(p.stock?.[typeId]??0)>0)return 0;
  return towerPrice(type,p.money,duelTowerLevel(s),p.purchaseVariation);
 }
 // Tower preparation shares one room level; hero addition follows each player's correct-answer count.
-function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!worksheetHeroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},heroStock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,board:decimalBoard(seed,0,duelHeroLearningLevel({solved:0})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
+function player(uid:string,name:string,seed:number,now:number,accountLevel:number,loadout:RewardLoadout):DuelPlayer{const rewardRoster=[...new Set(loadout.rewardHeroes??[])].filter(id=>!!worksheetHeroSpec(id)).slice(0,30),personalLevel=normalizedAccountLevel(accountLevel);return {uid,name,accountLevel:personalLevel,rewardRoster,rewardHero:loadout.rewardHero&&rewardRoster.includes(loadout.rewardHero)?loadout.rewardHero:null,rewardUsed:false,ready:false,flame:FLAME_MAX,money:DUEL_START_MONEY,escrow:0,stock:{},heroStock:{},egg:0,solved:0,purchases:0,wrongQuestions:[],round:0,heroQuestion:decimalQuestion(seed,0,1),board:decimalBoard(seed,0,duelHeroLearningLevel({solved:0})),towers:[],quote:null,lastSeen:now,lastRequest:0,lastHeartbeat:0,recent:[],combatScore:0,questionScore:0,kills:0,answeredQuestions:0,towerWrongAttempts:0,fusionWrongAttempts:0};}
 export function createDuel(uid:string,name:string,seed:number,now:number,accountLevel=1,loadout:RewardLoadout={},mapId?:string):DuelState{duelMap(mapId);return {version:1,seed,...(mapId===undefined?{}:{mapId}),learningLevel:Math.min(10,normalizedAccountLevel(accountLevel)),createdAt:now,startedAt:0,preparationStartedAt:0,preparationElapsed:0,updatedAt:now,elapsed:0,wave:0,nextId:1,revision:0,status:'waiting',players:[player(uid,name,seed,now,accountLevel,loadout),null],enemies:[],shots:[],winner:null,reason:'',log:[]};}
 export function joinDuel(s:DuelState,uid:string,name:string,now:number,accountLevel=1,loadout:RewardLoadout={}){
  if(s.players.some(p=>p?.uid===uid))return;
  if(s.status!=='waiting'||s.players[1]||now-s.createdAt>600000)throw Error('참가할 수 없는 방이에요. 새 방을 만들어 주세요.');
  s.players[1]=player(uid,name,s.seed,now,accountLevel,loadout);
  s.learningLevel=Math.min(10,s.players[0].accountLevel??1,s.players[1].accountLevel);
- for(const p of s.players)p!.board=decimalBoard(s.seed,p!.round,duelHeroLearningLevel(p!));
+ for(const p of s.players){p!.heroQuestion=decimalQuestion(s.seed,p!.round,duelHeroLearningLevel(p!));p!.board=decimalBoard(s.seed,p!.round,duelHeroLearningLevel(p!));}
  s.revision++;
 }
 export function duelSide(s:DuelState,uid:string):Side{const i=s.players.findIndex(p=>p?.uid===uid);if(i<0)throw Error('이 대전에 참가한 계정이 아니에요.');return i as Side;}
 function note(s:DuelState,text:string){s.log.push(text);s.log=s.log.slice(-6);}
 function end(s:DuelState,winner:Side|null,reason:string){s.status='finished';s.winner=winner;s.reason=reason;note(s,reason);}
 function endByScore(s:DuelState){const [a,b]=s.players as [DuelPlayer,DuelPlayer],left=duelScore(a),right=duelScore(b);s.elapsed=DUEL_SECONDS;end(s,left===right?null:left>right?0:1,`${DUEL_TOTAL_SECONDS/60}분 종료 · 점수 ${left} : ${right}${left===right?' · 무승부':' · 높은 점수로 승부를 결정했어요.'}`);}
-function owns(side:Side,x:number){return side===0?x>=1&&x<=10:x>=13&&x<=22;}
+function owns(side:Side,x:number,y:number){return x>=1&&x<=DUEL_COLUMNS-2&&y>=duelLaneOffset(side)&&y<duelLaneOffset(side)+DUEL_LANE_ROWS;}
 export function validDuelCell(s:DuelState,side:Side,x:number,y:number){
- const p=s.players[side];return !!p&&Number.isInteger(x)&&Number.isInteger(y)&&owns(side,x)&&y>=0&&y<DUEL_ROWS&&!duelRoadCell(s.mapId,x,y)&&!p.towers.some(t=>t.x===x&&t.y===y);
+ const p=s.players[side];return !!p&&Number.isInteger(x)&&Number.isInteger(y)&&owns(side,x,y)&&!duelRoadCell(s.mapId,x,y,side)&&!p.towers.some(t=>t.x===x&&t.y===y);
 }
-export function duelEnemyDistance(s:DuelState,e:DuelEnemy){return e.pathDistance??duelPathDistance(s.mapId,e.x,e.y??DUEL_ROAD);}
+export function duelEnemyDistance(s:DuelState,e:DuelEnemy){return e.pathDistance??duelPathDistance(s.mapId,e.x,e.y??DUEL_ROAD+duelLaneOffset(e.target),e.target);}
 /** All auras measure the rendered two-dimensional position, including turns. */
-interface AuraSource{owner:Side;effect:HeroEffect;amount:number;radius:number;shieldHits:number;x:number;y:number;}
+interface AuraSource{owner:Side;effect:HeroEffect;amount:number;radius:number;shieldHits:number;x:number;y:number;pathDistance:number;}
 function auraSources(s:DuelState):AuraSource[]{
  const sources:AuraSource[]=[];
  for(const source of s.enemies){
   if(source.hp<=0||!source.hero)continue;
   const collected=source.rewardSummon===true,hero=collected?worksheetHeroSpec(source.hero):heroSpec(source.hero);if(!hero)continue;
-  const effects=collected?(hero.effects??[hero.effect]):[hero.effect],stats=heroEffectStats(hero.level),position=duelPathPosition(s.mapId,duelEnemyDistance(s,source));
-  for(const effect of effects)sources.push({owner:source.owner,effect,...stats,...position});
+  const effects=collected?(hero.effects??[hero.effect]):[hero.effect],stats=heroEffectStats(hero.level),pathDistance=duelEnemyDistance(s,source),position=duelPathPosition(s.mapId,pathDistance,source.target);
+  for(const effect of effects)sources.push({owner:source.owner,effect,pathDistance,...stats,...position});
  }
  return sources;
 }
 function nearbyHeroStats(s:DuelState,owner:Side,effect:HeroEffect,x:number,y:number,sources=auraSources(s)){
  let amount=0,shieldHits=0;
  for(const source of sources){
-  if(source.effect!==effect||source.owner!==owner||Math.hypot(source.x-x,source.y-y)>source.radius+1e-9)continue;
+  const position=effect==='tower-haste'?duelPathPosition(s.mapId,source.pathDistance,source.owner):source;
+  if(source.effect!==effect||source.owner!==owner||Math.hypot(position.x-x,position.y-y)>source.radius+1e-9)continue;
   amount=Math.max(amount,source.amount);shieldHits=Math.max(shieldHits,source.shieldHits);
  }
  return {amount,shieldHits};
 }
 function enemyAura(s:DuelState,e:DuelEnemy,effect:HeroEffect,sources=auraSources(s)){
- const position=duelPathPosition(s.mapId,duelEnemyDistance(s,e));
+ const position=duelPathPosition(s.mapId,duelEnemyDistance(s,e),e.target);
  return nearbyHeroStats(s,e.owner,effect,position.x,position.y,sources);
 }
 function vitalityCapacity(e:DuelEnemy,amount:number){
@@ -125,10 +126,10 @@ function enemySpeed(s:DuelState,e:DuelEnemy,sources=auraSources(s)){
 }
 /** Shared path sampling keeps rendered turns and host-authoritative movement identical. */
 export function duelEnemyPosition(s:DuelState,e:DuelEnemy,seconds=0){
- const direction=e.target===0?-1:1,distance=duelEnemyDistance(s,e)+(s.status==='playing'&&seconds>0&&e.stun<=0?direction*enemySpeed(s,e)*seconds:0),position=duelPathPosition(s.mapId,distance);
+ const direction=e.target===0?-1:1,distance=duelEnemyDistance(s,e)+(s.status==='playing'&&seconds>0&&e.stun<=0?direction*enemySpeed(s,e)*seconds:0),position=duelPathPosition(s.mapId,distance,e.target);
  // At a corner, the negative direction enters the preceding segment rather
  // than facing back along the segment used for positive-distance sampling.
- const facing=direction<0?duelPathPosition(s.mapId,distance-1e-8):position;
+ const facing=direction<0?duelPathPosition(s.mapId,distance-1e-8,e.target):position;
  return {...position,dx:facing.dx*direction||0,dy:facing.dy*direction||0};
 }
 function release(p:DuelPlayer){p.quote=null;p.money+=p.escrow;p.escrow=0;}
@@ -139,7 +140,7 @@ function wrong(s:DuelState,p:DuelPlayer,q:Omit<WrongQuestion,'level'|'elapsed'|'
 }
 function spawn(s:DuelState,owner:Side,target:Side,level:number,hp:number,hero:string|null,pathDistance:number,rewardSummon=false,sourceHeroId?:string){
  if(s.enemies.length>=100)return false;
- const {x,y}=duelPathPosition(s.mapId,pathDistance);
+ const {x,y}=duelPathPosition(s.mapId,pathDistance,target);
  s.enemies.push({id:s.nextId++,owner,target,hero,level,hp,max:hp,x,y,pathDistance,slow:0,stun:0,hits:0,...(rewardSummon?{rewardSummon:true}:{}),...(sourceHeroId?{sourceHeroId}:{})});return true;
 }
 function summonReward(s:DuelState,side:Side,hero:HeroSpec){
@@ -160,7 +161,7 @@ export function advanceDuel(s:DuelState,now:number){
   s.preparationElapsed=Math.min(DUEL_PREPARATION_SECONDS,Math.max(0,(now-s.preparationStartedAt)/1000));
   if(s.preparationElapsed>=DUEL_PREPARATION_SECONDS){
    s.status='playing';s.startedAt=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.updatedAt=s.startedAt;s.elapsed=0;s.wave=0;
-   for(const p of s.players){if(!p)continue;p.money=0;p.escrow=0;p.quote=null;}
+   for(const p of s.players)if(p)release(p);
    note(s,'3분 문제풀이 완료 · 3분 동안 모은 타워를 배치하고 영웅을 소환해요!');
    syncHeroAuras(s);
   }
@@ -183,7 +184,7 @@ export function advanceDuel(s:DuelState,now:number){
    for(const e of s.enemies){
     if(e.hp<=0)continue;e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt);if(e.stun>0)continue;
     e.pathDistance=duelEnemyDistance(s,e)+(e.target===0?-1:1)*enemySpeed(s,e,movementSources)*dt;
-    const position=duelPathPosition(s.mapId,e.pathDistance);e.x=position.x;e.y=position.y;
+    const position=duelPathPosition(s.mapId,e.pathDistance,e.target);e.x=position.x;e.y=position.y;
     if(e.pathDistance<=0||e.pathDistance>=duelMap(s.mapId).length){const p=s.players[e.target]!;p.flame=Math.max(0,p.flame-(e.hero?1000+e.level*300:1000));e.hp=0;note(s,`${p.name}의 불꽃 체력 ${numberText(p.flame)} · ${e.hero?'영웅':'돌 몬스터'} 도착`);}
    }
    let towerSources=auraSources(s);syncHeroAuras(s,towerSources);
@@ -192,13 +193,13 @@ export function advanceDuel(s:DuelState,now:number){
      t.cooldown=Math.max(0,t.cooldown-dt*towerAttackRate(s,side,t,towerSources));if(!t.enabled||t.cooldown>0)continue;
      const spec=towerType(t.typeId)!,radius=spec.effect==='range'?4:3;
      const e=s.enemies.filter(e=>{const position=duelEnemyPosition(s,e);return e.hp>0&&e.target===side&&Math.hypot(t.x-position.x,t.y-position.y)<=radius;}).sort((a,b)=>Number(b.hp>=t.unit)-Number(a.hp>=t.unit)||(side===0?duelEnemyDistance(s,a)-duelEnemyDistance(s,b):duelEnemyDistance(s,b)-duelEnemyDistance(s,a))||a.id-b.id)[0];
-     if(!e)continue;t.cooldown=spec.cooldown;
+     if(!e)continue;t.cooldown=spec.cooldown;const position=duelEnemyPosition(s,e);
      if(enemyAura(s,e,'shield',towerSources).shieldHits>(e.shieldSpent??0)){
-      e.shieldSpent=(e.shieldSpent??0)+1;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,typeId:t.typeId,fromX:t.x,fromY:t.y,owner:side,enemyId:e.id,x:e.x,y:e.y??DUEL_ROAD,before:e.hp,unit:t.unit,after:e.hp,effect:spec.effect,shielded:true});
+      e.shieldSpent=(e.shieldSpent??0)+1;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,typeId:t.typeId,fromX:t.x,fromY:t.y,owner:side,enemyId:e.id,x:position.x,y:position.y,before:e.hp,unit:t.unit,after:e.hp,effect:spec.effect,shielded:true});
       note(s,`${p.name}: 영웅의 보호막이 공격을 막았어요`);continue;
      }
      const result=hit(e.hp,t.unit);if(!result.valid){note(s,`${p.name}: 공격력이 남은 체력보다 커요`);continue;}
-     const before=e.hp;damageEnemy(e,result.hp);e.hits++;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,typeId:t.typeId,fromX:t.x,fromY:t.y,owner:side,enemyId:e.id,x:e.x,y:e.y??DUEL_ROAD,before,unit:t.unit,after:e.hp,effect:spec.effect});note(s,`${p.name}: ${numberText(before)} − ${numberText(t.unit)} = ${numberText(e.hp)}`);
+     const before=e.hp;damageEnemy(e,result.hp);e.hits++;(s.shots??=[]).push({id:s.nextId++,time:s.elapsed,towerId:t.id,typeId:t.typeId,fromX:t.x,fromY:t.y,owner:side,enemyId:e.id,x:position.x,y:position.y,before,unit:t.unit,after:e.hp,effect:spec.effect});note(s,`${p.name}: ${numberText(before)} − ${numberText(t.unit)} = ${numberText(e.hp)}`);
      if(spec.effect==='slow')e.slow=3;
      if(spec.effect==='stun'&&((Math.imul(e.id+e.hits,1103515245)+s.seed)>>>0)%100<25)e.stun=1.5;
      if(e.hp===0){p.combatScore=(p.combatScore??0)+duelKillScore(e.hits+(e.shieldSpent??0));p.kills=(p.kills??0)+1;}
@@ -288,31 +289,33 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  if(action.type==='build'){
   if(s.status!=='playing')return bad('3분 문제풀이가 끝나면 모은 타워를 설치할 수 있어요.');
   const type=towerType(action.typeId);
-  if(!type||!canUseDuelTower(s,side,action.typeId))return bad('전반부에 모아 둔 타워만 설치할 수 있어요.');
+  if(!type)return bad('타워를 다시 선택해 주세요.');
   if(!validDuelCell(s,side,action.x,action.y))return bad('내 쪽의 비어 있는 바닥에 설치해요.');
   if(p.towers.length>=14||(type.unit===10&&p.towers.filter(t=>t.unit===10).length>=3))return bad('설치 제한이에요. 전체 14개, 바늘탑 3개까지예요.');
-  p.stock[type.id]--;
-  p.towers.push({id:s.nextId++,typeId:type.id,x:action.x,y:action.y,unit:type.unit,cost:0,enabled:true,cooldown:0,prepared:true});
-  return ok('모아 둔 타워를 설치했어요.');
+  const prepared=(p.stock?.[type.id]??0)>0,cost=duelBuildCost(s,side,type.id);if(!Number.isSafeInteger(cost)||cost<0||cost>p.money)return bad('코인이 부족해요.');
+  if(prepared)p.stock[type.id]--;else p.money-=cost;
+  p.towers.push({id:s.nextId++,typeId:type.id,x:action.x,y:action.y,unit:type.unit,cost,enabled:true,cooldown:0,prepared});
+  return ok(prepared?'모아 둔 타워를 설치했어요.':'남은 코인으로 타워를 바로 설치했어요.');
  }
  if(action.type==='toggle'||action.type==='sell'){
   if(s.status!=='playing')return bad('전투가 시작된 뒤 타워를 선택해요.');
   if(p.quote)return bad('구매 문제를 먼저 닫아 주세요.');const t=p.towers.find(t=>t.id===action.towerId);if(!t)return bad('내 타워를 선택해 주세요.');
   if(action.type==='toggle'){t.enabled=!t.enabled;return ok(`발사 ${t.enabled?'켜짐':'멈춤'}`);}
   p.towers=p.towers.filter(o=>o.id!==t.id);
-  (p.stock??={})[t.typeId]=(p.stock[t.typeId]??0)+1;return ok('타워를 회수했어요. 다시 설치할 수 있어요.');
+  if(t.prepared||t.cost===0)(p.stock??={})[t.typeId]=(p.stock[t.typeId]??0)+1;else p.money+=t.cost;
+  return ok('타워를 회수했어요. 다시 설치할 수 있어요.');
  }
  if(action.type==='fuse'){
   // Keep the runtime check for network messages from older clients.
-  if(action.operation!=='+')return bad('영웅 알은 덧셈으로 만들어요. 두 블럭의 합을 골라 주세요.');
+  if(action.operation!=='+')return bad('영웅 알은 덧셈으로 만들어요. 제시된 덧셈의 정답 블록 한 개를 골라 주세요.');
   if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 성장량으로 영웅을 소환해요.');
-  if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==3||new Set(action.slots).size!==3||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15))return bad('서로 다른 블럭 세 개를 다시 골라요.');
-  const [a,b,c]=action.slots.map(i=>p.board[i]);
-  // Mistakes belong to the whole board round, even if the player changes operands.
-  if(![a,b,c].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');
-  if(!learningValue(a+b)){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 다른 블럭 조합을 골라 주세요.');}
-  if(!recipe(a,b,c,'+')){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 블럭과 알은 그대로예요.');}
-  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 성장량 ${p.egg} · 전투에서 선택한 레벨만큼 사용해요.`);
+  if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==1||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15))return bad('현재 덧셈 문제의 정답 블록 한 개를 골라요.');
+  const {a,b}=p.heroQuestion,c=p.board[action.slots[0]];
+  // Mistakes belong to the whole board round, even if the player tries another answer candidate.
+  if(![a,b,c].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 정답 블럭을 골라 주세요.');
+  if(!learningValue(a+b)){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 문제를 다시 확인해 주세요.');}
+  if(a+b!==c){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 문제와 정답 후보는 그대로예요.');}
+  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.heroQuestion=decimalQuestion(s.seed,p.round,duelHeroLearningLevel(p));p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 성장량 ${p.egg} · 전투에서 선택한 레벨만큼 사용해요.`);
  }
  return bad('지원하지 않는 조작이에요.');
 }

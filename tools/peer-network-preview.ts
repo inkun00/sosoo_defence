@@ -1,6 +1,6 @@
 import {HostPeer} from '../src/multiplayer/peer';
 import {DUEL_MAPS,duelMap} from '../src/multiplayer/duel-maps';
-import {decimalBoard} from '../src/multiplayer/decimal-boards';
+import {decimalBoard,decimalQuestion} from '../src/multiplayer/decimal-boards';
 import {duelHeroLearningLevel,DUEL_PREPARATION_SECONDS} from '../src/multiplayer/duel';
 import {additionSlots} from '../src/multiplayer/computer-peer';
 import {worksheetHeroSpec,heroEffectStats} from '../src/multiplayer/heroes';
@@ -46,7 +46,7 @@ button.onclick=async()=>{
   note('PASS · 양쪽 같은 맵 · '+duelMap(mapChoice.value).name);
   for(const state of [host.state!,guest.state!]){
    if(state.players[0].accountLevel!==1||state.players[1]!.accountLevel!==8)throw Error('개인 계정 레벨이 접속 중 바뀌었어요.');
-   for(const player of state.players)if(duelHeroLearningLevel(player!)!==1||JSON.stringify(player!.board)!==JSON.stringify(decimalBoard(state.seed,player!.round,1)))throw Error('영웅 덧셈의 첫 1단계 문제판이 일치하지 않아요.');
+   for(const player of state.players)if(duelHeroLearningLevel(player!)!==1||JSON.stringify(player!.heroQuestion)!==JSON.stringify(decimalQuestion(state.seed,player!.round,1))||JSON.stringify(player!.board)!==JSON.stringify(decimalBoard(state.seed,player!.round,1)))throw Error('영웅 덧셈의 첫 1단계 계산식과 정답판이 일치하지 않아요.');
    if(JSON.stringify(state.players[0].board)!==JSON.stringify(state.players[1]!.board))throw Error('첫 문제판이 계정 레벨에 따라 달라졌어요.');
   }
   note('PASS · 실제 데이터 채널에서 Lv.1/Lv.8 계정 유지 · 계정과 무관한 같은 1단계 영웅 문제판');
@@ -57,13 +57,13 @@ button.onclick=async()=>{
   note('PASS · 선택과 준비 원자 처리 · 학습지 영웅은 전투 소환을 기다림');
   for(const [target,stage] of [[5,2],[10,3],[15,4]]){
    while(host.state!.players[0].solved<target){
-    await new Promise(resolve=>setTimeout(resolve,250));const player=host.state!.players[0],slots=additionSlots(player.board);
+    await new Promise(resolve=>setTimeout(resolve,250));const player=host.state!.players[0],slots=additionSlots(player.heroQuestion,player.board);
     if(!slots)throw Error('영웅 덧셈의 정답을 찾지 못했어요.');const solved=await host.send({type:'fuse',round:player.round,slots,operation:'+'});if(!solved.ok)throw Error(solved.message);
    }
    await guest.send({type:'tick'});
    for(const state of [host.state!,guest.state!]){
     const player=state.players[0],other=state.players[1]!;
-    if(player.solved!==target||player.egg!==target||duelHeroLearningLevel(player)!==stage||JSON.stringify(player.board)!==JSON.stringify(decimalBoard(state.seed,player.round,stage)))throw Error('개인 정답수에 따른 학습 단계·성장량이 양쪽에 일치하지 않아요.');
+    if(player.solved!==target||player.egg!==target||duelHeroLearningLevel(player)!==stage||JSON.stringify(player.heroQuestion)!==JSON.stringify(decimalQuestion(state.seed,player.round,stage))||JSON.stringify(player.board)!==JSON.stringify(decimalBoard(state.seed,player.round,stage)))throw Error('개인 정답수에 따른 계산식·정답판·학습 단계·성장량이 양쪽에 일치하지 않아요.');
     if(other.solved!==0||other.egg!==0||duelHeroLearningLevel(other)!==1)throw Error('한 사람의 정답이 상대의 학습 진도를 올렸어요.');
    }
    note(`PASS · 데이터 채널에서 호스트 정답 ${target}개 → ${stage}단계 · 성장량 ${target} · 참가자 1단계 유지`);
@@ -92,3 +92,14 @@ button.onclick=async()=>{
  finally{button.disabled=false;}
 };
 window.addEventListener('pagehide',()=>{host?.dispose();guest?.dispose();});
+// Local QA can inspect the actual peers and fast-forward only their test clock.
+if(['localhost','127.0.0.1'].includes(location.hostname))Object.assign(window,{__duelNetworkCheck:{
+ get host(){return host;},get guest(){return guest;},
+ advanceToBattle(){
+  if(!host?.state||host.state.status!=='preparing'||!guest?.connected)throw Error('Connect and prepare the local peers first.');
+  host.onState=()=>{};guest.onState=()=>{};
+  const clock=host as unknown as {started:number;now():number};
+  clock.started+=host.state.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000-clock.now();
+  const now=clock.now();for(const player of host.state.players)if(player)player.lastSeen=now;
+ }
+}});

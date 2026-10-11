@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {advanceDuel,applyDuel,canPurchaseDuelTower,canUseDuelTower,createDuel,duelBuildCost,duelTowerLevel,joinDuel,DUEL_PREPARATION_SECONDS,DUEL_START_MONEY,DuelState} from '../src/multiplayer/duel';
-import {numberText,recipe} from '../src/math';
+import {numberText} from '../src/math';
 import {TOWERS,towerPrice} from '../src/towers';
 
 const NOW=100000,START=NOW+DUEL_PREPARATION_SECONDS*1000;
@@ -14,11 +14,10 @@ function reserve(s:DuelState,typeId='basic',nonce='q',now=NOW){
  const result=applyDuel(s,0,{type:'prepare-quote',typeId},now,nonce);assert.equal(result.ok,true,result.message);
  const q=s.players[0].quote!;const answer=applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now,'answer');assert.equal(answer.ok,true,answer.message);return q;
 }
-function playing(){const s=preparing();reserve(s);connectedAdvance(s,START);return s;}
+function playing(){const s=preparing();reserve(s);connectedAdvance(s,START);s.players.forEach(p=>p!.money=0);return s;}
 function fuse(s:DuelState,now=NOW){
  const p=s.players[0];
- for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&recipe(p.board[a],p.board[b],p.board[c],'+'))return applyDuel(s,0,{type:'fuse',round:p.round,slots:[a,b,c],operation:'+'},now,'fusion');
- throw Error('No addition recipe');
+ const index=p.board.indexOf(p.heroQuestion.a+p.heroQuestion.b);assert.ok(index>=0);return applyDuel(s,0,{type:'fuse',round:p.round,slots:[index],operation:'+'},now,'fusion');
 }
 
 test('준비 중 타워 문제와 영웅 성장 문제를 함께 풀되 부화와 소환은 전투까지 기다린다',()=>{
@@ -96,11 +95,11 @@ test('수집 영웅은 준비와 전투 전환 때 대기하고 전투에서 선
  const q=reserve(s),budget=DUEL_START_MONEY-q.cost;
  connectedAdvance(s,NOW+30000);assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,1);assert.equal(s.enemies.length,0);
  connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);
- assert.equal(s.players[0].money,0);assert.equal(s.players[0].stock.basic,1);assert.equal(s.enemies.length,0);
+ assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,1);assert.equal(s.enemies.length,0);
  assert.equal(applyDuel(s,0,{type:'summon-reward'},START,'reward').ok,true);assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].hero,'hero-3-2');assert.equal(s.players[0].rewardUsed,true);
  assert.equal(applyDuel(s,0,{type:'summon-reward'},START,'duplicate').ok,false);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'stock').ok,true);
- assert.equal(s.players[0].money,0);assert.equal(s.players[0].stock.basic,0);assert.equal(s.players[0].quote,null);
+ assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,0);assert.equal(s.players[0].quote,null);
 });
 
 test('타워 선택 후 가격 뺄셈 정답마다 설치 대신 비축이 한 개 늘어난다',()=>{
@@ -139,13 +138,14 @@ test('준비 중에는 설치와 전투가 멈추고 타워 선택에는 좌표�
  assert.equal(s.enemies.length,0);assert.equal(s.shots.length,0);assert.equal(s.players[0].towers.length,0);assert.equal(s.players[0].stock.basic,1);
 });
 
-test('180초가 끝나면 양쪽 코인과 열린 견적을 비우고 전투 시간 0부터 시작한다',()=>{
+test('180초가 끝나면 남은 코인과 보관 코인을 돌려주고 열린 견적을 취소한다',()=>{
  const s=preparing();reserve(s);
  assert.equal(applyDuel(s,1,{type:'prepare-quote',typeId:'double'},NOW+55000,'open').ok,true);
  s.players[0].escrow=777;s.players[1]!.escrow=333;
+ const budgets=s.players.map(p=>p!.money+p!.escrow);
  connectedAdvance(s,START);
  assert.equal(s.status,'playing');assert.equal(s.preparationElapsed,180);assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
- assert.ok(s.players.every(p=>p?.money===0&&p.escrow===0&&p.quote===null));
+ assert.deepEqual(s.players.map(p=>p!.money),budgets);assert.ok(s.players.every(p=>p?.escrow===0&&p.quote===null));
  assert.equal(s.players[0].stock.basic,1);assert.deepEqual(s.players[1]!.stock,{});assert.equal(s.enemies.length,0);
 });
 
@@ -159,23 +159,23 @@ test('180초 경계에 도착한 정답은 비축을 추가하지 않는다',()=
  const s=preparing();applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},NOW,'late');const q=s.players[0].quote!;
  s.players.forEach(p=>p!.lastSeen=START);
  const result=applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},START,'late-answer');
- assert.equal(result.ok,false);assert.equal(s.status,'playing');assert.equal(s.players[0].money,0);assert.deepEqual(s.players[0].stock,{});assert.equal(s.players[0].quote,null);
+ assert.equal(result.ok,false);assert.equal(s.status,'playing');assert.equal(s.players[0].money,DUEL_START_MONEY);assert.deepEqual(s.players[0].stock,{});assert.equal(s.players[0].quote,null);
 });
 
-test('전투 중 비축 타워만 코인 없이 즉시 설치하고 재고가 없으면 거부한다',()=>{
+test('전투 중 비축 타워를 먼저 무료 배치하고 없으면 남은 코인으로 문제 없이 구입한다',()=>{
  const s=playing(),p=s.players[0];p.money=555;
  assert.equal(duelBuildCost(s,0,'basic'),0);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'stock').ok,true);
  assert.equal(p.stock.basic,0);assert.equal(p.money,555);assert.equal(p.quote,null);assert.equal(p.towers.length,1);
  assert.equal(p.towers[0].cost,0);assert.equal(p.towers[0].prepared,true);
- assert.equal(duelBuildCost(s,0,'basic'),Infinity);
- assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:4,y:2},START,'cash').ok,false);
- assert.equal(p.money,555);assert.equal(p.towers.length,1);assert.equal(p.quote,null);
+ const cost=duelBuildCost(s,0,'basic'),questions=p.answeredQuestions,score=p.questionScore,purchases=p.purchases;assert.ok(cost>0&&cost<=555);
+ assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:4,y:2},START,'cash').ok,true);
+ assert.equal(p.money,555-cost);assert.equal(p.towers.length,2);assert.equal(p.quote,null);assert.equal(p.towers[1].cost,cost);assert.equal(p.towers[1].prepared,false);assert.equal(p.answeredQuestions,questions);assert.equal(p.questionScore,score);assert.equal(p.purchases,purchases);
  assert.equal(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},START,'problem').ok,false);
  assert.equal(applyDuel(s,0,{type:'quote',typeId:'basic',x:5,y:2},START,'legacy-problem').ok,false);
 });
 
-test('전투 처치는 점수만 올리고 코인이나 구매 기회를 만들지 않는다',()=>{
+test('전투 처치는 점수만 올리고 코인을 만들지 않는다',()=>{
  const s=playing(),p=s.players[0];applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'first');
  s.enemies=[{id:900,owner:1,target:0,hero:null,level:1,hp:100,max:100,x:3,y:3,slow:0,stun:0,hits:0}];
  connectedAdvance(s,START+100);
@@ -186,7 +186,7 @@ test('전투 처치는 점수만 올리고 코인이나 구매 기회를 만들�
 
 test('잘못된 설치 칸과 부족한 재고는 재고와 코인을 소모하지 않는다',()=>{
  const s=playing(),p=s.players[0];
- for(const [x,y] of [[13,2],[3,3],[3.5,2],[3,-1]])assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x,y},START,'invalid').ok,false);
+ for(const [x,y] of [[13,10],[3,7],[3,3],[3.5,2],[3,-1]])assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x,y},START,'invalid').ok,false);
  assert.equal(p.stock.basic,1);assert.equal(p.money,0);assert.equal(p.towers.length,0);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'double',x:4,y:2},START,'poor').ok,false);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'valid').ok,true);
@@ -201,7 +201,8 @@ test('비축 타워 회수는 코인을 만들지 않고 재고를 복구한다'
   assert.equal(p.stock.basic,1);assert.equal(p.money,0);assert.equal(p.towers.length,0);
  }
  p.stock.basic=0;p.money=500;
- assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'cash').ok,false);assert.equal(p.money,500);assert.equal(p.stock.basic,0);
+ const cost=duelBuildCost(s,0,'basic');assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'cash').ok,true);assert.equal(p.money,500-cost);assert.equal(p.stock.basic,0);
+ assert.equal(applyDuel(s,0,{type:'sell',towerId:p.towers[0].id},START,'cash-refund').ok,true);assert.equal(p.money,500);assert.equal(p.stock.basic,0);
 });
 
 test('비축은 배치 제한보다 더 모을 수 있지만 전투 타워 14개와 바늘탑 3개 제한은 유지된다',()=>{
@@ -236,17 +237,16 @@ test('준비는 12종을 모두 선택하고 문제 난도와 가격은 공동 �
  }
 });
 
-test('상위 비축 타워는 전투 레벨과 관계없이 배치하고 레벨이 올라가도 코인 구매는 거부한다',()=>{
+test('상위 비축은 무료이며 직접 구매 가격은 현재 전투 레벨을 따른다',()=>{
  const s=preparing(10),p=s.players[0];reserve(s,'rune','rune');connectedAdvance(s,START);
  assert.equal(duelTowerLevel(s),1);assert.equal(canUseDuelTower(s,0,'rune'),true);assert.equal(duelBuildCost(s,0,'rune'),0);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'rune',x:3,y:2},START,'prepared-rune').ok,true);
  assert.equal(p.stock.rune,0);p.money=99999;
- assert.equal(canUseDuelTower(s,0,'rune'),false);
- assert.equal(applyDuel(s,0,{type:'build',typeId:'rune',x:4,y:2},START,'locked-rune').ok,false);
- assert.equal(p.money,99999);assert.equal(canUseDuelTower(s,0,'basic'),false);
- s.elapsed=170;assert.equal(canUseDuelTower(s,0,'rune'),false);
- assert.equal(applyDuel(s,0,{type:'build',typeId:'rune',x:4,y:2},START,'unlocked-rune').ok,false);
- assert.equal(p.money,99999);
+ for(const [elapsed,x] of [[0,4],[170,5]]){
+  s.elapsed=elapsed;const cost=duelBuildCost(s,0,'rune'),before=p.money;
+  assert.equal(cost,towerPrice(TOWERS.find(t=>t.id==='rune')!,before,duelTowerLevel(s),p.purchaseVariation));
+  assert.equal(canUseDuelTower(s,0,'rune'),true);assert.equal(applyDuel(s,0,{type:'build',typeId:'rune',x,y:2},START,'cash-rune').ok,true);assert.equal(p.money,before-cost);assert.equal(p.towers.at(-1)!.cost,cost);
+ }
 });
 
 test('준비 중 다시 시작하거나 취소를 반복해도 180초 마감과 예산은 늘어나지 않는다',()=>{
@@ -259,12 +259,25 @@ test('준비 중 다시 시작하거나 취소를 반복해도 180초 마감과 
  assert.equal(s.preparationStartedAt,NOW);assert.equal(p.money,DUEL_START_MONEY);assert.deepEqual(p.stock,{});
  connectedAdvance(s,NOW+30000);advanceDuel(s,NOW+20000);
  assert.equal(s.preparationElapsed,30);assert.equal(s.updatedAt,NOW+30000);
- connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(p.money,0);
+ connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(p.money,DUEL_START_MONEY);
 });
 
-test('이전 저장 상태의 타워를 회수해도 코인 대신 재고 한 개만 복구한다',()=>{
+test('이전 저장 상태의 유료 타워도 구입 가격으로 회수한다',()=>{
  const s=playing(),p=s.players[0];p.stock.basic=0;p.money=1000;
  const tower={id:500,typeId:'basic',x:3,y:2,unit:100,cost:100,enabled:true,cooldown:0};p.towers=[tower];s.elapsed=170;
  assert.equal(applyDuel(s,0,{type:'sell',towerId:tower.id},START,'later-sell').ok,true);
- assert.equal(p.money,1000);assert.equal(p.stock.basic,1);assert.equal(p.towers.length,0);
+ assert.equal(p.money,1100);assert.equal(p.stock.basic,0);assert.equal(p.towers.length,0);
+});
+
+test('양쪽 진영의 직접 구매는 부족한 돈·상대 길·빈틈·성·점유·설치 제한에서 자원을 보존한다',()=>{
+ for(const side of [0,1] as const){
+  const s=playing(),p=s.players[side]!,y=side===0?2:10;p.stock={};p.money=DUEL_START_MONEY;
+  const reject=(typeId:string,x:number,targetY:number)=>{const before=structuredClone(s);assert.equal(applyDuel(s,side,{type:'build',typeId,x,y:targetY},START,'invalid-cash').ok,false);assert.deepEqual(s,before);};
+  for(const [x,targetY] of [[0,y],[23,y],[3,7],[3,side===0?10:2],[3,y+1],[3.5,y]])reject('basic',x,targetY);
+  reject('unknown',3,y);p.money=0;reject('basic',3,y);p.money=DUEL_START_MONEY;
+  p.stock.basic=1;const budget=p.money;assert.ok(applyDuel(s,side,{type:'build',typeId:'basic',x:3,y},START,'free-first').ok);assert.equal(p.money,budget);assert.equal(p.stock.basic,0);reject('basic',3,y);
+  const cost=duelBuildCost(s,side,'basic');assert.ok(applyDuel(s,side,{type:'build',typeId:'basic',x:4,y},START,'cash-second').ok);assert.equal(p.money,budget-cost);assert.equal(p.towers[1].cost,cost);assert.equal(p.towers[1].prepared,false);
+  p.towers=Array.from({length:14},(_,i)=>({id:i,typeId:'basic',x:1+i,y,unit:100,cost:100,prepared:false,enabled:true,cooldown:0}));reject('double',22,y);
+  p.towers=Array.from({length:3},(_,i)=>({id:i,typeId:'needle',x:1+i,y,unit:10,cost:100,prepared:false,enabled:true,cooldown:0}));reject('needle',22,y);
+ }
 });

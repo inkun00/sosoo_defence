@@ -1,33 +1,34 @@
 import {advanceDuel,applyDuel,createDuel,duelLevel,duelTowerLevel,canUseDuelTower,joinDuel,validDuelCell,DuelAction,DuelState,RewardLoadout,Side,DUEL_COLUMNS,DUEL_ROWS} from './duel';
 import {duelMap,duelPathDistance,duelPathPosition} from './duel-maps';
+import {duelLaneOffset} from './duel-maps';
+import type {DecimalAdditionQuestion} from './decimal-boards';
 import {ComputerMood,ComputerPortrait,ComputerOpponent,computerOpponent} from './computer-opponents';
 import {heroesAtLevel,heroSpec,HeroSpec} from './heroes';
 import {TOWERS,towerPrice} from '../towers';
-import {numberText,recipe} from '../math';
+import {numberText,learningValue} from '../math';
 import type {PeerIdentity,Reply} from './peer';
 
 export interface ComputerOptions{seed?:number;clock?:()=>number;autoTick?:boolean;mapId?:string;}
 /** The same approach-to-flame policy is mirrored for either player's land. */
 export function strategicDuelCells(s:DuelState,side:Side,unit:number,radius=3):{x:number;y:number}[]{
- const map=duelMap(s.mapId),half=map.length/2,preferred=unit>=1000?.2:unit<=50?.84:.52;
- const samples=Array.from({length:Math.ceil(half/.5)+1},(_,i)=>duelPathPosition(s.mapId,half+Math.min(half,i*.5)));
+ const map=duelMap(s.mapId),preferred=unit>=1000?.2:unit<=50?.84:.52;
+ const samples=Array.from({length:Math.ceil(map.length/.5)+1},(_,i)=>duelPathPosition(s.mapId,Math.min(map.length,i*.5)));
  const towers=s.players[side]?.towers??[],cells:{x:number;y:number;score:number;order:number}[]=[];
- // Score on the right half and mirror coordinates, avoiding floating point tie
+  // Score the full base route and mirror local coordinates, avoiding tie
  // differences and giving an identical legal placement policy to either side.
- for(const y of [2,4,1,5,0,6,3].filter(y=>y<DUEL_ROWS))for(let rightX=Math.floor(DUEL_COLUMNS/2)+1;rightX<=DUEL_COLUMNS-2;rightX++){
-  const x=side===1?rightX:DUEL_COLUMNS-1-rightX;if(!validDuelCell(s,side,x,y))continue;
-  const pathDistance=duelPathDistance(s.mapId,rightX,y),point=duelPathPosition(s.mapId,pathDistance),distance=Math.hypot(rightX-point.x,y-point.y);
+ for(const localY of [2,4,1,5,0,6,3])for(let rightX=1;rightX<=DUEL_COLUMNS-2;rightX++){
+  const x=side===1?rightX:DUEL_COLUMNS-1-rightX,y=localY+duelLaneOffset(side);if(!validDuelCell(s,side,x,y))continue;
+  const pathDistance=duelPathDistance(s.mapId,rightX,localY),point=duelPathPosition(s.mapId,pathDistance),distance=Math.hypot(rightX-point.x,localY-point.y);
   if(distance>radius-.2)continue;
-  const progress=Math.max(0,Math.min(1,(pathDistance-half)/half)),coverage=samples.filter(p=>Math.hypot(rightX-p.x,y-p.y)<=radius).length;
+  const progress=Math.max(0,Math.min(1,pathDistance/map.length)),coverage=samples.filter(p=>Math.hypot(rightX-p.x,localY-p.y)<=radius).length;
   const crowding=towers.reduce((total,t)=>total+Math.max(0,2-Math.hypot(x-t.x,y-t.y)),0);
   cells.push({x,y,score:Math.abs(progress-preferred)*4+Math.max(0,distance-1)*.2-coverage/samples.length*.8+crowding*.1,order:cells.length});
  }
  return cells.sort((a,b)=>a.score-b.score||a.order-b.order).map(({x,y})=>({x,y}));
 }
-export function additionSlots(board:readonly number[]):number[]|null{
- for(let a=0;a<board.length;a++)for(let b=a+1;b<board.length;b++)for(let c=0;c<board.length;c++){
-  if(c!==a&&c!==b&&recipe(board[a],board[b],board[c],'+'))return [a,b,c];
- }return null;
+export function additionSlots(question:DecimalAdditionQuestion,board:readonly number[]):number[]|null{
+ if(!question||![question.a,question.b,question.a+question.b].every(learningValue))return null;
+ const index=board.indexOf(question.a+question.b);return index<0?null:[index];
 }
 /** A local authoritative duel. All computer actions pass through the ordinary game rules. */
 export class ComputerPeer{
@@ -77,17 +78,17 @@ export class ComputerPeer{
   const count=(id:string)=>p.towers.filter(t=>t.typeId===id).length;
   const priorities=[...(wave>=2&&count('needle')<2?['needle']:[]),...(count('frost')<1?['frost']:[]),...(wave>=6&&count('sniper')<1?['sniper']:[]),...(wave>=8&&count('rune')<1?['rune']:[]),...(wave>=3&&count('catapult')<1?['catapult']:[]),...(wave>=4&&count('lightning')<1?['lightning']:[]),...(wave>=5&&count('crystal')<1?['crystal']:[]),...(wave>=3&&count('frost')<2?['frost']:[]),...(wave>=5&&count('catapult')<2?['catapult']:[])];
   // Experienced opponents replace duplicate starting cannons with an already
-  // prepared advanced tower. Battle coins never buy additional defense.
+  // prepared advanced tower before spending the remaining combat budget.
   if(p.towers.length>=max){
    if(this.definition.level<6||wave<3)return;
-   const old=p.towers.filter(t=>experienced?['basic','double','pebble','needle'].includes(t.typeId)&&count(t.typeId)>(t.typeId==='needle'?2:1):['basic','double'].includes(t.typeId)&&count(t.typeId)>(t.typeId==='basic'?2:1)).sort((a,b)=>s.mapId?duelPathDistance(s.mapId,b.x,b.y)-duelPathDistance(s.mapId,a.x,a.y):b.x-a.x)[0];
+   const old=p.towers.filter(t=>experienced?['basic','double','pebble','needle'].includes(t.typeId)&&count(t.typeId)>(t.typeId==='needle'?2:1):['basic','double'].includes(t.typeId)&&count(t.typeId)>(t.typeId==='basic'?2:1)).sort((a,b)=>duelPathDistance(s.mapId,b.x,b.y,1)-duelPathDistance(s.mapId,a.x,a.y,1))[0];
    const affordable=old?TOWERS.filter(t=>t.grade>=2&&canUseDuelTower(s,1,t.id)&&p.stock[t.id]>0):[];
    const upgrade=experienced?priorities.map(id=>affordable.find(t=>t.id===id)).find(Boolean):affordable.find(t=>!p.towers.some(o=>o.typeId===t.id));
    if(!old||!upgrade)return;
    if(!this.act({type:'sell',towerId:old.id},now).ok)return;
    upgrading=upgrade.id;
   }
-  const unlocked=TOWERS.filter(t=>canUseDuelTower(s,1,t.id)&&p.stock[t.id]>0&&!(t.id==='needle'&&p.towers.filter(x=>x.typeId==='needle').length>=3));
+  const unlocked=TOWERS.filter(t=>canUseDuelTower(s,1,t.id)&&!(t.id==='needle'&&p.towers.filter(x=>x.typeId==='needle').length>=3));
   const preferences=this.preferences();
   const finishing=wave>=2&&count('needle')<(this.definition.level>=8?2:1)?unlocked.find(t=>t.id==='needle'):undefined;
   const stored=unlocked.filter(t=>p.stock[t.id]>0);
@@ -95,8 +96,7 @@ export class ComputerPeer{
   const pick=unlocked.find(t=>t.id===upgrading)??(stored.length?stored.sort((a,b)=>count(a.id)-count(b.id)||preferences.indexOf(a.id)-preferences.indexOf(b.id))[0]:strategic??finishing??unlocked.sort((a,b)=>count(a.id)-count(b.id)||preferences.indexOf(a.id)-preferences.indexOf(b.id))[0]);if(!pick)return;
   // Large projectiles strike first; hundredth finishers wait near the flame.
   // Otherwise a tiny early hit can make a later large projectile invalid.
-  const columns=this.definition.level<4?[20,17,14,22,18,15]:pick.unit>=1000?[13,14,15,16,17,18,19,20,21,22]:pick.unit<=50?[21,22,20,19,18,17,16,15,14,13]:[16,18,20,14,17,19,15,22,21,13];
-  const cells=s.mapId?strategicDuelCells(s,1,pick.unit,pick.effect==='range'?4:3):[2,4,1,5].flatMap(y=>columns.map(x=>({x,y}))),cell=cells.find(c=>validDuelCell(s,1,c.x,c.y));if(!cell)return;
+  const cell=strategicDuelCells(s,1,pick.unit,pick.effect==='range'?4:3).find(c=>validDuelCell(s,1,c.x,c.y));if(!cell)return;
   if(this.act({type:'build',...cell,typeId:pick.id},now).ok)this.mood('cast','새 타워로 불꽃을 지킬게요!',now);
  }
  private chooseHero(level:number):HeroSpec|undefined{
@@ -106,7 +106,7 @@ export class ComputerPeer{
  private prepareHeroes(now:number){
   const p=this.state.players[1]!;
   if(now>=this.nextFusion){
-   this.nextFusion=now+this.definition.fusionMs;const slots=additionSlots(p.board);
+   this.nextFusion=now+this.definition.fusionMs;const slots=additionSlots(p.heroQuestion,p.board);
    if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 영웅 성장량을 모았어요.',now);
   }
  }

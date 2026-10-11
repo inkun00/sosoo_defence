@@ -42,13 +42,13 @@ test('대전 준비의 큰 지갑·계산 중 별도 적립·취소에서도 한
  assert.equal(s.players[0].money,12700-q.cost);assert.equal(s.players[0].stock.basic,1);assert.equal(s.players[0].towers.length,0);
  assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'double'},now,'q2').ok);const before=s.players[0].money;s.players[0].escrow=300;
  applyDuel(s,0,{type:'cancel'},now,'c');assert.equal(s.players[0].money,before+300);
- startCombat(s,now);assert.equal(s.players[0].money,0);assert.equal(s.players[0].escrow,0);assert.equal(s.players[0].stock.basic,1);
+ const balance=s.players[0].money;startCombat(s,now);assert.equal(s.players[0].money,balance);assert.equal(s.players[0].escrow,0);assert.equal(s.players[0].stock.basic,1);
 });
 
 test('대전에서 합이 10 이상인 오답 조합은 재료·알을 유지하고 범위 밖 복습 문항을 만들지 않는다',()=>{
  const preparationStartedAt=100000,s=preparation(preparationStartedAt,10);
- s.players[0].board=[9000,8000,7000,...Array(13).fill(100)];
- assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0,1,2],operation:'+'},preparationStartedAt,'w').ok,false);
+ s.players[0].heroQuestion={a:9000,b:8000};s.players[0].board=[7000,...Array(15).fill(100)];
+ assert.equal(applyDuel(s,0,{type:'fuse',round:0,slots:[0],operation:'+'},preparationStartedAt,'w').ok,false);
  assert.equal(s.players[0].wrongQuestions.length,0);assert.equal(s.players[0].egg,0);assert.equal(s.players[0].round,0);
  assert.equal(s.players[0].solved,0);const now=startCombat(s,preparationStartedAt);
  for(let tick=1;tick<=300;tick++){const time=now+tick*1000;s.players.forEach(p=>p!.lastSeen=time);advanceDuel(s,time);assert.ok(s.enemies.every(e=>learningValue(e.hp)&&learningValue(e.max)));}

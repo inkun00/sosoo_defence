@@ -14,7 +14,7 @@ export class OpponentPortrait {
  private compact=false;private height=800;
  constructor(private scene:Phaser.Scene,private reduced=false){}
  setLayout(compact:boolean,height:number){this.compact=compact;this.height=height;this.position();}
- private position(){this.sprite?.setPosition(1045,this.compact?this.height-48:747).setDisplaySize(this.compact?65:96,this.compact?66:98);}
+ private position(){this.sprite?.setPosition(1045,this.compact?this.height-48:this.height-53).setDisplaySize(this.compact?65:96,this.compact?66:98);}
  sync(opponent?:ComputerView){
   if(!opponent){this.sprite?.setVisible(false);this.last='';return;}
   const level=opponent.level,key='cpu-opponent-'+level;

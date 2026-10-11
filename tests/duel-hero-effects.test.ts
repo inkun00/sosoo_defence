@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {activeDuelHeroEffects,activeDuelTowerHeroEffects,advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,DUEL_PREPARATION_SECONDS,type DuelEnemy,type DuelState,type DuelTower} from '../src/multiplayer/duel';
 import {HEROES,heroEffectStats,type HeroEffect} from '../src/multiplayer/heroes';
-import {duelPathDistance,duelMapSpeedScale} from '../src/multiplayer/duel-maps';
+import {duelPathDistance,duelMapSpeedScale,duelLaneOffset,duelPathPosition} from '../src/multiplayer/duel-maps';
 
 const ROOM_NOW=100000,NOW=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
 function match(mapId?:string):DuelState{
@@ -94,4 +94,28 @@ test('굽은 맵의 실제 이동에도 같은 가속 배율과 맵 길이 보�
  const s=match('moon-meander'),unit=enemy({pathDistance:2}),leader=hero('haste',false,{pathDistance:3});s.enemies=[unit,leader];
  const speed=(.24+.009)*1.1*duelMapSpeedScale(s.mapId);
  assert.ok(Math.abs(duelEnemyPosition(s,unit,1).x-(2+speed))<1e-12);
+});
+
+test('기절한 하단 적의 좌표가 생략되거나 오래되어도 일반·보호막 발사체는 실제 목표 길을 기록한다',()=>{
+ for(const shielded of [false,true]){
+  const s=match(),unit=enemy({stun:1,x:20,y:undefined,pathDistance:4});
+  s.enemies=shielded?[unit,hero('shield',false,{stun:1,pathDistance:3})]:[unit];
+  s.players[1]!.towers=[{id:1,typeId:'basic',x:4,y:10,unit:100,cost:100,enabled:true,cooldown:0}];
+  advanceDuel(s,NOW+100);assert.ok(unit.stun>0);assert.equal(s.shots.length,1);
+  assert.deepEqual([s.shots[0].x,s.shots[0].y],[4,11]);assert.equal(s.shots[0].fromY,10);assert.equal(!!s.shots[0].shielded,shielded);
+  assert.equal(unit.hp,shielded?1000:900);
+ }
+});
+
+test('각 진영의 타워 가속은 공격 영웅을 자기 길에 투영하고 적 포탑 감속은 실제 목표 길에서 판정한다',()=>{
+ for(const side of [0,1] as const){
+  const s=match('ember-bend'),target=(1-side) as 0|1,buff=hero('tower-haste',false,{owner:side,target,pathDistance:11}),debuff=hero('enemy-slow',false,{owner:target,target:side,pathDistance:11});
+  const local=duelPathPosition(s.mapId,11,side),t:DuelTower={id:1,typeId:'basic',x:local.x,y:local.y-1,unit:100,cost:100,enabled:true,cooldown:1};s.enemies=[buff,debuff];
+  assert.equal(duelEnemyPosition(s,buff).y,local.y+duelLaneOffset(target)-duelLaneOffset(side));
+  assert.deepEqual(activeDuelTowerHeroEffects(s,side,t),['enemy-slow','tower-haste']);
+  t.y=local.y-2;assert.deepEqual(activeDuelTowerHeroEffects(s,side,t),['enemy-slow','tower-haste']);
+  t.y-=.001;assert.deepEqual(activeDuelTowerHeroEffects(s,side,t),[]);
+  t.y=local.y-1;debuff.hp=0;assert.deepEqual(activeDuelTowerHeroEffects(s,side,t),['tower-haste']);
+  assert.deepEqual(activeDuelTowerHeroEffects(s,target,{...t,y:t.y+duelLaneOffset(target)-duelLaneOffset(side)}),[]);
+ }
 });

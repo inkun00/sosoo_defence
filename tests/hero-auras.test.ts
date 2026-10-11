@@ -13,7 +13,7 @@ function unit(extra:Partial<DuelEnemy>={}):DuelEnemy{return{id:90,owner:0,target
 function leader(effect:HeroEffect,high=false,extra:Partial<DuelEnemy>={}):DuelEnemy{
  const list=HEROES.filter(h=>h.effect===effect),h=high?list.at(-1)!:list[0];return unit({id:110+HEROES.indexOf(h),hero:h.id,level:h.level,pathDistance:3,...extra});
 }
-function tower(extra:Partial<DuelTower>={}):DuelTower{return{id:1,typeId:'basic',x:4,y:2,unit:100,cost:100,enabled:true,cooldown:0,...extra};}
+function tower(extra:Partial<DuelTower>={}):DuelTower{return{id:1,typeId:'basic',x:4,y:10,unit:100,cost:100,enabled:true,cooldown:0,...extra};}
 
 test('능력치는 0.1부터 레벨마다 커지고 반경 2→5, Lv8부터 보호막 2회다',()=>{
  assert.deepEqual(heroEffectStats(1),{amount:.1,radius:2,shieldHits:1});assert.deepEqual(heroEffectStats(10),{amount:.46,radius:5,shieldHits:2});
@@ -79,7 +79,7 @@ test('보호막은 체력 추가분도 소모하지 않고 소진 다음 공격�
 
 test('상대 포탑 감속과 내 포탑 가속은 실제 공격 빈도를 감소/증가시킨다',()=>{
  function count(effect:HeroEffect|null){
-  const s=state(),e=unit({owner:1,target:0,hp:20000,max:20000}),t=tower();s.enemies=[e];s.players[0].towers=[t];
+  const s=state(),e=unit({owner:1,target:0,hp:20000,max:20000}),t=tower({y:2});s.enemies=[e];s.players[0].towers=[t];
   if(effect)s.enemies.push(leader(effect,true,{owner:effect==='enemy-slow'?1:0,target:effect==='enemy-slow'?0:1,hp:10000,max:10000}));
   tick(s,10);return e.hits;
  }
@@ -88,7 +88,7 @@ test('상대 포탑 감속과 내 포탑 가속은 실제 공격 빈도를 감�
 });
 
 test('포탑 공격속도는 동일효과 최강만 적용하고 가속과 감속을 함께 계산한다',()=>{
- const s=state(),t=tower({cooldown:2}),buff=leader('tower-haste',true),weak=leader('tower-haste'),debuff=leader('enemy-slow',true,{owner:1,target:0});
+ const s=state(),t=tower({y:2,cooldown:2}),buff=leader('tower-haste',true),weak=leader('tower-haste'),debuff=leader('enemy-slow',true,{owner:1,target:0});
  s.players[0].towers=[t];s.enemies=[unit({owner:1,target:0,hp:10000,max:10000}),buff,weak,debuff];
  assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),['enemy-slow','tower-haste']);tick(s,1);
  const rate=(1+heroEffectStats(buff.level).amount)*(1-heroEffectStats(debuff.level).amount);assert.ok(Math.abs(t.cooldown-(2-rate))<1e-10);

@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {DUEL_MAPS,DEFAULT_DUEL_MAP_ID,duelMap,duelPathDistance,duelPathPosition,duelRoadCell,isDuelMapId} from '../src/multiplayer/duel-maps';
+import {DUEL_MAPS,DEFAULT_DUEL_MAP_ID,DUEL_LANE_ROWS,DUEL_LANE_STRIDE,DUEL_BATTLE_ROWS,duelLaneOffset,duelMap,duelPathDistance,duelPathPosition,duelRoadCell,isDuelMapId} from '../src/multiplayer/duel-maps';
+import {duelMapPreviewHTML,duelMapPickerHTML,duelMapSummaryHTML} from '../src/multiplayer/map-picker';
 import {advanceDuel,applyDuel,createDuel,duelEnemyPosition,joinDuel,validDuelCell,DUEL_PREPARATION_SECONDS,DuelEnemy,DuelState} from '../src/multiplayer/duel';
 const ROOM_NOW=100000,NOW=ROOM_NOW+DUEL_PREPARATION_SECONDS*1000;
 function match(mapId?:string,rewardHero?:string){
@@ -9,10 +10,10 @@ function match(mapId?:string,rewardHero?:string){
  assert.ok(applyDuel(s,0,{type:'ready'},ROOM_NOW,'a').ok);assert.ok(applyDuel(s,1,{type:'ready'},ROOM_NOW,'b').ok);assert.equal(s.status,'preparing');
  s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);return s;
 }
-function enemy(s:DuelState,x:number,y:number,extra:Partial<DuelEnemy>={}):DuelEnemy{return{id:90,owner:1,target:0,hero:null,level:1,hp:500,max:500,x,y,pathDistance:duelPathDistance(s.mapId,x,y),slow:0,stun:0,hits:0,...extra};}
+function enemy(s:DuelState,x:number,localY:number,extra:Partial<DuelEnemy>={}):DuelEnemy{const target=extra.target??0,y=localY+duelLaneOffset(target);return{id:90,owner:1,target,hero:null,level:1,hp:500,max:500,x,y,pathDistance:duelPathDistance(s.mapId,x,y,target),slow:0,stun:0,hits:0,...extra};}
 function keepConnected(s:DuelState,now:number){s.players.forEach(p=>p!.lastSeen=now);advanceDuel(s,now);}
 
-test('10개 선택 맵은 서로 다르고 좌우 대칭이며 이어진 굽잇길과 충분한 설치 공간을 가진다',()=>{
+test('10개 선택 맵은 기본 경로의 공정한 좌우 대칭을 유지하고 독립 진영 전체에 설치 공간을 가진다',()=>{
  assert.equal(DUEL_MAPS.length,10);assert.equal(new Set(DUEL_MAPS.map(map=>map.id)).size,10);assert.equal(new Set(DUEL_MAPS.map(map=>JSON.stringify(map.points))).size,10);assert.equal(DEFAULT_DUEL_MAP_ID,DUEL_MAPS[0].id);
  for(const map of DUEL_MAPS){
   assert.deepEqual(map.points[0],{x:0,y:3});assert.deepEqual(map.points.at(-1),{x:23,y:3});
@@ -25,8 +26,50 @@ test('10개 선택 맵은 서로 다르고 좌우 대칭이며 이어진 굽잇�
    if(i)assert.equal(Math.abs(a.x-map.roadCells[i-1].x)+Math.abs(a.y-map.roadCells[i-1].y),1,`${map.id}: 이어진 길`);
   }
   const s=match(map.id);let slots=0;
-  for(let x=1;x<=10;x++)for(let y=0;y<7;y++){const allowed=validDuelCell(s,0,x,y);assert.equal(allowed,validDuelCell(s,1,23-x,y));assert.equal(allowed,!roads.has(`${x},${y}`));if(allowed)slots++;}
+  for(let x=1;x<=22;x++)for(let y=0;y<7;y++){const allowed=validDuelCell(s,0,x,y);assert.equal(allowed,validDuelCell(s,1,23-x,y+8));assert.equal(allowed,!roads.has(`${x},${y}`));if(allowed)slots++;}
   assert.ok(slots>=14,`${map.id}: 전체 14타워를 선택할 공간`);
+ }
+});
+
+test('두 lane의 좌표·길 판정·거리 투영은 8칸만 다르고 이동 경로는 모든 맵에서 겹치지 않는다',()=>{
+ assert.equal(DUEL_LANE_ROWS,7);assert.equal(DUEL_LANE_STRIDE,8);assert.equal(DUEL_BATTLE_ROWS,15);
+ assert.equal(duelLaneOffset(0),0);assert.equal(duelLaneOffset(1),8);
+ for(const mapId of [undefined,...DUEL_MAPS.map(map=>map.id)]){
+  const map=duelMap(mapId),upper=new Set(map.roadCells.map(p=>`${p.x},${p.y}`)),lower=new Set(map.roadCells.map(p=>`${p.x},${p.y+8}`));
+  assert.ok([...upper].every(cell=>!lower.has(cell)),'road cells are disjoint');
+  for(let x=0;x<24;x++)for(let y=0;y<15;y++){
+   assert.equal(duelRoadCell(mapId,x,y),upper.has(`${x},${y}`),'omitted side keeps the base path');
+   assert.equal(duelRoadCell(mapId,x,y,0),upper.has(`${x},${y}`));
+   assert.equal(duelRoadCell(mapId,x,y,1),lower.has(`${x},${y}`));
+  }
+  for(let distance=-1;distance<=map.length+1;distance+=.25){
+   const a=duelPathPosition(mapId,distance),b=duelPathPosition(mapId,distance,1);
+   assert.deepEqual(a,duelPathPosition(mapId,distance,0));
+   assert.equal(a.x,b.x);assert.equal(b.y-a.y,8);assert.equal(a.dx,b.dx);assert.equal(a.dy,b.dy);
+   assert.ok(a.y>=0&&a.y<=6&&b.y>=8&&b.y<=14);
+   const clamped=Math.max(0,Math.min(map.length,distance));
+   assert.ok(Math.abs(duelPathDistance(mapId,a.x,a.y)-clamped)<1e-8);
+   assert.ok(Math.abs(duelPathDistance(mapId,b.x,b.y,1)-clamped)<1e-8);
+  }
+  assert.equal(duelPathDistance(mapId,8.2,2.7),duelPathDistance(mapId,8.2,10.7,1),'off-road projections use lane-local height');
+ }
+});
+
+test('설치는 각 진영 x1~22 전체에서 가능하고 성·분리줄·상대 lane에는 불가능하다',()=>{
+ for(const map of DUEL_MAPS){
+  const s=match(map.id);
+  for(const side of [0,1] as const)for(let x=0;x<24;x++)for(let y=0;y<15;y++){
+   const offset=duelLaneOffset(side),expected=x>=1&&x<=22&&y>=offset&&y<offset+7&&!duelRoadCell(map.id,x,y,side);
+   assert.equal(validDuelCell(s,side,x,y),expected,`${map.id}: side${side} (${x},${y})`);
+  }
+  for(const side of [0,1] as const){
+   const y=duelLaneOffset(side)+6;s.players[side]!.stock.basic=1;
+   assert.equal(applyDuel(s,side,{type:'build',x:11,y:7,typeId:'basic'},NOW,`divider-${side}`).ok,false);
+   assert.equal(applyDuel(s,side,{type:'build',x:11,y:duelLaneOffset(side===0?1:0)+6,typeId:'basic'},NOW,`other-${side}`).ok,false);
+   assert.equal(s.players[side]!.stock.basic,1,'rejected cross-lane placement preserves prepared stock');
+   assert.equal(applyDuel(s,side,{type:'build',x:11,y,typeId:'basic'},NOW,`whole-${side}`).ok,true,'center columns now belong to the entire lane');
+   assert.equal(s.players[side]!.stock.basic,0);
+  }
  }
 });
 
@@ -46,16 +89,16 @@ test('경로 샘플은 모서리를 돌아가며 모든 맵의 대응 위치가 
   assert.ok(Math.abs(left.x+right.x-23)<1e-8);assert.ok(Math.abs(left.y-right.y)<1e-8);assert.ok(Math.abs(duelPathDistance(map.id,left.x,left.y)-distance)<1e-8);
  }}
  const s=match(DEFAULT_DUEL_MAP_ID),e=enemy(s,7,1.2,{owner:0,target:1});
- const start=duelEnemyPosition(s,e),predicted=duelEnemyPosition(s,e,1);assert.equal(start.dx,0);assert.equal(start.dy,-1);assert.equal(predicted.y,1);assert.ok(predicted.x>7);
+ const start=duelEnemyPosition(s,e),predicted=duelEnemyPosition(s,e,1);assert.equal(start.dx,0);assert.equal(start.dy,-1);assert.equal(predicted.y,9);assert.ok(predicted.x>7);
  const turn=duelEnemyPosition(s,enemy(s,7,1));assert.equal(turn.dx,0);assert.equal(turn.dy,1,'왼쪽으로 가는 적도 모서리에서 다음 진행 방향을 바라본다');
  s.enemies=[e];advanceDuel(s,NOW+1000);assert.ok(Math.abs(e.x-predicted.x)<1e-8);assert.ok(Math.abs(e.y-predicted.y)<1e-8);
 });
 
-test('모든 선택 맵에서 파동은 아군 성에서 대칭으로 출발하고 같은 시간에 상대 불꽃에 도착한다',()=>{
+test('모든 선택 맵에서 파동은 각 target lane으로 출발하고 같은 시간에 상대 불꽃에 도착한다',()=>{
  const arrivals:number[]=[];
  for(const map of DUEL_MAPS){
   const s=match(map.id);keepConnected(s,NOW+8000);assert.equal(s.enemies.length,2);assert.equal(s.enemies[0].target,0);assert.equal(s.enemies[1].target,1);
-  const [a,b]=s.enemies;assert.ok(Math.abs(a.x+b.x-23)<1e-8);assert.ok(Math.abs(a.y-b.y)<1e-8);
+  const [a,b]=s.enemies;assert.ok(Math.abs(a.x+b.x-23)<1e-8);assert.ok(Math.abs(b.y!-a.y!-8)<1e-8);assert.ok(a.y!>=0&&a.y!<=6&&b.y!>=8&&b.y!<=14);
   assert.equal(a.owner,1);assert.equal(b.owner,0);assert.ok(a.pathDistance!>map.length-1.1);assert.ok(b.pathDistance!<1.1);
   let first=-1;
   for(let second=9;second<=120;second++){
@@ -89,15 +132,30 @@ test('가속 영웅의 범위는 서로 다른 높이의 아군을 구별한다'
  assert.ok(Math.abs(alone.enemies[0].pathDistance!-far.enemies[0].pathDistance!)<1e-8);assert.ok(near.enemies[0].pathDistance!>alone.enemies[0].pathDistance!);
 });
 
-test('부화와 학습지 영웅은 동반 병사 없이 양쪽 곡선 길에 좌우 대칭으로 배치된다',()=>{
+test('부화와 학습지 영웅은 동반 병사 없이 서로 겹치지 않는 target lane에 배치된다',()=>{
  for(const map of DUEL_MAPS){
   const s=match(map.id);for(const side of [0,1] as const){s.players[side]!.egg=10;assert.ok(applyDuel(s,side,{type:'hatch',heroId:'hero-10-1'},NOW,`h-${side}`).ok);}
   const a=s.enemies.filter(e=>e.owner===0),b=s.enemies.filter(e=>e.owner===1);assert.equal(a.length,1);assert.equal(b.length,1);assert.ok(s.enemies.every(e=>e.hero));
-  for(let i=0;i<a.length;i++){assert.ok(Math.abs(a[i].x+b[i].x-23)<1e-8);assert.equal(a[i].y,b[i].y);assert.ok(Math.abs(a[i].pathDistance!+b[i].pathDistance!-map.length)<1e-8);}
+  for(let i=0;i<a.length;i++){assert.ok(Math.abs(a[i].x+b[i].x-23)<1e-8);assert.equal(a[i].y!-b[i].y!,8);assert.ok(Math.abs(a[i].pathDistance!+b[i].pathDistance!-map.length)<1e-8);}
   const reward=match(map.id,'hero-10-1');for(const side of [0,1] as const){assert.equal(reward.players[side]!.rewardUsed,false);assert.ok(applyDuel(reward,side,{type:'summon-reward'},NOW,`summon-${side}`).ok);assert.equal(reward.players[side]!.rewardUsed,true);assert.equal(applyDuel(reward,side,{type:'summon-reward'},NOW,`duplicate-${side}`).ok,false);}
-  assert.equal(reward.enemies.filter(e=>e.rewardSummon).length,2);assert.ok(reward.enemies.every(e=>duelRoadCell(map.id,Math.round(e.x),Math.round(e.y!))));
+  assert.equal(reward.enemies.filter(e=>e.rewardSummon).length,2);assert.ok(reward.enemies.every(e=>duelRoadCell(map.id,Math.round(e.x),Math.round(e.y!),e.target)));
   const left=reward.enemies.filter(e=>e.owner===0),right=reward.enemies.filter(e=>e.owner===1);
   assert.equal(left.length,1);assert.equal(right.length,1);assert.ok(reward.enemies.every(e=>e.hero));
-  for(let i=0;i<left.length;i++){assert.ok(Math.abs(left[i].x+right[i].x-23)<1e-8);assert.equal(left[i].y,right[i].y);assert.ok(Math.abs(left[i].pathDistance!+right[i].pathDistance!-map.length)<1e-8);}
+  for(let i=0;i<left.length;i++){assert.ok(Math.abs(left[i].x+right[i].x-23)<1e-8);assert.equal(left[i].y!-right[i].y!,8);assert.ok(Math.abs(left[i].pathDistance!+right[i].pathDistance!-map.length)<1e-8);}
  }
+});
+
+test('맵 선택 미리보기는 두 독립 경로와 가운데 분리줄을 표시한다',()=>{
+ for(const map of DUEL_MAPS){
+  const html=duelMapPreviewHTML(map.id),routes=[...html.matchAll(/<polyline data-lane-route="([01])" points="([^"]+)"/g)];
+  assert.equal(routes.length,2);assert.ok(html.includes('viewBox="-1 -1 25 17"'));assert.ok(html.includes('data-lane-divider="true" d="M-.5 7 H23.5"'));
+  for(const route of routes){
+   const side=Number(route[1]) as 0|1,points=route[2].split(' ').map(pair=>{const [x,y]=pair.split(',').map(Number);return{x,y};});
+   assert.deepEqual(points,map.points.map(point=>({x:point.x,y:point.y+duelLaneOffset(side)})));
+  }
+  assert.ok(duelMapSummaryHTML(map.id).includes('위·아래 독립 경로'));
+ }
+ const picker=duelMapPickerHTML(DEFAULT_DUEL_MAP_ID);
+ assert.equal((picker.match(/data-duel-map=/g)||[]).length,10);assert.equal((picker.match(/data-lane-route=/g)||[]).length,20);
+ assert.equal((picker.match(/aria-pressed="true"/g)||[]).length,1);assert.ok(picker.includes('몬스터 동선은 겹치지 않아요.'));
 });

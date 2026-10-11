@@ -30,7 +30,7 @@ test('학습지 영웅은 기존 30개 ID와 기본 체력을 유지하며 이�
 });
 
 test('이전에 획득한 ID로 수집 영웅을 소환하면 가속·체력 강화·아군 타워 가속이 동시에 적용된다',()=>{
- const s=match('hero-1-0'),unit=enemy({pathDistance:1.5,x:1.5}),opponent=enemy({id:91,owner:1,target:0,pathDistance:1.5,x:1.5}),allyTower=tower({x:2}),otherTower=tower({id:51,x:2});
+ const s=match('hero-1-0'),unit=enemy({pathDistance:1.5,x:1.5}),opponent=enemy({id:91,owner:1,target:0,pathDistance:1.5,x:1.5}),allyTower=tower({x:2}),otherTower=tower({id:51,x:2,y:10});
  s.enemies=[unit,opponent];s.players[0].towers=[allyTower];
  const result=applyDuel(s,0,{type:'summon-reward'},NOW,'legacy-reward');assert.equal(result.ok,true);assert.ok(result.message.includes(worksheetHeroSpec('hero-1-0')!.name));
  const leader=s.enemies.find(e=>e.rewardSummon)!;assert.equal(leader.hero,'hero-1-0');assert.equal(leader.vitalityBaseMax,heroSpec('hero-1-0')!.hp);assert.equal(s.players[0].rewardUsed,true);
@@ -44,7 +44,7 @@ test('이전에 획득한 ID로 수집 영웅을 소환하면 가속·체력 강
 test('세 가족의 몬스터 효과와 상대 타워 감속은 살아 있는 같은 편 출처와 실제 반경을 따른다',()=>{
  const expected:HeroEffect[][]=[['haste','vitality'],['vitality','shield'],['haste','shield']];
  for(let variant=0;variant<3;variant++){
-  const s=match(),unit=enemy({pathDistance:12}),opponent=enemy({id:91,owner:1,target:0,pathDistance:12}),leader=collected(1,variant,{pathDistance:12}),enemyTower=tower({x:13}),allyTower=tower({x:13});s.enemies=[unit,opponent,leader];
+  const s=match(),unit=enemy({pathDistance:12}),opponent=enemy({id:91,owner:1,target:0,pathDistance:12}),leader=collected(1,variant,{pathDistance:12}),enemyTower=tower({x:13,y:10}),allyTower=tower({x:13});s.enemies=[unit,opponent,leader];
   assert.deepEqual(activeDuelHeroEffects(s,unit),expected[variant]);assert.deepEqual(activeDuelHeroEffects(s,opponent),[]);
   assert.deepEqual(activeDuelTowerHeroEffects(s,1,enemyTower),variant===0?[]:['enemy-slow']);assert.deepEqual(activeDuelTowerHeroEffects(s,0,allyTower),variant===0?['tower-haste']:[]);
   leader.pathDistance=20;assert.deepEqual(activeDuelHeroEffects(s,unit),[]);assert.deepEqual(activeDuelTowerHeroEffects(s,1,enemyTower),[]);
@@ -63,11 +63,11 @@ test('아군 타워 가속과 상대 타워 감속은 서로 곱해 적용하고
  const s=match(),left=collected(10,0,{pathDistance:11}),right=collected(10,1,{id:200,owner:1,target:0,pathDistance:12}),t=tower({x:10});s.enemies=[left,right];s.players[0].towers=[t];
  assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),['enemy-slow','tower-haste']);assert.deepEqual(activeDuelTowerHeroEffects(s,1,t),[]);
  const amount=heroEffectStats(10).amount;advanceDuel(s,NOW+100);assert.ok(Math.abs(t.cooldown-(1-.1*(1+amount)*(1-amount)))<1e-12);
- left.owner=1;left.target=0;right.owner=0;right.target=1;assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),[]);assert.deepEqual(activeDuelTowerHeroEffects(s,1,t),['enemy-slow','tower-haste']);
+ left.owner=1;left.target=0;right.owner=0;right.target=1;t.y=10;assert.deepEqual(activeDuelTowerHeroEffects(s,0,t),[]);assert.deepEqual(activeDuelTowerHeroEffects(s,1,t),['enemy-slow','tower-haste']);
 });
 
 test('수집 영웅 보호막과 체력 완충은 이탈·재진입·동급 출처 교체로 재충전되지 않는다',()=>{
- const s=match(),unit=enemy({pathDistance:12.5}),leader=collected(1,1,{pathDistance:12}),t=tower({x:13,cooldown:0});s.enemies=[unit,leader];s.players[1]!.towers=[t];
+ const s=match(),unit=enemy({pathDistance:12.5}),leader=collected(1,1,{pathDistance:12}),t=tower({x:13,y:10,cooldown:0});s.enemies=[unit,leader];s.players[1]!.towers=[t];
  advanceDuel(s,NOW+100);assert.equal(unit.shieldSpent,1);assert.equal(unit.hp,1100);assert.equal(s.shots[0].shielded,true);
  leader.pathDistance=4;t.cooldown=1;advanceDuel(s,NOW+200);assert.equal(unit.hp,1000);assert.deepEqual(activeDuelHeroEffects(s,unit),[]);
  leader.pathDistance=12;advanceDuel(s,NOW+300);assert.equal(unit.hp,1100);assert.deepEqual(activeDuelHeroEffects(s,unit),['vitality']);
@@ -77,7 +77,7 @@ test('수집 영웅 보호막과 체력 완충은 이탈·재진입·동급 출�
 });
 
 test('상위 학습지 영웅의 보호막은 두 번만 막고 새 동급 출처가 와도 소진 상태를 유지한다',()=>{
- const s=match(),unit=enemy({pathDistance:12.5}),leader=collected(10,2,{pathDistance:12}),t=tower({x:13,cooldown:0});s.enemies=[unit,leader];s.players[1]!.towers=[t];
+ const s=match(),unit=enemy({pathDistance:12.5}),leader=collected(10,2,{pathDistance:12}),t=tower({x:13,y:10,cooldown:0});s.enemies=[unit,leader];s.players[1]!.towers=[t];
  assert.equal(heroEffectStats(10).shieldHits,2);
  for(let hit=1;hit<=2;hit++){t.cooldown=0;advanceDuel(s,NOW+hit*100);assert.equal(unit.shieldSpent,hit);assert.equal(unit.hp,1000);assert.equal(s.shots.at(-1)!.shielded,true);}
  assert.deepEqual(activeDuelHeroEffects(s,unit),['haste']);t.cooldown=0;advanceDuel(s,NOW+300);assert.equal(unit.hp,900);assert.equal(s.shots.at(-1)!.shielded,undefined);

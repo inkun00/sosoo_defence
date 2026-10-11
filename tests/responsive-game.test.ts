@@ -32,17 +32,24 @@ test('invalid measurements remain finite while the game waits for a visible pare
  }
 });
 
-test('duel crafting keeps both 44px rows visible after reserving space for audio controls',()=>{
- for(const [width,height] of [[568,271],[667,326],[844,281],[844,341],[1024,719]]){
+test('duel keeps independent upper and lower fields and both 44px answer rows visible',()=>{
+ for(const [width,height] of [[568,271],[667,326],[844,281],[844,341],[1024,719],[390,844],[375,667],[700,1200],[720,1280],[768,1024],[1024,650]]){
   const layout=duelScreenLayout(width,height),touch=Math.max(68,Math.ceil(44/layout.scale));
   assert.ok(layout.width*layout.scale<=width+.01);
   assert.ok(layout.height*layout.scale<=height+.01);
   if(layout.compact){
    assert.ok(touch*layout.scale>=44);
-   assert.ok(3*touch+369<=layout.height-8,'last crafting row must remain above the bottom margin');
+   assert.ok(3*touch+673<=layout.height-8,'both fields and last answer row remain above the bottom margin');
   }
  }
- assert.deepEqual(duelScreenLayout(1280,720),gameScreenLayout(1280,720));
+ for(const [width,height] of [[1280,720],[1024,768]]){
+  const layout=duelScreenLayout(width,height);assert.equal(layout.height,1104);
+  assert.equal(layout.scale,Math.min(width/1280,height/1104));
+ }
+ assert.ok(duelScreenLayout(390,844).compact,'narrow portrait duel pages answers into two touch rows');
+ assert.ok(duelScreenLayout(768,1024).compact,'four answer rows reflow before minimum touch height would clip');
+ assert.ok(duelScreenLayout(1024,650).compact,'short screens reflow even when aspect ratio is below the adventure threshold');
+ assert.equal(gameScreenLayout(390,844).compact,false,'adventure layout stays independent');
 });
 
 test('FIT reads fresh parent bounds before both same-height rotation and game-size changes, then disposes listeners',t=>{

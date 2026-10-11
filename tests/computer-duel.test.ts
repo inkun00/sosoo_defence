@@ -5,7 +5,7 @@ import {COMPUTER_OPPONENTS,computerOpponent} from '../src/multiplayer/computer-o
 import {DUEL_START_MONEY,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_TOTAL_SECONDS,FLAME_MAX,duelBuildCost,applyDuel,createDuel,joinDuel,advanceDuel,canPurchaseDuelTower,validDuelCell,duelHeroLearningLevel} from '../src/multiplayer/duel';
 import {DUEL_MAPS,duelRoadCell} from '../src/multiplayer/duel-maps';
 import {decimalBoard} from '../src/multiplayer/decimal-boards';
-import {numberText,recipe} from '../src/math';
+import {numberText} from '../src/math';
 import {simulateComputerDuel} from '../tools/computer-duel-simulation';
 import {simulateDuelDifficulty,DUEL_AUDIT_POLICIES} from '../tools/audit-duel-difficulty';
 
@@ -24,7 +24,7 @@ test('컴퓨터 상대 10명은 타워 난이도를 유지하며 동일한 예�
   assert.equal(peer.definition.level,level);assert.equal(s.learningLevel,level);assert.equal(s.status,'waiting');assert.equal(s.players[1]!.ready,true);
   assert.equal(s.players[0].accountLevel,1);assert.equal(s.players[1]!.accountLevel,level);
   assert.deepEqual(s.players[0].board,decimalBoard(912,0,1));assert.deepEqual(s.players[1]!.board,s.players[0].board);assert.ok(s.players.every(p=>duelHeroLearningLevel(p!)===1&&p!.money===DUEL_START_MONEY&&p!.flame===FLAME_MAX&&stockTotal(p!.stock)===0));
-  const slots=additionSlots(s.players[1]!.board)!;assert.ok(slots);assert.equal(new Set(slots).size,3);assert.ok(recipe(...slots.map(i=>s.players[1]!.board[i]) as [number,number,number],'+'));
+  const slots=additionSlots(s.players[1]!.heroQuestion,s.players[1]!.board)!;assert.ok(slots);assert.equal(slots.length,1);assert.equal(s.players[1]!.board[slots[0]],s.players[1]!.heroQuestion.a+s.players[1]!.heroQuestion.b);
   assert.ok(s.players[0].board.every(n=>n%10===0));peer.dispose();
  }
  assert.equal(computerOpponent(-10).level,1);assert.equal(computerOpponent(99).level,10);
@@ -38,7 +38,7 @@ test('계정 레벨이 달라도 같은 첫 덧셈으로 성장량을 모으고 
   assert.deepEqual(p.board,decimalBoard(912,0,1));assert.deepEqual(cpu.board,p.board);
   await peer.send({type:'ready'});assert.equal(s.status,'preparing');
   for(let round=0;round<4;round++){
-   const cpuBefore=structuredClone(cpu),board=[...p.board],slots=additionSlots(board)!;assert.ok(slots);
+   const cpuBefore=structuredClone(cpu),board=[...p.board],slots=additionSlots(p.heroQuestion,board)!;assert.ok(slots);
    assert.equal((await peer.send({type:'fuse',operation:'+',round:p.round,slots})).ok,true);
    assert.equal(p.round,round+1);assert.deepEqual(p.board,decimalBoard(912,p.round,1));assert.ok(p.board.every(n=>n%100===0));assert.deepEqual(cpu,cpuBefore);
    if(round===1){const before=[...p.board];assert.equal((await peer.send({type:'hatch',heroId:'hero-2-0'})).ok,false);assert.equal(p.egg,2);assert.deepEqual(p.board,before);assert.equal(stockTotal(p.heroStock??{}),0);assert.equal(s.enemies.length,0);}
@@ -60,14 +60,14 @@ test('CPU의 영웅 덧셈은 개인 정답 5·10·15개 경계에서 진급하�
   f.run(f.peer.definition.fusionMs);assert.equal(cpu.solved,count);assert.equal(cpu.egg,count);assert.equal(cpu.round,count);
   const stage=boundaries.get(count);if(stage){
    assert.equal(duelHeroLearningLevel(cpu),stage);assert.deepEqual(cpu.board,decimalBoard(912,count,stage),`CPU 정답 ${count}개 뒤 ${stage}단계 판`);
-   const slots=additionSlots(cpu.board)!,a=cpu.board[slots[0]],b=cpu.board[slots[1]],hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10,tenths=Math.floor(a/100)%10+Math.floor(b/100)%10;
+   const slots=additionSlots(cpu.heroQuestion,cpu.board)!,a=cpu.heroQuestion.a,b=cpu.heroQuestion.b,hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10,tenths=Math.floor(a/100)%10+Math.floor(b/100)%10;
    assert.equal(hundredths>=10||tenths+Math.floor(hundredths/10)>=10,stage===2||stage===4,`${stage}단계의 CPU 정답은 정해진 받아올림 규칙을 지킨다`);
    if(stage<=2)assert.ok(cpu.board.every(n=>n%100===0));else assert.ok(cpu.board.every(n=>n%10===0)&&cpu.board.some(n=>n%100!==0));
   }
   assert.equal(duelHeroLearningLevel(p),1);assert.equal(p.solved,0);assert.equal(p.egg,0);assert.deepEqual(p.board,humanBoard);assert.equal(s.learningLevel,10);assert.equal(cpu.accountLevel,10);assert.equal(p.accountLevel,27);
  }
  const cpuBefore=structuredClone(cpu);
- for(let count=1;count<=5;count++){assert.ok((await f.peer.send({type:'fuse',round:p.round,operation:'+',slots:additionSlots(p.board)!})).ok);assert.equal(p.egg,count);}
+ for(let count=1;count<=5;count++){assert.ok((await f.peer.send({type:'fuse',round:p.round,operation:'+',slots:additionSlots(p.heroQuestion,p.board)!})).ok);assert.equal(p.egg,count);}
  assert.equal(duelHeroLearningLevel(p),2);assert.deepEqual(p.board,decimalBoard(912,5,2));assert.deepEqual(cpu,cpuBefore);assert.equal(duelHeroLearningLevel(cpu),4);assert.equal(stockTotal(cpu.heroStock??{}),0);assert.equal(s.enemies.length,0);f.peer.dispose();
 });
 
@@ -97,21 +97,21 @@ test('CPU도 준비 3분 내내 타워와 제한 없는 성장량을 모으고 �
  assert.ok(counts[9]>counts[0],`상위 CPU가 더 많은 타워를 준비한다: ${counts.join(', ')}`);
 });
 
-test('180초 뒤 양쪽 코인은 0이고 모아 둔 타워는 문제 없이 즉시 설치한다',async()=>{
+test('180초 뒤 양쪽 남은 코인을 보존하고 모아 둔 타워는 문제 없이 무료 설치한다',async()=>{
  const f=local(6),s=f.peer.state,p=s.players[0];await f.peer.send({type:'ready'});await prepareTower(f.peer);assert.equal(p.stock.basic,1);assert.equal(p.towers.length,0);
- assert.equal((await f.peer.send({type:'build',typeId:'basic',x:4,y:2})).ok,false);f.run(DUEL_PREPARATION_SECONDS*1000);
- assert.equal(s.status,'playing');assert.equal(s.preparationElapsed,DUEL_PREPARATION_SECONDS);assert.ok(s.players.every(player=>player!.money===0&&player!.escrow===0&&player!.quote===null));
+ assert.equal((await f.peer.send({type:'build',typeId:'basic',x:4,y:2})).ok,false);f.run(DUEL_PREPARATION_SECONDS*1000-1);const budgets=s.players.map(player=>player!.money+player!.escrow);f.advance(1);
+ assert.equal(s.status,'playing');assert.equal(s.preparationElapsed,DUEL_PREPARATION_SECONDS);assert.deepEqual(s.players.map(player=>player!.money),budgets);assert.ok(s.players.every(player=>player!.escrow===0&&player!.quote===null));
  assert.equal((await f.peer.send({type:'prepare-quote',typeId:'basic'})).ok,false);assert.equal((await f.peer.send({type:'quote',typeId:'basic',x:4,y:2})).ok,false);
- assert.ok((await f.peer.send({type:'build',typeId:'basic',x:4,y:2})).ok);assert.equal(p.towers.length,1);assert.equal(p.stock.basic,0);assert.equal(p.money,0);assert.equal(p.quote,null);
+ assert.ok((await f.peer.send({type:'build',typeId:'basic',x:4,y:2})).ok);assert.equal(p.towers.length,1);assert.equal(p.stock.basic,0);assert.equal(p.money,budgets[0]);assert.equal(p.quote,null);
  f.run(1800);assert.equal(s.players[1]!.towers.length,1);assert.equal(s.players[1]!.quote,null);assert.equal(f.peer.opponent.mood,'cast');f.peer.dispose();
 });
 
-test('온라인과 컴퓨터 대전 모두 동일한 3분 문제풀이와 0코인 전투 규칙을 사용한다',()=>{
+test('온라인과 컴퓨터 대전 모두 동일한 3분 문제풀이와 남은 코인 보존 규칙을 사용한다',()=>{
  const now=100000,s=createDuel('online','수호자',17,now);joinDuel(s,'guest','상대',now);
  assert.equal(canPurchaseDuelTower(s),false);applyDuel(s,0,{type:'ready'},now,'ready-a');applyDuel(s,1,{type:'ready'},now,'ready-b');assert.equal(s.status,'preparing');
  assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},now,'online-quote').ok);const q=s.players[0].quote!;
  assert.ok(applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now,'online-answer').ok);assert.equal(s.players[0].stock.basic,1);assert.equal(s.players[0].towers.length,0);
- for(const p of s.players)p!.lastSeen=now+DUEL_PREPARATION_SECONDS*1000;advanceDuel(s,now+DUEL_PREPARATION_SECONDS*1000);assert.equal(s.status,'playing');assert.ok(s.players.every(p=>p!.money===0));
+ const budgets=s.players.map(p=>p!.money+p!.escrow);for(const p of s.players)p!.lastSeen=now+DUEL_PREPARATION_SECONDS*1000;advanceDuel(s,now+DUEL_PREPARATION_SECONDS*1000);assert.equal(s.status,'playing');assert.deepEqual(s.players.map(p=>p!.money),budgets);
  assert.ok(applyDuel(s,0,{type:'build',typeId:'basic',x:4,y:2},now+DUEL_PREPARATION_SECONDS*1000,'online-build').ok);assert.equal(s.players[0].towers.length,1);
 });
 
@@ -121,13 +121,14 @@ test('오래 대기해도 준비와 전투의 CPU 행동 타이머는 각 단계
  const solved=p.solved,growth=p.egg;assert.ok(solved>0&&growth===solved);assert.equal(stockTotal(p.heroStock??{}),0);f.advance(1799);assert.equal(p.towers.length,0);assert.equal(s.enemies.some(e=>e.hero),false);f.advance(1);assert.equal(p.towers.length,1);assert.equal(p.quote,null);assert.equal(p.solved,solved);assert.equal(p.egg,growth);f.peer.dispose();
 });
 
-test('전투 중 처치는 점수를 주며 새 타워를 사지 못하고 비축 타워의 회수·재설치는 가능하다',async()=>{
+test('전투 처치는 코인을 만들지 않으며 직접 코인 구매와 비축 회수는 문제 없이 진행한다',async()=>{
  const f=local(6),peer=f.peer,s=peer.state,p=s.players[0];await peer.send({type:'ready'});await prepareTower(peer);f.run(DUEL_PREPARATION_SECONDS*1000);
  assert.ok((await peer.send({type:'build',typeId:'basic',x:4,y:2})).ok);
- s.enemies.push({id:9000,owner:1,target:0,hero:null,level:1,hp:100,max:100,x:4,y:3,slow:0,stun:0,hits:0});f.advance(100);assert.ok((p.combatScore??0)>0);assert.equal(p.money,0);
- p.money=DUEL_START_MONEY;const money=p.money;assert.equal(duelBuildCost(s,0,'basic'),Infinity);assert.equal((await peer.send({type:'build',typeId:'basic',x:6,y:2})).ok,false);assert.equal(p.money,money);assert.equal(p.quote,null);
+ p.money=0;s.enemies.push({id:9000,owner:1,target:0,hero:null,level:1,hp:100,max:100,x:4,y:3,slow:0,stun:0,hits:0});f.advance(100);assert.ok((p.combatScore??0)>0);assert.equal(p.money,0);
+ p.money=DUEL_START_MONEY;const money=p.money,cost=duelBuildCost(s,0,'basic');assert.ok(cost>0&&cost<=money);assert.equal((await peer.send({type:'build',typeId:'basic',x:6,y:2})).ok,true);assert.equal(p.money,money-cost);assert.equal(p.quote,null);
+ assert.ok((await peer.send({type:'sell',towerId:p.towers[1].id})).ok);assert.equal(p.money,money);assert.equal(p.stock.basic,0);
  assert.ok((await peer.send({type:'sell',towerId:p.towers[0].id})).ok);assert.equal(p.stock.basic,1);assert.ok((await peer.send({type:'build',typeId:'basic',x:6,y:2})).ok);assert.equal(p.money,money);
- f.run(10000);const enemy=s.enemies.find(e=>e.target===0)!,x=enemy.x,towers=s.players[1]!.towers.length,solved=s.players[1]!.solved;f.run(12000);assert.ok(s.elapsed>=22);assert.ok(enemy.x<x);assert.ok(s.players[1]!.towers.length>=towers);assert.equal(s.players[1]!.quote,null);assert.equal(s.players[1]!.solved,solved);assert.ok(s.players[1]!.towers.every(t=>t.prepared&&t.cost===0));
+ f.run(10000);const enemy=s.enemies.find(e=>e.target===0)!,x=enemy.x,towers=s.players[1]!.towers.length,solved=s.players[1]!.solved;f.run(12000);assert.ok(s.elapsed>=22);assert.ok(enemy.x<x);assert.ok(s.players[1]!.towers.length>=towers);assert.equal(s.players[1]!.quote,null);assert.equal(s.players[1]!.solved,solved);assert.ok(s.players[1]!.towers.every(t=>t.prepared?t.cost===0:t.cost>0));
  peer.dispose();const elapsed=s.elapsed;f.advance(30000);assert.equal(s.elapsed,elapsed);await assert.rejects(()=>peer.send({type:'ready'}));
 });
 
@@ -138,8 +139,11 @@ test('컴퓨터 표정은 준비 계산·전투 설치·불꽃 피격·승패에
  await peer.send({type:'surrender'});assert.equal(s.status,'finished');assert.equal(peer.opponent.mood,'victory');peer.dispose();
 });
 
-test('무작위 판의 덧셈 해답 탐색은 같은 값을 가진 서로 다른 블럭을 사용한다',()=>{
- assert.deepEqual(additionSlots([100,100,200]),[0,1,2]);assert.equal(additionSlots([100,200,400]),null);assert.equal(additionSlots([100,200]),null);
+test('CPU 정답 탐색은 고정 문제의 합만 찾고 후보끼리 성립하는 다른 식으로 우회하지 않는다',()=>{
+ assert.deepEqual(additionSlots({a:100,b:100},[100,200,300]),[1]);
+ assert.equal(additionSlots({a:100,b:100},[100,300,400]),null);
+ assert.equal(additionSlots({a:6000,b:7000},[100,200,300]),null);
+ assert.equal(additionSlots({a:105,b:200},[100,305,400]),null);
 });
 
 test('선택한 10종 맵에서 컴퓨터도 같은 길과 설치 규칙을 사용하고 좌우 배치 전략이 대칭이다',()=>{
@@ -148,8 +152,8 @@ test('선택한 10종 맵에서 컴퓨터도 같은 길과 설치 규칙을 사�
   assert.equal(s.mapId,map.id);assert.equal(s.status,'waiting');assert.equal(s.players[1]!.towers.length,0);assert.equal(s.players[1]!.quote,null);
   for(const unit of [10,200,2000]){
    const left=strategicDuelCells(s,0,unit),right=strategicDuelCells(s,1,unit);assert.ok(left.length>=6,`${map.id}에는 타워 설치 공간이 충분해야 한다`);
-   assert.deepEqual(left.map(c=>({x:23-c.x,y:c.y})),right,`${map.id}: 양쪽은 동일한 경로 배치 전략`);
-   for(const [side,cells]of [[0,left],[1,right]]as const)for(const c of cells){assert.ok(validDuelCell(s,side,c.x,c.y));assert.equal(duelRoadCell(map.id,c.x,c.y),false);}
+   assert.deepEqual(left.map(c=>({x:23-c.x,y:c.y+8})),right,`${map.id}: 양쪽은 동일한 경로 배치 전략`);
+   for(const [side,cells]of [[0,left],[1,right]]as const)for(const c of cells){assert.ok(validDuelCell(s,side,c.x,c.y));assert.equal(duelRoadCell(map.id,c.x,c.y,side),false);}
   }
   peer.dispose();
  }
@@ -158,11 +162,11 @@ test('선택한 10종 맵에서 컴퓨터도 같은 길과 설치 규칙을 사�
 test('10종 맵 × CPU 10레벨의 100대전이 180초 타워·성장량 준비와 180초 재고 전투로 끝난다',()=>{
  const reports=DUEL_MAPS.flatMap(map=>Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id)));assert.equal(reports.length,100);
  for(const r of reports){
-  const label=`${r.mapId} / Lv.${r.level}`;assert.equal(r.status,'finished',label);assert.equal(r.preparationSeconds,DUEL_PREPARATION_SECONDS);assert.ok(r.seconds>0&&r.seconds<=DUEL_SECONDS);assert.ok(r.totalSeconds>DUEL_PREPARATION_SECONDS&&r.totalSeconds<=DUEL_TOTAL_SECONDS);assert.ok(r.zeroCombatCoins,label);assert.ok(r.legalEconomy,`${label}: 코인·재고·설치 제한·전투 문제 없음`);assert.ok(r.noBattleFusion,label);
+  const label=`${r.mapId} / Lv.${r.level}`;assert.equal(r.status,'finished',label);assert.equal(r.preparationSeconds,DUEL_PREPARATION_SECONDS);assert.ok(r.seconds>0&&r.seconds<=DUEL_SECONDS);assert.ok(r.totalSeconds>DUEL_PREPARATION_SECONDS&&r.totalSeconds<=DUEL_TOTAL_SECONDS);assert.ok(r.coinsConserved,label);assert.ok(r.legalEconomy,`${label}: 코인·재고·설치 제한·전투 문제 없음`);assert.ok(r.noBattleFusion,label);
   assert.ok(r.playerPrepared>=1&&r.computerPrepared>=1,label);assert.ok(r.playerPreparedGrowth>=1&&r.computerPreparedGrowth>=1,label);assert.ok(r.growthConserved,`${label}: 소환 레벨 비용만큼 성장량을 사용한다`);assert.ok(r.playerStockPlaced>=1&&r.computerStockPlaced>=1,`${label}: 양쪽 모두 재고 배치`);assert.equal(r.playerEarned,0,label);assert.equal(r.computerEarned,0,label);
   assert.ok(r.computerSolved>=1);assert.ok(r.computerHatched);assert.ok(r.traversedBend);assert.ok(r.waves>=3);assert.ok(r.playerFlame>=0&&r.playerFlame<=FLAME_MAX);assert.ok(r.computerFlame>=0&&r.computerFlame<=FLAME_MAX);
  }
- assert.ok(reports.every(r=>r.playerCashBuilt===0&&r.computerCashBuilt===0));
+
  for(let level=1;level<=10;level++){const r=reports.find(r=>r.level===level)!;assert.ok(r.computerPrepared<=COMPUTER_OPPONENTS[level-1].maxTowers);}
  assert.ok(reports.find(r=>r.level===10)!.computerPrepared>reports.find(r=>r.level===1)!.computerPrepared);
 });
@@ -172,7 +176,7 @@ test('준비 경제의 기준 전략은 입문 CPU를 이기고 최고 CPU의 �
   const levels=[1,4,5,9,10],matches=levels.map(level=>simulateComputerDuel(level,seed));
   assert.equal(matches[0].winner,0,'입문 CPU는 기존 느린 기준 전략으로 클리어할 수 있다');
   assert.equal(matches[4].winner,1,'최고 CPU는 적은 방어와 느린 합성의 기준 전략을 압박한다');
-  assert.ok(matches.every(m=>m.status==='finished'&&m.legalEconomy&&m.zeroCombatCoins));
+  assert.ok(matches.every(m=>m.status==='finished'&&m.legalEconomy&&m.coinsConserved));
   for(const match of matches.filter(m=>m.reason.startsWith('6분 종료'))){
    assert.equal(match.totalSeconds,DUEL_TOTAL_SECONDS);assert.equal(match.seconds,DUEL_SECONDS);
    assert.equal(match.winner,match.playerScore===match.computerScore?null:match.playerScore>match.computerScore?0:1);
@@ -180,7 +184,7 @@ test('준비 경제의 기준 전략은 입문 CPU를 이기고 최고 CPU의 �
    assert.equal(match.computerScore,match.computerCombatScore+match.computerQuestionScore);
   }
   assert.ok(matches[4].computerSolved>matches[0].computerSolved);assert.ok(matches[4].computerPurchased>matches[0].computerPurchased);
-  const burst=simulateComputerDuel(10,seed,'burst');assert.ok(burst.status==='finished'&&burst.legalEconomy&&burst.zeroCombatCoins&&burst.noBattleFusion&&burst.growthConserved);assert.ok(burst.playerPrepared>=matches[4].playerPrepared);assert.ok(burst.playerPreparedGrowth>matches[4].playerPreparedGrowth);
+  const burst=simulateComputerDuel(10,seed,'burst');assert.ok(burst.status==='finished'&&burst.legalEconomy&&burst.coinsConserved&&burst.noBattleFusion&&burst.growthConserved);assert.ok(burst.playerPrepared>=matches[4].playerPrepared);assert.ok(burst.playerPreparedGrowth>matches[4].playerPreparedGrowth);
  }
 });
 
@@ -189,7 +193,7 @@ test('입문 1~3단계는 느린 정상 정답 정책으로 클리어할 수 있
  for(const level of [1,2,3])for(const seed of [17,91,912]){
   const result=simulateDuelDifficulty(level,seed,weak);
   assert.equal(result.winner,0,`CPU ${level} / seed ${seed}: 느린 정상 공략의 승리 경로`);
-  assert.ok(result.legal&&result.zeroCombatCoins);
+  assert.ok(result.legal&&result.coinsConserved);
  }
 });
 
@@ -204,10 +208,10 @@ test('상위 8~10단계는 충분한 성장량을 준비해 고레벨 영웅을 
   assert.ok(good.towerTypes[0].includes('sniper')&&good.towerTypes[0].includes('catapult'));
   assert.equal(good.towerTypes[1].length,good.prepared[1],'상위 CPU는 준비한 방어 재고를 전부 배치한다');
   assert.ok(good.towerPositions[1].some(t=>t.type==='sniper'&&t.prepared&&t.cost===0),'장거리 방어도 준비 재고만 사용한다');
-  assert.ok(good.cashBuilds.every(n=>n===0)&&good.towerPositions[1].every(t=>t.prepared),'전투 중에는 현금 구매가 없다');
+  assert.ok(good.towerPositions.flat().every(t=>t.prepared?t.cost===0:t.cost>0),'재고 배치는 무료이고 직접 구매만 가격을 차감한다');
   assert.ok(good.preparedGrowth[1]>=level&&good.hatches[1].includes(level),'상위 CPU는 준비한 성장량으로 목표 레벨 영웅을 전투에서 소환한다');
   assert.ok(good.growthConserved&&exploit.growthConserved,'낮은 레벨의 마지막 소환 후에도 성장량 계산을 보존한다');
-  assert.ok([exploit,good].every(r=>r.legal&&r.zeroCombatCoins&&r.noBattleFusion&&r.status==='finished'));
+  assert.ok([exploit,good].every(r=>r.legal&&r.coinsConserved&&r.noBattleFusion&&r.status==='finished'));
  }
 });
 
@@ -226,10 +230,10 @@ test('최고 CPU는 준비 문제 사이의 중복 대기를 줄이고 비축 �
 test('성장량 10은 낮은 영웅 열 명이나 높은 영웅 한 명으로 쓰고 CPU도 잔여량에 맞춰 소환한다',async()=>{
  for(const level of [1,10]){
   const f=local(10),s=f.peer.state,p=s.players[0];await f.peer.send({type:'ready'});
-  for(let i=0;i<10;i++)assert.ok((await f.peer.send({type:'fuse',operation:'+',round:p.round,slots:additionSlots(p.board)!})).ok);
+  for(let i=0;i<10;i++)assert.ok((await f.peer.send({type:'fuse',operation:'+',round:p.round,slots:additionSlots(p.heroQuestion,p.board)!})).ok);
   const money=p.money;assert.equal(p.egg,10);assert.equal(money,DUEL_START_MONEY);assert.equal(stockTotal(p.heroStock??{}),0);f.run(DUEL_PREPARATION_SECONDS*1000);
   for(let count=0;count<10/level;count++){assert.ok((await f.peer.send({type:'hatch',heroId:`hero-${level}-0`})).ok);assert.equal(p.egg,10-(count+1)*level);}
-  assert.equal(s.enemies.filter(e=>e.owner===0&&e.hero).length,10/level);assert.equal(p.money,0);assert.equal(p.egg,0);f.peer.dispose();
+  assert.equal(s.enemies.filter(e=>e.owner===0&&e.hero).length,10/level);assert.equal(p.money,money);assert.equal(p.egg,0);f.peer.dispose();
  }
  const f=local(10),s=f.peer.state,cpu=s.players[1]!;await f.peer.send({type:'ready'});f.run(DUEL_PREPARATION_SECONDS*1000);const growth=cpu.egg,seen=new Map<number,number>();
  assert.equal(growth,34,'최고 CPU는 늘어난 준비 3분 동안 성장량 34를 모은다');
@@ -249,13 +253,20 @@ test('10종 굽잇길은 사거리와 준비한 고급 타워를 활용하는 �
   const result=simulateDuelDifficulty(10,912,policy,map.id);
   assert.equal(result.winner,0,`${map.id}: 모든 전장에 정상 클리어 경로가 있다`);
   assert.ok(result.flames[0]>0);assert.ok(result.totalSeconds>DUEL_PREPARATION_SECONDS&&result.totalSeconds<=DUEL_TOTAL_SECONDS);
-  assert.ok(result.legal&&result.zeroCombatCoins&&result.noBattleFusion&&result.towerPositions[0].some(t=>t.type==='sniper'&&t.prepared&&t.cost===0));
+  assert.ok(result.legal&&result.coinsConserved&&result.noBattleFusion&&result.towerPositions[0].some(t=>t.type==='sniper'&&t.prepared&&t.cost===0));
  }
 });
 
 test('준비 문제 취소·3분 만료·경기 종료 뒤 갱신에서 견적과 타이머가 정리된다',async()=>{
  const f=local(5),peer=f.peer,s=peer.state;await peer.send({type:'ready'});assert.ok((await peer.send({type:'prepare-quote',typeId:'basic'})).ok);const initial=s.players[0].money;
  assert.ok((await peer.send({type:'cancel'})).ok);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].money,initial);
- assert.ok((await peer.send({type:'prepare-quote',typeId:'basic'})).ok);const nonce=s.players[0].quote!.nonce;f.run(DUEL_PREPARATION_SECONDS*1000+100);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].money,0);assert.equal(stockTotal(s.players[0].stock),0);
+ assert.ok((await peer.send({type:'prepare-quote',typeId:'basic'})).ok);const nonce=s.players[0].quote!.nonce;f.run(DUEL_PREPARATION_SECONDS*1000+100);assert.equal(s.players[0].quote,null);assert.equal(s.players[0].money,initial);assert.equal(stockTotal(s.players[0].stock),0);
  assert.equal((await peer.send({type:'answer',nonce,answer:'8.7'})).ok,false);await peer.send({type:'surrender'});let events=0;peer.onState=()=>{events++;};peer.dispose();f.advance(10000);assert.equal(events,0);
+});
+
+test('CPU도 비축이 없으면 남은 코인으로 자기 하단 길에 직접 구입하고 수학 문제와 진도를 만들지 않는다',async()=>{
+ const f=local(6),s=f.peer.state,cpu=s.players[1]!;await f.peer.send({type:'ready'});f.run(DUEL_PREPARATION_SECONDS*1000);
+ cpu.stock={};cpu.money=DUEL_START_MONEY;const before=structuredClone(cpu);f.advance(1800);
+ assert.equal(cpu.towers.length,1);const t=cpu.towers[0];assert.equal(t.prepared,false);assert.ok(t.cost>0);assert.equal(cpu.money,before.money-t.cost);assert.ok(t.y>=8&&t.y<=14);assert.equal(cpu.quote,null);
+ for(const field of ['solved','round','answeredQuestions','questionScore','purchases'] as const)assert.equal(cpu[field],before[field]);assert.deepEqual(cpu.heroQuestion,before.heroQuestion);assert.deepEqual(cpu.board,before.board);f.peer.dispose();
 });

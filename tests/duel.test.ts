@@ -1,27 +1,24 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {createDuel,joinDuel,duelSide,decimalBoard,applyDuel,advanceDuel,validDuelCell,duelLevel,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_START_MONEY,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
+import {createDuel,joinDuel,duelSide,decimalBoard,decimalQuestion,applyDuel,advanceDuel,validDuelCell,duelLevel,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_START_MONEY,DuelState,DuelEnemy,DuelAction} from '../src/multiplayer/duel';
 import {duelMap} from '../src/multiplayer/duel-maps';
-import {HEROES} from '../src/multiplayer/heroes';import {recipe,numberText} from '../src/math';
+import {HEROES} from '../src/multiplayer/heroes';import {numberText} from '../src/math';
 const NOW=220000,PREP_NOW=NOW-DUEL_PREPARATION_SECONDS*1000;
 function preparation(){const s=createDuel('a','왼쪽',17,PREP_NOW);joinDuel(s,'b','오른쪽',PREP_NOW);applyDuel(s,0,{type:'ready'},PREP_NOW,'r1');applyDuel(s,1,{type:'ready'},PREP_NOW,'r2');assert.equal(s.status,'preparing');return s;}
-function match(){const s=preparation();s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');return s;}
+function match(){const s=preparation();s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');s.players.forEach(p=>p!.money=0);return s;}
 function build(s:DuelState,side:0|1,typeId:string,x:number,y:number){const p=s.players[side]!;p.stock[typeId]=(p.stock[typeId]??0)+1;return applyDuel(s,side,{type:'build',typeId,x,y},s.updatedAt,'build');}
 function answer(s:DuelState,side:0|1){const q=s.players[side]!.quote!;return applyDuel(s,side,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},s.updatedAt,'a');}
 function enemy(o:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:500,max:500,x:3,slow:0,stun:0,hits:0,...o};}
-function recipeSlots(board:number[],operation:'+'|'-'){
- for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&recipe(board[a],board[b],board[c],operation))return [a,b,c];throw Error('No recipe');
-}
 function solve(s:DuelState,side:0|1){
- const p=s.players[side]!;return applyDuel(s,side,{type:'fuse',round:p.round,slots:recipeSlots(p.board,'+'),operation:'+'},s.updatedAt,'f');
+ const p=s.players[side]!;return applyDuel(s,side,{type:'fuse',round:p.round,slots:[p.board.indexOf(p.heroQuestion.a+p.heroQuestion.b)],operation:'+'},s.updatedAt,'f');
 }
 test('영웅 30종은 레벨 1~10 각각 3종이며 4프레임 시트와 증가하는 효과를 가진다',()=>{assert.equal(HEROES.length,30);assert.equal(new Set(HEROES.map(h=>h.id)).size,30);for(let l=1;l<=10;l++)assert.equal(HEROES.filter(h=>h.level===l).length,3);for(let i=3;i<30;i++)assert.ok(HEROES[i].hp>HEROES[i-3].hp);assert.ok(HEROES.every(h=>h.hp%10===0));});
 test('블럭 16개는 같은 시드와 문제 순서에서 양쪽에 같고 모든 판에 덧셈 해답이 있다',()=>{
- for(let seed=0;seed<40;seed++)for(let round=0;round<10;round++){const a=decimalBoard(seed,round);assert.equal(a.length,16);assert.deepEqual(a,decimalBoard(seed,round));assert.equal(recipeSlots(a,'+').length,3);assert.ok(a.every(v=>v%100===0));}
+ for(let seed=0;seed<40;seed++)for(let round=0;round<10;round++){const a=decimalBoard(seed,round);assert.equal(a.length,16);assert.deepEqual(a,decimalBoard(seed,round));const q=decimalQuestion(seed,round);assert.equal(a.filter(v=>v===q.a+q.b).length,1);assert.equal(new Set(a).size,16);assert.ok(a.every(v=>v%100===0));}
 });
 test('두 계정이 준비해야 시작하고 제삼자·다른 방 참가자는 들어갈 수 없다',()=>{const s=createDuel('a','가',17,NOW);applyDuel(s,0,{type:'ready'},NOW,'a');assert.equal(s.status,'waiting');joinDuel(s,'b','나',NOW);assert.throws(()=>joinDuel(s,'c','다',NOW));assert.throws(()=>duelSide(s,'c'));assert.equal(duelSide(s,'b'),1);applyDuel(s,1,{type:'ready'},NOW,'b');assert.equal(s.status,'preparing');assert.equal(s.startedAt,0);});
 test('전투 중 타워는 문제 없이 비축 재고로 설치하고 상대 진영·길·점유 칸은 거부한다',()=>{
  const s=match(),p=s.players[0];p.money=0;p.stock.basic=1;
- assert.equal(applyDuel(s,0,{type:'build',x:13,y:2,typeId:'basic'},NOW,'x').ok,false);assert.equal(validDuelCell(s,0,3,3),false);
+ assert.equal(applyDuel(s,0,{type:'build',x:13,y:10,typeId:'basic'},NOW,'x').ok,false);assert.equal(validDuelCell(s,0,3,3),false);
  assert.ok(applyDuel(s,0,{type:'build',x:3,y:2,typeId:'basic'},NOW,'q').ok);assert.equal(p.money,0);assert.equal(p.stock.basic,0);assert.equal(p.quote,null);
  assert.equal(validDuelCell(s,0,3,2),false);assert.ok(validDuelCell(s,0,4,2));assert.ok(validDuelCell(s,0,4,1));assert.ok(validDuelCell(s,0,5,2));assert.ok(validDuelCell(s,0,5,0));assert.ok(validDuelCell(s,0,6,2));assert.ok(validDuelCell(s,0,3,5));assert.equal(s.players[1]!.money,0);
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},NOW,'repeat').ok,false);
@@ -56,7 +53,7 @@ test('양쪽의 올바른 뺄셈 합성 요청도 거부하고 모든 플레이�
   s.players[side]!.escrow=100*(side+1);
  }
  for(const side of [0,1] as const){
-  const p=s.players[side]!,slots=recipeSlots(p.board,'-');
+  const p=s.players[side]!,slots=[p.board.indexOf(p.heroQuestion.a+p.heroQuestion.b)];
   // A stale or forged client can still send subtraction despite the action type.
   const action={type:'fuse',round:p.round,slots,operation:'-'} as unknown as DuelAction;
   const before=structuredClone(s.players),result=applyDuel(s,side,action,PREP_NOW,`subtract-${side}`);
@@ -124,4 +121,13 @@ test('호스트 판정은 초과 피해를 거부하고 상대 불꽃 파괴·�
  const win=match();win.players[1]!.flame=1000;win.enemies=[enemy({owner:0,target:1,x:22.99,hero:'hero-1-0'})];advanceDuel(win,NOW+1000);assert.equal(win.status,'finished');assert.equal(win.winner,0);
  const timeout=match();timeout.elapsed=DUEL_SECONDS-.05;advanceDuel(timeout,NOW+100);assert.equal(timeout.status,'finished');assert.equal(timeout.winner,null);
  const offline=match();offline.players[0].lastSeen=NOW+50000;advanceDuel(offline,NOW+50000);assert.equal(offline.winner,0);assert.equal(offline.status,'finished');
+});
+
+test('고정 덧셈은 한 후보만 채점하고 세 블록 조합·가짜 문제·낡은 회차로 우회할 수 없다',()=>{
+ const s=preparation(),p=s.players[0];p.heroQuestion={a:100,b:200};p.board=[100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600];
+ for(const slots of [[],[0,1,2],[2,2],[16],[-1],[2.5]]){const before=structuredClone(s);assert.equal(applyDuel(s,0,{type:'fuse',round:0,operation:'+',slots},PREP_NOW,'invalid').ok,false);assert.deepEqual(s,before);}
+ const forged={type:'fuse',round:0,operation:'+',slots:[3],heroQuestion:{a:100,b:300}} as unknown as DuelAction;
+ assert.equal(applyDuel(s,0,forged,PREP_NOW,'forged-question').ok,false);assert.equal(p.round,0);assert.equal(p.egg,0);assert.deepEqual(p.heroQuestion,{a:100,b:200});assert.equal(p.wrongQuestions.length,1);assert.equal(p.wrongQuestions[0].a,100);assert.equal(p.wrongQuestions[0].b,200);assert.equal(p.wrongQuestions[0].submitted,'0.4');
+ assert.ok(applyDuel(s,0,{type:'fuse',round:0,operation:'+',slots:[2]},PREP_NOW,'actual-answer').ok);assert.equal(p.round,1);assert.equal(p.egg,1);assert.equal(p.questionScore,12);assert.deepEqual(p.heroQuestion,decimalQuestion(s.seed,1,1));assert.deepEqual(p.board,decimalBoard(s.seed,1,1));
+ const before=structuredClone(s);assert.equal(applyDuel(s,0,{type:'fuse',round:0,operation:'+',slots:[2]},PREP_NOW,'replay').ok,false);assert.deepEqual(s,before);
 });

@@ -87,8 +87,8 @@ test('a battle summon snapshot without optional enemy markers still identifies b
 
 test('reserve entrance uses the curved road position for both host and guest snapshots',()=>{
  const s=state();s.mapId='storm-step';const host=new HeroSummonStream(),guest=new HeroSummonStream();host.take('curve',s);guest.take('curve',structuredClone(s));
- prepare(s);host.take('curve',s);guest.take('curve',structuredClone(s));play(s);summon(s);const enemy=s.enemies.find(e=>e.rewardSummon&&e.owner===0)!;enemy.pathDistance=duelPathDistance(s.mapId,2,1);enemy.x=2;enemy.y=1;
- const events=host.take('curve',s);assert.equal(events.length,2);assert.equal(events[0].x,2);assert.equal(events[0].y,1);assert.deepEqual(guest.take('curve',structuredClone(s)),events);
+ prepare(s);host.take('curve',s);guest.take('curve',structuredClone(s));play(s);summon(s);const enemy=s.enemies.find(e=>e.rewardSummon&&e.owner===0)!;enemy.pathDistance=duelPathDistance(s.mapId,2,9,1);enemy.x=2;enemy.y=9;
+ const events=host.take('curve',s);assert.equal(events.length,2);assert.equal(events[0].x,2);assert.equal(events[0].y,9);assert.deepEqual(guest.take('curve',structuredClone(s)),events);
 });
 
 test('visual entrance settles with no changes to the authoritative position or reduced motion',()=>{

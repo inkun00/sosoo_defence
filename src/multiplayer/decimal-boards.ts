@@ -1,4 +1,5 @@
 export type DecimalTriple=readonly [number,number,number];
+export interface DecimalAdditionQuestion{a:number;b:number;}
 export function learningLevel(accountLevel:number){return Number.isSafeInteger(accountLevel)&&accountLevel>0?Math.min(10,accountLevel):1;}
 export function normalizedAccountLevel(value:number){return Number.isSafeInteger(value)&&value>0?Math.min(1000000,value):1;}
 function additionStage(stage:number){return Number.isSafeInteger(stage)&&stage>0?Math.min(4,stage):1;}
@@ -45,11 +46,19 @@ export function decimalTriples(seed:number,round:number,stage=1):DecimalTriple[]
  }
  return triples;
 }
+/** A fixed equation replaces free choice of operands from the answer board. */
+export function decimalQuestion(seed:number,round:number,stage=1):DecimalAdditionQuestion{
+ const [a,b]=decimalTriples(seed,round,stage)[0];return {a,b};
+}
 export function decimalBoard(seed:number,round:number,stage=1){
- const triples=decimalTriples(seed,round,stage),board=triples.flatMap(t=>[...t]);
- // Keep the original 16 slots. The extra value belongs to an existing triple,
- // so unlike a random decoy it can also form a valid three-block equation.
- board.push(triples[(round>>>0)%5][(round>>>0)%3]);
- const r=rng(seed^Math.imul(round+1,3266489917)^Math.imul(additionStage(stage),668265263));
- for(let i=15;i>0;i--){const j=Math.floor(r()*(i+1));[board[i],board[j]]=[board[j],board[i]];}return board;
+ const difficulty=additionStage(stage),{a,b}=decimalQuestion(seed,round,difficulty),answer=a+b,unit=difficulty<=2?100:10;
+ const choices=new Set<number>([answer]),r=rng(seed^Math.imul(round+1,3266489917)^Math.imul(difficulty,668265263));
+ const add=(value:number)=>{if(choices.size<16&&Number.isSafeInteger(value)&&value>0&&value<10000&&value%unit===0&&(difficulty<=2||value%100!==0))choices.add(value);};
+ // Common errors: choosing an operand, subtracting, forgetting a carry, or
+ // moving the decimal point. Fill remaining choices with nearby exact values.
+ for(const value of [a,b,Math.abs(a-b),answer-100,answer+100,answer-1000,answer+1000,answer*10,answer/10])add(value);
+ for(let distance=1;choices.size<16;distance++){
+  const direction=r()<.5?-1:1;add(answer+direction*distance*unit);add(answer-direction*distance*unit);
+ }
+ const board=[...choices];for(let i=15;i>0;i--){const j=Math.floor(r()*(i+1));[board[i],board[j]]=[board[j],board[i]];}return board;
 }

@@ -11,16 +11,17 @@ export function gameScreenLayout(pixelWidth:number,pixelHeight:number):GameScree
  return {width:1280,height,compact,scale:Math.min(w/1280,h/height),pixelWidth:w,pixelHeight:h};
 }
 
-/** The duel needs a board plus two rows of 44px crafting controls. */
+/** Reserve both battlefields and reflow answers on short or narrow duel screens. */
 export function duelScreenLayout(pixelWidth:number,pixelHeight:number):GameScreenLayout{
  const layout=gameScreenLayout(pixelWidth,pixelHeight);
- if(!layout.compact)return layout;
  const {pixelWidth:w,pixelHeight:h}=layout;
+ const standardScale=Math.min(w/1280,h/1104),compact=layout.compact||Math.ceil(44/standardScale)>70;
+ if(!compact)return {...layout,height:1104,scale:standardScale};
  // boardY + crafting offset + two touch rows + bottom padding.
  // Three ceil-rounded touch heights need at most 3 extra logical pixels.
- const height=Math.max(layout.height,3*Math.max(68,Math.ceil(44*1280/w))+377,
-  h>132?Math.ceil(380/(1-132/h)):layout.height);
- return {...layout,height,scale:Math.min(w/1280,h/height)};
+ const height=Math.max(layout.height+304,3*Math.max(68,Math.ceil(44*1280/w))+681,
+  h>132?Math.ceil(684/(1-132/h)):layout.height+304);
+ return {...layout,compact,height,scale:Math.min(w/1280,h/height)};
 }
 
 /** Follow both rotation and browser chrome changes without recreating the game. */

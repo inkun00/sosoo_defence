@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {advanceDuel,applyDuel,createDuel,duelKillScore,duelQuestionScore,duelScore,joinDuel,DUEL_PREPARATION_SECONDS,DUEL_SECONDS,DUEL_TOTAL_SECONDS,type DuelEnemy,type DuelState,type Side} from '../src/multiplayer/duel';
-import {numberText,recipe} from '../src/math';
+import {numberText} from '../src/math';
 
 const NOW=100000,START=NOW+DUEL_PREPARATION_SECONDS*1000,END=NOW+DUEL_TOTAL_SECONDS*1000;
 function preparing(){
@@ -13,13 +13,11 @@ function playing(){const s=preparing();connectedAdvance(s,START);s.wave=10000;re
 function quote(s:DuelState,nonce='q',side:Side=0){assert.ok(applyDuel(s,side,{type:'prepare-quote',typeId:'basic'},NOW,nonce).ok);return s.players[side]!.quote!;}
 function correctTower(s:DuelState,side:Side=0,now=NOW){const q=s.players[side]!.quote!;return applyDuel(s,side,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now,'correct');}
 function fuseSlots(s:DuelState,side:Side=0){
- const board=s.players[side]!.board;
- for(let a=0;a<16;a++)for(let b=0;b<16;b++)for(let c=0;c<16;c++)if(a!==b&&a!==c&&b!==c&&recipe(board[a],board[b],board[c],'+'))return [a,b,c];
- throw Error('No addition answer');
+ const p=s.players[side]!;return [p.board.indexOf(p.heroQuestion.a+p.heroQuestion.b)];
 }
 function fuse(s:DuelState,side:Side=0,now=s.updatedAt,slots=fuseSlots(s,side)){return applyDuel(s,side,{type:'fuse',round:s.players[side]!.round,slots,operation:'+'},now,'fuse');}
 function enemy(extra:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:100,max:100,x:3,y:3,pathDistance:3,slow:0,stun:0,hits:0,...extra};}
-function tower(s:DuelState,typeId='basic',side:Side=0){s.players[side]!.stock[typeId]=1;assert.ok(applyDuel(s,side,{type:'build',typeId,x:side===0?3:20,y:2},START,'build').ok);}
+function tower(s:DuelState,typeId='basic',side:Side=0){s.players[side]!.stock[typeId]=1;assert.ok(applyDuel(s,side,{type:'build',typeId,x:side===0?3:20,y:side===0?2:10},START,'build').ok);}
 
 test('대전 총 시간은 준비 180초와 전투 180초이며 점수는 정수로 타격·오답 효율을 보상한다',()=>{
  assert.equal(DUEL_PREPARATION_SECONDS,180);assert.equal(DUEL_SECONDS,180);assert.equal(DUEL_TOTAL_SECONDS,360);
@@ -70,11 +68,11 @@ test('구조가 잘못된 요청이나 취소한 문제에는 점수가 없고 �
  assert.equal(s.status,'playing');assert.equal(duelScore(p),0);assert.equal(p.answeredQuestions,0);assert.deepEqual(p.stock,{});
 });
 
-test('영웅 덧셈은 같은 판에서 다른 식을 선택해도 오답을 합산하고 다음 판부터 새로 채점한다',()=>{
- const s=preparing(),p=s.players[0];p.board=[100,200,400,300,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600];
- assert.equal(fuse(s,0,NOW,[0,1,2]).ok,false);assert.equal(fuse(s,0,NOW,[1,3,2]).ok,false);
+test('영웅 덧셈은 같은 문제의 서로 다른 후보 오답도 합산하고 다음 문제부터 새로 채점한다',()=>{
+ const s=preparing(),p=s.players[0];p.heroQuestion={a:100,b:200};p.board=[100,200,400,300,500,600,700,800,900,1000,1100,1200,1300,1400,1500,1600];
+ assert.equal(fuse(s,0,NOW,[2]).ok,false);assert.equal(fuse(s,0,NOW,[4]).ok,false);
  assert.equal(p.fusionWrongAttempts,2);assert.equal(p.round,0);assert.equal(duelScore(p),0);
- assert.ok(fuse(s,0,NOW,[0,1,3]).ok);assert.equal(p.questionScore,8);assert.equal(p.answeredQuestions,1);assert.equal(p.fusionWrongAttempts,0);assert.equal(p.round,1);
+ assert.ok(fuse(s,0,NOW,[3]).ok);assert.equal(p.questionScore,8);assert.equal(p.answeredQuestions,1);assert.equal(p.fusionWrongAttempts,0);assert.equal(p.round,1);
  assert.ok(fuse(s).ok);assert.equal(p.questionScore,33);assert.equal(p.answeredQuestions,2);assert.equal(duelScore(s.players[1]),0);
 });
 
@@ -86,9 +84,9 @@ test('같은 영웅 문제의 재전송과 유효하지 않은 블럭은 점수�
 });
 
 test('덧셈 합이 학습 범위를 넘어간 오답도 다음 유효한 정답의 보상을 낮춘다',()=>{
- const s=preparing(),p=s.players[0];p.board=[6000,7000,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400];
- assert.equal(fuse(s,0,NOW,[0,1,2]).ok,false);assert.equal(p.fusionWrongAttempts,1);assert.equal(p.wrongQuestions.length,0);assert.equal(duelScore(p),0);
- assert.ok(fuse(s,0,NOW,[2,3,4]).ok);assert.equal(p.questionScore,12);assert.equal(p.fusionWrongAttempts,0);
+ const s=preparing(),p=s.players[0];p.heroQuestion={a:6000,b:7000};p.board=[6000,7000,100,200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400];
+ assert.equal(fuse(s,0,NOW,[2]).ok,false);assert.equal(p.fusionWrongAttempts,1);assert.equal(p.wrongQuestions.length,0);assert.equal(duelScore(p),0);
+ p.heroQuestion={a:100,b:200};assert.ok(fuse(s,0,NOW,[4]).ok);assert.equal(p.questionScore,12);assert.equal(p.fusionWrongAttempts,0);
 });
 
 test('준비 오답과 영웅 합성 오답은 서로 다른 문제의 채점에 섞이지 않는다',()=>{

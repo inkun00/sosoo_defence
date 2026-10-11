@@ -8,26 +8,24 @@ const checks=[],errors=[];
 const check=(name,value)=>{assert.ok(value,name);checks.push(name);console.log('PASS',name);};
 const browser=await chromium.launch({executablePath,headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 let currentPage,currentLabel;
-async function snapshot(page){return page.evaluate(()=>{const api=window.__personalHeroLevelTest;return api.state.players.map(p=>p&&({account:p.accountLevel,stage:api.duelHeroLearningLevel(p),solved:p.solved,round:p.round,growth:p.egg,board:[...p.board],wrong:p.wrongQuestions.length}));});}
+async function snapshot(page){return page.evaluate(()=>{const api=window.__personalHeroLevelTest;return api.state.players.map(p=>p&&({account:p.accountLevel,stage:api.duelHeroLearningLevel(p),solved:p.solved,round:p.round,growth:p.egg,question:{...p.heroQuestion},board:[...p.board],wrong:p.wrongQuestions.length}));});}
 async function boardRule(page,owner){
  return page.evaluate(owner=>{
-  const api=window.__personalHeroLevelTest,p=api.state.players[owner],stage=api.duelHeroLearningLevel(p),board=p.board;
+  const api=window.__personalHeroLevelTest,p=api.state.players[owner],stage=api.duelHeroLearningLevel(p),board=p.board,{a,b}=p.heroQuestion;
   if(board.length!==16||!board.every(n=>Number.isSafeInteger(n)&&n>0&&n<10000&&n%10===0))return false;
+  if(new Set(board).size!==16||board.filter(n=>n===a+b).length!==1)return false;
   if(stage<=2?!board.every(n=>n%100===0):!board.every(n=>n%100!==0))return false;
-  let count=0;
-  for(let i=0;i<16;i++)for(let j=0;j<16;j++)for(let k=0;k<16;k++){
-   if(i===j||i===k||j===k||board[i]+board[j]!==board[k])continue;
-   count++;
-   const a=board[i],b=board[j],hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10>=10,tenths=Math.floor(a/100)%10+Math.floor(b/100)%10+(hundredths?1:0)>=10;
-   if(stage===1&&tenths||stage===2&&!tenths||stage===3&&(hundredths||tenths)||stage===4&&!hundredths&&!tenths)return false;
-  }
-  return count>0;
+  if(![a,b].every(n=>Number.isSafeInteger(n)&&n>0&&n%10===0))return false;
+  if(stage<=2?![a,b].every(n=>n%100===0):![a,b].every(n=>n%100!==0))return false;
+  const hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10>=10,tenths=Math.floor(a/100)%10+Math.floor(b/100)%10+(hundredths?1:0)>=10;
+  return !(stage===1&&tenths||stage===2&&!tenths||stage===3&&(hundredths||tenths)||stage===4&&!hundredths&&!tenths);
  },owner);
 }
 async function uiRule(page,owner){
  return page.evaluate(owner=>{
-  const api=window.__personalHeroLevelTest,p=api.state.players[owner],stage=api.duelHeroLearningLevel(p),row=document.querySelector(`#proof [data-side="${owner}"]`),stageText=api.scene.ui.getByName('duel-hero-stage'),progress=api.scene.ui.getByName('duel-hero-progress'),description=api.scene.ui.getByName('duel-hero-description');
-  return api.view().side===owner&&row?.dataset.stage===String(stage)&&row.dataset.solved===String(p.solved)&&row.textContent.includes(`정답 ${p.solved}개`)&&stageText?.text.includes(`문제 ${stage}단계`)&&progress?.text.includes(stage<4?`다음 단계까지 정답 ${5-p.solved%5}개`:'최고 단계 유지')&&description?.text.includes(stage<=2?'한 자리':'두 자리')&&!stageText.text.includes('학습 Lv');
+  const api=window.__personalHeroLevelTest,p=api.state.players[owner],stage=api.duelHeroLearningLevel(p),row=document.querySelector(`#proof [data-side="${owner}"]`),stageText=api.scene.ui.getByName('duel-hero-stage'),progress=api.scene.ui.getByName('duel-hero-progress'),description=api.scene.ui.getByName('duel-hero-description'),question=api.scene.ui.getByName('duel-hero-question');
+  const numberText=n=>String(n/1000);
+  return api.view().side===owner&&row?.dataset.stage===String(stage)&&row.dataset.solved===String(p.solved)&&row.textContent.includes(`정답 ${p.solved}개`)&&stageText?.text.includes(`문제 ${stage}단계`)&&progress?.text.includes(stage<4?`다음 단계까지 정답 ${5-p.solved%5}개`:'최고 단계 유지')&&description?.text.includes(stage<=2?'한 자리':'두 자리')&&!stageText.text.includes('학습 Lv')&&question?.text===`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`&&[...api.scene.controls.keys()].filter(id=>id.startsWith('slot:')).join()==='slot:0';
  },owner);
 }
 async function solve(page,owner,count){
@@ -41,14 +39,14 @@ async function wrong(page,label,owner){
  check(`${label} player ${owner} wrong answer preserves stage, count, blocks and growth`,before.every((p,index)=>JSON.stringify({...p,wrong:0})===JSON.stringify({...after[index],wrong:0}))&&after[owner].wrong===before[owner].wrong+1);
 }
 try{
- for(const [label,width,height]of [['desktop',1280,800],['tablet',1024,768],['phone-landscape',844,390]]){
+ for(const [label,width,height]of [['desktop',1280,800],['tablet',1024,768],['phone-landscape',844,390],['phone-portrait',390,844]]){
   if(process.env.DECIMAL_BOARDS_SCREEN&&process.env.DECIMAL_BOARDS_SCREEN!==label)continue;
   const page=await browser.newPage({viewport:{width,height},hasTouch:label!=='desktop'});currentPage=page;currentLabel=label;page.setDefaultTimeout(10000);
   page.on('pageerror',e=>errors.push(`${label}: ${e.message}`));
   await page.goto(url);await page.waitForFunction(()=>window.__personalHeroLevelTest?.loaded&&window.__personalHeroLevelTest.scene.ready);
   const initial=await snapshot(page);
-  check(label+' different account levels both start at stage one with the same blocks',initial[0].account===1&&initial[1].account===8&&initial.every(p=>p.stage===1&&p.solved===0&&p.growth===0)&&JSON.stringify(initial[0].board)===JSON.stringify(initial[1].board));
-  check(label+' stage one has tenths without any carry in every valid equation',await boardRule(page,0));
+  check(label+' different account levels both start at stage one with the same fixed question and choices',initial[0].account===1&&initial[1].account===8&&initial.every(p=>p.stage===1&&p.solved===0&&p.growth===0)&&JSON.stringify(initial[0].board)===JSON.stringify(initial[1].board)&&JSON.stringify(initial[0].question)===JSON.stringify(initial[1].question));
+  check(label+' fixed stage-one question has tenths without carry and one correct answer among sixteen unique choices',await boardRule(page,0));
   check(label+' initial UI states stage one, zero correct and five to next stage',await uiRule(page,0));
   check(label+' preserves three-minute preparation, three-minute battle and 17.6 budget',await page.evaluate(()=>{const api=window.__personalHeroLevelTest;return api.state.status==='preparing'&&api.state.players.every(p=>p.money===17600)&&api.scene.ui.getByName('duel-total-timer').text==='06:00'&&api.scene.ui.getByName('duel-phase-timer').text==='문제풀이 03:00';}));
   check(label+' visible canvas actions and preview buttons have 44px touch height',await page.evaluate(()=>{const api=window.__personalHeroLevelTest,canvas=document.querySelector('#field canvas'),box=canvas.getBoundingClientRect(),scale=box.height/canvas.height;return [...api.scene.controls.values()].filter(c=>c.enabled).every(c=>c.h*scale>=43.9)&&[...document.querySelectorAll('.preview-controls button')].every(b=>b.getBoundingClientRect().height>=44);}));

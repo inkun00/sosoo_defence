@@ -3,6 +3,8 @@ export interface DuelPathPosition extends DuelMapPoint{dx:number;dy:number;}
 export interface DuelMap{id:string;name:string;description:string;points:readonly DuelMapPoint[];roadCells:readonly DuelMapPoint[];length:number;}
 
 const COLUMNS=24,BASE_LENGTH=COLUMNS-1;
+export const DUEL_LANE_ROWS=7,DUEL_LANE_STRIDE=8,DUEL_BATTLE_ROWS=DUEL_LANE_STRIDE+DUEL_LANE_ROWS;
+export function duelLaneOffset(side:0|1){return side*DUEL_LANE_STRIDE;}
 function map(id:string,name:string,description:string,left:readonly (readonly [number,number])[]):DuelMap{
  const tuples=[...left,[12,3] as const,...left.slice(0,-1).reverse().map(([x,y])=>[BASE_LENGTH-x,y] as const)];
  const points=tuples.map(([x,y])=>Object.freeze({x,y})),roadCells:DuelMapPoint[]=[];let length=0;
@@ -16,7 +18,7 @@ function map(id:string,name:string,description:string,left:readonly (readonly [n
  return Object.freeze({id,name,description,points:Object.freeze(points),roadCells:Object.freeze(roadCells),length});
 }
 
-/** Each path is reflected around the central gate, giving both guardians the same road. */
+/** Reflection gives both guardians equal route shapes within their independent lanes. */
 export const DUEL_MAPS:readonly DuelMap[]=Object.freeze([
  map('ember-bend','불꽃 굽잇길','위쪽으로 돌아가는 넓은 굽이',[[0,3],[7,3],[7,1],[9,1],[9,3],[11,3]]),
  map('moon-meander','달빛 굽잇길','아래쪽으로 휘어지는 긴 굽이',[[0,3],[4,3],[4,5],[8,5],[8,3],[11,3]]),
@@ -36,20 +38,20 @@ export function duelMap(mapId?:string):DuelMap{
  if(mapId===undefined)return LEGACY_MAP;
  const result=DUEL_MAPS.find(map=>map.id===mapId);if(!result)throw Error('선택한 대전 맵을 찾을 수 없어요.');return result;
 }
-export function duelRoadCell(mapId:string|undefined,x:number,y:number){return duelMap(mapId).roadCells.some(cell=>cell.x===x&&cell.y===y);}
+export function duelRoadCell(mapId:string|undefined,x:number,y:number,side:0|1=0){const localY=y-duelLaneOffset(side);return duelMap(mapId).roadCells.some(cell=>cell.x===x&&cell.y===localY);}
 /** Distance runs from the left flame to the right flame, irrespective of travel direction. */
-export function duelPathPosition(mapId:string|undefined,distance:number):DuelPathPosition{
- const {points,length}=duelMap(mapId);let remaining=Math.max(0,Math.min(length,distance));
+export function duelPathPosition(mapId:string|undefined,distance:number,side:0|1=0):DuelPathPosition{
+ const {points,length}=duelMap(mapId),offset=duelLaneOffset(side);let remaining=Math.max(0,Math.min(length,distance));
  for(let i=0;i<points.length-1;i++){
   const a=points[i],b=points[i+1],segment=Math.hypot(b.x-a.x,b.y-a.y);
-  if(remaining<segment||i===points.length-2){const dx=(b.x-a.x)/segment,dy=(b.y-a.y)/segment;return{x:a.x+dx*remaining,y:a.y+dy*remaining,dx,dy};}
+  if(remaining<segment||i===points.length-2){const dx=(b.x-a.x)/segment,dy=(b.y-a.y)/segment;return{x:a.x+dx*remaining,y:a.y+dy*remaining+offset,dx,dy};}
   remaining-=segment;
  }
- return{x:0,y:3,dx:1,dy:0};
+ return{x:0,y:3+offset,dx:1,dy:0};
 }
 /** Project a grid/world point onto the route; used by legacy snapshots and tower planning. */
-export function duelPathDistance(mapId:string|undefined,x:number,y:number):number{
- const {points}=duelMap(mapId);let traveled=0,bestDistance=Infinity,best=0;
+export function duelPathDistance(mapId:string|undefined,x:number,y:number,side:0|1=0):number{
+ const {points}=duelMap(mapId);y-=duelLaneOffset(side);let traveled=0,bestDistance=Infinity,best=0;
  for(let i=0;i<points.length-1;i++){
   const a=points[i],b=points[i+1],vx=b.x-a.x,vy=b.y-a.y,squared=vx*vx+vy*vy,length=Math.sqrt(squared),t=Math.max(0,Math.min(1,((x-a.x)*vx+(y-a.y)*vy)/squared));
   const distance=Math.hypot(x-a.x-vx*t,y-a.y-vy*t);
