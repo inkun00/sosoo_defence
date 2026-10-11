@@ -228,3 +228,10 @@ pixels and alpha are preserved; optimized WebP is loaded on demand.
 Exact prompts, generation paths and frame validation are retained in
 licenses/worksheet-heroes-v1-prompts.json (source-only, excluded from deployment).
 Reward names, three simultaneous aura effects and rank halos are game code.
+
+ADVENTURE MAP (2026-10-11)
+Original hand-painted medieval fantasy landscape generated with the built-in
+OpenAI image_gen tool: assets/dungeon/adventure-map-v1.png. Source PNG is
+preserved; the game displays an optimized WebP inside its existing metal frame.
+Generation prompt: licenses/adventure-map-v1-prompts.json (source-only).
+Numbered stages, route, locks and stars are drawn by the game.

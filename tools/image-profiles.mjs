@@ -3,6 +3,7 @@
 export function imageProfile(name){
  const profile={quality:80,alphaQuality:100,effort:6};
  if(name.startsWith('story-')||name==='title-castle-v1')return {...profile,quality:76};
+ if(name==='adventure-map-v1')return {...profile,width:1536,quality:78};
  if(name.startsWith('heroes-level-'))return {...profile,width:768};
  if(name==='worksheet-heroes-v1')return {...profile,width:768};
  if(name.startsWith('hero-effect-'))return {...profile,width:96,quality:88,trim:true};

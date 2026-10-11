@@ -1,4 +1,18 @@
 {
+  "adventure-map-v1": {
+    "url": "/assets/dungeon/adventure-map-v1.9aabc9f50126.webp",
+    "sourceHash": "f0bad260301fbea905589c4cc76b84db52df254626905a35033791da4bb616d0",
+    "width": 1536,
+    "height": 864,
+    "sourceBytes": 3305127,
+    "bytes": 254140,
+    "encoding": {
+      "quality": 78,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1536
+    }
+  },
   "cpu-opponent-1-v1": {
     "url": "/assets/dungeon/cpu-opponent-1-v1.bf7c00b82666.webp",
     "sourceHash": "3dbf02723612ac7d331ef291d8d892e7aba9f876c7a2891c5e008e01c6369598",

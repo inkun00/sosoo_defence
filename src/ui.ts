@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {artURL} from './art';
 import {Defense,Event as BattleEvent,WALL_DURABILITY} from './model';
 import {Effect,EFFECTS,LEVELS,FINAL_STAGE} from './levels';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
@@ -34,7 +35,7 @@ export class GameUI extends Phaser.Scene{
  private screenLayout?:GameScreenLayout;private controlViews=new Map<string,Phaser.GameObjects.Container>();
  readonly reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  constructor(getState:()=>UIState){super('game-ui');this.getState=getState;}
- preload(){}
+ preload(){this.load.image('adventure-map',artURL('adventure-map-v1'));}
  create(){this.ready=true;this.header=this.add.container(0,0);this.shop=this.add.container(0,0);this.dock=this.add.container(0,0);this.popup=this.add.container(0,0).setDepth(40);this.refresh(true);}
  setScreenLayout(layout:GameScreenLayout){this.screenLayout=layout;if(this.ready){this.tweens.killTweensOf(this.popup);this.popup.setScale(1).setPosition(0,0);this.clearNotification();this.refresh(true);}}
  get shopPageSize(){return this.screenLayout?.compact?this.compactShopLayout().count:6;}
@@ -307,13 +308,22 @@ export class GameUI extends Phaser.Scene{
   this.button(this.popup,'wall',914,602,220,64,`성벽 설치 (${m.wallStock})`,m.wallStock>0,'button_red',24);
  }
  private drawMap(){
-  const s=this.getState();this.modalFrame(`소수의 성으로 가는 ${FINAL_STAGE}개의 모험`,1120,640);
-  this.text(this.popup,640,164,`나의 레벨 ${s.save.level}  ·  배치와 돈은 단계마다 새로 시작해요`,19,'#bdb7ae').setOrigin(.5);
+  const s=this.getState();this.frame(this.popup,640,410,1120,640,'panel_brown');
+  // The landscape stays inside the original metal frame, beneath every control.
+  if(this.textures.exists('adventure-map'))this.popup.add(this.add.image(640,410,'adventure-map').setDisplaySize(1082,602).setName('adventure-map-background'));
+  const shade=this.add.graphics().fillStyle(0x0c141c,.25).fillRect(99,109,1082,602)
+   .fillGradientStyle(0x080d16,0x080d16,0x080d16,0x080d16,.85,.85,0,0).fillRect(99,109,1082,130)
+   .fillGradientStyle(0x080d16,0x080d16,0x080d16,0x080d16,0,0,.6,.6).fillRect(99,591,1082,120);
+  this.popup.add(shade);
+  this.text(this.popup,640,125,`소수의 성으로 가는 ${FINAL_STAGE}개의 모험`,32).setOrigin(.5).setStroke('#0a0c12',4);
+  this.button(this.popup,'close',1158,129,58,58,'×',true,'button_red',30);
+  this.text(this.popup,640,164,`나의 레벨 ${s.save.level}  ·  배치와 돈은 단계마다 새로 시작해요`,19,'#dfd9ce').setOrigin(.5).setStroke('#0a0c12',3);
   const positions=LEVELS.map((_,i)=>({x:i<6?190+i*180:1000-(i-6)*180,y:i<6?280+(i%2)*24:500-((i-6)%2)*24}));
-  const road=this.add.graphics().lineStyle(20,0x302a23).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();road.lineStyle(10,0xb28752).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();this.popup.add(road);
+  const road=this.add.graphics().lineStyle(20,0x302a23,.8).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();road.lineStyle(10,0xd5ab6a,.9).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();this.popup.add(road);
   LEVELS.forEach((l,i)=>{const p=positions[i],open=l.id<=s.save.level;const b=this.button(this.popup,`stage:${l.id}`,p.x,p.y,86,82,open?String(l.id):'잠김',open,l.id===s.model.level.id?'button_red':'button_brown',open?34:22);
-   this.text(this.popup,p.x,p.y+52,l.name,17,open?C.ink:'#99959a',180).setOrigin(.5,0);
-   this.text(this.popup,p.x,p.y+78,stageMap(l.id).name,13,open?'#dbc29e':'#99959a',180).setOrigin(.5,0);
+   this.popup.add(this.add.rectangle(p.x,p.y+86,176,80,0x0b1018,open?.72:.8).setName('adventure-map-caption-'+l.id));
+   this.text(this.popup,p.x,p.y+52,l.name,17,open?C.ink:'#b5b3b9',180).setOrigin(.5,0).setStroke('#0a0c12',3);
+   this.text(this.popup,p.x,p.y+78,stageMap(l.id).name,13,open?'#ead3b2':'#b5b3b9',180).setOrigin(.5,0).setStroke('#0a0c12',2);
    [0,1,2].forEach(j=>{const star=this.add.image(p.x+(j-1)*25,p.y+114,'dungeon-icons','star').setDisplaySize(26,26).setAlpha(j<s.save.stars[i]?1:.17);this.popup.add(star);});
    if(!open)b.container.setAlpha(.7);
   });

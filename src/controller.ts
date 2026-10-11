@@ -24,6 +24,7 @@ import {observeGameScreen} from './responsive-game';
 import {recordLearning} from './learning';
 import {TutorialSession} from './tutorial';
 import {mountTutorialGuide,type TutorialTargetRect} from './tutorial-guide';
+import {goToMainMenu} from './navigation';
 import './game.css';
 
 const app=document.querySelector<HTMLDivElement>('#app')!;
@@ -200,6 +201,7 @@ function settings(){
 }
 function credits(){openHTML('<p class="eyebrow">소수의 성</p><h2>모험을 만든 재료들</h2><p>초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 11단계 디펜스입니다.</p><p>Phaser 3 (MIT). 던전 바닥·UI·타워·성벽·아이콘·돌 슬라임·발사·명중 효과 등 현재 게임의 모든 이미지 에셋을 내장 OpenAI imagegen으로 새로 제작했습니다. 언더다크 디펜스의 던전 분위기와 카드형 UI를 참고했습니다.</p><p>학습 자료: 한대희(4-2)지도서 3단원.<br>소수의 계산은 정수 단위로 정확하게 처리합니다.</p><a href="/CREDITS.txt" target="_blank" rel="noopener">에셋 출처·라이선스·생성 프롬프트 보기 ↗</a>');}
 function action(key:string){
+ if(key==='home'){persistInventory();sound.setMusic(false);goToMainMenu();return;}
  if(movie)return;
  if(tutorial&&!tutorialActionAllowed(key)){notify('아래 안내의 순서대로 먼저 연습해요.');return;}
  sound.resume();sound.play('ui');
@@ -220,7 +222,6 @@ function action(key:string){
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{const url=new URL(location.href);url.searchParams.set('mode','duel');location.assign(url.href);break;}
   case 'hall':void showAdventureHall();break;
-  case 'home':{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.delete('mode');location.assign(url.href);break;}
   case 'tutorial':if(tutorial)restartTutorial();else{persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','tutorial');location.assign(url.href);}break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
   case 'cancel':field.mode.kind='inspect';break;
