@@ -115,9 +115,8 @@ export class DuelScene extends Phaser.Scene{
   this.button('lobby',lobbyX,compact?headerHeight/2+3:42,headerButtonWidth,Math.max(touch,55),'대기실',!v.busy);this.button('leave',leaveX,compact?headerHeight/2+3:42,headerButtonWidth,Math.max(touch,55),'나가기',!v.busy);
   const terrainSig=JSON.stringify([s?.mapId,s?.players.map(p=>p?.towers.map(t=>[t.id,t.typeId,t.x,t.y,t.enabled])),v.side]);
   if(terrainSig!==this.signature){this.signature=terrainSig;this.drawTerrain();}
-  this.text(this.ui,265,compact?headerHeight+10:96,'상단 전장 ← · '+(s?.players[0]?.name||'호스트 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??9000),19,'#9adbea');
-  this.text(this.ui,734,compact?headerHeight+10:96,'하단 전장 → · '+(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??9000),19,'#f7bd85');
   for(const side of [0,1] as Side[]){const player=s?.players[side];this.text(this.ui,side===0?265:734,compact?headerHeight+28:117,`점수 ${duelScore(player).toLocaleString('ko-KR')} · 전투 ${(player?.combatScore??0).toLocaleString('ko-KR')} / 문제 ${(player?.questionScore??0).toLocaleString('ko-KR')}`,14,side===0?'#9adbea':'#f7bd85').setName('duel-score-'+side);}
+  this.drawCastleNames(s);
   this.drawCastleHealth(s);
   const shopTop=compact?headerHeight+8:84,shopHeight=compact?height-shopTop-8:preparing?612+LOWER_SHIFT:572+LOWER_SHIFT,shopItems=this.shopPageSize,page=Math.min(v.shopPage,this.shopPageCount-1),cardHeight=compact?touch:Math.max(66,touch),cardTop=compact?headerHeight+60:162,cardGap=compact?6:4,pageY=compact?height-touch*1.5-28:preparing?609+LOWER_SHIFT:622+LOWER_SHIFT;
   this.panel(this.ui,1130,shopTop+shopHeight/2,266,shopHeight);this.text(this.ui,1130,compact?shopTop+18:113,preparing?'타워 구입 문제':'타워 배치',23);this.text(this.ui,1130,compact?shopTop+43:144,preparing?'남은 코인 전투 시 0 · 비축 보존':s?.status==='waiting'?'문제풀이 3분 뒤 전투 3분':`설치 ${p?.towers.length??0}/14 · 비축 ${stockTotal}개`,13,'#c3b8a8').setName('duel-shop-phase-note');
@@ -216,6 +215,18 @@ export class DuelScene extends Phaser.Scene{
   this.text(this.ui,493,center+(compact?-2:16),'후반부 3분 · 비축 타워 무료 배치와 영웅 소환',compact?19:23,'#a3e9dd');
   this.text(this.ui,493,center+(compact?31:53),'준비 남은 코인은 전투 시작에 0 · 비축과 성장량 보존',compact?16:17,'#c1b7aa');
  }
+ private drawCastleNames(s:DuelState|null){
+  const map=duelMap(s?.mapId);
+  for(const lane of [0,1] as Side[])for(const owner of [0,1] as Side[]){
+   // The two lanes share castle owners: left is player 0, right is player 1.
+   const end=map.points[owner===0?0:map.points.length-1],x=X+(end.x+.5)*T,y=this.boardY+(end.y+duelLaneOffset(lane)+.5)*T;
+   const name=s?.players[owner]?.name||(owner===0?'플레이어':'상대 기다리는 중');
+   this.text(this.ui,x,y+42,name,14,owner===0?'#9adbea':'#f7bd85',false)
+    .setWordWrapWidth(90,true).setAlign('center').setOrigin(.5,0)
+    .setStroke('#080b12',2).setBackgroundColor('#111722dd')
+    .setName(`castle-owner-${lane}-${owner}`).setData('playerName',name);
+  }
+ }
  private drawCastleHealth(s:DuelState|null){
   const map=duelMap(s?.mapId),width=60,height=22;
   for(const side of [0,1] as Side[]){
@@ -272,7 +283,6 @@ export class DuelScene extends Phaser.Scene{
   }
   for(const side of [0,1] as Side[]){for(const owner of [0,1] as Side[]){const end=map.points[owner===0?0:map.points.length-1],x=X+(end.x+.5)*T,y=this.boardY+(end.y+duelLaneOffset(side)+.5)*T;
    this.ambient?.add(this.terrain,owner===side?'guardian-'+owner:'enemy-start-'+side,'flame',x,y-10,94,92).setTint(owner===0?0xa6e8ff:0xffc382).setAlpha(owner===side?1:.65);
-   this.text(this.terrain,x,y+46,owner===side?'방어 성':`적군 출발 ${side===0?'←':'→'}`,11,owner===0?'#9adbea':'#f7bd85').setBackgroundColor('#111722dd');
   }
    for(const t of s?.players[side]?.towers??[]){const x=X+(t.x+.5)*T,y=this.boardY+(t.y+.5)*T,c=this.add.container(x,y-4);this.units.add(c);c.setAlpha(t.enabled?1:.5);const head=this.towerIcon(c,0,0,t.typeId,47);this.text(c,0,30,numberText(t.unit),15,'#ffe4a6').setBackgroundColor('#11131be8');this.towerViews.set(t.id,{head,tower:t,side,effects:new DuelHeroEffectBadges(this,this.reduced)});}
   }
