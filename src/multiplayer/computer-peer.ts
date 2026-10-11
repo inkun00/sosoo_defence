@@ -107,7 +107,7 @@ export class ComputerPeer{
   const p=this.state.players[1]!;
   if(now>=this.nextFusion){
    this.nextFusion=now+this.definition.fusionMs;const slots=additionSlots(p.heroQuestion,p.board);
-   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 영웅 성장량을 모았어요.',now);
+   if(slots&&this.act({type:'fuse',round:p.round,slots,operation:'+'},now).ok)this.mood('thinking','덧셈으로 영웅 소환석을 모았어요.',now);
   }
  }
  private summon(now:number){

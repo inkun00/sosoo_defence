@@ -240,16 +240,16 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   summonReward(s,side,hero);syncHeroAuras(s);return ok(`${hero.name} 출발! 다음 대전에서도 선택할 수 있어요.`);
  }
  if(action.type==='summon'||action.type==='hatch'){
-  if(s.status!=='playing')return bad('준비 중에는 성장량을 모아요. 전투에서 원하는 레벨의 영웅을 소환해요.');
+  if(s.status!=='playing')return bad('준비 중에는 소환석을 모아요. 전투에서 원하는 레벨의 영웅을 소환해요.');
   const hero=heroSpec(action.heroId);if(!hero)return bad('소환할 영웅을 다시 선택해 주세요.');
   // Older matches may still contain prepared heroes. A legacy summon uses
   // exactly one stock unit; hatching always spends only the selected level.
   const stored=action.type==='summon'&&(p.heroStock?.[hero.id]??0)>=1;
-  if(!stored&&(!Number.isSafeInteger(p.egg)||p.egg<hero.level))return bad(`성장량이 부족해요. Lv.${hero.level} 영웅은 성장량 ${hero.level}이 필요해요.`);
+  if(!stored&&(!Number.isSafeInteger(p.egg)||p.egg<hero.level))return bad(`소환석이 부족해요. Lv.${hero.level} 영웅은 소환석 ${hero.level}개가 필요해요.`);
   const length=duelMap(s.mapId).length;
   if(!spawn(s,side,(1-side) as Side,hero.level,hero.hp,hero.id,side===0?1:length-1))return bad('길이 붐벼요. 잠시 뒤 소환해 주세요.');
   if(stored)p.heroStock![hero.id]--;else p.egg-=hero.level;
-  syncHeroAuras(s);note(s,`${p.name} · ${hero.name} Lv.${hero.level} 소환!`);return ok(`${hero.name}이 아군 성에서 출발했어요. 남은 성장량 ${p.egg}`);
+  syncHeroAuras(s);note(s,`${p.name} · ${hero.name} Lv.${hero.level} 소환!`);return ok(`${hero.name}이 아군 성에서 출발했어요. 남은 소환석 ${p.egg}개`);
  }
  if(action.type==='ready'){
   if(s.status!=='waiting')return bad('이미 대전이 시작됐어요.');
@@ -307,15 +307,15 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
  }
  if(action.type==='fuse'){
   // Keep the runtime check for network messages from older clients.
-  if(action.operation!=='+')return bad('영웅 알은 덧셈으로 만들어요. 제시된 덧셈의 정답 블록 한 개를 골라 주세요.');
-  if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 성장량으로 영웅을 소환해요.');
+  if(action.operation!=='+')return bad('소환석은 덧셈 문제를 풀어 모아요. 제시된 덧셈의 정답 블록 한 개를 골라 주세요.');
+  if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 소환석으로 영웅을 소환해요.');
   if(action.round!==p.round||!Array.isArray(action.slots)||action.slots.length!==1||action.slots.some(i=>!Number.isInteger(i)||i<0||i>15))return bad('현재 덧셈 문제의 정답 블록 한 개를 골라요.');
   const {a,b}=p.heroQuestion,c=p.board[action.slots[0]];
   // Mistakes belong to the whole board round, even if the player tries another answer candidate.
   if(![a,b,c].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 정답 블럭을 골라 주세요.');
   if(!learningValue(a+b)){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 문제를 다시 확인해 주세요.');}
   if(a+b!==c){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 문제와 정답 후보는 그대로예요.');}
-  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.heroQuestion=decimalQuestion(s.seed,p.round,duelHeroLearningLevel(p));p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 성장량 ${p.egg}`);
+  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.heroQuestion=decimalQuestion(s.seed,p.round,duelHeroLearningLevel(p));p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 소환석 ${p.egg}개`);
  }
  return bad('지원하지 않는 조작이에요.');
 }

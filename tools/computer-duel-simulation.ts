@@ -69,5 +69,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const matches=seeds.map(seed=>simulateComputerDuel(i+1,seed));return {level:i+1,computerWins:matches.filter(m=>m.winner===1).length,playerWins:matches.filter(m=>m.winner===0).length,draws:matches.filter(m=>m.winner===null).length,matches};
  });
  const maps=DUEL_MAPS.map(map=>({mapId:map.id,name:map.name,matches:Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id))}));
- console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 표시된 덧셈식의 정답 블록을 하나 고를 때마다 성장량 1을 제한 없이 모은다. 영웅 덧셈은 계정 레벨과 무관하게 정답 0·5·10·15개에 따라 1·2·3·4단계로 진행한다. 준비에서 남은 코인은 전투 시작에 모두 없애고 0 코인으로 시작하는 3분 전투 중 비축 타워를 무료로 배치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
+ console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 표시된 덧셈식의 정답 블록을 하나 고를 때마다 소환석 1개를 제한 없이 모은다. 영웅 덧셈은 계정 레벨과 무관하게 정답 0·5·10·15개에 따라 1·2·3·4단계로 진행한다. 준비에서 남은 코인은 전투 시작에 모두 없애고 0 코인으로 시작하는 3분 전투 중 비축 타워를 무료로 배치하고 원하는 레벨 비용만큼 소환석을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
 }

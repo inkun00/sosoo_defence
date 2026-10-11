@@ -156,7 +156,7 @@ async function cell(page,x,y){
    await check(page,label+' growth picker locks canvas input',()=>!window.__duelPhaseTest.scene.input.enabled);
    await page.locator('[data-hero-level-select]').selectOption('2');
    assert.equal(await page.locator('.modal:not(.hidden) [data-hero]').count(),3);
-   assert.match(await page.locator('.hero-growth-summary').innerText(),/비용 2 · 같은 레벨 최대 3명/);
+   assert.match(await page.locator('.hero-growth-summary').innerText(),/^소환석 6개$/);
    await page.screenshot({path:path.join(output,label+'-growth-picker.png')});
    const pickerTouch=await page.locator('.hero-level-nav button,.hero-level-nav select,.hero-growth-picker [data-hero]').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return{width:r.width,height:r.height};}));
    assert.ok(pickerTouch.every(r=>Math.min(r.width,r.height)>=44),label+' picker touch controls at least44px');
@@ -173,8 +173,8 @@ async function cell(page,x,y){
    assert.equal(await page.locator('[data-hero-level-select] option').count(),10);
    await page.locator('[data-hero-level-select]').selectOption('6');
    assert.equal(await page.locator('.modal:not(.hidden) [data-hero]').count(),3);
-   assert.match(await page.locator('.hero-growth-summary').innerText(),/비용 6 · 같은 레벨 최대 2명/);
-   assert.match(await page.locator('.hero-growth-example').innerText(),/성장량 6이 남아요/);
+   assert.match(await page.locator('.hero-growth-summary').innerText(),/^소환석 12개$/);
+   assert.match(await page.locator('.hero-growth-example').innerText(),/소환석 6개가 남아요/);
    await page.locator('[data-hero-level-select]').selectOption('10');
    await page.screenshot({path:path.join(output,label+'-growth-picker-high.png')});
    await page.locator('[data-hero="hero-10-2"]').click();await page.waitForTimeout(260);

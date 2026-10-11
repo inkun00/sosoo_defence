@@ -37,12 +37,12 @@ function progress(owner:Side){
 }
 function updateProof(){
  const p=state.players[side]!;
- $('status').textContent=`${loaded?'실제 DuelScene 표시 완료':'실제 대전 이미지 로딩 중'} · ${side===0?'호스트':'참가자'} 계정 Lv.${p.accountLevel} · ${progress(side)} · 영웅 성장량 ${p.egg}`;
+ $('status').textContent=`${loaded?'실제 DuelScene 표시 완료':'실제 대전 이미지 로딩 중'} · ${side===0?'호스트':'참가자'} 계정 Lv.${p.accountLevel} · ${progress(side)} · 소환석 ${p.egg}개`;
  $('equation').textContent=equation;
  $('proof').replaceChildren(...([0,1] as Side[]).map(owner=>{
   const player=state.players[owner]!,stage=duelHeroLearningLevel(player),row=document.createElement('span');
   row.dataset.side=String(owner);row.dataset.accountLevel=String(player.accountLevel);row.dataset.stage=String(stage);row.dataset.solved=String(player.solved);row.dataset.round=String(player.round);row.dataset.egg=String(player.egg);row.dataset.wrong=String(player.wrongQuestions.length);
-  row.textContent=`${owner===0?'호스트':'참가자'} · 계정 Lv.${player.accountLevel} / ${progress(owner)} · 성장량 ${player.egg} · 오답 기록 ${player.wrongQuestions.length}개\n문제: ${numberText(player.heroQuestion.a)} + ${numberText(player.heroQuestion.b)} = ?\n정답 후보: ${player.board.map(n=>numberText(n)).join(' · ')}`;
+  row.textContent=`${owner===0?'호스트':'참가자'} · 계정 Lv.${player.accountLevel} / ${progress(owner)} · 소환석 ${player.egg}개 · 오답 기록 ${player.wrongQuestions.length}개\n문제: ${numberText(player.heroQuestion.a)} + ${numberText(player.heroQuestion.b)} = ?\n정답 후보: ${player.board.map(n=>numberText(n)).join(' · ')}`;
   return row;
  }));
  for(const owner of [0,1] as Side[]){const button=$(`${owner===0?'host':'guest'}-view`) as HTMLButtonElement;button.textContent=`${owner===0?'호스트':'참가자'} 계정 Lv.${state.players[owner]!.accountLevel} 시점`;button.setAttribute('aria-pressed',String(side===owner));}
@@ -79,7 +79,7 @@ function nextStage(){
  const target=stage*5;while(p.solved<target)solveCorrect();
 }
 function reset(reverse=false){
- if(reverse)reversed=!reversed;startFixture();operation='새 대전: 두 사람의 덧셈 정답 수와 영웅 성장량을 0으로 초기화했어요.';equation='계정 레벨이 달라도 두 사람은 같은 문제 1단계에서 다시 시작해요.';refresh();
+ if(reverse)reversed=!reversed;startFixture();operation='새 대전: 두 사람의 덧셈 정답 수와 소환석을 0개로 초기화했어요.';equation='계정 레벨이 달라도 두 사람은 같은 문제 1단계에서 다시 시작해요.';refresh();
 }
 for(const owner of [0,1] as Side[])$(`${owner===0?'host':'guest'}-view`).onclick=()=>{side=owner;slots=[];operation='이번 대전에서 내가 맞힌 정답 수에 맞춘 문제예요.';refresh();};
 $('correct-fuse').onclick=solveCorrect;$('wrong-fuse').onclick=solveWrong;$('next-stage').onclick=nextStage;

@@ -3,11 +3,11 @@ export interface ComputerPortrait{level:number;id:string;name:string;mood:Comput
 export interface ComputerOpponent{level:number;id:string;name:string;title:string;description:string;thinkMs:number;buildMs:number;fusionMs:number;hatchMs:number;maxTowers:number;heroLevel:number;}
 const names=[
  ['moss-apprentice','이끼 견습생','첫 결투','천천히 계산하고 기본 포탑으로 불꽃을 지켜요.'],
- ['lantern-scout','등불 정찰병','길을 살피는 수호자','작은 공격을 섞고 낮은 레벨의 영웅을 부화시켜요.'],
- ['ember-smith','불씨 대장장이','돌과 불의 장인','타워를 넓게 배치하고 돌 알을 조금 더 성장시켜요.'],
+ ['lantern-scout','등불 정찰병','길을 살피는 수호자','작은 공격을 섞고 낮은 레벨의 영웅을 소환해요.'],
+ ['ember-smith','불씨 대장장이','돌과 불의 장인','타워를 넓게 배치하고 소환석을 더 모아 영웅을 소환해요.'],
  ['frost-sage','서리 현자','겨울의 결투사','감속 타워로 시간을 벌며 차근차근 공격해요.'],
  ['lightning-alchemist','번개 연금술사','푸른 섬광','여러 공격력을 섞어 남은 체력을 마무리해요.'],
- ['rune-knight','룬 기사','불꽃의 수호자','타워 종류를 바꾸고 성장한 영웅을 보내요.'],
+ ['rune-knight','룬 기사','불꽃의 수호자','타워 종류를 바꾸고 높은 레벨의 영웅을 보내요.'],
  ['crystal-oracle','수정 예언자','별빛의 전략가','여러 구간을 지키며 적의 체력에 맞춰 준비해요.'],
  ['shadow-warden','그림자 파수꾼','어둠의 성문지기','빠른 합성과 균형 잡힌 타워 배치로 압박해요.'],
  ['storm-dragon-sage','폭풍 용 현자','폭풍을 부르는 자','감속과 기절, 긴 사거리를 함께 활용해요.'],

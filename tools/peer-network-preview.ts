@@ -63,10 +63,10 @@ button.onclick=async()=>{
    await guest.send({type:'tick'});
    for(const state of [host.state!,guest.state!]){
     const player=state.players[0],other=state.players[1]!;
-    if(player.solved!==target||player.egg!==target||duelHeroLearningLevel(player)!==stage||JSON.stringify(player.heroQuestion)!==JSON.stringify(decimalQuestion(state.seed,player.round,stage))||JSON.stringify(player.board)!==JSON.stringify(decimalBoard(state.seed,player.round,stage)))throw Error('개인 정답수에 따른 계산식·정답판·학습 단계·성장량이 양쪽에 일치하지 않아요.');
+    if(player.solved!==target||player.egg!==target||duelHeroLearningLevel(player)!==stage||JSON.stringify(player.heroQuestion)!==JSON.stringify(decimalQuestion(state.seed,player.round,stage))||JSON.stringify(player.board)!==JSON.stringify(decimalBoard(state.seed,player.round,stage)))throw Error('개인 정답수에 따른 계산식·정답판·학습 단계·소환석이 양쪽에 일치하지 않아요.');
     if(other.solved!==0||other.egg!==0||duelHeroLearningLevel(other)!==1)throw Error('한 사람의 정답이 상대의 학습 진도를 올렸어요.');
    }
-   note(`PASS · 데이터 채널에서 호스트 정답 ${target}개 → ${stage}단계 · 성장량 ${target} · 참가자 1단계 유지`);
+   note(`PASS · 데이터 채널에서 호스트 정답 ${target}개 → ${stage}단계 · 소환석 ${target}개 · 참가자 1단계 유지`);
   }
   const positions=JSON.stringify(host.state!.enemies.map(enemy=>[enemy.id,enemy.pathDistance,enemy.hp]));
   let frozenChecked=false,snapshotChecked=false,battleChecked=false;
@@ -74,13 +74,13 @@ button.onclick=async()=>{
   host.onState=s=>{
    if(!frozenChecked&&s.status==='preparing'&&s.preparationElapsed>=3){frozenChecked=true;note((JSON.stringify(s.enemies.map(enemy=>[enemy.id,enemy.pathDistance,enemy.hp]))===positions?'PASS':'FAIL')+' · 준비 중 영웅 위치·체력 고정');}
    if(s.status==='playing'&&!battleChecked){
-    battleChecked=true;note(`PASS · 호스트 전투 시작: ${s.startedAt-started}ms · 코인 ${s.players[0].money}/${s.players[1]!.money} · 성장량 ${s.players[0].egg}/${s.players[1]!.egg}`);host!.onState=()=>{};
+    battleChecked=true;note(`PASS · 호스트 전투 시작: ${s.startedAt-started}ms · 코인 ${s.players[0].money}/${s.players[1]!.money} · 소환석 ${s.players[0].egg}개/${s.players[1]!.egg}개`);host!.onState=()=>{};
     void(async()=>{
      await new Promise(resolve=>setTimeout(resolve,250));const first=await host!.send({type:'summon-reward'}),second=await guest!.send({type:'summon-reward'});if(!first.ok||!second.ok)throw Error(first.message+' '+second.message);
      const heroes=host!.state!.enemies.filter(enemy=>enemy.rewardSummon),high=heroes.find(enemy=>enemy.owner===1&&enemy.hero==='hero-10-1'),spec=worksheetHeroSpec('hero-10-1')!;
      if(heroes.length!==2||!heroes.some(enemy=>enemy.owner===0&&enemy.hero==='hero-4-1')||!high||high.vitalityBonus!==Math.round(spec.hp*heroEffectStats(spec.level).amount/10)*10)throw Error('전투 중 학습지 영웅의 수동 소환·체력 강화가 일치하지 않아요.');
-     if(host!.state!.players[0].egg!==15||host!.state!.players[1]!.egg!==0)throw Error('학습지 영웅 소환이 성장량을 소비했어요.');
-     note('PASS · 전투 중 양쪽 학습지 영웅 한 명씩 수동 소환 · 체력 강화 · 성장량 보존');
+     if(host!.state!.players[0].egg!==15||host!.state!.players[1]!.egg!==0)throw Error('학습지 영웅 소환이 소환석을 소비했어요.');
+     note('PASS · 전투 중 양쪽 학습지 영웅 한 명씩 수동 소환 · 체력 강화 · 소환석 보존');
     })().catch(error=>note('FAIL · '+(error as Error).message));
    }
   };

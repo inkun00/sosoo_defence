@@ -106,8 +106,8 @@ export class DuelScene extends Phaser.Scene{
   if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.syncTowerEffects();this.syncHeroSummons();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,compact?headerHeight/2+3:44,1264,headerHeight);this.text(this.ui,titleX,compact?headerHeight/2:40,'소수 디펜스 · 1:1',compact?20:24);this.text(this.ui,roomX,compact?headerHeight/2-15:25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,roomX,compact?headerHeight/2+16:56,`Lv.${s?duelLevel(s):1} · ${duelMap(s?.mapId).name}`,15,'#ffca7e');
   const preparing=s?.status==='preparing',stockTotal=Object.values(p?.stock??{}).reduce((sum,count)=>sum+count,0);
-  if(preparing){this.text(this.ui,budgetX,compact?headerHeight/2-15:26,numberText(p?.money??DUEL_START_MONEY)+' 코인',compact?18:21,'#ffcb7b');this.text(this.ui,budgetX,compact?headerHeight/2+17:58,`비축 타워 ${stockTotal}개 · 영웅 성장 ${p?.egg??0}`,14,'#f3dfb9');}
-  else if(s?.status==='playing'){this.text(this.ui,budgetX,compact?headerHeight/2-15:26,`남은 코인 ${numberText(p?.money??0)}`,compact?18:21,'#ffcb7b').setName('duel-battle-coins');this.text(this.ui,budgetX,compact?headerHeight/2+17:58,`비축 타워 ${stockTotal} · 영웅 성장 ${p?.egg??0}`,14,'#f3dfb9');}
+  if(preparing){this.text(this.ui,budgetX,compact?headerHeight/2-15:26,numberText(p?.money??DUEL_START_MONEY)+' 코인',compact?18:21,'#ffcb7b');this.text(this.ui,budgetX,compact?headerHeight/2+17:58,`비축 타워 ${stockTotal}개 · 소환석 ${p?.egg??0}개`,14,'#f3dfb9');}
+  else if(s?.status==='playing'){this.text(this.ui,budgetX,compact?headerHeight/2-15:26,`남은 코인 ${numberText(p?.money??0)}`,compact?18:21,'#ffcb7b').setName('duel-battle-coins');this.text(this.ui,budgetX,compact?headerHeight/2+17:58,`비축 타워 ${stockTotal} · 소환석 ${p?.egg??0}개`,14,'#f3dfb9');}
   else this.text(this.ui,budgetX,compact?headerHeight/2:41,`${numberText(p?.money??DUEL_START_MONEY)} 코인`,compact?18:21,'#ffcb7b');
   const clockWidth=compact?headerInfoRight*.2:140;
   const timer=this.text(this.ui,clockX,compact?headerHeight/2:41,formatDuelClock(clock.seconds),compact?26:25,clock.state==='active'?'#ffcb7b':clock.state==='complete'?'#a3e9dd':'#bcb4aa').setName('duel-phase-timer').setData('active',clock.state==='active').setData('state',clock.state).setData('phase',clock.phase);timer.setScale(Math.min(1,clockWidth/Math.max(1,timer.width)));
@@ -134,7 +134,7 @@ export class DuelScene extends Phaser.Scene{
   const selected=p?.towers.find(t=>t.id===v.selectedTower);
   const shopBottomY=compact?height-touch/2-10:preparing?667+LOWER_SHIFT:696+LOWER_SHIFT;
   if(selected){this.text(this.ui,compact?1045:1085,shopBottomY,compact?'자동 공격':'타워 자동 공격',16,'#c1b7aa');this.button('sell',compact?1266-Math.max(105,touch)/2:1210,shopBottomY,Math.max(105,touch),Math.max(touch,57),'회수',!v.busy);}
-  else if(preparing)this.button('prepare:heroes',1130,shopBottomY,228,Math.max(touch,56),'영웅 성장 문제',!v.busy,true,18);
+  else if(preparing)this.button('prepare:heroes',1130,shopBottomY,228,Math.max(touch,56),'영웅 소환석 문제',!v.busy,true,18);
   else if(!compact&&s?.status==='playing')this.text(this.ui,1130,697+LOWER_SHIFT,v.selectedType?'내 전장 빈 바닥에 바로 설치':p?.money?'비축 무료 · 코인이 있으면 바로 설치':'비축 타워를 골라 무료 배치',16,'#c1b7aa');
   const reserve=p?.rewardHero?worksheetHeroSpec(p.rewardHero):null;
   // Prepare every reserved hero atlas before its manually timed entrance.
@@ -184,7 +184,7 @@ export class DuelScene extends Phaser.Scene{
   const heroes=HEROES.filter(hero=>(p.heroStock?.[hero.id]??0)>0),total=heroes.reduce((sum,hero)=>sum+(p.heroStock?.[hero.id]??0),0),pageSize=compact?2:6,pages=Math.max(1,Math.ceil(heroes.length/pageSize));
   this.heroPage=Math.min(this.heroPage,pages-1);const page=this.heroPage;
   this.panel(this.ui,8+mainWidth/2,area.y+area.height/2,mainWidth,area.height);this.panel(this.ui,sideLeft+sideWidth/2,area.y+area.height/2,sideWidth,area.height);
-  this.text(this.ui,8+mainWidth/2,area.y+15,heroes.length?`이전 비축 영웅 ${total}개 · 원하는 때 소환`:`영웅 성장량 ${p.egg} · 나눠서 소환`,compact?19:22,'#ffca7e');
+  this.text(this.ui,8+mainWidth/2,area.y+15,heroes.length?`이전 비축 영웅 ${total}개 · 원하는 때 소환`:`소환석 ${p.egg}개 · 나눠서 소환`,compact?19:22,'#ffca7e');
   const columns=compact?2:3,cardWidth=(mainWidth-24)/columns,rowHeight=compact?Math.max(touch,(area.height-28)/2):122,firstY=area.y+28+rowHeight/2;
   heroes.slice(page*pageSize,page*pageSize+pageSize).forEach((hero,index)=>{
    const count=p.heroStock?.[hero.id]??0,x=20+cardWidth*(index%columns+.5),y=firstY+Math.floor(index/columns)*(rowHeight+8);
@@ -192,18 +192,18 @@ export class DuelScene extends Phaser.Scene{
    this.controls.get('summon:'+hero.id)!.label=`${hero.name} 레벨 ${hero.level} 비축 ${count}개 소환 · ${hero.description}`;
   });
   if(!heroes.length){
-   this.button('hatch',8+mainWidth/2,firstY,mainWidth-32,rowHeight,p.egg?'영웅 레벨·종류 선택 ▶\n성장량을 나눠 원하는 때 소환':'영웅 성장량을 모두 사용했어요',p.egg>0&&!v.busy,true,compact?21:24);
+   this.button('hatch',8+mainWidth/2,firstY,mainWidth-32,rowHeight,p.egg?'영웅 레벨·종류 선택 ▶\n소환석을 나눠 원하는 때 소환':'소환석을 모두 사용했어요',p.egg>0&&!v.busy,true,compact?21:24);
    const maximum=Math.min(10,p.egg),secondY=compact?firstY+rowHeight+4:area.y+220;
    this.text(this.ui,8+mainWidth/2,secondY-15,p.egg?`Lv.1 최대 ${p.egg}명 / Lv.${maximum} 최대 ${Math.floor(p.egg/maximum)}명`:'소환한 영웅과 배치한 타워로 승부해요',compact?18:21,'#ffca7e');
-   this.text(this.ui,8+mainWidth/2,secondY+20,'선택한 영웅 레벨만 소모 · 남은 성장량 보존',compact?16:18,'#c1b7aa');
+   this.text(this.ui,8+mainWidth/2,secondY+20,'영웅 레벨만큼 소환석 사용 · 남은 소환석 보관',compact?16:18,'#c1b7aa');
   }
   const reward=p.rewardHero?worksheetHeroSpec(p.rewardHero):null,readyReward=!!reward&&!p.rewardUsed;
   this.text(this.ui,sideLeft+sideWidth/2,area.y+15,'소환 대기',compact?19:22,'#ffca7e');
   const tacticHeight=compact?rowHeight:84,tacticFirstY=compact?firstY:area.y+77,tacticSecondY=compact?firstY+rowHeight+4:area.y+173;
   this.button('summon-reward',sideLeft+sideWidth/2,tacticFirstY,sideWidth-18,tacticHeight,readyReward?`✦ ${reward!.name}\n3종 효과 · 소환 ▶`:p.rewardUsed?'특별 영웅 출전 완료':'수집 영웅 없음',readyReward&&!v.busy,true,compact?19:18);
   if(reward)this.controls.get('summon-reward')!.label=`학습지 특별 영웅 ${reward.name} 레벨 ${reward.level} · 세 효과 동시 발동 · ${reward.description} · ${p.rewardUsed?'출전 완료':'소환'}`;
-  if(heroes.length)this.button('hatch',sideLeft+sideWidth/2,tacticSecondY,sideWidth-18,tacticHeight,p.egg?`성장량 ${p.egg}\n레벨 선택 · 소환 ▶`:'남은 성장량 없음',p.egg>0&&!v.busy,true,compact?19:18);
-  else {this.text(this.ui,sideLeft+sideWidth/2,tacticSecondY-16,'특별 영웅은 성장 소모 없이',compact?16:17,'#c1b7aa');this.text(this.ui,sideLeft+sideWidth/2,tacticSecondY+16,'전투 중 한 번 소환해요',compact?17:18,'#ffca7e');}
+  if(heroes.length)this.button('hatch',sideLeft+sideWidth/2,tacticSecondY,sideWidth-18,tacticHeight,p.egg?`소환석 ${p.egg}개\n레벨 선택 · 소환 ▶`:'남은 소환석 없음',p.egg>0&&!v.busy,true,compact?19:18);
+  else {this.text(this.ui,sideLeft+sideWidth/2,tacticSecondY-16,'특별 영웅은 소환석 없이',compact?16:17,'#c1b7aa');this.text(this.ui,sideLeft+sideWidth/2,tacticSecondY+16,'전투 중 한 번 소환해요',compact?17:18,'#ffca7e');}
   const pageY=compact?firstY+rowHeight+4:area.y+280;
   const pageLeft=compact?24:sideLeft+12,pageWidth=compact?mainWidth-32:sideWidth-24,navWidth=compact?Math.max(touch,150):70;
   if(heroes.length){this.button('heroes:prev',pageLeft+navWidth/2,pageY,navWidth,compact?rowHeight:Math.max(touch,56),'◀',page>0&&!v.busy,false,21);this.text(this.ui,pageLeft+pageWidth/2,pageY,`${page+1}/${pages}`,20,'#ffca7e');this.button('heroes:next',pageLeft+pageWidth-navWidth/2,pageY,navWidth,compact?rowHeight:Math.max(touch,56),'▶',page<pages-1&&!v.busy,false,21);}
