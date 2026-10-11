@@ -13,6 +13,7 @@ import {hitEquationsEnabled} from './combat-preferences';
 import {AmbientProps} from './ambient-props';
 import type {GameScreenLayout} from './responsive-game';
 import {playTowerProjectile,clearTowerProjectiles} from './tower-projectiles';
+import {BossAuraView} from './boss-aura-view';
 export interface Mode{kind:'tower'|'wall'|'inspect';unit:number;effect:Effect;typeId?:string;}
 interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.Image;pivot:Phaser.GameObjects.Container;head:Phaser.GameObjects.Image;angle:number;recoilTime:number;}
 interface ShotData{towerId:number;typeId:string;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
@@ -35,13 +36,15 @@ export class Field extends Phaser.Scene{
  private battleEffects=new Set<Phaser.GameObjects.GameObject>();private lastShakeTime=0;
  private hitEquations?:HitEquationPopups;private shotSequence=0;
  private ambient?:AmbientProps;
+ private bossAura?:BossAuraView;
  private loadingMonsters=new Set<MonsterKind>();private monsterRetry=new Map<MonsterKind,number>();
  private screenLayout?:GameScreenLayout;
  constructor(model:Defense){super('field');this.model=model;}
  preload(){loadDungeon(this,stageMonsterKinds(this.model.level));this.load.image('dungeon-wall-collapse-v1',artURL('wall-collapse-v1'));}
  create(){
   this.readyFlag=true;this.layoutCamera();registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
-  this.ambient=new AmbientProps(this,this.reducedMotion);
+  this.ambient=new AmbientProps(this,this.reducedMotion);this.bossAura=new BossAuraView(this,this.reducedMotion);
+  if(this.presentationHeld)this.input.enabled=false;
   this.hitEquations=new HitEquationPopups(this,{left:16,right:FIELD_WIDTH-16,top:12,bottom:FIELD_HEIGHT-16},()=>this.model.phase==='paused');
   for(const kind of MONSTER_KINDS)this.monsterAnimations(kind);
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
@@ -77,7 +80,7 @@ export class Field extends Phaser.Scene{
    else {this.selected=undefined;this.onSelect(0);}
    this.flush();this.onChange();
  }
- setModel(model:Defense){this.model=model;this.presentationHeld=false;this.selected=undefined;this.selectedWall=undefined;if(this.readyFlag)this.clearBattleEffects();this.mode.kind='inspect';this.knownTowerIds.clear();if(!this.readyFlag)return;for(const v of this.towerArt.values())this.tweens.killTweensOf(v.root);this.towerArt.clear();for(const v of this.visuals.values()){v.sprite.destroy();v.text.destroy();v.name.destroy();v.bar.destroy();}this.visuals.clear();this.layoutSignature='';this.overlay.clear();this.drawTerrain();}
+ setModel(model:Defense){this.model=model;this.presentationHeld=false;this.bossAura?.clear();this.selected=undefined;this.selectedWall=undefined;if(this.readyFlag)this.clearBattleEffects();this.mode.kind='inspect';this.knownTowerIds.clear();if(!this.readyFlag)return;for(const v of this.towerArt.values())this.tweens.killTweensOf(v.root);this.towerArt.clear();for(const v of this.visuals.values()){v.sprite.destroy();v.text.destroy();v.name.destroy();v.bar.destroy();}this.visuals.clear();this.layoutSignature='';this.overlay.clear();this.drawTerrain();}
  private label(x:number,y:number,text:string,size=16,color='#f7e8cd'){
   return this.add.text(x,y,text,{fontFamily:'Malgun Gothic, system-ui, sans-serif',fontSize:size,fontStyle:'bold',color,align:'center',padding:{x:5,y:3}}).setOrigin(.5);
  }
@@ -303,7 +306,8 @@ export class Field extends Phaser.Scene{
   const paused=this.model.phase==='paused';this.tweens.timeScale=paused?0:1;if(paused)this.cameras.main.shakeEffect.reset();
   this.ambient?.setPaused(paused);
   for(const object of this.battleEffects)if(object instanceof Phaser.GameObjects.Sprite){if(paused)object.anims.pause();else if(object.anims.isPaused)object.anims.resume();}
-  if(!this.presentationHeld)this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
+  if(this.presentationHeld)this.input.enabled=false;else this.model.step(delta/1000);for(const e of this.model.enemies)this.enemyVisual(e);
+  this.bossAura?.sync(this.model);
   for(const v of this.visuals.values()){if(paused)v.sprite.anims.pause();else if(v.sprite.anims.isPaused)v.sprite.anims.resume();}
   const live=new Set(this.model.enemies.map(e=>e.id));for(const [id,v]of this.visuals){if(live.has(id))continue;v.text.destroy();v.name.destroy();v.bar.destroy();this.trackEffect(v.sprite);v.sprite.play((this.anims.exists(v.kind+'-fall')?v.kind:'slime')+'-fall');this.tweens.add({targets:v.sprite,alpha:0,duration:550,onComplete:()=>v.sprite.destroy()});this.visuals.delete(id);}
   if(this.layoutSignature!==this.signature())this.drawTerrain();this.animateWalls();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(this.heartbeat>=120){this.heartbeat=0;this.onChange();}

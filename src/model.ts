@@ -19,6 +19,7 @@ export interface WallImpact{wallId:number;enemyId:number;kind:MonsterKind;durabi
 export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'wall-impact'|'wall-break'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
 export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
 export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8;
+export const BOSS_AURA_RADIUS=3*TILE,BOSS_AURA_SPEED=1.25,BOSS_AURA_SLOW=.8,BOSS_AURA_STUN=2;
 export {DEFAULT_SPAWN_INTERVAL as SPAWN_INTERVAL} from './difficulty';
 export class Defense{
  level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
@@ -33,6 +34,12 @@ export class Defense{
  constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.storedWallHealth=Array.from({length:inventory.walls},(_,i)=>{const hp=inventory.wallDurabilities?.[i];return hp===1||hp===2?hp:WALL_DURABILITY;});this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  path(blocks=this.blocks,start=this.map.start){return route(blocks,start,this.map.end);}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
+ get bossAuraSource():Enemy|null{
+  if(this.level.id!==11||this.level.boss?.kind!=='wizard')return null;
+  return this.enemies.find(e=>e.kind==='wizard'&&e.hp>0&&e.next<e.path.length)??null;
+ }
+ private withinBossAura(e:Enemy,source:Enemy){return e!==source&&e.hp>0&&e.next<e.path.length&&Math.hypot(e.x-source.x,e.y-source.y)<=BOSS_AURA_RADIUS+1e-8;}
+ isBossEmpowered(e:Enemy){const source=this.bossAuraSource;return source!==null&&this.withinBossAura(e,source);}
  get canChangeDifficulty(){return this.phase==='ready'&&!this.towers.length&&!this.walls.length;}
  setDifficulty(difficulty:Difficulty){
   if(!isDifficulty(difficulty)||!this.canChangeDifficulty)return this.notice('방어 시작 전에 타워와 성벽을 회수하면 난이도를 바꿀 수 있어요.');
@@ -195,8 +202,11 @@ export class Defense{
   this.moveWalls(dt);
   if(this.spawned<this.level.hp.length&&this.elapsed+1e-9>=FIRST_SPAWN_DELAY+this.spawned*this.balance.spawnInterval)this.spawn();
   if(this.level.boss&&!this.bossSpawned&&this.elapsed+1e-9>=this.level.boss.spawnAt)this.spawnBoss();
+  // All monsters use the same starting positions for this tick's aura.
+  // Moving the wizard first or last cannot change another monster's buff.
+  const auraSource=this.bossAuraSource,empowered=new Set(auraSource?this.enemies.filter(e=>this.withinBossAura(e,auraSource)):[]);
   for(const e of this.enemies){
-   if(e.hp===0)continue;e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt);
+   if(e.hp===0)continue;const buffed=empowered.has(e);e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt*(buffed?BOSS_AURA_STUN:1));
    e.wallCooldown=Math.max(0,(e.wallCooldown??0)-dt);
    if(e.recoil&&e.recoil.remaining>0){const h=Math.min(dt,e.recoil.remaining),friction=1.2,decay=Math.exp(-friction*h);e.x+=e.recoil.vx*(1-decay)/friction;e.y+=e.recoil.vy*(1-decay)/friction;e.recoil.vx*=decay;e.recoil.vy*=decay;e.recoil.remaining=Math.max(0,e.recoil.remaining-dt);continue;}
    if(e.stun)continue;
@@ -204,7 +214,7 @@ export class Defense{
    // Creatures accelerate into a short ram; the collision reflects that
    // actual approach velocity rather than creating extra bounce energy.
    const charge=approachingWall&&target?1+.8*Math.max(0,Math.min(1,(TILE-Math.hypot(target.x-e.x,target.y-e.y))/(TILE*.6))):1;
-   const speed=this.balance.speed*MONSTERS[e.kind].speed*(e.slow?.6:1)*charge;
+   const speed=this.balance.speed*MONSTERS[e.kind].speed*(buffed?BOSS_AURA_SPEED:1)*(e.slow?(buffed?BOSS_AURA_SLOW:.6):1)*charge;
    let travel=speed*dt;
    while(travel>0&&e.next<e.path.length){const target=world(e.path[e.next]),dx=target.x-e.x,dy=target.y-e.y,d=Math.hypot(dx,dy);
     const wall=this.walls.find(w=>key(w)===key(e.path[e.next])),contact=TILE*.4;

@@ -15,6 +15,8 @@ import {towerType,TOWERS,parseMoney} from './towers';
 import {playCinematic} from './cinematic';
 import {playBossFinale} from './boss-finale';
 import {BossFinaleFlow} from './boss-finale-flow';
+import {playBossIntro,type BossIntroPresentation} from './boss-intro';
+import {BossIntroFlow} from './boss-intro-flow';
 import {observeGameScreen} from './responsive-game';
 import {recordLearning} from './learning';
 import {TutorialSession} from './tutorial';
@@ -54,6 +56,9 @@ let fusionOperation:FusionOperation='+';
 let resumeAfterPanel=false,resumeAfterHTML=false,resumeAfterWall=false,controlsSignature='';
 const field=new Field(model);const learningSession=crypto.randomUUID();let learningQuestion=0;
 let bossFinale=new BossFinaleFlow();
+const bossIntroFlow=new BossIntroFlow();
+let bossIntroPresentation:BossIntroPresentation|undefined,bossIntroToken=bossIntroFlow.enter(model.level.id,!!tutorial);
+if(bossIntroFlow.held){movie=true;field.presentationHeld=true;}
 function purchaseLearning(outcome:'wrong'|'help'|'correct',q=model.pendingPurchase){if(q&&!tutorial)recordLearning({a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'},outcome,learningSession+':purchase:'+learningQuestion);}
 const state=():UIState=>({model,save,unit,effect,selected,selectedWall,brickPage,speed,mode:field.mode,panel,slots,fusionOperation,equation,hint,message,towerTypeId,shopPage,purchaseInput,purchaseMessage,purchaseHelp});
 const ui=new GameUI(state);
@@ -66,6 +71,7 @@ function persistInventory(){
 }
 function update(){
  if(tutorial){tutorial.sync();if(tutorial.completed){field.presentationHeld=true;field.input.enabled=false;}}
+ if(bossIntroFlow.held){movie=true;field.presentationHeld=true;if(field.input)field.input.enabled=false;}
  if(selectedWall&&!model.walls.some(w=>w.x===selectedWall!.x&&w.y===selectedWall!.y)){selectedWall=null;field.selectedWall=undefined;field.clearWallPreview();}
  // The model can win before its last projectile lands. Hold the result until
  // that impact and the boss's farewell have both been shown.
@@ -92,6 +98,17 @@ function finalBossImpact(x:number,y:number){
  let completed=false;
  const finish=()=>{if(completed)return;completed=true;if(owner!==bossFinale)return;owner.finish();movie=false;field.presentationHeld=false;field.input.enabled=!panel&&$('modal').classList.contains('hidden');ui.refresh(true);update();};
  void playBossFinale(save,origin,finish).catch(finish);
+}
+function startBossIntro(){
+ const token=bossIntroToken;if(token===null||!bossIntroFlow.begin(token))return;
+ const owner=model;movie=true;field.presentationHeld=true;if(field.input)field.input.enabled=false;sound.setPaused(true);
+ const finish=()=>{
+  if(owner!==model||!bossIntroFlow.finish(token))return;
+  bossIntroPresentation=undefined;bossIntroToken=null;movie=false;field.presentationHeld=false;
+  if(field.input)field.input.enabled=!panel&&$('modal').classList.contains('hidden');
+  ui.refresh(true);update();document.querySelector<HTMLCanvasElement>('#field canvas')?.focus({preventScroll:true});
+ };
+ bossIntroPresentation=playBossIntro(save,finish);
 }
 function notify(text:string){message=text;$('accessible-notice').textContent=text;ui.notify(text);}
 function nextWallCell(){return model.path()?.find(c=>model.previewWall(c).valid);}
@@ -129,9 +146,10 @@ function stage(n:number){
  if(tutorial){restartTutorial();return;}
  settingsAudioControls?.dispose();settingsAudioControls=undefined;
  if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
+ bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroFlow.cancel();movie=false;
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
  save.resumeStage=n;save.started=true;writeSave(save);
- bossFinale=new BossFinaleFlow();model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);field.input.enabled=true;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();
+ bossFinale=new BossFinaleFlow();model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);bossIntroToken=bossIntroFlow.enter(n);movie=bossIntroFlow.held;field.presentationHeld=movie;if(field.input)field.input.enabled=!movie;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();startBossIntro();
 }
 function event(ev:BattleEvent){
  // Damage and learning state update immediately; impact audio follows the flight.
@@ -272,18 +290,20 @@ function updateTutorialGuide(){
 }
 ui.onControls=(controls:Map<string,Control>)=>{
  const popupKey=(id:string)=>['close','fuse','wall','levels','help','tutorial','settings','credits','retry','next','difficulty','online','home','popup-calculation'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
- const active=[...controls].filter(([id])=>$('modal').classList.contains('hidden')&&(!panel||popupKey(id))&&(!tutorial||tutorialActionAllowed(id)));
+ const active=[...controls].filter(([id])=>!movie&&$('modal').classList.contains('hidden')&&(!panel||popupKey(id))&&(!tutorial||tutorialActionAllowed(id)));
  const signature=active.map(([id,c])=>`${id}:${c.label}:${c.enabled}`).join('|');if(signature===controlsSignature)return;controlsSignature=signature;
  const focus=(document.activeElement as HTMLElement)?.dataset.action;
  $('accessible-controls').replaceChildren();for(const [id,c]of active){const b=document.createElement('button');b.type='button';b.textContent=c.label||id;b.dataset.action=id;b.disabled=!c.enabled;b.onclick=c.run;$('accessible-controls').append(b);if(id===focus)b.focus();}
 };
 field.onChange=update;field.onEvent=event;field.onImpactAudio=type=>{if(!movie)sound.play(type);};field.onFinalBossImpact=finalBossImpact;field.onSelect=id=>{selected=id;selectedWall=null;field.selectedWall=undefined;update();};field.onWallSelect=c=>{selected=0;selectedWall=c;update();};
 field.beforeCellAction=c=>{
+ if(movie)return false;
  if(!tutorial)return true;
  const valid=tutorial.step==='place-tower'&&field.mode.kind==='tower'&&cellKey(c)===cellKey(tutorial.suggestedTowerCell)||tutorial.step==='wall'&&field.mode.kind==='wall'&&cellKey(c)===cellKey(tutorial.suggestedWallCell);
  if(!valid)notify('빛나는 칸과 아래 안내를 따라 연습해요.');return valid;
 };
 field.onWallPlace=c=>{
+ if(movie)return;
  model.cancelWall();const placed=model.placeWall(c);field.flush();
  if(!placed){field.focusCell(c);update();return;}
  field.drawTerrain();const next=nextWallCell();
@@ -291,9 +311,10 @@ field.onWallPlace=c=>{
  else{leaveWallPlacement();selectedWall={...c};field.selectedWall=selectedWall;field.focusCell(c);notify(model.wallStock?`설치를 마쳤어요. 남은 성벽 ${model.wallStock}개는 보관해요.`:'성벽 설치 완료! 준비한 성벽을 모두 놓았어요.');}
  update();
 };
-field.onPurchase=(c,id)=>{if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${purchaseBalanceText(q.wallet,q.before,q.digits)}. ${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
+field.onPurchase=(c,id)=>{if(movie)return;if(model.requestPurchase(c,id)){learningQuestion++;purchaseInput='';purchaseMessage='';purchaseHelp=false;setPanel('purchase');const q=model.pendingPurchase!;$('accessible-notice').textContent=`${purchaseBalanceText(q.wallet,q.before,q.digits)}. ${towerType(id)!.name} 설치 문제: ${numberText(q.before,q.digits)}에서 ${numberText(q.cost,q.digits)}를 빼면 남는 코인은 얼마인가요?`;document.querySelector<HTMLCanvasElement>('canvas')?.focus();}};
 const originalUpdate=field.update.bind(field);field.update=(time:number,delta:number)=>originalUpdate(time,delta*speed);
 const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,height:GAME_HEIGHT,backgroundColor:'#111216',scene:[field,ui],scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},render:{antialias:true},audio:{noAudio:true}});
+startBossIntro();
 if(tutorial){tutorialGuide=mountTutorialGuide(app,{next:tutorialNext,restart:restartTutorial,exit:()=>action('home'),adventure:()=>{sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','adventure');location.assign(url.href);}});updateTutorialGuide();}
 observeGameScreen(game,$('field'),layout=>{field.setScreenLayout(layout);ui.setScreenLayout(layout);shopPage=Math.min(shopPage,ui.shopPageCount-1);ui.refresh(true);updateTutorialGuide();});
 game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');});
@@ -306,6 +327,12 @@ document.addEventListener('keydown',e=>{
  if(e.code==='Space'&&!panel){e.preventDefault();action('pause');}else if(e.key.toLowerCase()==='f'&&!panel)action('forge');
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&model.phase==='playing'){model.togglePause();update();}});
-window.addEventListener('pagehide',()=>{tutorialGuide?.dispose();tutorial?.dispose();settingsAudioControls?.dispose();gameAudioControls.dispose();sound.dispose();});
-if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();}}});
+window.addEventListener('pagehide',()=>{
+ const introHeld=bossIntroFlow.held;
+ bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroToken=null;bossIntroFlow.cancel();
+ // A page restored from the browser cache must not retain an invisible input lock.
+ if(introHeld){movie=false;field.presentationHeld=false;if(field.input)field.input.enabled=!panel&&$('modal').classList.contains('hidden');if(ui.ready)ui.refresh(true);}
+ tutorialGuide?.dispose();tutorial?.dispose();settingsAudioControls?.dispose();gameAudioControls.dispose();sound.dispose();
+});
+if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();},get presentation(){return{movie,held:field.presentationHeld,introPhase:bossIntroFlow.phase};}}});
 
