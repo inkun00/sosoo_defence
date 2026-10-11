@@ -68,6 +68,16 @@ async function assertClock(page,label,text,phase,state,active){
  const actual=await page.evaluate(()=>{const ui=window.__duelPhaseTest.scene.ui,timer=ui.getByName('duel-phase-timer');return {text:timer?.text,phase:timer?.getData('phase'),state:timer?.getData('state'),active:timer?.getData('active'),oldTimers:['duel-preparation-timer','duel-battle-timer','duel-total-timer'].some(name=>ui.getByName(name))};});
  assert.deepEqual(actual,{text,phase,state,active,oldTimers:false},label+' uses one current-phase clock');checks.push(label+' uses one current-phase clock '+text+' '+phase);
 }
+async function towerCards(page,label){
+ await check(page,label+' tower cards use matching cropped artwork and real effects',async()=>{
+  const {TOWERS}=await import('/src/towers.ts'),{artURL}=await import('/src/art.ts'),effects={slow:'감속 40% · 3초',stun:'기절 25% · 1.5초',range:'장거리 · 사거리 4칸'};
+  const cards=[...document.querySelectorAll('.duel-preparation-tower:not([hidden])')];
+  return cards.length===6&&cards.every(button=>{
+   const t=TOWERS.find(t=>t.id===button.dataset.prepareType),art=button.querySelector('[data-tower-art]'),head=button.querySelector('[data-tower-art-head]'),base=button.querySelector('[data-tower-art-base]'),effect=button.querySelector('[data-tower-effect]');
+   return t&&art?.dataset.towerId===t.id&&art.dataset.towerSheet===t.sheet&&art.dataset.towerFrame===String(t.frame)&&head?.getAttribute('viewBox')===`${t.frame%3*256} ${Math.floor(t.frame/3)*256} 256 256`&&head.querySelector('image')?.getAttribute('href')===artURL('tower-heads-'+t.sheet+'-v1')&&base?.getAttribute('viewBox')==='0 0 256 256'&&base.querySelector('image')?.getAttribute('href')===artURL('turret-parts-v1')&&getComputedStyle(head).overflow==='hidden'&&getComputedStyle(base).overflow==='hidden'&&effect?.hidden===(t.effect==='basic')&&effect.textContent===(effects[t.effect]||'');
+  });
+ });
+}
 async function exercise(page,label,side,touch){
  const popup=page.locator('.duel-preparation-panel');
  assert.equal(await popup.isVisible(),false,label+' no preparation popup before ready');
@@ -136,9 +146,15 @@ async function exercise(page,label,side,touch){
  checks.push(label+' five correct answers advance the learning stage');
 
  await activate(popup.locator('[data-preparation-tab="towers"]'),touch);
+ await towerCards(page,label+' page1');
+ await activate(popup.locator('[data-preparation-page="next"]'),touch);
+ await towerCards(page,label+' page2');
+ await activate(popup.locator('[data-preparation-page="prev"]'),touch);
  await activate(popup.locator('[data-prepare-type="basic"]'),touch);
  await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
  const quoted=await currentPlayer(page),q=quoted.quote;
+ assert.equal(await popup.locator('[data-preparation-buy]').innerText(),'정답 제출',label+' tower submit label');
+ assert.equal(await popup.locator('[data-preparation-cancel]').innerText(),'취소',label+' tower cancel label');
  assert.equal(quoted.money,grown.money,label+' opening tower calculation preserves wallet');
  assert.ok(q.before<=q.wallet&&q.cost<=q.before,label+' tower calculation uses available coins');
  assert.match(await popup.locator('[data-preparation-equation]').innerText(),/−|-/);

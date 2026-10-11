@@ -1,11 +1,24 @@
 import {numberText} from '../math';
-import {TOWERS,towerType} from '../towers';
+import {artURL} from '../art';
+import {TOWERS,towerType,type TowerType} from '../towers';
 import {duelBuildCost,duelHeroLearningLevel,type DuelAction,type DuelState,type Side} from './duel';
 import {duelCountdown,formatDuelClock} from './duel-clock';
 import './preparation-panel.css';
 
 interface PreparationPanelOptions{onVisibilityChange?:()=>void;}
 interface ActionReply{ok:boolean;message?:string;}
+
+const TOWER_EFFECTS={
+ slow:{label:'감속 40% · 3초',description:'3초 동안 적의 이동 속도 40% 감소'},
+ stun:{label:'기절 25% · 1.5초',description:'25% 확률로 적이 1.5초 동안 기절'},
+ range:{label:'장거리 · 사거리 4칸',description:'사거리 4칸으로 장거리 공격'}
+};
+function towerArtHTML(type:TowerType){
+ const x=type.frame%3*256,y=Math.floor(type.frame/3)*256;
+ // Use the same base, head, and placement as the battlefield's towerIcon.
+ // Each nested SVG clips one atlas cell so neighboring towers cannot appear.
+ return `<svg data-tower-art data-tower-id="${type.id}" data-tower-sheet="${type.sheet}" data-tower-frame="${type.frame}" viewBox="-60 -60 120 120" xmlns="http://www.w3.org/2000/svg"><svg data-tower-art-base x="-50" y="-50" width="100" height="100" viewBox="0 0 256 256" overflow="hidden"><image href="${artURL('turret-parts-v1')}" width="768" height="512"/></svg><svg data-tower-art-head x="-42" y="-59.76" width="84" height="84" viewBox="${x} ${y} 256 256" overflow="hidden"><image href="${artURL('tower-heads-'+type.sheet+'-v1')}" width="768" height="512"/></svg></svg>`;
+}
 
 /** Preparation is a screen-sized dialog, independent of the battlefield's canvas scale. */
 export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=>unknown,options:PreparationPanelOptions={}){
@@ -20,8 +33,8 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
    <div class="duel-preparation-hero-actions"><span data-preparation-selected aria-live="polite">정답을 골라요</span><button type="button" class="duel-preparation-primary" data-preparation-confirm>정답 확인</button></div>
   </section>
   <section id="duel-preparation-towers" class="duel-preparation-towers" role="tabpanel" aria-labelledby="duel-preparation-towers-tab" hidden>
-   <div class="duel-preparation-shop"><div class="duel-preparation-tower-grid">${Array.from({length:6},()=>'<button type="button" class="duel-preparation-tower"><strong></strong><span data-tower-details></span><span data-tower-price></span></button>').join('')}</div><nav class="duel-preparation-pages" aria-label="타워 목록 페이지"><button type="button" data-preparation-page="prev" aria-label="이전 타워 목록">◀</button><span data-preparation-page-label></span><button type="button" data-preparation-page="next" aria-label="다음 타워 목록">▶</button></nav></div>
-   <form class="duel-preparation-purchase" novalidate hidden><div class="duel-preparation-purchase-copy"><p class="duel-preparation-purchase-name" data-preparation-tower-name></p><h3 class="duel-preparation-equation" data-preparation-equation></h3><label class="duel-preparation-input-label">남는 코인<input name="answer" inputmode="none" autocomplete="off" maxlength="12" aria-label="타워 구입 후 남는 코인" placeholder="남는 코인"></label></div><div class="duel-preparation-keypad" role="group" aria-label="남는 코인 숫자 입력">${['7','8','9','4','5','6','1','2','3','0','.','⌫'].map(key=>`<button type="button" data-preparation-key="${key}"${key==='⌫'?' aria-label="마지막 숫자 지우기"':''}>${key}</button>`).join('')}</div><div class="duel-preparation-purchase-actions"><button type="submit" class="duel-preparation-primary" data-preparation-buy>정답 확인 · 타워 비축</button><button type="button" data-preparation-cancel>취소 · 소환석</button></div></form>
+   <div class="duel-preparation-shop"><div class="duel-preparation-tower-grid">${Array.from({length:6},()=>'<button type="button" class="duel-preparation-tower"><span class="duel-preparation-tower-art" aria-hidden="true"></span><span class="duel-preparation-tower-copy"><strong></strong><span data-tower-details></span><span data-tower-price></span><span data-tower-effect hidden></span></span></button>').join('')}</div><nav class="duel-preparation-pages" aria-label="타워 목록 페이지"><button type="button" data-preparation-page="prev" aria-label="이전 타워 목록">◀</button><span data-preparation-page-label></span><button type="button" data-preparation-page="next" aria-label="다음 타워 목록">▶</button></nav></div>
+   <form class="duel-preparation-purchase" novalidate hidden><div class="duel-preparation-purchase-copy"><p class="duel-preparation-purchase-name" data-preparation-tower-name></p><h3 class="duel-preparation-equation" data-preparation-equation></h3><label class="duel-preparation-input-label">남는 코인<input name="answer" inputmode="none" autocomplete="off" maxlength="12" aria-label="타워 구입 후 남는 코인" placeholder="남는 코인"></label></div><div class="duel-preparation-keypad" role="group" aria-label="남는 코인 숫자 입력">${['7','8','9','4','5','6','1','2','3','0','.','⌫'].map(key=>`<button type="button" data-preparation-key="${key}"${key==='⌫'?' aria-label="마지막 숫자 지우기"':''}>${key}</button>`).join('')}</div><div class="duel-preparation-purchase-actions"><button type="submit" class="duel-preparation-primary" data-preparation-buy>정답 제출</button><button type="button" data-preparation-cancel>취소</button></div></form>
   </section>
   <p class="duel-preparation-feedback" data-preparation-feedback role="status" aria-live="polite"></p>
  </section>`;
@@ -63,9 +76,12 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   const pages=Math.ceil(TOWERS.length/towerButtons.length);page=Math.max(0,Math.min(pages-1,page));
   for(const [index,button] of towerButtons.entries()){
    const type=TOWERS[page*towerButtons.length+index];button.hidden=!type;if(!type)continue;
-   const cost=duelBuildCost(state!,side,type.id),stored=p.stock?.[type.id]??0;button.dataset.prepareType=type.id;
+   const cost=duelBuildCost(state!,side,type.id),stored=p.stock?.[type.id]??0;
+   if(button.dataset.prepareType!==type.id){button.querySelector('.duel-preparation-tower-art')!.innerHTML=towerArtHTML(type);button.dataset.prepareType=type.id;}
    button.querySelector('strong')!.textContent=type.name;button.querySelector('[data-tower-details]')!.textContent=`공격 ${numberText(type.unit)} · 비축 ${stored}개`;button.querySelector('[data-tower-price]')!.textContent=cost<=p.money?`${numberText(cost)} 코인`:'코인 부족';
-   button.setAttribute('aria-label',`${type.name} · 공격 ${numberText(type.unit)} · 비축 ${stored}개 · 구입 ${numberText(cost)} 코인`);button.disabled=blocked()||!!q||cost>p.money;
+   const effect=type.effect==='basic'?null:TOWER_EFFECTS[type.effect],effectElement=button.querySelector<HTMLElement>('[data-tower-effect]')!;
+   effectElement.hidden=!effect;effectElement.textContent=effect?.label??'';effectElement.dataset.towerEffect=type.effect;effectElement.title=effect?.description??'';
+   button.setAttribute('aria-label',`${type.name} · 공격 ${numberText(type.unit)} · 비축 ${stored}개 · 구입 ${numberText(cost)} 코인${effect?' · '+effect.description:''}`);button.disabled=blocked()||!!q||cost>p.money;
   }
   find<HTMLButtonElement>('[data-preparation-page="prev"]').disabled=blocked()||page===0;find<HTMLButtonElement>('[data-preparation-page="next"]').disabled=blocked()||page===pages-1;find('[data-preparation-page-label]').textContent=`${page+1} / ${pages}`;
   if(q){if(quoteNonce!==q.nonce){quoteNonce=q.nonce;input.value='';feedback('');}find('[data-preparation-tower-name]').textContent=`${towerType(q.typeId)?.name??'타워'} · 남는 코인을 계산해요`;find('[data-preparation-equation]').textContent=`${numberText(q.before,q.digits??2)} − ${numberText(q.cost,q.digits??2)} = ?`;}
