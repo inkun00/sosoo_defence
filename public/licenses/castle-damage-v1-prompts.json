@@ -1,0 +1,23 @@
+{
+  "tool": "built-in OpenAI image_gen",
+  "created": "2026-10-12",
+  "reference": "assets/dungeon/flame-loop-v1.png",
+  "background": "transparent",
+  "layout": {
+    "columns": 4,
+    "rows": 4,
+    "frames": 16
+  },
+  "assets": [
+    {
+      "file": "assets/dungeon/castle-hit-v1.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-5c7727d9-a9a6-4f94-9474-d756cabcaada.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent raster sprite sheet for a medieval fantasy tower defense game. Input image 1 is a reference idle 3 by 3 sprite sheet; use its small gray stone castle identity, front-left isometric camera, painterly 3D game art, four crenellated stone turrets, small arched barred front gate and stairs, amber window slits, large orange guardian flame atop its central roof. Preserve that exact castle design, camera and light direction. Produce ONE clean 4 columns by 4 rows sheet, exactly sixteen ordered animation frames, reading left to right then top to bottom. Every cell has exactly ONE instance at identical size, fixed center and ground anchor. Equal square cells, generous transparent gutters, absolutely no border, grid lines, captions, numbers, text or watermark. Canvas truly transparent RGBA, no checkerboard paint, no floor tile or scenery. The base spans about 60% of each cell width; flame and building together span about 82% of each cell height, ground anchor 92% down each cell. All fragments, fire and dust stay completely inside their own cell with transparent separation. Render recognisable detailed chunky stone blocks that read clearly at small game icon scale. Primary request: a sixteen-frame NONFATAL CASTLE HIT animation. Frames 1-2 intact referenced flaming castle. Frames 3-5 a brief amber-red impact flare hits the upper right stone battlement, flame bends, 3-5 small stone chips fly, fine cracks and pale dust visible. Frames 6-9 stone chips arc down and puff of dust spreads slightly while the castle remains standing. Frames 10-13 sparks and dust dissipate. Frames 14-16 return to the intact original castle with normal guardian flame. No collapse, no destruction, no change of camera, no walking or bouncing castle. Ground/base alignment stays absolutely identical in all sixteen frames; animate impact and debris rather than moving the whole castle."
+    },
+    {
+      "file": "assets/dungeon/castle-collapse-v1.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-24123c3c-d32d-4993-b098-452e1e6e291b.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent raster sprite sheet for a medieval fantasy tower defense game. Input image 1 is a reference idle 3 by 3 sprite sheet; use its small gray stone castle identity, front-left isometric camera, painterly 3D game art, four crenellated stone turrets, small arched barred front gate and stairs, amber window slits, large orange guardian flame atop its central roof. Preserve that exact castle design, camera and light direction. Produce ONE clean 4 columns by 4 rows sheet, exactly sixteen ordered animation frames, reading left to right then top to bottom. Every cell has exactly ONE instance at identical size, fixed center and ground anchor. Equal square cells, generous transparent gutters, absolutely no border, grid lines, captions, numbers, text or watermark. Canvas truly transparent RGBA, no checkerboard paint, no floor tile or scenery. The base spans about 60% of each cell width; flame and building together span about 82% of each cell height, ground anchor 92% down each cell. All fragments, fire and dust stay completely inside their own cell with transparent separation. Render recognisable detailed chunky stone blocks that read clearly at small game icon scale. Primary request: a sixteen-frame CASTLE DESTRUCTION animation ending in permanent ruins. Frames 1-2 intact referenced flaming castle. Frames 3-4 cracks glow and the guardian flame sputters. Frames 5-7 top battlements and roof break inward, stone turrets crumble downward. Frames 8-10 middle walls and front gate collapse under gravity with outward dust and amber embers. Frames 11-13 low rubble settles, smoke and dust diminish, guardian flame goes out. Frames 14-16 same stable low pile of gray stone rubble and broken gate/stair fragments at original ground anchor, little residual ember in frame14 fading to none by frame16. Every frame is a distinct progressive pose, particularly the middle collapse. Do not restore the castle in the last row. No explosive mushroom cloud; clearly readable stone structure physically falling down. All rubble stays within the same footprint, at same fixed camera and scale."
+    }
+  ]
+}

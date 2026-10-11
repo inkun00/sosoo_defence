@@ -4,12 +4,14 @@ import {MonsterKind,MONSTER_KINDS,MONSTERS} from './monsters';
 import {TOWERS} from './towers';
 import {AMBIENT_TEXTURES,registerAmbientFrames} from './ambient-props';
 import {PROJECTILE_SHEETS} from './projectile-profiles';
+import {CASTLE_EFFECT_SHEETS,registerCastleDamageFrames} from './castle-damage-effects';
 
 // Every illustrated texture in this skin is an original built-in imagegen output.
 // Atlas cells are registered at runtime; the atlas dimensions and alpha are preserved in compressed WebP.
 export function loadDungeon(scene:Phaser.Scene,kinds:MonsterKind[]=MONSTER_KINDS){
  for(const name of ['terrain','ui','props','icons','slime','turret-parts-v1','fx-impact-v1','fx-utility-v1','tower-heads-a-v1','tower-heads-b-v1',...AMBIENT_TEXTURES])scene.load.image('dungeon-'+name,artURL(name));
  for(const sheet of PROJECTILE_SHEETS)scene.load.image(sheet.key,artURL(sheet.atlas));
+ for(const sheet of CASTLE_EFFECT_SHEETS)scene.load.image('dungeon-'+sheet.texture,artURL(sheet.texture));
  for(const kind of kinds.filter(k=>k!=='slime')){const atlas=MONSTERS[kind].atlas;scene.load.image('dungeon-'+atlas,artURL(atlas));}
 }
 export function registerMonster(scene:Phaser.Scene,kind:MonsterKind){
@@ -32,6 +34,7 @@ function cells(scene:Phaser.Scene,atlas:string,cols:number,rows:number,names:str
 }
 export function registerDungeon(scene:Phaser.Scene){
  registerAmbientFrames(scene);
+ registerCastleDamageFrames(scene);
  cells(scene,'terrain',2,2,['floor','path','floor-alt','path-alt']);
  cells(scene,'ui',2,2,['panel','button','active','disabled']);
  cells(scene,'props',3,3,['rock','wall','base','portal','brick','torch','crate','plant','rubble']);

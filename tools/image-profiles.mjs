@@ -21,6 +21,7 @@ export function imageProfile(name){
  if(name==='slime'||name==='monster-beetle')return {...profile,width:768};
  if(name.startsWith('monster-'))return {...profile,width:1024};
  if(name.endsWith('-loop-v1')||name==='wall-collapse-v1')return {...profile,width:768};
+ if(name==='castle-hit-v1'||name==='castle-collapse-v1')return {...profile,width:640,quality:84};
  return profile;
 }
 export function transformedImage(sharp,input,profile){

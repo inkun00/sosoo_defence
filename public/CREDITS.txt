@@ -235,3 +235,11 @@ OpenAI image_gen tool: assets/dungeon/adventure-map-v1.png. Source PNG is
 preserved; the game displays an optimized WebP inside its existing metal frame.
 Generation prompt: licenses/adventure-map-v1-prompts.json (source-only).
 Numbered stages, route, locks and stars are drawn by the game.
+
+CASTLE DAMAGE AND COLLAPSE (2026-10-12)
+Original 16-frame, 4-by-4 transparent castle hit and destruction sprite sheets
+generated with the built-in OpenAI image_gen tool, using this game's original
+flame-loop-v1 castle as the visual reference. Source PNGs and alpha preserved:
+assets/dungeon/castle-hit-v1.png and assets/dungeon/castle-collapse-v1.png.
+Optimized WebP atlases power health-triggered feedback in adventure and duel.
+Exact prompts: licenses/castle-damage-v1-prompts.json (source-only).

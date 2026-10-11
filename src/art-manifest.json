@@ -13,6 +13,34 @@
       "width": 1536
     }
   },
+  "castle-collapse-v1": {
+    "url": "/assets/dungeon/castle-collapse-v1.3c96dff2e8f1.webp",
+    "sourceHash": "d8f61522c84977eb0ceb5363d5d83451b20e3a1b22354fe4b8cd3860bdd40ec3",
+    "width": 640,
+    "height": 640,
+    "sourceBytes": 1704368,
+    "bytes": 145620,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 640
+    }
+  },
+  "castle-hit-v1": {
+    "url": "/assets/dungeon/castle-hit-v1.04f1f232ab79.webp",
+    "sourceHash": "f442611ecbf28f257aea9633a0b856f488bb1158df4aa53b94f7f789393a6b36",
+    "width": 640,
+    "height": 640,
+    "sourceBytes": 1557510,
+    "bytes": 126972,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 640
+    }
+  },
   "cpu-opponent-1-v1": {
     "url": "/assets/dungeon/cpu-opponent-1-v1.bf7c00b82666.webp",
     "sourceHash": "3dbf02723612ac7d331ef291d8d892e7aba9f876c7a2891c5e008e01c6369598",

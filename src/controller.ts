@@ -87,7 +87,7 @@ function update(){
  sound.setPaused(movie||model.phase==='paused');
  sound.setTrack(adventureMusicTrack(model.level.id,model.phase));
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
- if(!tutorial&&!finaleHeld&&['won','review','lost'].includes(model.phase)&&!resultShown){
+ if(!tutorial&&!finaleHeld&&!(model.phase==='lost'&&field.castleDestructionPlaying)&&['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
   if(model.phase==='won'){recordStageScore(save,model);save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
   panel='result';field.input.enabled=false;

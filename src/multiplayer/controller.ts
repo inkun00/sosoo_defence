@@ -52,6 +52,7 @@ let listingId='',listingClaim='',listingExpires=0,listingClosing=false,listingRe
 let roomRows:ListedRoom[]=[],roomRowsSignature='',serverOffset=0,roomListLoaded=false,loadingRoomList=false;
 let audioStatus='',audioFlame=9000;
 let motionPhase='',preparationVisible=false;
+let resultPresentationGeneration=0,pendingResultPeer:HostPeer|ComputerPeer|null=null;
 function loadDuelMap(){try{const id=localStorage.getItem('sosoo-duel-map');return isDuelMapId(id)?id:DEFAULT_DUEL_MAP_ID;}catch{return DEFAULT_DUEL_MAP_ID;}}
 let selectedMapId=loadDuelMap();
 const sound=new Sound();sound.sfx=loadSave().sfx;sound.setMusic(loadSave().music);
@@ -113,7 +114,7 @@ function settings(fromLobby=false,fromComputer=false){
 function authScreen(mode:'login'|'register'='login'){
  show('auth','');mountAccountForm(content,'duel',value=>void accountChanged(value),mode);dialog.setAttribute('aria-labelledby','account-heading');
 }
-function disposeRoom(){computerSelection.cancel();motion.clear();motionPhase='';clearTimeout(roomPoll);roomPoll=undefined;const id=listingId,claim=listingClaim,hosting=peer?.side===0;if(id)void roomRequest({action:hosting?'close':'release',id,claim}).catch(()=>{});listingId='';listingClaim='';listingExpires=0;listingClosing=false;listingRetryAt=0;peer?.dispose();peer=null;state=null;room='';offerCode='';answerCode='';recorded='';lastRound=-1;}
+function disposeRoom(){resultPresentationGeneration++;pendingResultPeer=null;computerSelection.cancel();motion.clear();motionPhase='';clearTimeout(roomPoll);roomPoll=undefined;const id=listingId,claim=listingClaim,hosting=peer?.side===0;if(id)void roomRequest({action:hosting?'close':'release',id,claim}).catch(()=>{});listingId='';listingClaim='';listingExpires=0;listingClosing=false;listingRetryAt=0;peer?.dispose();peer=null;state=null;room='';offerCode='';answerCode='';recorded='';lastRound=-1;}
 function profileText(){return `${user?.displayName||'수호자'} · 계정 Lv.${progress.level} · ${progress.wins}승 ${progress.losses}패 · 경험치 ${progress.experience}${firebaseEmulator?' · 테스트 계정':''}`;}
 function mapScreen(backTo:()=>void){
  show('map-select',duelMapPickerHTML(selectedMapId));
@@ -316,6 +317,17 @@ function showResultScores(){
  root.append(table);
 }
 function result(){
+ // The outcome and its record are already final; let the castle fall before covering it.
+ if(state?.status==='finished'&&scene.castleDestructionPlaying){
+  const owner=peer;if(!owner||pendingResultPeer===owner)return;
+  if(!dialog.classList.contains('hidden'))close();
+  pendingResultPeer=owner;const generation=++resultPresentationGeneration;
+  void scene.waitForCastleDestruction().then(()=>{
+   if(generation!==resultPresentationGeneration||peer!==owner||state?.status!=='finished')return;
+   pendingResultPeer=null;result();
+  });return;
+ }
+ resultPresentationGeneration++;pendingResultPeer=null;
  if(state?.status==='finished'){
   const outcome=state.winner===null?'draw':state.winner===side?'victory':'defeat';
   void motion.play(outcome,{title:outcome==='draw'?'무승부':outcome==='victory'?'대전 승리':'대전 패배',subtitle:`${duelScore(state.players[side]).toLocaleString('ko-KR')}점`,key:`${peer?.id??room}:result`});
@@ -368,6 +380,6 @@ async function accountChanged(value:User|null){const previousUid=user?.uid;user=
 if(auth)onAuthStateChanged(auth,value=>{if(value&&content.dataset.accountSubmitting==='true')return;void accountChanged(value);});else authScreen();
 window.addEventListener('online',()=>{if(!user||peer instanceof ComputerPeer)return;const uid=user.uid;void flushResults(uid).then(saved=>{if(user?.uid!==uid)return;if(saved.progress)progress=saved.progress;if(dialogKind==='result'){saveMessage=saved.message;document.getElementById('result-save')!.textContent=saveMessage;}else if(dialogKind==='lobby')lobby();});});
 window.addEventListener('beforeunload',e=>{if(state&&(state.status==='preparing'||state.status==='playing')){e.preventDefault();e.returnValue='';}});
-window.addEventListener('pagehide',()=>{computerSelection.cancel();motion.dispose();peer?.dispose();settingsAudioControls?.dispose();gameAudioControls.dispose();preparationPanel.dispose();sound.dispose();});
+window.addEventListener('pagehide',()=>{resultPresentationGeneration++;pendingResultPeer=null;computerSelection.cancel();motion.dispose();peer?.dispose();settingsAudioControls?.dispose();gameAudioControls.dispose();preparationPanel.dispose();sound.dispose();});
 document.addEventListener('keydown',e=>{if(e.defaultPrevented)return;if(e.key==='Escape'&&dialogKind==='computer-taunt'){e.preventDefault();computerScreen();}else if(e.key==='Escape'&&preparationPanel.visible){e.preventDefault();preparationPanel.close();}else if(e.key==='Escape'&&dialog.classList.contains('hidden')&&state?.players[side]?.quote)send({type:'cancel'});else if(e.key==='Escape'&&dialogKind==='leaderboard')lobby();else if(e.key==='Escape'&&['heroes','collection'].includes(dialogKind))close();});
 if((import.meta as ImportMeta&{env:{DEV:boolean}}).env.DEV)Object.assign(window,{__duelTest:{get state(){return state;},get side(){return side;},get room(){return room;},scene,send,view,preparationPanel,get peer(){return peer;},get progress(){return progress;},pendingCount,get user(){return user;}}});
