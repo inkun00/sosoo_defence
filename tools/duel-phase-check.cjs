@@ -70,11 +70,12 @@ async function assertClock(page,label,text,phase,state,active){
 }
 async function towerCards(page,label){
  await check(page,label+' tower cards use matching cropped artwork and real effects',async()=>{
-  const {TOWERS}=await import('/src/towers.ts'),{artURL}=await import('/src/art.ts'),effects={slow:'감속 40% · 3초',stun:'기절 25% · 1.5초',range:'장거리 · 사거리 4칸'};
+  const {TOWERS}=await import('/src/towers.ts'),{artURL}=await import('/src/art.ts'),{duelBuildCost}=await import('/src/multiplayer/duel.ts'),{numberText}=await import('/src/math.ts'),api=window.__duelPhaseTest,effects={slow:'감속 40% · 3초',stun:'기절 25% · 1.5초',range:'장거리 · 사거리 4칸'};
   const cards=[...document.querySelectorAll('.duel-preparation-tower:not([hidden])')];
-  return cards.length===6&&cards.every(button=>{
+  return cards.length===12&&new Set(cards.map(button=>button.dataset.prepareType)).size===TOWERS.length&&!document.querySelector('[data-preparation-page],.duel-preparation-pages')&&cards.every(button=>{
    const t=TOWERS.find(t=>t.id===button.dataset.prepareType),art=button.querySelector('[data-tower-art]'),head=button.querySelector('[data-tower-art-head]'),base=button.querySelector('[data-tower-art-base]'),effect=button.querySelector('[data-tower-effect]');
-   return t&&art?.dataset.towerId===t.id&&art.dataset.towerSheet===t.sheet&&art.dataset.towerFrame===String(t.frame)&&head?.getAttribute('viewBox')===`${t.frame%3*256} ${Math.floor(t.frame/3)*256} 256 256`&&head.querySelector('image')?.getAttribute('href')===artURL('tower-heads-'+t.sheet+'-v1')&&base?.getAttribute('viewBox')==='0 0 256 256'&&base.querySelector('image')?.getAttribute('href')===artURL('turret-parts-v1')&&getComputedStyle(head).overflow==='hidden'&&getComputedStyle(base).overflow==='hidden'&&effect?.hidden===(t.effect==='basic')&&effect.textContent===(effects[t.effect]||'');
+   const cost=t?duelBuildCost(api.peer.state,api.view().side,t.id):Infinity,affordable=cost<=api.peer.state.players[api.view().side].money;
+   return t&&button.disabled===!affordable&&button.querySelector('[data-tower-price]')?.textContent===(affordable?numberText(cost)+' 코인':'코인 부족')&&button.getAttribute('aria-label')?.includes('구입 '+numberText(cost)+' 코인')&&art?.dataset.towerId===t.id&&art.dataset.towerSheet===t.sheet&&art.dataset.towerFrame===String(t.frame)&&head?.getAttribute('viewBox')===`${t.frame%3*256} ${Math.floor(t.frame/3)*256} 256 256`&&head.querySelector('image')?.getAttribute('href')===artURL('tower-heads-'+t.sheet+'-v1')&&base?.getAttribute('viewBox')==='0 0 256 256'&&base.querySelector('image')?.getAttribute('href')===artURL('turret-parts-v1')&&getComputedStyle(head).overflow==='hidden'&&getComputedStyle(base).overflow==='hidden'&&effect?.hidden===(t.effect==='basic')&&effect.textContent===(effects[t.effect]||'');
   });
  });
 }
@@ -161,10 +162,7 @@ async function exercise(page,label,side,touch){
  checks.push(label+' five correct answers advance the learning stage');
 
  await activate(popup.locator('[data-preparation-tab="towers"]'),touch);
- await towerCards(page,label+' page1');
- await activate(popup.locator('[data-preparation-page="next"]'),touch);
- await towerCards(page,label+' page2');
- await activate(popup.locator('[data-preparation-page="prev"]'),touch);
+ await towerCards(page,label+' all twelve towers');
  await activate(popup.locator('[data-prepare-type="basic"]'),touch);
  await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
  const quoted=await currentPlayer(page),q=quoted.quote;

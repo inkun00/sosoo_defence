@@ -34,7 +34,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
    <div class="duel-preparation-hero-actions"><span data-preparation-selected aria-live="polite">정답을 골라요</span><button type="button" class="duel-preparation-primary" data-preparation-confirm>정답 확인</button></div>
   </section>
   <section id="duel-preparation-towers" class="duel-preparation-towers" role="tabpanel" aria-labelledby="duel-preparation-towers-tab" hidden>
-   <div class="duel-preparation-shop"><div class="duel-preparation-tower-grid">${Array.from({length:6},()=>'<button type="button" class="duel-preparation-tower"><span class="duel-preparation-tower-art" aria-hidden="true"></span><span class="duel-preparation-tower-copy"><strong></strong><span data-tower-details></span><span data-tower-price></span><span data-tower-effect hidden></span></span></button>').join('')}</div><nav class="duel-preparation-pages" aria-label="타워 목록 페이지"><button type="button" data-preparation-page="prev" aria-label="이전 타워 목록">◀</button><span data-preparation-page-label></span><button type="button" data-preparation-page="next" aria-label="다음 타워 목록">▶</button></nav></div>
+   <div class="duel-preparation-shop"><div class="duel-preparation-tower-grid">${TOWERS.map(()=>'<button type="button" class="duel-preparation-tower"><span class="duel-preparation-tower-art" aria-hidden="true"></span><span class="duel-preparation-tower-copy"><strong></strong><span data-tower-details></span><span data-tower-price></span><span data-tower-effect hidden></span></span></button>').join('')}</div></div>
    <form class="duel-preparation-purchase" novalidate hidden><div class="duel-preparation-purchase-copy"><p class="duel-preparation-purchase-name" data-preparation-tower-name></p><h3 class="duel-preparation-equation" data-preparation-equation></h3><label class="duel-preparation-input-label">남는 코인<input name="answer" inputmode="none" autocomplete="off" maxlength="12" aria-label="타워 구입 후 남는 코인" placeholder="남는 코인"></label></div><div class="duel-preparation-keypad" role="group" aria-label="남는 코인 숫자 입력">${['7','8','9','4','5','6','1','2','3','0','.','⌫'].map(key=>`<button type="button" data-preparation-key="${key}"${key==='⌫'?' aria-label="마지막 숫자 지우기"':''}>${key}</button>`).join('')}</div><div class="duel-preparation-purchase-actions"><button type="submit" class="duel-preparation-primary" data-preparation-buy>정답 제출</button><button type="button" data-preparation-cancel>취소</button></div></form>
   </section>
   <p class="duel-preparation-feedback" data-preparation-feedback role="status" aria-live="polite"></p>
@@ -46,7 +46,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
  const heroes=find('#duel-preparation-heroes'),towers=find('#duel-preparation-towers'),shop=find('.duel-preparation-shop'),purchase=find<HTMLFormElement>('form'),input=find<HTMLInputElement>('input');
  const answerButtons=Array.from(root.querySelectorAll<HTMLButtonElement>('[data-answer-index]')),towerButtons=Array.from(root.querySelectorAll<HTMLButtonElement>('.duel-preparation-tower'));
  const feedbackElement=find('[data-preparation-feedback]'),confirm=find<HTMLButtonElement>('[data-preparation-confirm]');
- let state:DuelState|null=null,side:Side=0,identity='',preparationKey='',roundKey='',quoteNonce='',tab:'heroes'|'towers'='heroes',page=0,selected:number|null=null;
+ let state:DuelState|null=null,side:Side=0,identity='',preparationKey='',roundKey='',quoteNonce='',tab:'heroes'|'towers'='heroes',selected:number|null=null;
  let intent=false,suspended=false,busy=false,pending=false,disposed=false,visibilityQueued=false,returnFocus:HTMLElement|null=null;
  const player=()=>state?.players[side];
  const active=()=>state?.status==='preparing'&&!!player();
@@ -63,6 +63,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   const p=player();if(!p||!active()){updateVisibility();return;}
   const q=p.quote;if(q)tab='towers';
   heroes.hidden=tab!=='heroes';towers.hidden=tab!=='towers';shop.hidden=!!q;purchase.hidden=!q;
+  card.dataset.preparationView=tab==='heroes'?'heroes':q?'purchase':'shop';
   for(const button of [heroesTab,towersTab]){const chosen=button.dataset.preparationTab===tab;button.setAttribute('aria-selected',String(chosen));button.tabIndex=chosen?0:-1;button.disabled=blocked();}
   const clock=duelCountdown(state);find('[data-preparation-clock]').textContent=formatDuelClock(clock.seconds);find('[data-preparation-clock]').setAttribute('aria-label',`준비 남은 시간 ${clock.seconds}초`);
   find('[data-preparation-money]').textContent=`코인 ${numberText(p.money+p.escrow)}`;
@@ -75,9 +76,8 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   for(const [index,button] of answerButtons.entries()){const value=p.board[index],label=numberText(value);if(button.textContent!==label)button.textContent=label;button.disabled=blocked();button.setAttribute('aria-pressed',String(selected===index));button.setAttribute('aria-label',`정답 후보 ${label}`);}
   confirm.disabled=blocked()||selected===null;
   find('[data-preparation-selected]').textContent=selected===null?'정답을 골라요':`선택한 정답 ${numberText(p.board[selected])}`;
-  const pages=Math.ceil(TOWERS.length/towerButtons.length);page=Math.max(0,Math.min(pages-1,page));
   for(const [index,button] of towerButtons.entries()){
-   const type=TOWERS[page*towerButtons.length+index];button.hidden=!type;if(!type)continue;
+   const type=TOWERS[index];
    const cost=duelBuildCost(state!,side,type.id),stored=p.stock?.[type.id]??0;
    if(button.dataset.prepareType!==type.id){button.querySelector('.duel-preparation-tower-art')!.innerHTML=towerArtHTML(type);button.dataset.prepareType=type.id;}
    button.querySelector('strong')!.textContent=type.name;button.querySelector('[data-tower-details]')!.textContent=`공격 ${numberText(type.unit)} · 비축 ${stored}개`;button.querySelector('[data-tower-price]')!.textContent=cost<=p.money?`${numberText(cost)} 코인`:'코인 부족';
@@ -85,7 +85,6 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
    effectElement.hidden=!effect;effectElement.textContent=effect?.label??'';effectElement.dataset.towerEffect=type.effect;effectElement.title=effect?.description??'';
    button.setAttribute('aria-label',`${type.name} · 공격 ${numberText(type.unit)} · 비축 ${stored}개 · 구입 ${numberText(cost)} 코인${effect?' · '+effect.description:''}`);button.disabled=blocked()||!!q||cost>p.money;
   }
-  find<HTMLButtonElement>('[data-preparation-page="prev"]').disabled=blocked()||page===0;find<HTMLButtonElement>('[data-preparation-page="next"]').disabled=blocked()||page===pages-1;find('[data-preparation-page-label]').textContent=`${page+1} / ${pages}`;
   if(q){if(quoteNonce!==q.nonce){quoteNonce=q.nonce;input.value='';feedback('');}find('[data-preparation-tower-name]').textContent=`${towerType(q.typeId)?.name??'타워'} · 남는 코인을 계산해요`;find('[data-preparation-equation]').textContent=`${numberText(q.before,q.digits??2)} − ${numberText(q.cost,q.digits??2)} = ?`;}
   else quoteNonce='';
   purchase.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button').forEach(element=>element.disabled=blocked());root.setAttribute('aria-busy',String(busy||pending));skin.sync();updateVisibility();
@@ -111,7 +110,6 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
  answerButtons.forEach((button,index)=>bindClick(button,()=>{if(blocked())return;selected=selected===index?null:index;feedback('');render();}));
  bindClick(confirm,async()=>{const p=player();if(!p||selected===null)return;const round=p.round,result=await perform({type:'fuse',round,slots:[selected],operation:'+'});if(result?.ok&&player()?.round!==round){selected=null;render();}});
  towerButtons.forEach(button=>bindClick(button,async()=>{const typeId=button.dataset.prepareType;if(!typeId||blocked())return;feedback('');await perform({type:'prepare-quote',typeId});if(player()?.quote&&!root.hidden)input.focus({preventScroll:true});}));
- for(const direction of ['prev','next'])bindClick(find<HTMLButtonElement>(`[data-preparation-page="${direction}"]`),()=>{if(blocked())return;page+=direction==='prev'?-1:1;render();});
  root.querySelectorAll<HTMLButtonElement>('[data-preparation-key]').forEach(button=>bindClick(button,()=>{if(blocked())return;const key=button.dataset.preparationKey!;if(key==='⌫')input.value=input.value.slice(0,-1);else if(key==='.'&&!input.value.includes('.'))input.value=(input.value||'0')+'.';else if(/^\d$/.test(key)&&input.value.length<12&&(!input.value.includes('.')||input.value.split('.')[1].length<2))input.value+=key;feedback('');}));
  purchase.addEventListener('submit',event=>{event.preventDefault();const q=player()?.quote;if(!q||blocked())return;if(!input.value.trim()){feedback('남는 코인을 입력해요.');input.focus({preventScroll:true});return;}void perform({type:'answer',nonce:q.nonce,answer:input.value});});
  bindClick(find<HTMLButtonElement>('[data-preparation-buy]'),()=>undefined);
@@ -129,7 +127,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
  for(const event of ['pointerdown','mousedown','touchstart','click'])root.addEventListener(event,e=>e.stopPropagation());
  return {root,sync(nextIdentity:string,nextState:DuelState|null,nextSide:Side,nextBusy:boolean,nextSuspended=false){
   identity=nextIdentity;state=nextState;side=nextSide;busy=nextBusy;suspended=nextSuspended;
-  if(active()){const key=`${identity}:${side}:${state!.preparationStartedAt}`;if(key!==preparationKey){preparationKey=key;intent=true;tab=player()?.quote?'towers':'heroes';page=0;roundKey='';quoteNonce='';selected=null;feedback('');}}
+  if(active()){const key=`${identity}:${side}:${state!.preparationStartedAt}`;if(key!==preparationKey){preparationKey=key;intent=true;tab=player()?.quote?'towers':'heroes';roundKey='';quoteNonce='';selected=null;feedback('');}}
   else{intent=false;preparationKey='';roundKey='';quoteNonce='';selected=null;pending=false;}
   render();
  },open(){if(!active())return;intent=true;render();},close,feedback,get isOpen(){return intent&&!!active();},get visible(){return !root.hidden;},dispose(){disposed=true;document.removeEventListener('keydown',keyboard,true);skin.dispose();root.remove();}};
