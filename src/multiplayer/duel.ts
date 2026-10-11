@@ -162,7 +162,7 @@ export function advanceDuel(s:DuelState,now:number){
   if(s.preparationElapsed>=DUEL_PREPARATION_SECONDS){
    s.status='playing';s.startedAt=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.updatedAt=s.startedAt;s.elapsed=0;s.wave=0;
    for(const p of s.players)if(p){p.quote=null;p.money=0;p.escrow=0;}
-   note(s,'3분 문제풀이 완료 · 3분 동안 모은 타워를 배치하고 영웅을 소환해요!');
+   note(s,'대결 시작');
    syncHeroAuras(s);
   }
  }
@@ -263,11 +263,11 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(readyTogether){
    s.status='preparing';s.preparationStartedAt=now;s.preparationElapsed=0;s.updatedAt=now;
    for(const a of s.players)if(a)a.lastSeen=now;
-   note(s,'양쪽 준비 완료 · 3분 동안 타워 구매 문제와 영웅 성장 문제를 자유롭게 풀어요!');
+   note(s,'양쪽 준비 완료');
   }
-  return ok('준비했어요.');
+  return ok('준비 완료');
  }
- if(!['playing','preparing'].includes(s.status))return bad('게임을 시작하면 3분 동안 타워와 영웅 문제를 풀어요.');
+ if(!['playing','preparing'].includes(s.status))return bad('아직 준비 전이에요.');
  if(action.type==='cancel'){release(p);return ok('구매를 취소했어요.');}
  if(action.type==='prepare-quote'||action.type==='quote'){
   if(s.status!=='preparing')return bad('전투 중에는 문제를 풀지 않고 타워를 바로 설치해요.');
@@ -276,7 +276,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
   // Cancelling and rerolling a quote cannot erase mistakes before the next correct answer.
   const before=purchaseCoins(p.money);p.quote={x:-1,y:-1,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:2,nonce,expires:s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000,purpose:'preparation',wrongAttempts:p.towerWrongAttempts??0};
-  p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('남는 코인을 계산하면 선택한 타워를 한 개 모아요.');
+  p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('타워 구입 문제');
  }
  if(action.type==='answer'){
   if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 타워를 설치해요.');
@@ -315,7 +315,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(![a,b,c].every(learningValue))return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 정답 블럭을 골라 주세요.');
   if(!learningValue(a+b)){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;return bad('소수는 두 자리까지, 자연수 부분은 한 자리로 계산해요. 문제를 다시 확인해 주세요.');}
   if(a+b!==c){p.fusionWrongAttempts=(p.fusionWrongAttempts??0)+1;wrong(s,p,{id:`fusion-${p.round}-+-${a}-${b}`,kind:'fusion',a,b,operation:'+',submitted:numberText(c),correct:a+b},duelHeroLearningLevel(p));return bad('식이 맞지 않아요. 문제와 정답 후보는 그대로예요.');}
-  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.heroQuestion=decimalQuestion(s.seed,p.round,duelHeroLearningLevel(p));p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 성장량 ${p.egg} · 전투에서 선택한 레벨만큼 사용해요.`);
+  awardQuestion(p,p.fusionWrongAttempts??0);p.fusionWrongAttempts=0;p.egg++;p.solved++;p.round++;p.heroQuestion=decimalQuestion(s.seed,p.round,duelHeroLearningLevel(p));p.board=decimalBoard(s.seed,p.round,duelHeroLearningLevel(p));return ok(`덧셈 정답! 영웅 성장량 ${p.egg}`);
  }
  return bad('지원하지 않는 조작이에요.');
 }

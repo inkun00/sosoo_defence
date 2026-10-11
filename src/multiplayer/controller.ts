@@ -116,7 +116,7 @@ function startComputer(level:number,mapId=selectedMapId){
  if(progressLoading){status('계정 레벨을 불러오는 중이에요. 잠시 뒤 다시 눌러 주세요.');return;}
  if(peer instanceof HostPeer&&state&&(state.status==='preparing'||state.status==='playing'))return;
  disposeRoom();sound.resume();const local=new ComputerPeer({uid:user.uid,name:(user.displayName||'나의 수호자').slice(0,16),accountLevel:progress.level,rewardHeroes:ownedHeroIds(),rewardHero:selectedWorksheetHero()},level,{mapId});
- peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='게임 시작 후 3분 동안 타워를 비축하고 영웅 성장량을 모아요. 이어지는 전투 3분 동안 내 전장을 방어하고 성장량을 나눠 소환해요. 준비 남은 코인은 전투 시작에 0이 되고, 비축 타워는 무료로 배치해요.';lastRound=0;
+ peer=local;state=local.state;side=0;room='컴퓨터 Lv.'+local.definition.level;connected=true;slots=[];selectedType='';selectedTower=0;shopPage=0;message='';lastRound=0;
  local.onState=(s,c)=>{if(peer!==local)return;state=s;connected=c;const p=s.players[0];if(p.round!==lastRound){slots=[];lastRound=p.round;}refresh();if(s.status==='finished'&&recorded!==local.id){void saveFinished();result();}};
  close();
 }
@@ -247,7 +247,7 @@ async function history(){
 }
 async function exitGame(){if(state&&(state.status==='preparing'||state.status==='playing')){await send({type:'surrender'});await saveFinished();}disposeRoom();back();}
 function heroBook(fromLobby=false,level=1,feedback=''){
- if(!fromLobby&&state?.status!=='playing'){status('준비 중에는 덧셈 정답으로 성장량을 계속 모아요. 전투에서 영웅을 골라 소환해요.');return;}
+ if(!fromLobby&&state?.status!=='playing')return;
  const growth=state?.players[side]?.egg??0;content.dataset.heroPhase=fromLobby?'book':'playing';show('heroes',`<p class="eyebrow">돌의 영웅 · 레벨마다 3종</p><h2>${fromLobby?'영웅 30종 도감':'성장량으로 영웅 선택 · 소환'}</h2>${heroGrowthPickerHTML(growth,level,fromLobby)}<p data-feedback role="status"></p><button id="hero-back">${fromLobby?'대기실로':'전장으로 · 닫기'}</button>`);
  content.querySelector<HTMLElement>('[data-feedback]')!.textContent=feedback;bind('hero-back',()=>fromLobby?lobby():close());
  bindHeroGrowthPicker(content,next=>heroBook(fromLobby,next),async heroId=>{const r=await send({type:'hatch',heroId});if(r?.ok&&dialogKind==='heroes'&&state?.status==='playing'){sound.play('kill');heroBook(false,level,r.message);}});
@@ -262,7 +262,7 @@ async function startWithCollectedHero(){
  if(!p.rewardRoster.length){await send({type:'ready'});return;}
  const book=loadWorkbook(),roster=new Set(p.rewardRoster);
  book.collection=book.collection.filter(hero=>roster.has(hero.heroId));
- show('collection',`<p class="eyebrow">수집 영웅 · 전투 중 1회 소환</p><h2>전투 중 소환할 영웅을 선택하세요</h2><p>먼저 3분 동안 타워와 영웅을 준비해요. 고른 수집 영웅은 후반부 전투에서 원하는 때 소환할 수 있어요.</p>${collectionHTML(p.rewardHero,false,book,{mode:'deployment'})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
+ show('collection',`<p class="eyebrow">수집 영웅 · 전투 중 1회 소환</p><h2>전투 중 소환할 영웅을 선택하세요</h2>${collectionHTML(p.rewardHero,false,book,{mode:'deployment'})}<p data-feedback role="status"></p><button id="deployment-back">돌아가기</button>`);
  const entryPeer=peer,entryHeading=content.querySelector('h2');
  bind('deployment-back',close);
  content.querySelectorAll<HTMLButtonElement>('[data-collection-hero]').forEach(button=>button.onclick=async()=>{
@@ -291,7 +291,7 @@ function result(){
  }
  const won=state?.winner===side,draw=state?.winner===null,record=state&&peer?finishedRecord(state,side,peer.id):null;show('result',`<p class="eyebrow">호스트 직접 연결 · 대전 종료</p><h2>${draw?'무승부':won?'대전 승리!':'대전 종료 · 패배'}</h2><p id="result-reason"></p><div id="duel-result-scores" class="duel-warning"></div><p>남은 불꽃 ${numberText(state?.players[side]?.flame??0)} · 경험치 +${record?matchExperience(record):0}</p><p id="result-save"></p><div id="result-wrong"></div><div class="duel-row"><button id="retry-save">기록 저장 다시 시도</button><button class="duel-primary" id="result-lobby">새 대전 준비</button></div>`);document.getElementById('result-reason')!.textContent=state?.reason||'';document.getElementById('result-save')!.textContent=record?saveMessage:'대전 시작 전 종료된 방은 승패·경험치에 포함하지 않아요.';showResultScores();
  const root=document.getElementById('result-wrong')!;for(const q of record?.wrongQuestions??[]){const p=document.createElement('p');p.textContent=wrongText(q);root.append(p);}bind('retry-save',saveFinished);bind('result-lobby',()=>{disposeRoom();lobby();});}
-scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state)return;const p=state.players[side]!;if(state.status!=='playing'){status('3분 동안 타워를 비축하고 영웅 성장량을 모아요. 준비 남은 코인은 전투 시작에 0이 되고, 비축 타워 배치와 영웅 소환을 할 수 있어요.');return;}
+scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||!state||state.status!=='playing')return;const p=state.players[side]!;
  const tower=p.towers.find(t=>t.x===x&&t.y===y);if(tower){selectedTower=tower.id;selectedType='';refresh();return;}
  if(selectedType){if(!canPurchaseDuelTower(state)){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}if(!validDuelCell(state,side,x,y)){status(`내 ${side===0?'상단':'하단'} 전장의 빈 칸에 설치해요. 길·성·가운데 분리줄에는 설치할 수 없어요.`);scene.preview(x,y);return;}await send({type:'build',x,y,typeId:selectedType});}
 };

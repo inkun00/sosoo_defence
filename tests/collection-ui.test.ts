@@ -10,15 +10,14 @@ const book:Workbook={version:1,sheets:[],selectedHero:'hero-1-0',collection:[
  {heroId:'hero-8-2',copies:1,obtainedAt:2},
 ]};
 
-test('출전 선택은 보유 특별 영웅만 표시하고 준비 후 원하는 때 수동 소환하도록 알린다',()=>{
+test('출전 선택은 준비 과정 설명 없이 보유 특별 영웅과 출전 버튼을 표시한다',()=>{
  const filtered={...book,collection:book.collection.slice(0,1)};
  const html=collectionHTML(book.selectedHero,false,filtered,{mode:'deployment'});
  assert.match(html,/data-mode="deployment"/);
  assert.match(html,/data-collection-hero="hero-1-0"/);
  assert.doesNotMatch(html,/data-collection-hero="hero-8-2"/);
  assert.match(html,/이 영웅으로 출전 · 2회 획득/);
- assert.match(html,/3분 동안 문제를 푼 뒤, 3분 전투에서 원하는 때 직접 소환/);
- assert.match(html,/세 효과를 함께 발동/);
+ assert.doesNotMatch(html,/3분 동안 문제|3분 전투|카드를 누르면 준비/);
  assert.doesNotMatch(html,/collection-chances|영웅이 바로 등장/);
 });
 
