@@ -10,10 +10,10 @@ function enemy(id:number,kind:MonsterKind,x:number,hp=1370):Enemy{
  const point=world({x,y:4});
  return {id,kind,hp,max:hp,...point,path:road,next:Math.floor(x)+1,hits:0,slow:0,stun:0,hitFlash:0,age:0};
 }
-function fixture(stage=11){
+function fixture(stage=11,age=3){
  const m=new Defense(LEVELS[stage-1]);m.phase='playing';m.spawned=m.level.hp.length;
  if(m.level.boss)m.bossSpawned=true;
- const boss=enemy(1,'wizard',5,99900);m.enemies=[boss];
+ const boss=enemy(1,'wizard',5,99900);boss.age=age;m.enemies=[boss];
  return {m,boss};
 }
 function near(actual:number,expected:number){assert.ok(Math.abs(actual-expected)<1e-9,`${actual} != ${expected}`);}
@@ -31,13 +31,18 @@ test('최종 마법사의 3칸 반경은 본인을 제외하고 살아 있는 �
  for(const e of [outside,dead,arrived])assert.equal(m.isBossEmpowered(e),false);
 });
 
-test('실제 16초 보스 스폰 틱부터 주변 몬스터가 강화되고 보스 자체 속도는 그대로다',()=>{
+test('실제 16초 보스 스폰은 먼저 예고하고 3초 뒤 주변 몬스터의 질주만 강화한다',()=>{
  const m=new Defense(LEVELS[10]);m.phase='playing';m.elapsed=15.9;m.spawned=m.level.hp.length;
  const p=m.path()!,point=world(m.map.start),e:Enemy={...enemy(90,'slime',0),...point,path:p,next:1};
  m.enemies=[e];m.step(.1);const boss=m.bossAuraSource!;
  assert.ok(boss);assert.equal(m.bossSpawned,true);assert.equal(boss.hp,99900);
- near(Math.hypot(e.x-point.x,e.y-point.y),travel(m,e)*BOSS_AURA_SPEED);
+ assert.equal(m.bossSpellState!.phase,'warning');assert.equal(m.isBossEmpowered(e),false);
+ assert.equal(m.events.filter(event=>event.type==='boss-warning').length,1);assert.equal(m.events.filter(event=>event.type==='boss-cast').length,0);
+ near(Math.hypot(e.x-point.x,e.y-point.y),travel(m,e));
  near(Math.hypot(boss.x-point.x,boss.y-point.y),travel(m,boss));
+ for(let i=0;i<28;i++)m.step(.1);assert.equal(m.bossSpellState!.phase,'warning');
+ const before={x:e.x,y:e.y};m.step(.1);assert.equal(m.bossSpellState!.phase,'active');assert.equal(m.isBossEmpowered(e),true);
+ near(Math.hypot(e.x-before.x,e.y-before.y),travel(m,e)*BOSS_AURA_SPEED);assert.equal(m.events.filter(event=>event.type==='boss-cast').length,1);
 });
 
 test('반경 안과 정확한 경계에서는 25% 빠르고 반경 밖은 기존 속도를 유지한다',()=>{
@@ -61,21 +66,21 @@ test('강화 범위 스냅샷은 마법사와 몬스터의 배열 순서와 무�
 });
 
 test('감속된 강화 몬스터는 0.8 계수를 쓰며 마법사와 범위 밖의 0.6 계수는 유지한다',()=>{
- const {m,boss}=fixture(),inside=enemy(2,'slime',6),outside=enemy(3,'slime',9);
+ const {m,boss}=fixture(11,15),inside=enemy(2,'slime',6),outside=enemy(3,'slime',9);
  m.enemies.push(inside,outside);for(const e of m.enemies)e.slow=3;
  const before=new Map(m.enemies.map(e=>[e.id,e.x]));m.step(.1);
- near(inside.x-before.get(inside.id)!,travel(m,inside)*BOSS_AURA_SPEED*BOSS_AURA_SLOW);
+ near(inside.x-before.get(inside.id)!,travel(m,inside)*BOSS_AURA_SLOW);
  for(const e of [boss,outside])near(e.x-before.get(e.id)!,travel(m,e)*.6);
  for(const e of m.enemies)near(e.slow,2.9);
 });
 
 test('기절은 강화 몬스터만 두 배로 회복하고 남은 시간이 0이 된 틱부터 이동한다',()=>{
- const {m,boss}=fixture(),inside=enemy(2,'slime',6),outside=enemy(3,'slime',9);
+ const {m,boss}=fixture(11,27),inside=enemy(2,'slime',6),outside=enemy(3,'slime',9);
  m.enemies.push(inside,outside);for(const e of m.enemies)e.stun=.25;
  const before=new Map(m.enemies.map(e=>[e.id,e.x]));m.step(.1);
  near(inside.stun,.05);for(const e of [boss,outside])near(e.stun,.15);
  for(const e of m.enemies)near(e.x,before.get(e.id)!);
- m.step(.1);assert.equal(inside.stun,0);near(inside.x-before.get(inside.id)!,travel(m,inside)*BOSS_AURA_SPEED);
+ m.step(.1);assert.equal(inside.stun,0);near(inside.x-before.get(inside.id)!,travel(m,inside));
  for(const e of [boss,outside]){near(e.stun,.05);near(e.x,before.get(e.id)!);}
 });
 

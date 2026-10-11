@@ -4,6 +4,7 @@ import {BossIntroFlow} from '../src/boss-intro-flow';
 import {bossIntroFrame,BossIntroClock,BOSS_INTRO_DURATION,BOSS_INTRO_STORY,BOSS_INTRO_MECHANICS} from '../src/boss-intro-story';
 import {Defense} from '../src/model';
 import {FINAL_STAGE,LEVELS} from '../src/levels';
+import {BOSS_SPELLS,BOSS_SPELL_WARNING_SECONDS,BOSS_SPELL_ACTIVE_SECONDS,BOSS_SPELL_REST_SECONDS} from '../src/boss-spells';
 
 test('stage eleven entry holds preparation for resume, next, selection and every retry',()=>{
  const flow=new BossIntroFlow();
@@ -41,7 +42,11 @@ test('three dialogue beats cover fourteen seconds and share exact transition bou
  const final=bossIntroFrame(time+100);assert.equal(final.index,2);assert.equal(final.progress,1);assert.equal(final.complete,true);assert.equal(final.dialogue,BOSS_INTRO_STORY[2].line);
  for(const invalid of [-3,NaN,Infinity])assert.equal(bossIntroFrame(invalid).time,0);
  assert.match(BOSS_INTRO_STORY.map(beat=>beat.line).join(' '),/감속과 기절/);
- assert.deepEqual(BOSS_INTRO_MECHANICS,['저주 범위 3칸','이동 속도 +25%','감속 중 속도 60% → 80%','기절에서 2배 빠르게 회복']);
+ const copy=BOSS_INTRO_MECHANICS.join(' ');
+ for(const spell of BOSS_SPELLS)assert.ok(copy.includes(spell.name),'intro names '+spell.name);
+ assert.ok(copy.includes(`${BOSS_SPELL_WARNING_SECONDS}초 예고`)&&copy.includes(`${BOSS_SPELL_ACTIVE_SECONDS}초 발동`)&&copy.includes(`${BOSS_SPELL_REST_SECONDS}초 휴식`));
+ for(const mechanic of ['3칸','하나씩 순환','25%','60% → 80%','회복 2배'])assert.ok(copy.includes(mechanic));
+ assert.match(BOSS_INTRO_STORY[1].line,/경고/);assert.match(BOSS_INTRO_STORY[1].line,/번갈아/);
 });
 
 test('reduced motion exposes the complete dialogue immediately without the speaking pulse',()=>{

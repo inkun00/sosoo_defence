@@ -7,6 +7,7 @@ import {Difficulty,balanceFor,isDifficulty,DIFFICULTIES} from './difficulty';
 import {towerType,towerPrice,parseMoney,borrowingPlaces,TowerType,TOWER_RANGE,LONG_TOWER_RANGE,PurchaseVariation} from './towers';
 import {drawWallRecipe} from './wall-recipe-store';
 import type {WallRecipe} from './wall-recipes';
+import {bossSpellAt,type BossSpellState} from './boss-spells';
 export interface Tower extends Cell{id:number;typeId:string;unit:number;effect:Effect;enabled:boolean;cooldown:number;cost:number;}
 export interface Purchase extends Cell{typeId:string;before:number;wallet:number;cost:number;digits:number;borrowing:number[];}
 export interface Enemy{id:number;kind:MonsterKind;hp:number;max:number;x:number;y:number;path:Cell[];next:number;hits:number;slow:number;stun:number;hitFlash:number;age:number;recoil?:{vx:number;vy:number;remaining:number};wallCooldown?:number;}
@@ -16,7 +17,7 @@ export const WALL_DURABILITY=3;
 export interface Wall extends Cell{id:number;durability:number;offsetX:number;offsetY:number;vx:number;vy:number;}
 export interface WallPreview extends Cell{valid:boolean;message:string;}
 export interface WallImpact{wallId:number;enemyId:number;kind:MonsterKind;durability:number;dx:number;dy:number;force:number;}
-export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'wall-impact'|'wall-break'|'leak';message:string;x?:number;y?:number;color?:string;data?:unknown;}
+export interface Event{type:'notice'|'hit'|'invalid'|'kill'|'shot'|'money'|'brick'|'wall'|'wall-impact'|'wall-break'|'leak'|'boss-warning'|'boss-cast';message:string;x?:number;y?:number;color?:string;data?:unknown;}
 export type Phase='ready'|'playing'|'paused'|'won'|'review'|'lost';
 export const CASTLE_HEALTH=5,STAGE_DURATION=120,FIRST_SPAWN_DELAY=8;
 export const BOSS_AURA_RADIUS=3*TILE,BOSS_AURA_SPEED=1.25,BOSS_AURA_SLOW=.8,BOSS_AURA_STUN=2;
@@ -26,6 +27,7 @@ export class Defense{
  towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Wall[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
  private nextId=1;private randomState=17;private droppedRecipe=0;private brickRecipe:WallRecipe|null=null;
  private carriedWalls=0;
+ private announcedBossSpells=new Set<string>();
  private storedWallHealth:number[]=[];wallPlacements=0;
  bossDefeated=false;bossSpawned=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
@@ -39,7 +41,15 @@ export class Defense{
   return this.enemies.find(e=>e.kind==='wizard'&&e.hp>0&&e.next<e.path.length)??null;
  }
  private withinBossAura(e:Enemy,source:Enemy){return e!==source&&e.hp>0&&e.next<e.path.length&&Math.hypot(e.x-source.x,e.y-source.y)<=BOSS_AURA_RADIUS+1e-8;}
- isBossEmpowered(e:Enemy){const source=this.bossAuraSource;return source!==null&&this.withinBossAura(e,source);}
+ get bossSpellState():BossSpellState|null{const source=this.bossAuraSource;return source?bossSpellAt(source.age,source.id):null;}
+ isBossEmpowered(e:Enemy){const source=this.bossAuraSource;return source!==null&&this.bossSpellState?.phase==='active'&&this.withinBossAura(e,source);}
+ private announceBossSpell(state:BossSpellState){
+  if(state.phase==='rest')return;
+  const key=`${state.sourceId}:${state.cycle}`,data={bossId:state.sourceId,spellId:state.spell.id,cycle:state.cycle};
+  // Even an injected/resumed active state announces its warning first.
+  if(!this.announcedBossSpells.has(`${key}:warning`)){this.announcedBossSpells.add(`${key}:warning`);this.emit({type:'boss-warning',message:state.spell.taunt,data});}
+  if(state.phase==='active'&&!this.announcedBossSpells.has(`${key}:active`)){this.announcedBossSpells.add(`${key}:active`);this.emit({type:'boss-cast',message:`${state.spell.name}! ${state.spell.description}`,data});}
+ }
  get canChangeDifficulty(){return this.phase==='ready'&&!this.towers.length&&!this.walls.length;}
  setDifficulty(difficulty:Difficulty){
   if(!isDifficulty(difficulty)||!this.canChangeDifficulty)return this.notice('방어 시작 전에 타워와 성벽을 회수하면 난이도를 바꿀 수 있어요.');
@@ -204,9 +214,13 @@ export class Defense{
   if(this.level.boss&&!this.bossSpawned&&this.elapsed+1e-9>=this.level.boss.spawnAt)this.spawnBoss();
   // All monsters use the same starting positions for this tick's aura.
   // Moving the wizard first or last cannot change another monster's buff.
-  const auraSource=this.bossAuraSource,empowered=new Set(auraSource?this.enemies.filter(e=>this.withinBossAura(e,auraSource)):[]);
+  const auraSource=this.bossAuraSource,startingSpell=this.bossSpellState;
+  if(startingSpell)this.announceBossSpell(startingSpell);
+  const spellState=auraSource?bossSpellAt(auraSource.age+dt,auraSource.id):null;
+  if(spellState)this.announceBossSpell(spellState);
+  const empowered=new Set(auraSource&&spellState?.phase==='active'?this.enemies.filter(e=>this.withinBossAura(e,auraSource)):[]);
   for(const e of this.enemies){
-   if(e.hp===0)continue;const buffed=empowered.has(e);e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt*(buffed?BOSS_AURA_STUN:1));
+   if(e.hp===0)continue;const spell=empowered.has(e)?spellState!.spell.id:null;e.age+=dt;e.hitFlash=Math.max(0,e.hitFlash-dt);e.slow=Math.max(0,e.slow-dt);e.stun=Math.max(0,e.stun-dt*(spell==='iron-will'?BOSS_AURA_STUN:1));
    e.wallCooldown=Math.max(0,(e.wallCooldown??0)-dt);
    if(e.recoil&&e.recoil.remaining>0){const h=Math.min(dt,e.recoil.remaining),friction=1.2,decay=Math.exp(-friction*h);e.x+=e.recoil.vx*(1-decay)/friction;e.y+=e.recoil.vy*(1-decay)/friction;e.recoil.vx*=decay;e.recoil.vy*=decay;e.recoil.remaining=Math.max(0,e.recoil.remaining-dt);continue;}
    if(e.stun)continue;
@@ -214,7 +228,7 @@ export class Defense{
    // Creatures accelerate into a short ram; the collision reflects that
    // actual approach velocity rather than creating extra bounce energy.
    const charge=approachingWall&&target?1+.8*Math.max(0,Math.min(1,(TILE-Math.hypot(target.x-e.x,target.y-e.y))/(TILE*.6))):1;
-   const speed=this.balance.speed*MONSTERS[e.kind].speed*(buffed?BOSS_AURA_SPEED:1)*(e.slow?(buffed?BOSS_AURA_SLOW:.6):1)*charge;
+   const speed=this.balance.speed*MONSTERS[e.kind].speed*(spell==='haste'?BOSS_AURA_SPEED:1)*(e.slow?(spell==='frost-ward'?BOSS_AURA_SLOW:.6):1)*charge;
    let travel=speed*dt;
    while(travel>0&&e.next<e.path.length){const target=world(e.path[e.next]),dx=target.x-e.x,dy=target.y-e.y,d=Math.hypot(dx,dy);
     const wall=this.walls.find(w=>key(w)===key(e.path[e.next])),contact=TILE*.4;
