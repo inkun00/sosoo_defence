@@ -78,6 +78,19 @@ async function towerCards(page,label){
   });
  });
 }
+async function popupSkin(page,label){
+ await check(page,label+' popup uses cropped game atlas frames and native selected/disabled states',async()=>{
+  const {artURL}=await import('/src/art.ts'),frames={panel:[23,25,221,211],button:[267,25,221,211],active:[22,264,222,214],disabled:[267,264,222,214],menu:[17,49,926,211]};
+  const visible=e=>!e.closest('[hidden]')&&e.getClientRects().length;
+  const surfaces=[...document.querySelectorAll('.duel-preparation-panel [data-preparation-skinned]')].filter(visible);
+  return !!document.querySelector('.duel-preparation-input-surface>input[name="answer"]')&&surfaces.length>2&&[...document.querySelectorAll('.duel-preparation-panel button')].filter(visible).every(button=>button.dataset.preparationSkinned===(button.disabled?'disabled':button.classList.contains('duel-preparation-primary')||button.getAttribute('aria-selected')==='true'||button.getAttribute('aria-pressed')==='true'?'active':'button'))&&surfaces.every(surface=>{
+   const kind=surface.dataset.preparationSkinned,skin=surface.querySelector(':scope>.duel-preparation-skin'),pieces=skin?[...skin.children]:[],f=frames[kind],ratio=kind==='menu'?.18:14/128;
+   if(!f||surface.querySelectorAll(':scope>.duel-preparation-skin').length!==1||pieces.length!==9||skin.dataset.preparationSkin!==kind||skin.getAttribute('aria-hidden')!=='true'||getComputedStyle(skin).pointerEvents!=='none'||getComputedStyle(surface).backgroundImage!=='none'||getComputedStyle(surface).borderTopLeftRadius!=='0px')return false;
+   const widths=[f[2]*ratio,f[2]*(1-2*ratio),f[2]*ratio],heights=[f[3]*ratio,f[3]*(1-2*ratio),f[3]*ratio];let y=f[1];
+   return heights.every((h,row)=>{let x=f[0];const ok=widths.every((w,col)=>{const svg=pieces[row*3+col],view=svg.getAttribute('viewBox').split(/\s+/).map(Number),ok=[x,y,w,h].every((n,i)=>Math.abs(n-view[i])<1e-7)&&getComputedStyle(svg).overflow==='hidden'&&svg.querySelector('image').getAttribute('href')===artURL(kind==='menu'?'menu-button-v1':'ui');x+=w;return ok;});y+=h;return ok;});
+  });
+ });
+}
 async function exercise(page,label,side,touch){
  const popup=page.locator('.duel-preparation-panel');
  assert.equal(await popup.isVisible(),false,label+' no preparation popup before ready');
@@ -95,6 +108,7 @@ async function exercise(page,label,side,touch){
  await assertClock(page,label+' preparation','03:00','preparation','active',true);
  await fitted(page,label,'preparing-popup');
  await popupFits(page,label);
+ await popupSkin(page,label);
  await check(page,label+' popup disables canvas input',()=>!window.__duelPhaseTest.scene.input.enabled);
  await check(page,label+' map has no preparation arithmetic controls',()=>![...window.__duelPhaseTest.scene.controls.keys()].some(id=>id==='fuse'||id.startsWith('block:')||id.startsWith('slot:')));
  assert.equal(await popup.locator('[data-answer-index]').count(),16,label+' has sixteen answer candidates');
@@ -116,6 +130,7 @@ async function exercise(page,label,side,touch){
 
  const correct=await answerIndex(page,true);
  await activate(popup.locator('[data-answer-index="'+correct+'"]'),touch);
+ await popupSkin(page,label+' selected answer');
  const fuseCalls=await page.evaluate(()=>window.__duelPhaseTest.sentActions.filter(item=>(item.action?.type||item.type)==='fuse').length);
  await page.evaluate(()=>window.__duelPhaseTest.setSendDelay(500));
  await popup.locator('[data-preparation-confirm]').focus();

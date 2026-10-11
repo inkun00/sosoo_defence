@@ -3,6 +3,7 @@ import {artURL} from '../art';
 import {TOWERS,towerType,type TowerType} from '../towers';
 import {duelBuildCost,duelHeroLearningLevel,type DuelAction,type DuelState,type Side} from './duel';
 import {duelCountdown,formatDuelClock} from './duel-clock';
+import {mountPreparationSkin} from './preparation-skin';
 import './preparation-panel.css';
 
 interface PreparationPanelOptions{onVisibilityChange?:()=>void;}
@@ -39,6 +40,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   <p class="duel-preparation-feedback" data-preparation-feedback role="status" aria-live="polite"></p>
  </section>`;
  host.append(root);
+ const skin=mountPreparationSkin(root);
  const find=<T extends HTMLElement=HTMLElement>(selector:string)=>root.querySelector<T>(selector)!;
  const card=find<HTMLElement>('.duel-preparation-card'),heroesTab=find<HTMLButtonElement>('[data-preparation-tab="heroes"]'),towersTab=find<HTMLButtonElement>('[data-preparation-tab="towers"]');
  const heroes=find('#duel-preparation-heroes'),towers=find('#duel-preparation-towers'),shop=find('.duel-preparation-shop'),purchase=find<HTMLFormElement>('form'),input=find<HTMLInputElement>('input');
@@ -70,7 +72,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   if(roundKey!==nextRound){roundKey=nextRound;selected=null;feedback('');}
   find('[data-preparation-progress]').textContent=`문제 ${duelHeroLearningLevel(p)}단계 · 정답 ${p.solved}개 · ${duelHeroLearningLevel(p)<4?`다음 단계까지 ${5-p.solved%5}개`:'최고 단계'}`;
   find('[data-preparation-question]').textContent=`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`;
-  for(const [index,button] of answerButtons.entries()){const value=p.board[index];button.textContent=numberText(value);button.disabled=blocked();button.setAttribute('aria-pressed',String(selected===index));button.setAttribute('aria-label',`정답 후보 ${numberText(value)}`);}
+  for(const [index,button] of answerButtons.entries()){const value=p.board[index],label=numberText(value);if(button.textContent!==label)button.textContent=label;button.disabled=blocked();button.setAttribute('aria-pressed',String(selected===index));button.setAttribute('aria-label',`정답 후보 ${label}`);}
   confirm.disabled=blocked()||selected===null;
   find('[data-preparation-selected]').textContent=selected===null?'정답을 골라요':`선택한 정답 ${numberText(p.board[selected])}`;
   const pages=Math.ceil(TOWERS.length/towerButtons.length);page=Math.max(0,Math.min(pages-1,page));
@@ -86,7 +88,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   find<HTMLButtonElement>('[data-preparation-page="prev"]').disabled=blocked()||page===0;find<HTMLButtonElement>('[data-preparation-page="next"]').disabled=blocked()||page===pages-1;find('[data-preparation-page-label]').textContent=`${page+1} / ${pages}`;
   if(q){if(quoteNonce!==q.nonce){quoteNonce=q.nonce;input.value='';feedback('');}find('[data-preparation-tower-name]').textContent=`${towerType(q.typeId)?.name??'타워'} · 남는 코인을 계산해요`;find('[data-preparation-equation]').textContent=`${numberText(q.before,q.digits??2)} − ${numberText(q.cost,q.digits??2)} = ?`;}
   else quoteNonce='';
-  purchase.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button').forEach(element=>element.disabled=blocked());root.setAttribute('aria-busy',String(busy||pending));updateVisibility();
+  purchase.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,button').forEach(element=>element.disabled=blocked());root.setAttribute('aria-busy',String(busy||pending));skin.sync();updateVisibility();
  };
  const perform=async(action:DuelAction):Promise<ActionReply|undefined>=>{
   if(blocked())return;pending=true;render();
@@ -130,5 +132,5 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   if(active()){const key=`${identity}:${side}:${state!.preparationStartedAt}`;if(key!==preparationKey){preparationKey=key;intent=true;tab=player()?.quote?'towers':'heroes';page=0;roundKey='';quoteNonce='';selected=null;feedback('');}}
   else{intent=false;preparationKey='';roundKey='';quoteNonce='';selected=null;pending=false;}
   render();
- },open(){if(!active())return;intent=true;render();},close,feedback,get isOpen(){return intent&&!!active();},get visible(){return !root.hidden;},dispose(){disposed=true;document.removeEventListener('keydown',keyboard,true);root.remove();}};
+ },open(){if(!active())return;intent=true;render();},close,feedback,get isOpen(){return intent&&!!active();},get visible(){return !root.hidden;},dispose(){disposed=true;document.removeEventListener('keydown',keyboard,true);skin.dispose();root.remove();}};
 }

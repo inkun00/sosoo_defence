@@ -1,0 +1,7 @@
+.duel-preparation-panel [data-preparation-skinned]{position:relative;isolation:isolate;background:none;border-color:transparent;border-radius:0;box-shadow:none}
+.duel-preparation-panel .duel-preparation-skin{position:absolute;inset:-1px;z-index:-1;display:grid;grid-template-columns:var(--preparation-skin-corner,10px) minmax(0,1fr) var(--preparation-skin-corner,10px);grid-template-rows:var(--preparation-skin-corner,10px) minmax(0,1fr) var(--preparation-skin-corner,10px);pointer-events:none;user-select:none;line-height:0}
+.duel-preparation-panel .duel-preparation-skin>svg{display:block;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden}
+.duel-preparation-panel .duel-preparation-card>.duel-preparation-skin{inset:0;--preparation-skin-corner:var(--preparation-skin-card-corner,16px)}
+.duel-preparation-panel .duel-preparation-skin[data-preparation-skin="menu"]{grid-template-columns:var(--preparation-skin-menu-side,28px) minmax(0,1fr) var(--preparation-skin-menu-side,28px);grid-template-rows:var(--preparation-skin-menu-edge,8px) minmax(0,1fr) var(--preparation-skin-menu-edge,8px)}
+.duel-preparation-panel .duel-preparation-input-surface{display:block;width:100%;line-height:normal;margin-top:0}
+.duel-preparation-panel .duel-preparation-input-surface>input{position:relative;display:block;margin:0;border-color:transparent;border-radius:0;background:none;box-shadow:none}
