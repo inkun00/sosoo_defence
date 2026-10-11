@@ -1,36 +1,36 @@
 .duel-purchase-panel{position:absolute;z-index:20;width:982px;height:332px;transform-origin:top left;padding:18px 24px;background:linear-gradient(135deg,#28282bfa,#111722fc);border:3px ridge #ad8951;border-radius:12px;box-shadow:0 3px 14px #0009;color:#ffedc9}
 .duel-purchase-panel[hidden]{display:none!important}
-.duel-purchase-form{height:100%;display:grid;grid-template-columns:1fr 332px;gap:28px}
-.duel-purchase-copy{display:flex;flex-direction:column;min-width:0}
-.duel-purchase-heading{margin:0;color:#e9bb70;font-size:21px;font-weight:bold}
-.duel-purchase-equation{margin:18px 0 14px;color:#ffe09e;font: bold 39px Consolas,'Malgun Gothic',monospace;white-space:nowrap}
-.duel-purchase-note,.duel-purchase-wallet{margin:4px 0;font-size:16px;line-height:1.5;color:#ddd0b8}
-.duel-purchase-panel [data-feedback]{margin:9px 0;font-size:18px;color:#ffd284;min-height:27px}
-.duel-purchase-actions{display:flex;gap:12px;margin-top:auto}
-.duel-purchase-panel button{border:2px ridge #ad8951;border-radius:7px;background:linear-gradient(#444449,#22242b);color:#fff0d0;font-weight:bold;font-size:20px;min-height:45px;padding:6px 14px}
+.duel-purchase-form{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 332px;gap:28px}
+.duel-purchase-copy{display:grid;grid-template-columns:140px minmax(0,1fr) 170px;grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:'heading heading heading' 'equation equation equation' 'feedback feedback feedback' 'answer confirm cancel';gap:8px 12px;min-width:0;min-height:0}
+.duel-purchase-heading{grid-area:heading;margin:0;color:#e9bb70;font-size:21px;font-weight:bold}
+.duel-purchase-equation{grid-area:equation;align-self:center;margin:0;color:#ffe09e;font:bold 54px/1.15 Consolas,'Malgun Gothic',monospace;text-align:center;white-space:nowrap}
+.duel-purchase-panel [data-feedback]{grid-area:feedback;margin:0;font-size:18px;line-height:27px;color:#ffd284;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.duel-purchase-panel [data-feedback]:empty{display:none}
+.duel-purchase-actions{display:contents}
+.duel-purchase-panel button{border:2px ridge #ad8951;border-radius:7px;background:linear-gradient(#444449,#22242b);color:#fff0d0;font-weight:bold;font-size:20px;min-height:var(--purchase-touch,56px);padding:6px 14px}
 .duel-purchase-panel button:disabled,.duel-purchase-panel input:disabled{opacity:.55}
-.duel-purchase-panel .duel-purchase-confirm{background:linear-gradient(#97622b,#4d321b);flex:1}
+.duel-purchase-panel .duel-purchase-confirm{grid-area:confirm;align-self:end;background:linear-gradient(#97622b,#4d321b)}
+.duel-purchase-panel [data-cancel]{grid-area:cancel;align-self:end;font-size:18px}
+.duel-purchase-answer{grid-area:answer;min-width:0;align-self:end}
 .duel-purchase-answer label{display:block;font-size:18px;font-weight:bold}
-.duel-purchase-answer input{display:block;width:100%;height:47px;margin:5px 0 10px;padding:5px 12px;background:#10141c;color:#fff0d0;border:2px solid #b99256;border-radius:6px;font-size:25px}
+.duel-purchase-answer input{display:block;width:100%;height:var(--purchase-touch,56px);margin:5px 0 0;padding:5px 8px;background:#10141c;color:#fff0d0;border:2px solid #b99256;border-radius:6px;font-size:25px}
 .duel-purchase-answer input::placeholder{font-size:16px;color:#c1b59f}
-.duel-purchase-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.duel-purchase-keypad button{font-size:25px;height:46px;padding:0}
+.duel-purchase-keypad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(4,minmax(var(--purchase-touch,56px),1fr));gap:6px;min-height:0}
+.duel-purchase-keypad button{font-size:31px;height:100%;padding:0}
 .duel-purchase-compact{padding:6px 8px}
-.duel-purchase-compact .duel-purchase-form{position:relative;grid-template-columns:minmax(0,1fr) var(--purchase-keypad-width);gap:12px}
-.duel-purchase-compact .duel-purchase-copy{position:relative;padding-right:calc(var(--purchase-touch) + 6px)}
+.duel-purchase-compact .duel-purchase-form{grid-template-columns:minmax(0,1fr) var(--purchase-keypad-width);gap:12px}
+.duel-purchase-compact .duel-purchase-copy{grid-template-columns:calc(var(--purchase-touch) + 12px) minmax(var(--purchase-touch),1fr) var(--purchase-touch)}
 .duel-purchase-compact .duel-purchase-heading{font-size:18px;line-height:20px}
-.duel-purchase-compact .duel-purchase-equation{margin:5px 0 0;font-size:32px;line-height:1.05;white-space:normal}
-.duel-purchase-compact .duel-purchase-note,.duel-purchase-compact .duel-purchase-wallet{display:none}
-.duel-purchase-compact [data-feedback]{position:absolute;left:0;top:0;margin:0;font-size:17px;line-height:20px;height:20px;min-height:20px;width:calc(100% - var(--purchase-touch) - 6px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.duel-purchase-compact.has-feedback .duel-purchase-heading{visibility:hidden}
-.duel-purchase-compact.has-feedback .duel-purchase-equation{font-size:27px}
-.duel-purchase-compact .duel-purchase-actions{display:contents}
-.duel-purchase-compact button{min-height:var(--purchase-touch);height:var(--purchase-touch);padding:3px 6px;font-size:23px}
-.duel-purchase-compact [data-cancel]{position:absolute;right:0;top:0;width:var(--purchase-touch)}
-.duel-purchase-compact .duel-purchase-confirm{position:absolute;left:calc(var(--purchase-touch) + 18px);bottom:0;width:calc(100% - var(--purchase-touch) - 18px);font-size:22px}
-.duel-purchase-compact .duel-purchase-answer label{position:absolute;left:0;bottom:0;width:calc(var(--purchase-touch) + 12px);font-size:0}
-.duel-purchase-compact .duel-purchase-answer input{height:var(--purchase-touch);margin:0;padding:3px 5px;font-size:29px}
+.duel-purchase-compact .duel-purchase-equation{font-size:42px}
+.duel-purchase-compact [data-feedback]{font-size:20px;line-height:24px}
+.duel-purchase-compact button{height:var(--purchase-touch);padding:3px 6px;font-size:22px}
+.duel-purchase-compact [data-cancel]{padding:0;font-size:20px;white-space:nowrap}
+.duel-purchase-compact .duel-purchase-answer label{font-size:0}
+.duel-purchase-compact .duel-purchase-answer input{margin:0;padding:3px 5px;font-size:29px}
 .duel-purchase-compact .duel-purchase-answer input::placeholder{font-size:19px}
-.duel-purchase-compact .duel-purchase-keypad{height:100%;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(var(--purchase-touch),1fr));gap:4px}
+.duel-purchase-compact .duel-purchase-keypad{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(var(--purchase-touch),1fr));gap:4px}
 .duel-purchase-compact .duel-purchase-keypad button{height:100%;font-size:31px}
-.duel-purchase-tablet .duel-purchase-note,.duel-purchase-tablet .duel-purchase-wallet{display:block;font-size:17px;line-height:1.35;margin-top:8px}
+.duel-purchase-dense .duel-purchase-copy{grid-template-columns:calc(var(--purchase-touch) + 12px) minmax(0,1fr) var(--purchase-touch);grid-template-areas:'heading heading cancel' 'equation equation equation' 'feedback feedback feedback' 'answer confirm confirm'}
+.duel-purchase-dense .duel-purchase-heading{align-self:center}
+.duel-purchase-four-columns{padding-block:0}
+.duel-purchase-four-columns .duel-purchase-keypad{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(var(--purchase-touch),1fr));gap:2px}

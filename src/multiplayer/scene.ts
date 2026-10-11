@@ -47,7 +47,7 @@ export class DuelScene extends Phaser.Scene{
  private get compactBlockColumns(){return this.minimumTouch>114?2:this.minimumTouch>74?4:8;}
  private get blockPageCount(){return Math.ceil(16/(this.compactBlockColumns*2));}
  get shopPageCount(){return Math.ceil(TOWERS.length/this.shopPageSize);}
- getPurchaseArea():DuelPurchaseArea{return{x:8,y:this.screenLayout.compact?this.boardY+299+LOWER_SHIFT:445+LOWER_SHIFT,width:this.screenLayout.compact&&this.minimumTouch>114?1264:982,height:this.screenLayout.compact?this.screenLayout.height-this.boardY-307-LOWER_SHIFT:this.screenLayout.height-772,compact:this.screenLayout.compact,minimumTouch:this.minimumTouch};}
+ getPurchaseArea():DuelPurchaseArea{return{x:8,y:this.screenLayout.compact?this.boardY+299+LOWER_SHIFT:445+LOWER_SHIFT,width:this.screenLayout.compact?1264:982,height:this.screenLayout.compact?this.screenLayout.height-this.boardY-307-LOWER_SHIFT:this.screenLayout.height-772,compact:this.screenLayout.compact,minimumTouch:this.minimumTouch};}
  cycleBlockPage(){this.blockPage=(this.blockPage+1)%this.blockPageCount;this.uiSignature='';this.redraw();}
  changeHeroPage(change:number){this.heroPage=Math.max(0,this.heroPage+change);this.uiSignature='';this.redraw();}
  setScreenLayout(layout:GameScreenLayout){

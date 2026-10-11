@@ -276,7 +276,7 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
   // Cancelling and rerolling a quote cannot erase mistakes before the next correct answer.
   const before=purchaseCoins(p.money);p.quote={x:-1,y:-1,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:2,nonce,expires:s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000,purpose:'preparation',wrongAttempts:p.towerWrongAttempts??0};
-  p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('타워 구입 문제');
+  p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('');
  }
  if(action.type==='answer'){
   if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 타워를 설치해요.');
