@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {decimalBoard,decimalQuestion,decimalTriples,learningDescription,learningLevel,normalizedAccountLevel} from '../src/multiplayer/decimal-boards';
+import {decimalBoard,decimalQuestion,decimalTriples,learningDescription,learningLevel,normalizedAccountLevel,HERO_ADDITION_STAGES} from '../src/multiplayer/decimal-boards';
 import {createDuel,joinDuel,applyDuel,advanceDuel,duelHeroLearningLevel,DUEL_PREPARATION_SECONDS,DuelState,DuelPlayer,Side} from '../src/multiplayer/duel';
 import {emptyProgress,progressAfter,MatchRecord} from '../src/multiplayer/records';
 import {numberText} from '../src/math';
@@ -19,11 +19,12 @@ function carry(a:number,b:number){
  return hundredths||Math.floor(a/100)%10+Math.floor(b/100)%10+(hundredths?1:0)>=10;
 }
 function assertStage(question:{a:number;b:number},board:number[],stage:number){
- const {a,b}=question,answer=a+b;
+ const {a,b}=question,answer=a+b,precision=(stage-1)%4+1;
  assert.ok([a,b,answer,...board].every(n=>Number.isSafeInteger(n)&&n%10===0&&n>0&&n<10000));
- assert.ok([a,b,answer,...board].every(n=>(numberText(n).split('.')[1]?.length??0)===(stage<=2?1:2)));
+ assert.ok([a,b,answer,...board].every(n=>(numberText(n).split('.')[1]?.length??0)===(precision<=2?1:2)));
  assert.equal(board.length,16);assert.equal(new Set(board).size,16);assert.equal(board.filter(value=>value===answer).length,1);
- assert.equal(carry(a,b),stage===2||stage===4);
+ assert.equal(carry(a,b),precision===2||precision===4);
+ assert.ok([a,b].every(n=>stage<=4?n<1000:n>=1000),'초반에는 두 수 모두 1 미만이고 후반에는 두 수 모두 정수 부분이 있다');
 }
 function personalBoard(s:DuelState,side:Side){
  const p=s.players[side]!,stage=duelHeroLearningLevel(p);
@@ -34,17 +35,17 @@ function solve(s:DuelState,side:Side,nonce:string){
  assert.equal(applyDuel(s,side,{type:'fuse',operation:'+',round:p.round,slots:addition(p)},NOW,nonce).ok,true);
 }
 
-test('네 단계의 고정 덧셈과 16개 후보는 정확한 소수 단위이며 정답이 정확히 한 개다',()=>{
- for(let stage=1;stage<=4;stage++)for(let seed=0;seed<30;seed++)for(let round=0;round<8;round++){
+test('여덟 단계의 고정 덧셈과 16개 후보는 정확한 소수 단위이며 정답이 정확히 한 개다',()=>{
+ for(let stage=1;stage<=HERO_ADDITION_STAGES;stage++)for(let seed=0;seed<30;seed++)for(let round=0;round<8;round++){
   const triples=decimalTriples(seed,round,stage),board=decimalBoard(seed,round,stage);
   assert.equal(triples.length,5);assert.equal(board.length,16);assert.deepEqual(board,decimalBoard(seed,round,stage));
-  for(const [a,b,c]of triples)assert.equal(a+b,c);
+  for(const [a,b,c]of triples){assert.equal(a+b,c);assert.ok(c<10000);assert.ok([a,b].every(n=>stage<=4?n<1000:n>=1000));}
   assert.deepEqual(decimalQuestion(seed,round,stage),{a:triples[0][0],b:triples[0][1]});assertStage(decimalQuestion(seed,round,stage),board,stage);
  }
 });
 
 test('고정 문제의 자릿수·받아올림과 중복 없는 정답 후보를 seed와 회차 전체에서 보장한다',()=>{
- for(let stage=1;stage<=4;stage++){
+ for(let stage=1;stage<=HERO_ADDITION_STAGES;stage++){
   const variants=new Set<string>();
   for(let seed=0;seed<100;seed++)for(let round=0;round<8;round++){
    const board=decimalBoard(seed,round,stage);assertStage(decimalQuestion(seed,round,stage),board,stage);
@@ -54,18 +55,20 @@ test('고정 문제의 자릿수·받아올림과 중복 없는 정답 후보를
  }
 });
 
-test('덧셈 단계만 네 단계로 정규화하고 계정·타워 레벨의 기존 범위는 유지한다',()=>{
+test('덧셈 단계만 여덟 단계로 정규화하고 계정·타워 레벨의 기존 범위는 유지한다',()=>{
  for(const invalid of [NaN,Infinity,-1,0,2.5]){
   assert.deepEqual(decimalBoard(918,0,invalid),decimalBoard(918,0,1));
   assert.deepEqual(decimalTriples(918,0,invalid),decimalTriples(918,0,1));
-  assert.equal(learningDescription(invalid),'한 자리 소수 · 받아올림 없음');
+  assert.equal(learningDescription(invalid),'한 자리 소수 · 받아올림 없음 · 1보다 작은 수');
  }
- assert.deepEqual(decimalBoard(918,0,99),decimalBoard(918,0,4));
- assert.equal(learningDescription(1),'한 자리 소수 · 받아올림 없음');assert.equal(learningDescription(2),'한 자리 소수 · 받아올림 있음');
- assert.equal(learningDescription(3),'두 자리 소수 · 받아올림 없음');assert.equal(learningDescription(99),'두 자리 소수 · 받아올림 있음');
+ assert.deepEqual(decimalBoard(918,0,99),decimalBoard(918,0,8));
+ for(const [stage,text]of [[1,'한 자리 소수 · 받아올림 없음'],[2,'한 자리 소수 · 받아올림 있음'],[3,'두 자리 소수 · 받아올림 없음'],[4,'두 자리 소수 · 받아올림 있음']] as const){
+  assert.equal(learningDescription(stage),text+' · 1보다 작은 수');assert.equal(learningDescription(stage+4),text+' · 정수 부분 포함');
+ }
+ assert.equal(learningDescription(99),learningDescription(8));
  assert.equal(learningLevel(NaN),1);assert.equal(learningLevel(-1),1);assert.equal(learningLevel(2.5),1);assert.equal(learningLevel(99),10);
  assert.equal(normalizedAccountLevel(99),99);assert.equal(normalizedAccountLevel(1000001),1000000);
- for(const [solved,expected]of [[0,1],[4,1],[5,2],[9,2],[10,3],[14,3],[15,4],[100,4],[NaN,1],[-1,1],[2.5,1]])assert.equal(duelHeroLearningLevel({solved}),expected);
+ for(const [solved,expected]of [[0,1],[4,1],[5,2],[9,2],[10,3],[14,3],[15,4],[19,4],[20,5],[24,5],[25,6],[29,6],[30,7],[34,7],[35,8],[100,8],[NaN,1],[-1,1],[2.5,1]])assert.equal(duelHeroLearningLevel({solved}),expected);
 });
 
 test('계정 레벨과 방장 순서가 달라도 첫 덧셈은 같은 1단계이고 타워 준비 레벨만 공유한다',()=>{
@@ -79,12 +82,12 @@ test('계정 레벨과 방장 순서가 달라도 첫 덧셈은 같은 1단계�
  }
 });
 
-test('개인 정답 5·10·15개 직후 새 단계가 생성되고 오답과 잘못된 요청은 진도를 바꾸지 않는다',()=>{
+test('개인 정답 5개마다 새 단계가 생성되고 오답과 잘못된 요청은 진도를 바꾸지 않는다',()=>{
  const s=createDuel('host','방장',918,NOW,99);joinDuel(s,'guest','참가자',NOW,1);startPreparation(s);
  const p=s.players[0],otherBefore=structuredClone(s.players[1]);
- for(let count=0;count<20;count++){
-  const stage=Math.min(4,Math.floor(count/5)+1);assert.equal(duelHeroLearningLevel(p),stage);personalBoard(s,0);
-  if([4,9,14].includes(count)){
+ for(let count=0;count<40;count++){
+  const stage=Math.min(HERO_ADDITION_STAGES,Math.floor(count/5)+1);assert.equal(duelHeroLearningLevel(p),stage);personalBoard(s,0);
+  if(count%5===4){
    const before=structuredClone(p),slots=addition(p);
    assert.equal(applyDuel(s,0,{type:'fuse',operation:'+',round:p.round-1,slots},NOW,`stale-${count}`).ok,false);assert.deepEqual(p,before);
    assert.equal(applyDuel(s,0,{type:'fuse',operation:'+',round:p.round,slots:[slots[0],slots[0],slots[2]]},NOW,`duplicate-${count}`).ok,false);assert.deepEqual(p,before);
@@ -98,7 +101,7 @@ test('개인 정답 5·10·15개 직후 새 단계가 생성되고 오답과 잘
   solve(s,0,`correct-${count}`);assert.equal(p.solved,count+1);assert.equal(p.egg,count+1);assert.equal(p.round,count+1);personalBoard(s,0);
   assert.deepEqual(s.players[1],otherBefore);
  }
- assert.equal(duelHeroLearningLevel(p),4);assert.equal(duelHeroLearningLevel(s.players[1]!),1);assert.equal(s.learningLevel,1);
+ assert.equal(duelHeroLearningLevel(p),8);assert.equal(duelHeroLearningLevel(s.players[1]!),1);assert.equal(s.learningLevel,1);
  const next=createDuel('host','방장',918,START,99);joinDuel(next,'guest','참가자',START,1);
  for(const player of next.players){assert.equal(player!.solved,0);assert.equal(duelHeroLearningLevel(player!),1);assert.deepEqual(player!.board,decimalBoard(918,0,1));}
 });
@@ -106,7 +109,7 @@ test('개인 정답 5·10·15개 직후 새 단계가 생성되고 오답과 잘
 test('진행 순서와 계정 레벨에 관계없이 같은 개인 정답 수·회차는 같은 단계의 판이다',()=>{
  for(const levels of [[1,8],[8,1],[99,10]]){
   const s=createDuel('host','방장',912,NOW,levels[0]);joinDuel(s,'guest','참가자',NOW,levels[1]);startPreparation(s);
-  for(let turn=0;turn<21;turn++){
+  for(let turn=0;turn<41;turn++){
    assert.deepEqual(s.players[0].board,s.players[1]!.board);
    for(const side of (turn%2?[1,0]:[0,1]) as Side[]){
     const otherBefore=structuredClone(s.players[(1-side) as Side]);solve(s,side,`same-${side}-${turn}`);
@@ -147,12 +150,12 @@ test('계정 승리 경험치는 다음 대전 타워 난이도에만 반영하�
 test('덧셈 오답에는 계정·타워 레벨 대신 당시의 개인 문제 단계를 기록한다',()=>{
  const s=createDuel('host','방장',17,NOW,99);joinDuel(s,'guest','참가자',NOW,1);startPreparation(s);
  const p=s.players[0];
- for(let stage=1;stage<=4;stage++){
+ for(let stage=1;stage<=HERO_ADDITION_STAGES;stage++){
   while(p.solved<(stage-1)*5)solve(s,0,`progress-${p.solved}`);
   const board=[...p.board],slots=addition(p,false),growth=p.egg;
   assert.equal(applyDuel(s,0,{type:'fuse',operation:'+',round:p.round,slots},NOW,`wrong-stage-${stage}`).ok,false);
   const wrong=p.wrongQuestions.at(-1)!;assert.equal(wrong.level,stage);assert.equal(wrong.submitted,numberText(board[slots[0]]));assert.equal(wrong.operation,'+');
   assert.equal(p.solved,(stage-1)*5);assert.equal(p.egg,growth);assert.equal(p.round,(stage-1)*5);assert.deepEqual(p.board,board);personalBoard(s,0);
  }
- assert.deepEqual(p.wrongQuestions.map(q=>q.level),[1,2,3,4]);assert.equal(duelHeroLearningLevel(s.players[1]!),1);assert.equal(s.learningLevel,1);
+ assert.deepEqual(p.wrongQuestions.map(q=>q.level),[1,2,3,4,5,6,7,8]);assert.equal(duelHeroLearningLevel(s.players[1]!),1);assert.equal(s.learningLevel,1);
 });

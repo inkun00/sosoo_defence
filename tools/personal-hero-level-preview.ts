@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {DuelScene,type DuelView} from '../src/multiplayer/scene';
 import {applyDuel,createDuel,duelHeroLearningLevel,joinDuel,type DuelState,type Side} from '../src/multiplayer/duel';
 import {additionSlots} from '../src/multiplayer/computer-peer';
-import {learningDescription} from '../src/multiplayer/decimal-boards';
+import {HERO_ADDITION_STAGES,learningDescription} from '../src/multiplayer/decimal-boards';
 import {numberText} from '../src/math';
 import {observeGameScreen,duelScreenLayout} from '../src/responsive-game';
 import '../src/game.css';
@@ -33,7 +33,7 @@ observeGameScreen(game,field,layout=>{scene.setScreenLayout(layout);scene.redraw
 
 function progress(owner:Side){
  const p=state.players[owner]!,stage=duelHeroLearningLevel(p);
- return `문제 ${stage}단계 · ${learningDescription(stage)} · 내 덧셈 정답 ${p.solved}개 · ${stage<4?`다음 단계까지 정답 ${5-p.solved%5}개`:'최고 단계 유지'}`;
+ return `문제 ${stage}단계 · ${learningDescription(stage)} · 내 덧셈 정답 ${p.solved}개 · ${stage<HERO_ADDITION_STAGES?`다음 단계까지 정답 ${5-p.solved%5}개`:'최고 단계 유지'}`;
 }
 function updateProof(){
  const p=state.players[side]!;
@@ -47,8 +47,8 @@ function updateProof(){
  }));
  for(const owner of [0,1] as Side[]){const button=$(`${owner===0?'host':'guest'}-view`) as HTMLButtonElement;button.textContent=`${owner===0?'호스트':'참가자'} 계정 Lv.${state.players[owner]!.accountLevel} 시점`;button.setAttribute('aria-pressed',String(side===owner));}
  ($('reverse-levels') as HTMLButtonElement).textContent=reversed?'호스트 Lv.1 · 참가자 Lv.8로 새 대전':'호스트 Lv.8 · 참가자 Lv.1로 새 대전';
- for(const id of ['correct-fuse','wrong-fuse','next-stage'])($(`${id}`) as HTMLButtonElement).disabled=!loaded||state.status!=='preparing'||id==='next-stage'&&duelHeroLearningLevel(p)===4;
- $('next-stage').textContent=duelHeroLearningLevel(p)<4?`정답을 풀어 ${duelHeroLearningLevel(p)+1}단계까지`:'최고 단계 도달';
+ for(const id of ['correct-fuse','wrong-fuse','next-stage'])($(`${id}`) as HTMLButtonElement).disabled=!loaded||state.status!=='preparing'||id==='next-stage'&&duelHeroLearningLevel(p)===HERO_ADDITION_STAGES;
+ $('next-stage').textContent=duelHeroLearningLevel(p)<HERO_ADDITION_STAGES?`정답을 풀어 ${duelHeroLearningLevel(p)+1}단계까지`:'최고 단계 도달';
 }
 function refresh(){scene.redraw();updateProof();}
 function fuse(selected:number[]){
@@ -75,7 +75,7 @@ function solveWrong(){
  return fuse([index]);
 }
 function nextStage(){
- const p=state.players[side]!,stage=duelHeroLearningLevel(p);if(stage===4)return;
+ const p=state.players[side]!,stage=duelHeroLearningLevel(p);if(stage===HERO_ADDITION_STAGES)return;
  const target=stage*5;while(p.solved<target)solveCorrect();
 }
 function reset(reverse=false){

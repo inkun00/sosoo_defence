@@ -158,7 +158,7 @@ async function exercise(page,label,side,touch){
  const grown=await currentPlayer(page);
  assert.equal(grown.solved,original.solved+5,label+' five correct answers count');
  assert.equal(grown.egg,original.egg+5,label+' five correct answers earn five stones');
- assert.equal(await page.evaluate(async()=>{const api=window.__duelPhaseTest,{duelHeroLearningLevel}=await import('/src/multiplayer/duel.ts');return duelHeroLearningLevel(api.peer.state.players[api.view().side]);}),Math.min(4,1+Math.floor(grown.solved/5)),label+' learning stage follows every five answers');
+ assert.equal(await page.evaluate(async()=>{const api=window.__duelPhaseTest,{duelHeroLearningLevel}=await import('/src/multiplayer/duel.ts');return duelHeroLearningLevel(api.peer.state.players[api.view().side]);}),Math.min(8,1+Math.floor(grown.solved/5)),label+' learning stage follows every five answers');
  checks.push(label+' five correct answers advance the learning stage');
 
  await activate(popup.locator('[data-preparation-tab="towers"]'),touch);

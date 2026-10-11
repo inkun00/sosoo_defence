@@ -2,7 +2,7 @@ import {towerType,towerPrice,parseMoney,PurchaseVariation} from '../towers';
 import {heroSpec,worksheetHeroSpec,heroEffectStats,HeroEffect,HeroSpec} from './heroes';
 import {hit,numberText,purchaseCoins,learningValue} from '../math';
 import type {WrongQuestion} from './records';
-import {decimalBoard,decimalQuestion,normalizedAccountLevel,DecimalAdditionQuestion} from './decimal-boards';
+import {decimalBoard,decimalQuestion,normalizedAccountLevel,HERO_ADDITION_STAGES,DecimalAdditionQuestion} from './decimal-boards';
 import {duelMap,duelMapSpeedScale,duelPathDistance,duelPathPosition,duelRoadCell,duelLaneOffset,DUEL_LANE_ROWS,DUEL_BATTLE_ROWS} from './duel-maps';
 export {decimalBoard,decimalQuestion} from './decimal-boards';
 export type Side=0|1;
@@ -23,7 +23,7 @@ export function duelQuestionScore(wrongAttempts:number){return Math.floor(DUEL_Q
 export function duelScore(p:Pick<DuelPlayer,'combatScore'|'questionScore'>|null|undefined){return (p?.combatScore??0)+(p?.questionScore??0);}
 function awardQuestion(p:DuelPlayer,wrongAttempts:number){p.questionScore=(p.questionScore??0)+duelQuestionScore(wrongAttempts);p.answeredQuestions=(p.answeredQuestions??0)+1;}
 export function duelLevel(s:DuelState){return Math.min(10,1+Math.floor((Math.max(0,s.elapsed)+1e-8)/(DUEL_SECONDS/10)));}
-export function duelHeroLearningLevel(p:Pick<DuelPlayer,'solved'>){const solved=Number.isSafeInteger(p.solved)&&p.solved>=0?p.solved:0;return Math.min(4,Math.floor(solved/5)+1);}
+export function duelHeroLearningLevel(p:Pick<DuelPlayer,'solved'>){const solved=Number.isSafeInteger(p.solved)&&p.solved>=0?p.solved:0;return Math.min(HERO_ADDITION_STAGES,Math.floor(solved/5)+1);}
 export function duelTowerLevel(s:DuelState){return s.status==='preparing'?Math.min(10,s.learningLevel??1):duelLevel(s);}
 export function canPurchaseDuelTower(s:DuelState){return s.status==='preparing'||s.status==='playing';}
 export function canUseDuelTower(s:DuelState,side:Side,typeId:string){

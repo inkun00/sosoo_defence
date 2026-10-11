@@ -53,22 +53,24 @@ test('계정 레벨이 달라도 같은 첫 덧셈으로 성장량을 모으고 
  assert.equal(peer.identity.accountLevel,undefined);assert.equal(peer.state.players[0].accountLevel,1);assert.deepEqual(peer.state.players[0].board,decimalBoard(912,0,1));peer.dispose();
 });
 
-test('CPU의 영웅 덧셈은 개인 정답 5·10·15개 경계에서 진급하고 사람의 진도와 성장량을 섞지 않는다',async()=>{
+test('CPU의 영웅 덧셈도 정답 5개마다 진급하며 정수 부분이 있는 수로 진행한다',async()=>{
  const f=local(10,27),s=f.peer.state,p=s.players[0],cpu=s.players[1]!;await f.peer.send({type:'ready'});
- const humanBoard=[...p.board],boundaries=new Map([[4,1],[5,2],[9,2],[10,3],[14,3],[15,4]]);
- for(let count=1;count<=15;count++){
+ const humanBoard=[...p.board],boundaries=new Map([[4,1],[5,2],[9,2],[10,3],[14,3],[15,4],[19,4],[20,5],[24,5],[25,6],[29,6],[30,7]]);
+ for(let count=1;count<=30;count++){
   f.run(f.peer.definition.fusionMs);assert.equal(cpu.solved,count);assert.equal(cpu.egg,count);assert.equal(cpu.round,count);
   const stage=boundaries.get(count);if(stage){
    assert.equal(duelHeroLearningLevel(cpu),stage);assert.deepEqual(cpu.board,decimalBoard(912,count,stage),`CPU 정답 ${count}개 뒤 ${stage}단계 판`);
    const slots=additionSlots(cpu.heroQuestion,cpu.board)!,a=cpu.heroQuestion.a,b=cpu.heroQuestion.b,hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10,tenths=Math.floor(a/100)%10+Math.floor(b/100)%10;
-   assert.equal(hundredths>=10||tenths+Math.floor(hundredths/10)>=10,stage===2||stage===4,`${stage}단계의 CPU 정답은 정해진 받아올림 규칙을 지킨다`);
-   if(stage<=2)assert.ok(cpu.board.every(n=>n%100===0));else assert.ok(cpu.board.every(n=>n%10===0)&&cpu.board.some(n=>n%100!==0));
+   const precision=(stage-1)%4+1;
+   assert.equal(hundredths>=10||tenths+Math.floor(hundredths/10)>=10,precision===2||precision===4,`${stage}단계의 CPU 정답은 정해진 받아올림 규칙을 지킨다`);
+   assert.ok([a,b].every(n=>stage<=4?n<1000:n>=1000));
+   if(precision<=2)assert.ok(cpu.board.every(n=>n%100===0));else assert.ok(cpu.board.every(n=>n%10===0)&&cpu.board.some(n=>n%100!==0));
   }
   assert.equal(duelHeroLearningLevel(p),1);assert.equal(p.solved,0);assert.equal(p.egg,0);assert.deepEqual(p.board,humanBoard);assert.equal(s.learningLevel,10);assert.equal(cpu.accountLevel,10);assert.equal(p.accountLevel,27);
  }
  const cpuBefore=structuredClone(cpu);
  for(let count=1;count<=5;count++){assert.ok((await f.peer.send({type:'fuse',round:p.round,operation:'+',slots:additionSlots(p.heroQuestion,p.board)!})).ok);assert.equal(p.egg,count);}
- assert.equal(duelHeroLearningLevel(p),2);assert.deepEqual(p.board,decimalBoard(912,5,2));assert.deepEqual(cpu,cpuBefore);assert.equal(duelHeroLearningLevel(cpu),4);assert.equal(stockTotal(cpu.heroStock??{}),0);assert.equal(s.enemies.length,0);f.peer.dispose();
+ assert.equal(duelHeroLearningLevel(p),2);assert.deepEqual(p.board,decimalBoard(912,5,2));assert.deepEqual(cpu,cpuBefore);assert.equal(duelHeroLearningLevel(cpu),7);assert.equal(stockTotal(cpu.heroStock??{}),0);assert.equal(s.enemies.length,0);f.peer.dispose();
 });
 
 test('컴퓨터 대전은 준비 버튼을 누르기 전 구매·문제풀이·선행 설치를 막는다',async()=>{

@@ -2,13 +2,15 @@ export type DecimalTriple=readonly [number,number,number];
 export interface DecimalAdditionQuestion{a:number;b:number;}
 export function learningLevel(accountLevel:number){return Number.isSafeInteger(accountLevel)&&accountLevel>0?Math.min(10,accountLevel):1;}
 export function normalizedAccountLevel(value:number){return Number.isSafeInteger(value)&&value>0?Math.min(1000000,value):1;}
-function additionStage(stage:number){return Number.isSafeInteger(stage)&&stage>0?Math.min(4,stage):1;}
-export function learningDescription(stage:number){return [
+export const HERO_ADDITION_STAGES=8;
+function additionStage(stage:number){return Number.isSafeInteger(stage)&&stage>0?Math.min(HERO_ADDITION_STAGES,stage):1;}
+function precisionStage(stage:number){return (stage-1)%4+1;}
+export function learningDescription(stage:number){const difficulty=additionStage(stage);return [
  '한 자리 소수 · 받아올림 없음',
  '한 자리 소수 · 받아올림 있음',
  '두 자리 소수 · 받아올림 없음',
  '두 자리 소수 · 받아올림 있음',
- ][additionStage(stage)-1];}
+ ][precisionStage(difficulty)-1]+(difficulty<=4?' · 1보다 작은 수':' · 정수 부분 포함');}
 function rng(seed:number){let n=seed>>>0;return()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
 function hasDecimalCarry(a:number,b:number){
  const hundredths=Math.floor(a/10)%10+Math.floor(b/10)%10>=10;
@@ -24,18 +26,21 @@ function compatible(values:number[],carry:boolean){
 // Every triple supports addition a+b=c, including repeated values.
 // Quantities stay exact in thousandths; learning uses tenths/hundredths only.
 export function decimalTriples(seed:number,round:number,stage=1):DecimalTriple[]{
- const difficulty=additionStage(stage),carry=difficulty===2||difficulty===4,r=rng(seed^Math.imul(round+1,2654435761)^Math.imul(difficulty,2246822519));
+ const difficulty=additionStage(stage),precision=precisionStage(difficulty),carry=precision===2||precision===4,r=rng(seed^Math.imul(round+1,2654435761)^Math.imul(difficulty,2246822519));
  const pick=(a:number,b:number)=>a+Math.floor(r()*(b-a+1));
  const triples:DecimalTriple[]=[],values:number[]=[];
- const fallback:DecimalTriple[]=[[100,200,300],[600,700,1300],[110,220,330],[560,670,1230]];
+ const fallback:DecimalTriple[]=[[100,200,300],[600,700,1300],[110,220,330],[560,670,1230],[1100,1200,2300],[1600,1700,3300],[1110,1220,2330],[1560,1670,3230]];
  for(let i=0;i<5;i++){
   let triple:DecimalTriple|undefined;
   for(let attempt=0;attempt<64;attempt++){
    let a:number,b:number;
-   if(difficulty===1){a=pick(1,4)*100;b=pick(1,4)*100;}
-   else if(difficulty===2){const tenths=pick(3,9);a=tenths*100;b=pick(10-tenths,9)*100;}
-   else if(difficulty===3){a=(pick(0,4)*10+pick(1,4))*10;b=(pick(0,4)*10+pick(1,4))*10;}
+   if(precision===1){a=pick(1,4)*100;b=pick(1,4)*100;}
+   else if(precision===2){const tenths=pick(3,9);a=tenths*100;b=pick(10-tenths,9)*100;}
+   else if(precision===3){a=(pick(0,4)*10+pick(1,4))*10;b=(pick(0,4)*10+pick(1,4))*10;}
    else{const hundredths=pick(3,9);a=(pick(0,9)*10+hundredths)*10;b=(pick(0,9)*10+pick(10-hundredths,9))*10;if((a+b)%100===0)continue;}
+   // Start with proper decimals. Only later correct-answer stages introduce
+   // whole-number parts; both operands and the result stay below ten.
+   if(difficulty>4){a+=pick(1,4)*1000;b+=pick(1,4)*1000;}
    const candidate=[a,b,a+b] as const;
    if(compatible([...values,...candidate],carry)){triple=candidate;break;}
   }
@@ -51,9 +56,9 @@ export function decimalQuestion(seed:number,round:number,stage=1):DecimalAdditio
  const [a,b]=decimalTriples(seed,round,stage)[0];return {a,b};
 }
 export function decimalBoard(seed:number,round:number,stage=1){
- const difficulty=additionStage(stage),{a,b}=decimalQuestion(seed,round,difficulty),answer=a+b,unit=difficulty<=2?100:10;
+ const difficulty=additionStage(stage),precision=precisionStage(difficulty),{a,b}=decimalQuestion(seed,round,difficulty),answer=a+b,unit=precision<=2?100:10;
  const choices=new Set<number>([answer]),r=rng(seed^Math.imul(round+1,3266489917)^Math.imul(difficulty,668265263));
- const add=(value:number)=>{if(choices.size<16&&Number.isSafeInteger(value)&&value>0&&value<10000&&value%unit===0&&(difficulty<=2||value%100!==0))choices.add(value);};
+ const add=(value:number)=>{if(choices.size<16&&Number.isSafeInteger(value)&&value>0&&value<10000&&value%unit===0&&(precision<=2||value%100!==0))choices.add(value);};
  // Common errors: choosing an operand, subtracting, forgetting a carry, or
  // moving the decimal point. Fill remaining choices with nearby exact values.
  for(const value of [a,b,Math.abs(a-b),answer-100,answer+100,answer-1000,answer+1000,answer*10,answer/10])add(value);

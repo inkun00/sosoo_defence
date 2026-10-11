@@ -4,6 +4,7 @@ import {TOWERS,towerType,type TowerType} from '../towers';
 import {duelBuildCost,duelHeroLearningLevel,type DuelAction,type DuelState,type Side} from './duel';
 import {duelCountdown,formatDuelClock} from './duel-clock';
 import {mountPreparationSkin} from './preparation-skin';
+import {HERO_ADDITION_STAGES} from './decimal-boards';
 import './preparation-panel.css';
 
 interface PreparationPanelOptions{onVisibilityChange?:()=>void;onViewChange?:(view:HTMLElement)=>void;}
@@ -72,7 +73,7 @@ export function mountPreparationPanel(host:HTMLElement,send:(action:DuelAction)=
   find('[data-preparation-stones]').textContent=`소환석 ${p.egg}개`;
   const nextRound=`${identity}:${preparationKey}:${p.round}`;
   if(roundKey!==nextRound){roundKey=nextRound;selected=null;feedback('');}
-  find('[data-preparation-progress]').textContent=`문제 ${duelHeroLearningLevel(p)}단계 · 정답 ${p.solved}개 · ${duelHeroLearningLevel(p)<4?`다음 단계까지 ${5-p.solved%5}개`:'최고 단계'}`;
+  find('[data-preparation-progress]').textContent=`문제 ${duelHeroLearningLevel(p)}단계 · 정답 ${p.solved}개 · ${duelHeroLearningLevel(p)<HERO_ADDITION_STAGES?`다음 단계까지 ${5-p.solved%5}개`:'최고 단계'}`;
   find('[data-preparation-question]').textContent=`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`;
   for(const [index,button] of answerButtons.entries()){const value=p.board[index],label=numberText(value);if(button.textContent!==label)button.textContent=label;button.disabled=blocked();button.setAttribute('aria-pressed',String(selected===index));button.setAttribute('aria-label',`정답 후보 ${label}`);}
   confirm.disabled=blocked()||selected===null;
