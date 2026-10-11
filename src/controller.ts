@@ -6,6 +6,7 @@ import {GameUI,Panel,UIState,Control} from './ui';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {Sound} from './audio';
+import {adventureMusicTrack} from './music';
 import {mountGameAudioControls,type GameAudioKind} from './game-audio-controls';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {GAME_WIDTH,GAME_HEIGHT} from './layout';
@@ -78,7 +79,7 @@ function update(){
  const finaleHeld=bossFinale.hold(model.level.id,model.bossDefeated);
  if(finaleHeld){movie=true;field.presentationHeld=true;field.input.enabled=false;}
  sound.setPaused(movie||model.phase==='paused');
- sound.setTrack(model.phase==='won'?'victory':model.phase==='lost'?'defeat':model.phase==='ready'||model.phase==='review'?'title':model.level.id>=10?'boss':'battle');
+ sound.setTrack(adventureMusicTrack(model.level.id,model.phase));
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
  if(!tutorial&&!finaleHeld&&['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();

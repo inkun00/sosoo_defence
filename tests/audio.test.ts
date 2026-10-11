@@ -1,7 +1,8 @@
 import test, {TestContext} from 'node:test';
 import assert from 'node:assert/strict';
 import {Sound} from '../src/audio';
-import {TRACKS,scoreStep,MusicTrack} from '../src/music';
+import {TRACKS,scoreStep,adventureMusicTrack,MusicTrack} from '../src/music';
+import type {Phase} from '../src/model';
 import {TOWERS} from '../src/towers';
 import {towerShotScore,towerShotDuration} from '../src/tower-sounds';
 import {TowerAudioSamples,TowerAudioSample,towerShotSampleGain} from '../src/tower-audio-samples';
@@ -54,6 +55,40 @@ test('boss finale cues are distinct, remain within the voice budget, and obey ef
 test('every full arrangement contains playable, finite notes and distinct instrumentation',()=>{
  for(const track of Object.keys(TRACKS) as MusicTrack[]){const notes=Array.from({length:128},(_,i)=>scoreStep(track,i)).flat();assert.ok(notes.length>32);assert.ok(notes.every(v=>Number.isFinite(v.note)&&v.note>=20&&v.note<=110&&v.volume>0&&v.volume<=.2&&v.duration>0));}
  assert.notDeepEqual(scoreStep('title',0),scoreStep('battle',0));assert.notDeepEqual(scoreStep('opening',0),scoreStep('ending',0));
+});
+
+test('boss stages use their ominous arrangement through preparation and battle while results retain their themes',()=>{
+ const phases:Phase[]=['ready','playing','paused','won','review','lost'];
+ const normal:MusicTrack[]=['title','battle','battle','victory','title','defeat'];
+ const boss:MusicTrack[]=['boss-dread','boss-dread','boss-dread','victory','title','defeat'];
+ for(const stage of [9,10,11])for(const [index,phase]of phases.entries())assert.equal(adventureMusicTrack(stage,phase),(stage>=10?boss:normal)[index],`stage ${stage}, ${phase}`);
+});
+
+test('the boss dread loop has sustained low tones and a distinct score without the bright marching accompaniment',()=>{
+ const loop=(track:MusicTrack)=>Array.from({length:128},(_,step)=>scoreStep(track,step)).flat();
+ const notes=loop('boss-dread');
+ assert.ok(notes.length>32);
+ assert.ok(notes.every(v=>Number.isFinite(v.note)&&v.note>=20&&v.note<=110&&Number.isFinite(v.duration)&&v.duration>0&&Number.isFinite(v.volume)&&v.volume>0&&v.volume<=.2));
+ assert.ok(notes.some(v=>v.instrument==='pad'&&v.duration>=2));
+ assert.ok(notes.some(v=>v.instrument==='bass'&&v.note<=40));
+ assert.ok(notes.every(v=>v.instrument!=='pluck'&&v.instrument!=='hat'));
+ assert.notDeepEqual(notes,loop('battle'));
+ assert.notDeepEqual(notes,loop('boss'));
+});
+
+for(const action of ['pause','mute','hidden'] as const)test(`boss drones stop on ${action} and resume without a duplicate scheduler`,async t=>{
+ const {sound,doc,context}=fixture(t);sound.setTrack('boss-dread');sound.setMusic(true);sound.resume();const c=context();
+ assert.ok(c.sources.some(v=>v.stopped[0]-v.started[0]>=2));
+ c.currentTime+=.2;t.mock.timers.tick(200);const old=c.sources.slice();
+ if(action==='pause')sound.setPaused(true);else if(action==='mute')sound.setMusic(false);else{doc.hidden=true;doc.dispatchEvent(new Event('visibilitychange'));}
+ assert.ok(old.every(v=>v.stopped.at(-1)!<=c.currentTime+.05));
+ if(action==='hidden')assert.equal(c.state,'suspended');
+ const count=c.sources.length;c.currentTime+=1;t.mock.timers.tick(1000);assert.equal(c.sources.length,count);
+ if(action==='pause')sound.setPaused(false);else if(action==='mute')sound.setMusic(true);else{doc.hidden=false;doc.dispatchEvent(new Event('visibilitychange'));await Promise.resolve();}
+ assert.ok(c.sources.length>count);assert.ok(c.sources.slice(count).every(v=>v.started[0]>c.currentTime));
+ const resumed=c.sources.length;sound.resume();sound.setMusic(true);sound.setPaused(false);assert.equal(c.sources.length,resumed);
+ sound.dispose();assert.equal(c.state,'closed');assert.ok(c.sources.every(v=>v.stopped.at(-1)!<=c.currentTime+.05));
+ c.currentTime+=1;t.mock.timers.tick(1000);assert.equal(c.sources.length,resumed);
 });
 
 test('all twelve weapons have distinct, bounded sound signatures and richer higher grades',()=>{

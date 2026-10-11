@@ -72,7 +72,7 @@ export function playBossIntro(preferences:BossIntroPreferences,onComplete:()=>vo
  if(app)app.inert=true;document.body.append(root);
  let ctx:CanvasRenderingContext2D|null=null;try{ctx=canvas.getContext('2d');}catch{/* Text and CSS keep the encounter usable without a renderer. */}
  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches,sound=new Sound(),clock=new BossIntroClock(),art=new Map<string,HTMLImageElement>();
- sound.sfx=preferences.sfx;sound.setTrack('boss');sound.setPaused(true);sound.setMusic(preferences.music);sound.resume();
+ sound.sfx=preferences.sfx;sound.setTrack('boss-dread');sound.setPaused(true);sound.setMusic(preferences.music);sound.resume();
  let disposed=false,raf=0,paused=false,loaded=false,chapter=-1;root.dataset.reduced=String(reduced);root.dataset.paused='false';root.dataset.elapsed='0';root.dataset.artStatus='loading';
  let resolveDone!:()=>void;const done=new Promise<void>(resolve=>{resolveDone=resolve;});
  function finish(notify=true){
