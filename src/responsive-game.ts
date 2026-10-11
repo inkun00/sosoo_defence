@@ -11,26 +11,20 @@ export function gameScreenLayout(pixelWidth:number,pixelHeight:number):GameScree
  return {width:1280,height,compact,scale:Math.min(w/1280,h/height),pixelWidth:w,pixelHeight:h};
 }
 
-/** Reserve both battlefields and reflow answers on short or narrow duel screens. */
+/** Keep both battlefields and the action strip within one uniformly fitted screen. */
 export function duelScreenLayout(pixelWidth:number,pixelHeight:number):GameScreenLayout{
  const layout=gameScreenLayout(pixelWidth,pixelHeight);
  const {pixelWidth:w,pixelHeight:h}=layout;
- const standardScale=Math.min(w/1280,h/1104),compact=layout.compact||Math.ceil(44/standardScale)>70;
- if(!compact)return {...layout,height:1104,scale:standardScale};
- // boardY + crafting offset + two touch rows + bottom padding.
- // Three ceil-rounded touch heights need at most 3 extra logical pixels.
- const height=Math.max(layout.height+304,3*Math.max(68,Math.ceil(44*1280/w))+681,
-  h>132?Math.ceil(684/(1-132/h)):layout.height+304);
+ const height=800,compact=layout.compact||w<960||h<650;
  return {...layout,compact,height,scale:Math.min(w/1280,h/height)};
 }
 
-/** Enlarge the fitted duel by 30%; scrolling keeps its full composition reachable. */
+/** The displayed duel uses the fitted scale so the whole map stays visible. */
 export function duelScreenDisplayLayout(pixelWidth:number,pixelHeight:number):GameScreenLayout{
- const layout=duelScreenLayout(pixelWidth,pixelHeight);
- return {...layout,scale:layout.scale*1.3};
+ return duelScreenLayout(pixelWidth,pixelHeight);
 }
 
-/** Measure the scroll viewport, never the enlarged field, so resizing cannot feed back. */
+/** Measure the fixed viewport, never the fitted field, so resizing cannot feed back. */
 export function observeDuelScreen(game:Phaser.Game,viewport:HTMLElement,field:HTMLElement,changed:(layout:GameScreenLayout)=>void){
  let previous='',disposed=false;
  const resize=()=>{
@@ -41,17 +35,16 @@ export function observeDuelScreen(game:Phaser.Game,viewport:HTMLElement,field:HT
   if(signature===previous)return;previous=signature;
   field.style.width=layout.width*layout.scale+'px';field.style.height=layout.height*layout.scale+'px';
   field.dataset.screenLayout=layout.compact?'compact':'standard';
-  // FIT must read the newly enlarged parent before it recomputes the canvas size.
+  // FIT must read the newly fitted parent before it recomputes the canvas size.
   if(game.isBooted)game.scale.getParentBounds();
   if(game.isBooted&&(game.scale.width!==layout.width||game.scale.height!==layout.height))game.scale.setGameSize(layout.width,layout.height);
   changed(layout);if(game.isBooted)game.scale.refresh();
  };
  const ready=()=>{previous='';resize();};
- const scroll=()=>{if(!disposed&&game.isBooted)game.scale.updateBounds();};
  const observer=new ResizeObserver(resize);observer.observe(viewport);
  window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
- viewport.addEventListener('scroll',scroll,{passive:true});game.events.on('ready',ready);
- const dispose=()=>{if(disposed)return;disposed=true;observer.disconnect();window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);viewport.removeEventListener('scroll',scroll);game.events.off('ready',ready);game.events.off('destroy',dispose);};
+ game.events.on('ready',ready);
+ const dispose=()=>{if(disposed)return;disposed=true;observer.disconnect();window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);game.events.off('ready',ready);game.events.off('destroy',dispose);};
  game.events.once('destroy',dispose);resize();return dispose;
 }
 

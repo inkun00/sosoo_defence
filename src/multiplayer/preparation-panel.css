@@ -1,0 +1,81 @@
+.duel-preparation-panel{position:fixed;inset:0;z-index:95;display:grid;place-items:center;padding:16px;background:#050914c9;backdrop-filter:blur(5px);color:#ffedcc;overscroll-behavior:none;overflow:hidden}
+.duel-preparation-panel [hidden],.duel-preparation-panel[hidden]{display:none!important}
+.duel-preparation-card{width:min(1080px,100%);max-height:calc(100dvh - 32px);min-width:0;min-height:0;display:grid;gap:12px;padding:20px 24px;border:2px solid #c09a5e;border-radius:14px;background:linear-gradient(135deg,#303039f9,#111923fc);box-shadow:inset 0 0 0 4px #121823,0 20px 70px #000b;overflow:hidden}
+.duel-preparation-panel button{min-width:44px;min-height:44px;padding:8px 12px;border:1px solid #8c7553;border-radius:7px;background:linear-gradient(#41414a,#252833);color:#fff0d2;font:700 16px 'Malgun Gothic','Apple SD Gothic Neo',sans-serif;touch-action:manipulation;cursor:pointer}
+.duel-preparation-panel button:hover:not(:disabled){border-color:#edc782;background:linear-gradient(#585049,#33303a)}
+.duel-preparation-panel button:disabled,.duel-preparation-panel input:disabled{opacity:.5;cursor:default}
+.duel-preparation-panel button:focus-visible,.duel-preparation-panel input:focus-visible{outline:3px solid #ffc65e;outline-offset:2px}
+.duel-preparation-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:20px;min-height:44px}
+.duel-preparation-header h2{font-size:28px;line-height:1.15;letter-spacing:-.04em;margin:0;color:#ffe2a6}
+.duel-preparation-timer{display:flex;align-items:center;gap:10px;color:#e7c692}
+.duel-preparation-timer span{font-size:13px}
+.duel-preparation-timer strong{font:700 32px/1 Consolas,monospace;color:#ffd17b;font-variant-numeric:tabular-nums}
+.duel-preparation-header [data-preparation-close]{font-size:14px}
+.duel-preparation-resources{display:flex;justify-content:center;align-items:center;gap:24px;font-size:15px;font-weight:700;line-height:22px;white-space:nowrap;color:#e2d1ad}
+.duel-preparation-resources [data-preparation-stones]{color:#a8e5da}
+.duel-preparation-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.duel-preparation-tabs button[aria-selected="true"]{border-color:#ddb068;background:linear-gradient(#795627,#47361f);color:#ffe0a0}
+.duel-preparation-heroes{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;min-height:0}
+.duel-preparation-question-copy{text-align:center;min-width:0}
+.duel-preparation-progress{margin:0 0 6px;font-size:14px;line-height:18px;color:#c8b89f}
+.duel-preparation-equation{margin:0;text-align:center;font:700 clamp(28px,4vw,46px)/1.2 Consolas,'Malgun Gothic',monospace;color:#ffe0a3;white-space:nowrap}
+.duel-preparation-hint{margin:6px 0 0;font-size:14px;line-height:18px;color:#c8b89f}
+.duel-preparation-answers{display:grid;grid-template-columns:repeat(8,minmax(44px,1fr));gap:8px;min-width:0}
+.duel-preparation-answers button{min-height:58px;padding:6px 4px;font:700 clamp(19px,2.3vw,28px)/1 Consolas,monospace}
+.duel-preparation-answers button[aria-pressed="true"]{border:2px solid #ffe1a0;background:linear-gradient(#9a672b,#5b3a20);box-shadow:0 0 0 2px #dfb86830;color:#fff6df}
+.duel-preparation-hero-actions{display:flex;align-items:center;justify-content:center;gap:20px;min-width:0}
+.duel-preparation-hero-actions [data-preparation-selected]{min-width:0;font-size:16px;color:#e7ca94}
+.duel-preparation-panel .duel-preparation-primary{background:linear-gradient(#95622a,#593719);border-color:#d8ac65;color:#ffe9ba}
+.duel-preparation-hero-actions button{min-width:160px}
+.duel-preparation-feedback{margin:0;min-height:22px;line-height:22px;text-align:center;font-size:14px;color:#ffce87;overflow-wrap:anywhere}
+.duel-preparation-towers{min-width:0;min-height:0}
+.duel-preparation-shop{display:grid;gap:10px}
+.duel-preparation-tower-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.duel-preparation-tower-grid .duel-preparation-tower{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:96px;padding:10px 8px}
+.duel-preparation-tower strong{font-size:17px;color:#ffe8bc;line-height:20px}
+.duel-preparation-tower span{font-size:13px;line-height:16px;white-space:nowrap}
+.duel-preparation-tower [data-tower-details]{color:#c7bca9}
+.duel-preparation-tower [data-tower-price]{color:#ffd487}
+.duel-preparation-pages{display:flex;align-items:center;justify-content:center;gap:20px;color:#cfb994;font-size:14px}
+.duel-preparation-pages button{width:52px;padding:6px}
+.duel-preparation-purchase{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:center}
+.duel-preparation-purchase-copy{display:grid;gap:12px;min-width:0}
+.duel-preparation-purchase-name{margin:0;text-align:center;font-size:16px;line-height:20px;color:#ebc686}
+.duel-preparation-input-label{display:block;width:min(280px,100%);margin-inline:auto;color:#d6c29f;font-size:13px;line-height:18px}
+.duel-preparation-input-label input{display:block;min-height:44px;width:100%;margin:4px 0 0;padding:5px 10px;border:1px solid #c19a61;border-radius:6px;background:#0f1724;color:#ffe9ba;font:700 26px/1.2 Consolas,monospace;text-align:center}
+.duel-preparation-input-label input::placeholder{color:#a89d86;font:14px 'Malgun Gothic',sans-serif}
+.duel-preparation-keypad{display:grid;grid-template-columns:repeat(3,minmax(44px,1fr));gap:6px}
+.duel-preparation-keypad button{min-height:48px;padding:3px;font:700 26px/1 Consolas,monospace}
+.duel-preparation-purchase-actions{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px}
+@media(max-width:650px){
+ .duel-preparation-panel{padding:10px}
+ .duel-preparation-card{padding:14px;gap:10px;max-height:calc(100dvh - 20px)}
+ .duel-preparation-header{gap:8px}.duel-preparation-header h2{font-size:21px}.duel-preparation-timer span{display:none}.duel-preparation-timer strong{font-size:28px}.duel-preparation-header [data-preparation-close]{padding:6px 9px;font-size:13px}
+ .duel-preparation-resources{gap:12px;font-size:12px;line-height:20px}.duel-preparation-tabs button{font-size:15px;padding:6px}
+ .duel-preparation-heroes{gap:10px}.duel-preparation-answers{grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px}.duel-preparation-answers button{min-height:48px;font-size:24px}
+ .duel-preparation-progress{font-size:12px;margin-bottom:4px}.duel-preparation-hint{font-size:12px;margin-top:4px}.duel-preparation-equation{font-size:32px}
+ .duel-preparation-hero-actions{gap:12px;justify-content:space-between}.duel-preparation-hero-actions [data-preparation-selected]{font-size:13px}.duel-preparation-hero-actions button{min-width:118px;font-size:14px}
+ .duel-preparation-feedback{font-size:12px;line-height:18px;min-height:18px}
+ .duel-preparation-tower-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.duel-preparation-tower-grid .duel-preparation-tower{min-height:76px;gap:4px;padding:6px 4px}.duel-preparation-tower strong{font-size:15px}.duel-preparation-tower span{font-size:11px;line-height:15px}
+ .duel-preparation-purchase{grid-template-columns:minmax(0,1fr);gap:10px}.duel-preparation-purchase-copy{gap:7px}.duel-preparation-purchase-name{font-size:13px;line-height:18px}.duel-preparation-input-label{width:100%;font-size:12px}.duel-preparation-input-label input{margin-top:2px}.duel-preparation-keypad{grid-template-columns:repeat(4,minmax(44px,1fr));gap:4px}.duel-preparation-keypad button{min-height:44px;font-size:24px}.duel-preparation-purchase-actions{gap:6px}.duel-preparation-purchase-actions button{font-size:12px;padding:6px 4px}
+}
+@media(max-height:650px){
+ .duel-preparation-panel{padding:8px}.duel-preparation-card{padding:10px 12px;gap:8px;max-height:calc(100dvh - 16px)}
+ .duel-preparation-header h2{font-size:21px}.duel-preparation-timer strong{font-size:28px}.duel-preparation-resources{line-height:20px;font-size:12px}.duel-preparation-heroes{gap:8px}.duel-preparation-hint{display:none}.duel-preparation-equation{font-size:32px}.duel-preparation-answers button{min-height:44px}.duel-preparation-feedback{min-height:18px;font-size:12px;line-height:18px}
+ .duel-preparation-purchase{gap:8px}.duel-preparation-purchase-copy{gap:6px}.duel-preparation-purchase-name{font-size:13px}.duel-preparation-shop{gap:8px}
+}
+@media(min-width:560px) and (max-height:500px){
+ .duel-preparation-card{width:min(1080px,100%);padding:8px 12px;gap:6px}.duel-preparation-header{gap:12px}.duel-preparation-timer span{display:none}.duel-preparation-resources{line-height:18px;gap:20px}.duel-preparation-tabs button{padding:5px;font-size:14px}
+ .duel-preparation-heroes{grid-template-columns:minmax(138px,.6fr) minmax(366px,1fr);grid-template-rows:auto auto;gap:6px 12px;align-items:center}.duel-preparation-question-copy{grid-column:1;grid-row:1}.duel-preparation-progress{margin:0 0 4px;font-size:12px;line-height:16px}.duel-preparation-question-copy .duel-preparation-equation{font-size:clamp(15px,min(calc((100vw - 434px) / 9),calc((100vw - 80px) / 24)),32px)}.duel-preparation-answers{grid-column:2;grid-row:1/3;grid-template-columns:repeat(8,minmax(44px,1fr));gap:2px}.duel-preparation-answers button{min-height:44px;font-size:21px;padding:4px 2px}.duel-preparation-hero-actions{grid-column:1;grid-row:2;display:grid;gap:4px;justify-content:stretch;text-align:center}.duel-preparation-hero-actions [data-preparation-selected]{font-size:12px;line-height:16px}.duel-preparation-hero-actions button{min-width:0;min-height:44px;padding:6px;font-size:14px}
+ .duel-preparation-tower-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.duel-preparation-tower-grid .duel-preparation-tower{min-height:64px;gap:2px;padding:4px}.duel-preparation-tower strong{font-size:14px;line-height:18px}.duel-preparation-tower span{font-size:11px;line-height:14px}.duel-preparation-shop{gap:6px}.duel-preparation-pages{gap:16px}.duel-preparation-pages button{min-height:44px}
+ .duel-preparation-purchase{grid-template-columns:minmax(0,1fr) minmax(284px,.9fr);gap:8px 14px}.duel-preparation-purchase-copy{gap:4px}.duel-preparation-purchase-copy .duel-preparation-equation{font-size:clamp(22px,3.3vw,32px)}.duel-preparation-input-label{font-size:0;line-height:0;max-width:240px}.duel-preparation-input-label input{margin:2px 0 0}.duel-preparation-keypad{grid-template-columns:repeat(6,minmax(44px,1fr));gap:4px}.duel-preparation-keypad button{min-height:44px;font-size:24px}.duel-preparation-purchase-actions{gap:8px}.duel-preparation-purchase-actions button{font-size:13px;padding:6px}
+}
+@media(min-width:560px) and (max-height:350px){
+ .duel-preparation-card{position:relative}.duel-preparation-header h2{visibility:hidden}.duel-preparation-resources{position:absolute;top:21px;left:12px;justify-content:flex-start;gap:10px;font-size:11px}
+ .duel-preparation-tower-grid .duel-preparation-tower{min-height:52px;gap:2px;padding:3px 4px}.duel-preparation-tower strong{line-height:16px}.duel-preparation-tower span{line-height:12px}
+}
+@media(max-width:380px){.duel-preparation-card{padding:8px;gap:6px}.duel-preparation-resources{gap:8px;font-size:11px}.duel-preparation-header h2{font-size:19px}.duel-preparation-timer strong{font-size:25px}.duel-preparation-answers{gap:4px}.duel-preparation-equation{font-size:29px}.duel-preparation-tower-grid .duel-preparation-tower{min-height:70px}.duel-preparation-hero-actions{gap:6px}}
+@media(max-width:380px) and (max-height:500px){
+ .duel-preparation-heroes{gap:4px}.duel-preparation-progress{margin-bottom:2px}.duel-preparation-resources{line-height:18px}
+ .duel-preparation-purchase{gap:6px}.duel-preparation-purchase-copy{gap:3px}.duel-preparation-purchase-copy .duel-preparation-equation{font-size:24px}.duel-preparation-input-label{font-size:0;line-height:0}.duel-preparation-input-label input{margin-top:0}
+}

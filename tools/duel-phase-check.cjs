@@ -2,236 +2,264 @@ const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const output=path.resolve('test-results/duel-phases');
+const output=path.resolve('test-results/preparation-popup');
 fs.mkdirSync(output,{recursive:true});
-const url=process.env.DUEL_PHASE_URL||'http://127.0.0.1:5173/tools/duel-purchase-preview.html';
-const errors=[],checks=[],retries=[];
-let screens=0;
+const url=process.env.PREPARATION_POPUP_URL||process.env.DUEL_PHASE_URL||'http://127.0.0.1:5173/tools/duel-purchase-preview.html';
+const checks=[],errors=[],geometry=[];
+const screens=[['pc',1049,884],['desktop',1365,768],['phone-landscape',844,390],['phone-portrait',390,844]];
 let currentPage,currentLabel;
-async function check(page,name,fn){assert.ok(await page.evaluate(fn),name);checks.push(name);}
-async function revealCanvasPoint(page,x,y){
- await page.evaluate(({x,y})=>{const viewport=document.getElementById('duel-viewport');if(!viewport)return;const canvas=document.querySelector('canvas'),box=canvas.getBoundingClientRect(),outer=viewport.getBoundingClientRect();viewport.scrollTo({left:viewport.scrollLeft+box.left+x*box.width/canvas.width-outer.left-viewport.clientWidth/2,top:viewport.scrollTop+box.top+y*box.height/canvas.height-outer.top-viewport.clientHeight/2});},{x,y});
- await page.waitForTimeout(80);
+
+async function check(page,name,fn,arg){
+ const result=await page.evaluate(fn,arg);
+ assert.ok(result,name);
+ checks.push(name);
 }
-async function control(page,id){
- for(let attempt=0;attempt<2;attempt++){
-  await page.waitForFunction(id=>window.__duelPhaseTest.scene.input.enabled&&window.__duelPhaseTest.scene.controls.get(id)?.enabled,id);
-  const before=await page.evaluate(()=>window.__duelPhaseClicks.length);
-  const c=await page.evaluate(id=>{const c=window.__duelPhaseTest.scene.controls.get(id);return{x:c.x,y:c.y};},id);
-  await revealCanvasPoint(page,c.x,c.y);
-  const canvas=page.locator('canvas'),box=await canvas.boundingBox(),size=await canvas.evaluate(e=>({width:e.width,height:e.height}));
-  const x=box.x+c.x*box.width/size.width,y=box.y+c.y*box.height/size.height;
-  await page.evaluate(({id,x,y,c,attempt})=>{window.__duelPhaseRequests??=[];window.__duelPhaseRequests.push({id,x,y,c,attempt});},{id,x,y,c,attempt});
-  await page.mouse.move(x,y);await page.waitForTimeout(100);
-  await page.mouse.click(x,y,{delay:80});
-  try{
-   await page.waitForFunction(({id,before})=>window.__duelPhaseClicks.slice(before).some(click=>click.key===id),{id,before},{timeout:1500});
-   await page.waitForTimeout(260);return;
-  }catch(error){
-   if(attempt)throw error;
-   // Retry only an unreceived pointer action, never an accepted summon or fuse.
-   await page.evaluate(({id,before})=>{window.__duelPhaseRetries??=[];window.__duelPhaseRetries.push({id,unreceived:true,clicks:window.__duelPhaseClicks.slice(before)});},{id,before});
-  }
- }
+async function control(page,id,touch=false){
+ await page.waitForFunction(id=>window.__duelPhaseTest.scene.input.enabled&&window.__duelPhaseTest.scene.controls.get(id)?.enabled,id);
+ const logical=await page.evaluate(id=>{const c=window.__duelPhaseTest.scene.controls.get(id);return{x:c.x,y:c.y};},id);
+ const box=await page.locator('canvas').boundingBox();
+ const dimensions=await page.locator('canvas').evaluate(e=>({width:e.width,height:e.height}));
+ const point={x:box.x+logical.x*box.width/dimensions.width,y:box.y+logical.y*box.height/dimensions.height};
+ assert.ok(point.x>=0&&point.x<=await page.evaluate(()=>innerWidth)&&point.y>=0&&point.y<=await page.evaluate(()=>innerHeight),id+' is reachable without scrolling');
+ if(touch)await page.touchscreen.tap(point.x,point.y);else await page.mouse.click(point.x,point.y,{delay:60});
 }
-async function recipe(page){
- const planned=await page.evaluate(()=>{const p=window.__duelPhaseTest.peer.state.players[0],index=p.board.indexOf(p.heroQuestion.a+p.heroQuestion.b);if(index<0)throw Error('No fixed addition answer');return{slots:[index],round:p.round};});
- assert.deepEqual(await page.evaluate(()=>window.__duelPhaseTest.view().slots),[],'recipe starts after previous selection clears');
- for(const [selected,i] of planned.slots.entries()){
-  for(let pageIndex=0;pageIndex<8;pageIndex++){
-   if(await page.evaluate(i=>window.__duelPhaseTest.scene.controls.has('block:'+i),i))break;
-   await control(page,'blocks:page');
-  }
-  await control(page,'block:'+i);
-  await page.waitForFunction(i=>window.__duelPhaseTest.view().slots.includes(i),i,{timeout:1500});
-  assert.deepEqual(await page.evaluate(()=>window.__duelPhaseTest.view().slots),planned.slots.slice(0,selected+1),'clicked block becomes the next selected slot');
- }
- await control(page,'fuse');
- await page.waitForFunction(round=>window.__duelPhaseTest.peer.state.players[0].round===round+1&&window.__duelPhaseTest.view().slots.length===0,planned.round,{timeout:3000});
+async function fitted(page,label,phase){
+ const result=await page.evaluate(()=>{
+  const canvas=document.querySelector('canvas'),viewport=document.getElementById('duel-viewport'),field=document.getElementById('field');
+  const box=canvas.getBoundingClientRect(),v=viewport.getBoundingClientRect();
+  const mapTop=window.__duelPhaseTest.scene.boardY,mapHeight=15*38,mapLeft=37,mapWidth=24*38;
+  const scale=box.width/canvas.width;
+  const map={left:box.left+mapLeft*scale,right:box.left+(mapLeft+mapWidth)*scale,top:box.top+mapTop*scale,bottom:box.top+(mapTop+mapHeight)*scale};
+  return {size:[innerWidth,innerHeight],phase:window.__duelPhaseTest.peer.state.status,canvas:{left:box.left,right:box.right,top:box.top,bottom:box.bottom,width:box.width,height:box.height,logicalHeight:canvas.height},map,viewport:{left:v.left,right:v.right,top:v.top,bottom:v.bottom},scroll:{documentX:document.documentElement.scrollWidth-document.documentElement.clientWidth,documentY:document.documentElement.scrollHeight-document.documentElement.clientHeight,viewportX:viewport.scrollWidth-viewport.clientWidth,viewportY:viewport.scrollHeight-viewport.clientHeight,fieldX:field.scrollWidth-field.clientWidth,fieldY:field.scrollHeight-field.clientHeight},controls:[...window.__duelPhaseTest.scene.controls].map(([id,c])=>({id,x:c.x,y:c.y,w:c.w,h:c.h,enabled:c.enabled}))};
+ });
+ geometry.push({label,phase,...result});
+ assert.ok(Object.values(result.scroll).every(n=>n<=1),label+' '+phase+' has no document or game scrolling '+JSON.stringify(result.scroll));
+ assert.ok(result.canvas.left>=-1&&result.canvas.top>=-1&&result.canvas.right<=result.size[0]+1&&result.canvas.bottom<=result.size[1]+1,label+' '+phase+' entire canvas fits one viewport');
+ assert.ok(result.map.left>=result.viewport.left-1&&result.map.right<=result.viewport.right+1&&result.map.top>=result.viewport.top-1&&result.map.bottom<=result.viewport.bottom+1,label+' '+phase+' both battlefields fully fit');
+ assert.ok(result.controls.every(c=>c.x-c.w/2>=-.1&&c.x+c.w/2<=1280.1&&c.y-c.h/2>=-.1&&c.y+c.h/2<=result.canvas.logicalHeight+.1),label+' '+phase+' all canvas controls fit');
+ const enabled=result.controls.filter(c=>c.enabled);
+ assert.ok(enabled.every((a,i)=>enabled.slice(i+1).every(b=>Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2)<=.1||Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2)<=.1)),label+' '+phase+' enabled canvas controls do not overlap');
+ checks.push(label+' '+phase+' map, canvas, controls and page fit one viewport without scrolling');
+ return result;
 }
-async function cell(page,x,y){
+async function popupFits(page,label){
+ const box=await page.locator('.duel-preparation-panel').boundingBox();
+ assert.ok(box,label+' preparation popup visible');
+ const size=await page.evaluate(()=>({width:innerWidth,height:innerHeight}));
+ assert.ok(box.x>=-1&&box.y>=-1&&box.x+box.width<=size.width+1&&box.y+box.height<=size.height+1,label+' popup fits viewport');
+ const contents=await page.locator('.duel-preparation-card').evaluate(card=>{const box=card.getBoundingClientRect();return {box:{left:box.left,right:box.right,top:box.top,bottom:box.bottom},scroll:{x:card.scrollWidth-card.clientWidth,y:card.scrollHeight-card.clientHeight},controls:[...card.querySelectorAll('button,input')].filter(e=>e.getClientRects().length&&!e.closest('[hidden]')).map(e=>{const r=e.getBoundingClientRect();return {label:e.getAttribute('aria-label')||e.textContent,left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};})};});
+ assert.ok(contents.scroll.x<=1&&contents.scroll.y<=1,label+' preparation card has no clipped or scrolling content '+JSON.stringify(contents.scroll));
+ assert.ok(contents.controls.every(c=>c.left>=contents.box.left-1&&c.right<=contents.box.right+1&&c.top>=contents.box.top-1&&c.bottom<=contents.box.bottom+1&&c.left>=-1&&c.right<=size.width+1&&c.top>=-1&&c.bottom<=size.height+1),label+' preparation controls fully visible');
+ assert.ok(contents.controls.every(c=>Math.min(c.width,c.height)>=43.9),label+' preparation controls meet 44px touch size');
+ checks.push(label+' popup fits viewport');
+}
+async function snapshot(page,label,suffix){await page.screenshot({path:path.join(output,label+'-'+suffix+'.png')});}
+async function cell(page,x,y,touch){
  const boardY=await page.evaluate(()=>window.__duelPhaseTest.scene.boardY);
- await revealCanvasPoint(page,37+(x+.5)*38,boardY+(y+.5)*38);
- const canvas=page.locator('canvas'),box=await canvas.boundingBox(),size=await canvas.evaluate(e=>({width:e.width,height:e.height}));
- await page.mouse.click(box.x+(37+(x+.5)*38)*box.width/size.width,box.y+(boardY+(y+.5)*38)*box.height/size.height);
- await page.waitForTimeout(260);
+ const box=await page.locator('canvas').boundingBox(),dimensions=await page.locator('canvas').evaluate(e=>({width:e.width,height:e.height}));
+ const point={x:box.x+(37+(x+.5)*38)*box.width/dimensions.width,y:box.y+(boardY+(y+.5)*38)*box.height/dimensions.height};
+ if(touch)await page.touchscreen.tap(point.x,point.y);else await page.mouse.click(point.x,point.y,{delay:60});
 }
+
+async function activate(locator,touch){if(touch)await locator.tap();else await locator.click();}
+async function currentPlayer(page){return page.evaluate(()=>{const api=window.__duelPhaseTest;return structuredClone(api.peer.state.players[api.view().side]);});}
+async function answerIndex(page,correct=true){return page.evaluate(correct=>{const api=window.__duelPhaseTest,p=api.peer.state.players[api.view().side];return p.board.findIndex(n=>correct?n===p.heroQuestion.a+p.heroQuestion.b:n!==p.heroQuestion.a+p.heroQuestion.b);},correct);}
+async function assertClock(page,label,text,phase,state,active){
+ const actual=await page.evaluate(()=>{const ui=window.__duelPhaseTest.scene.ui,timer=ui.getByName('duel-phase-timer');return {text:timer?.text,phase:timer?.getData('phase'),state:timer?.getData('state'),active:timer?.getData('active'),oldTimers:['duel-preparation-timer','duel-battle-timer','duel-total-timer'].some(name=>ui.getByName(name))};});
+ assert.deepEqual(actual,{text,phase,state,active,oldTimers:false},label+' uses one current-phase clock');checks.push(label+' uses one current-phase clock '+text+' '+phase);
+}
+async function exercise(page,label,side,touch){
+ const popup=page.locator('.duel-preparation-panel');
+ assert.equal(await popup.isVisible(),false,label+' no preparation popup before ready');
+ await assertClock(page,label+' waiting','03:00','preparation','waiting',false);
+ await control(page,'ready',touch);
+ await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.status==='preparing');
+ await popup.waitFor({state:'visible'});
+ if(side===1){
+  await page.evaluate(()=>window.__duelPhaseTest.selectSide(1));
+  await popup.waitFor({state:'visible'});
+  await activate(popup.locator('[data-preparation-tab="heroes"]'),touch);
+  await page.waitForFunction(()=>!window.__duelPhaseTest.peer.state.players[1].quote&&!window.__duelPhaseTest.view().busy);
+ }
+ await page.evaluate(()=>window.__duelPhaseTest.advancePreparation(0));
+ await assertClock(page,label+' preparation','03:00','preparation','active',true);
+ await fitted(page,label,'preparing-popup');
+ await popupFits(page,label);
+ await check(page,label+' popup disables canvas input',()=>!window.__duelPhaseTest.scene.input.enabled);
+ await check(page,label+' map has no preparation arithmetic controls',()=>![...window.__duelPhaseTest.scene.controls.keys()].some(id=>id==='fuse'||id.startsWith('block:')||id.startsWith('slot:')));
+ assert.equal(await popup.locator('[data-answer-index]').count(),16,label+' has sixteen answer candidates');
+ assert.match(await popup.locator('[data-preparation-question]').innerText(),/\+/);
+ assert.match(await popup.locator('[data-preparation-progress]').innerText(),/다음 단계.*\d개|최고 단계/,label+' shows every-five progression');
+ assert.ok((await popup.innerText()).includes('소환석'),label+' shows summon stone count');
+ checks.push(label+' popup has fixed addition, 16 choices, progress and summon stones');
+ await snapshot(page,label,'hero-popup');
+
+ const original=await currentPlayer(page);
+ const wrong=await answerIndex(page,false);
+ await activate(popup.locator('[data-answer-index="'+wrong+'"]'),touch);
+ await activate(popup.locator('[data-preparation-confirm]'),touch);
+ await page.waitForFunction(round=>!window.__duelPhaseTest.view().busy&&window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].round===round,original.round);
+ const afterWrong=await currentPlayer(page);
+ assert.deepEqual({round:afterWrong.round,egg:afterWrong.egg,solved:afterWrong.solved,question:afterWrong.heroQuestion,board:afterWrong.board,money:afterWrong.money},{round:original.round,egg:original.egg,solved:original.solved,question:original.heroQuestion,board:original.board,money:original.money},label+' wrong hero answer preserves board, round, coins and growth');
+ assert.ok(afterWrong.fusionWrongAttempts>=(original.fusionWrongAttempts||0)+1,label+' wrong answer records attempt');
+ checks.push(label+' wrong answer preserves current hero problem');
+
+ const correct=await answerIndex(page,true);
+ await activate(popup.locator('[data-answer-index="'+correct+'"]'),touch);
+ const fuseCalls=await page.evaluate(()=>window.__duelPhaseTest.sentActions.filter(item=>(item.action?.type||item.type)==='fuse').length);
+ await page.evaluate(()=>window.__duelPhaseTest.setSendDelay(500));
+ await popup.locator('[data-preparation-confirm]').focus();
+ await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>window.__duelPhaseTest.view().busy);
+ assert.equal(await popup.locator('[data-preparation-confirm]').isDisabled(),true,label+' confirm disabled while sending');
+ assert.equal(await popup.locator('[data-answer-index]:enabled').count(),0,label+' choices disabled while sending');
+ await page.keyboard.press('Enter');
+ const disabledBox=await popup.locator('[data-answer-index="'+correct+'"] ').boundingBox();
+ if(touch)await page.touchscreen.tap(disabledBox.x+disabledBox.width/2,disabledBox.y+disabledBox.height/2);else await page.mouse.click(disabledBox.x+disabledBox.width/2,disabledBox.y+disabledBox.height/2);
+ await page.waitForFunction(round=>!window.__duelPhaseTest.view().busy&&window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].round===round+1,original.round);
+ await page.evaluate(()=>window.__duelPhaseTest.setSendDelay(0));
+ const afterBusy=await currentPlayer(page);
+ assert.equal(afterBusy.egg,original.egg+1,label+' keyboard plus busy duplicates awards exactly one stone');
+ assert.equal(afterBusy.solved,original.solved+1,label+' keyboard plus busy duplicates advances exactly one round');
+ assert.equal(await page.evaluate(()=>window.__duelPhaseTest.sentActions.filter(item=>(item.action?.type||item.type)==='fuse').length),fuseCalls+1,label+' busy keyboard and pointer submit exactly one action');
+ checks.push(label+' keyboard confirm and busy touch prevention advance one round');
+ for(let i=1;i<5;i++){
+  const before=await currentPlayer(page),index=await answerIndex(page,true);
+  await activate(popup.locator('[data-answer-index="'+index+'"]'),touch);
+  await activate(popup.locator('[data-preparation-confirm]'),touch);
+  await page.waitForFunction(round=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].round===round+1&&!window.__duelPhaseTest.view().busy,before.round);
+ }
+ const grown=await currentPlayer(page);
+ assert.equal(grown.solved,original.solved+5,label+' five correct answers count');
+ assert.equal(grown.egg,original.egg+5,label+' five correct answers earn five stones');
+ assert.equal(await page.evaluate(async()=>{const api=window.__duelPhaseTest,{duelHeroLearningLevel}=await import('/src/multiplayer/duel.ts');return duelHeroLearningLevel(api.peer.state.players[api.view().side]);}),Math.min(4,1+Math.floor(grown.solved/5)),label+' learning stage follows every five answers');
+ checks.push(label+' five correct answers advance the learning stage');
+
+ await activate(popup.locator('[data-preparation-tab="towers"]'),touch);
+ await activate(popup.locator('[data-prepare-type="basic"]'),touch);
+ await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
+ const quoted=await currentPlayer(page),q=quoted.quote;
+ assert.equal(quoted.money,grown.money,label+' opening tower calculation preserves wallet');
+ assert.ok(q.before<=q.wallet&&q.cost<=q.before,label+' tower calculation uses available coins');
+ assert.match(await popup.locator('[data-preparation-equation]').innerText(),/−|-/);
+ await popup.locator('input[name="answer"]').fill('0');
+ await activate(popup.locator('[data-preparation-buy]'),touch);
+ await page.waitForFunction(()=>!window.__duelPhaseTest.view().busy);
+ const wrongTower=await currentPlayer(page);
+ assert.equal(wrongTower.quote.nonce,q.nonce,label+' wrong tower answer keeps quote');
+ assert.equal(wrongTower.money,grown.money,label+' wrong tower answer keeps all coins');
+ assert.deepEqual(wrongTower.stock,grown.stock,label+' wrong tower answer does not award a tower');
+ await popup.locator('input[name="answer"]').fill('');
+ for(const key of String((q.before-q.cost)/1000))await activate(popup.locator('[data-preparation-key="'+key+'"]'),touch);
+ assert.equal(await popup.locator('input[name="answer"]').inputValue(),String((q.before-q.cost)/1000),label+' decimal keypad inputs exact answer');
+ await activate(popup.locator('[data-preparation-buy]'),touch);
+ await page.waitForFunction(()=>!window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
+ const bought=await currentPlayer(page);
+ assert.equal(bought.money,q.wallet-q.cost,label+' correct answer deducts only tower cost');
+ assert.equal(bought.stock.basic,(grown.stock.basic||0)+1,label+' correct answer stocks one tower');
+ assert.equal(bought.egg,grown.egg,label+' tower purchase preserves stones');
+ checks.push(label+' tower subtraction accepts touch keypad and stocks one tower');
+ await snapshot(page,label,'tower-popup');
+ await popupFits(page,label+' tower-picker');
+
+ await activate(popup.locator('[data-prepare-type="basic"]'),touch);
+ await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
+ await popupFits(page,label+' tower-calculation');
+ await activate(popup.locator('[data-preparation-tab="heroes"]'),touch);
+ await page.waitForFunction(()=>!window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
+ const switched=await currentPlayer(page);
+ assert.equal(switched.money,bought.money,label+' switching back to heroes preserves coins');
+ assert.equal(switched.egg,bought.egg,label+' switching back to heroes preserves stones');
+ assert.equal(await popup.locator('[data-answer-index]').count(),16,label+' hero grid returns after tab switch');
+ checks.push(label+' hero/tower switches preserve coins and earned growth');
+
+ await activate(popup.locator('[data-preparation-close]'),touch);
+ await popup.waitFor({state:'hidden'});
+ await check(page,label+' manual popup closure restores keyboard focus to map',()=>document.activeElement===document.querySelector('canvas'));
+ await fitted(page,label,'preparing-map');
+ await check(page,label+' closing preparation restores map input',()=>window.__duelPhaseTest.scene.input.enabled);
+ await control(page,'prepare:heroes',touch);
+ await popup.waitFor({state:'visible'});
+ assert.equal((await currentPlayer(page)).egg,bought.egg,label+' reopening preserves stones');
+ checks.push(label+' popup can close for map view and reopen');
+ await activate(popup.locator('[data-preparation-tab="towers"]'),touch);
+ await activate(popup.locator('[data-prepare-type="basic"]'),touch);
+ await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].quote&&!window.__duelPhaseTest.view().busy);
+ const boundaryBefore=await page.evaluate(()=>window.__duelPhaseTest.peer.state.players.map(p=>({stock:structuredClone(p.stock),egg:p.egg,money:p.money})));
+ const at179=await page.evaluate(()=>{const api=window.__duelPhaseTest;api.advancePreparation(179);return {status:api.peer.state.status,elapsed:api.peer.state.preparationElapsed,popup:api.preparationPanel.visible};});
+ assert.equal(at179.status,'preparing',label+' remains preparing at 179 seconds');
+ assert.equal(at179.elapsed,179,label+' exact preparation time at 179 seconds');
+ assert.equal(await popup.isVisible(),true,label+' popup remains visible at 179 seconds');
+ await assertClock(page,label+' 179 seconds','00:01','preparation','active',true);
+ assert.equal(await popup.locator('[data-preparation-clock]').innerText(),'00:01',label+' popup shows one second left');
+ await page.evaluate(()=>window.__duelPhaseTest.advancePreparation(180));
+ await popup.waitFor({state:'hidden'});
+ await check(page,label+' automatic popup closure restores keyboard focus to map',()=>document.activeElement===document.querySelector('canvas'));
+ await assertClock(page,label+' 180 seconds','03:00','battle','active',true);
+ const boundaryAfter=await page.evaluate(()=>{const api=window.__duelPhaseTest;return {status:api.peer.state.status,elapsed:api.peer.state.preparationElapsed,players:api.peer.state.players.map(p=>({stock:structuredClone(p.stock),egg:p.egg,money:p.money,quote:p.quote,escrow:p.escrow}))};});
+ assert.equal(boundaryAfter.status,'playing',label+' battle starts at 180 seconds');
+ assert.equal(boundaryAfter.elapsed,180,label+' preparation time clamps to exactly three minutes');
+ boundaryAfter.players.forEach((p,index)=>{assert.equal(p.money,0,label+' player '+index+' unused coins discarded');assert.equal(p.escrow,0,label+' player '+index+' escrow discarded');assert.equal(p.quote,null,label+' player '+index+' unfinished calculation closes');assert.deepEqual(p.stock,boundaryBefore[index].stock,label+' player '+index+' tower stock survives');assert.equal(p.egg,boundaryBefore[index].egg,label+' player '+index+' summon stones survive');});
+ await check(page,label+' battle restores map input with no arithmetic controls',()=>window.__duelPhaseTest.scene.input.enabled&&![...window.__duelPhaseTest.scene.controls.keys()].some(id=>id==='fuse'||id.startsWith('block:')||id.startsWith('slot:')||id==='prepare:heroes'));
+ await fitted(page,label,'playing');
+ await snapshot(page,label,'battle');
+ checks.push(label+' exact three-minute transition closes popup, discards unspent money and keeps earned tower stock/stones');
+
+ const location=await page.evaluate(async()=>{const api=window.__duelPhaseTest,{validDuelCell}=await import('/src/multiplayer/duel.ts');for(let y=api.view().side===0?0:8;y<(api.view().side===0?7:15);y++)for(let x=2;x<=21;x++)if(validDuelCell(api.peer.state,api.view().side,x,y))return{x,y};throw Error('No legal own-lane cell');});
+ const beforeBuild=await currentPlayer(page);
+ await control(page,'type:basic',touch);
+ await cell(page,location.x,location.y,touch);
+ await page.waitForFunction(count=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].towers.length===count+1,beforeBuild.towers.length);
+ const afterBuild=await currentPlayer(page),placed=afterBuild.towers.find(t=>t.x===location.x&&t.y===location.y);
+ assert.ok(placed.prepared,label+' reserved stock installs as a prepared tower');
+ assert.equal(afterBuild.stock.basic,beforeBuild.stock.basic-1,label+' free placement consumes one stock');
+ assert.equal(afterBuild.money,0,label+' free placement requires zero battle coins');
+ await cell(page,location.x,location.y,touch);
+ await control(page,'sell',touch);
+ await page.waitForFunction(count=>window.__duelPhaseTest.peer.state.players[window.__duelPhaseTest.view().side].towers.length===count,beforeBuild.towers.length);
+ const recovered=await currentPlayer(page);
+ assert.equal(recovered.stock.basic,beforeBuild.stock.basic,label+' recovered prepared tower returns to stock');
+ assert.equal(recovered.money,0,label+' recovering prepared tower creates no coins');
+ checks.push(label+' zero-coin battle permits own-lane stock placement and recovery');
+ await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[api.view().side].heroStock={'hero-5-0':1,'hero-6-1':1,'hero-7-2':1,'hero-8-0':1};api.scene.redraw();});
+ await fitted(page,label,'playing-legacy-heroes');
+ if(await page.evaluate(()=>window.__duelPhaseTest.scene.controls.get('heroes:next')?.enabled)){
+  await control(page,'heroes:next',touch);
+  await fitted(page,label,'playing-legacy-heroes-next');
+  await control(page,'heroes:prev',touch);
+ }
+}
+
 (async()=>{
  const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'],executablePath:'C:/Users/user/AppData/Local/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-win64/chrome-headless-shell.exe'});
  try{
-  for(const [label,width,height] of [['desktop',1280,800],['tablet',1024,768],['phone-landscape',844,390],['phone-portrait',390,844]]){
-   if(process.env.DUEL_PHASE_SCREEN&&process.env.DUEL_PHASE_SCREEN!==label)continue;
-   screens++;
-   const page=await browser.newPage({viewport:{width,height},hasTouch:label!=='desktop'});
-   currentPage=page;currentLabel=label;page.setDefaultTimeout(10000);
-   page.on('pageerror',e=>errors.push(`${label}: ${e.message}`));
-   await page.goto(url);
-   await page.waitForFunction(()=>window.__duelPhaseTest?.scene.ready);
-   await page.waitForFunction(()=>JSON.parse(document.getElementById('landscape-proof').textContent||'{}').screenReady);
-   await page.evaluate(()=>{const scene=window.__duelPhaseTest.scene,original=scene.onAction;window.__duelPhaseClicks=[];scene.onAction=key=>{window.__duelPhaseClicks.push({key,x:scene.input.activePointer.x,y:scene.input.activePointer.y});return original(key);};});
-   await page.evaluate(()=>{const p=window.__duelPhaseTest.peer.state.players[0];p.rewardRoster=['hero-3-2'];p.rewardHero='hero-3-2';window.__duelPhaseTest.scene.redraw();});
-   await check(page,label+' waiting shows one unlabeled three-minute phase countdown',()=>{const ui=window.__duelPhaseTest.scene.ui,timer=ui.getByName('duel-phase-timer');return timer.text==='03:00'&&timer.getData('state')==='waiting'&&timer.getData('phase')==='preparation'&&!timer.getData('active')&&['duel-preparation-timer','duel-battle-timer','duel-total-timer'].every(name=>!ui.getByName(name));});
-   await check(page,label+' single countdown stays inside header without overlapping settings',()=>{const scene=window.__duelPhaseTest.scene,timer=scene.ui.getByName('duel-phase-timer'),bounds=timer.getBounds(),settings=scene.controls.get('settings');return /^\d{2}:\d{2}$/.test(timer.text)&&bounds.left>=0&&bounds.right<settings.x-settings.w/2&&bounds.top>=0&&bounds.bottom<=settings.y+settings.h/2+4;});
-   await control(page,'ready');
-   await check(page,label+' preparation started',()=>window.__duelPhaseTest.peer.state.status==='preparing');
-   await check(page,label+' preparation starts an active three-minute countdown',()=>{const api=window.__duelPhaseTest;api.advancePreparation(0);const timer=api.scene.ui.getByName('duel-phase-timer');return api.peer.state.preparationElapsed===0&&timer.text==='03:00'&&timer.getData('active')&&timer.getData('state')==='active'&&timer.getData('phase')==='preparation';});
-   await check(page,label+' preparation starts with 17.6 coins',()=>window.__duelPhaseTest.peer.state.players[0].money===17600);
-   await check(page,label+' fixed hero addition has one answer slot',async()=>{const api=window.__duelPhaseTest,p=api.peer.state.players[0],{numberText}=await import('/src/math.ts');return api.scene.controls.has('fuse')&&[...api.scene.controls.keys()].filter(id=>id.startsWith('slot:')).join()==='slot:0'&&api.scene.ui.getByName('duel-hero-question').text===`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`;});
-   await check(page,label+' two independent battlefields and four castle endpoints render',()=>{const scene=window.__duelPhaseTest.scene,terrain=scene.terrain;return terrain.getByName('duel-lane-divider')&&['guardian-0','guardian-1','enemy-start-0','enemy-start-1'].every(id=>terrain.list.some(o=>o.name==='ambient-'+id));});
-   await check(page,label+' road arrows show opposite top and bottom travel',()=>{const terrain=window.__duelPhaseTest.scene.terrain,top=terrain.getByName('duel-route-arrows-0')?.getData('directions'),bottom=terrain.getByName('duel-route-arrows-1')?.getData('directions');return top?.length>0&&bottom?.length===top.length&&top.every((a,i)=>a.dx===-bottom[i].dx&&a.dy===-bottom[i].dy)&&top[0].dx<0&&bottom[0].dx>0;});
-   await check(page,label+' preparation only accumulates growth',()=>!window.__duelPhaseTest.scene.controls.has('hatch'));
-   await page.screenshot({path:path.join(output,label+'-preparation.png')});
-   await control(page,'type:basic');
-   await page.locator('.duel-purchase-panel').waitFor({state:'visible'});
-   await page.locator('.duel-purchase-panel [data-cancel]').click();await page.waitForTimeout(260);
-   await check(page,label+' tower cancel returns to hero problems',()=>!window.__duelPhaseTest.peer.state.players[0].quote&&window.__duelPhaseTest.scene.controls.has('fuse'));
-   await control(page,'type:basic');
-   await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[0].quote);
-   const answer=await page.evaluate(()=>{const q=window.__duelPhaseTest.peer.state.players[0].quote;return String((q.before-q.cost)/1000);});
-   await page.locator('.duel-purchase-answer input').fill('0');
-   await page.locator('.duel-purchase-confirm').click();await page.waitForTimeout(260);
-   await check(page,label+' wrong tower answer preserves stock',()=>!window.__duelPhaseTest.peer.state.players[0].stock.basic);
-   await page.locator('.duel-purchase-answer input').fill(answer);
-   await page.locator('.duel-purchase-confirm').click();await page.waitForTimeout(260);
-   await check(page,label+' correct tower answer stocks one',()=>window.__duelPhaseTest.peer.state.players[0].stock.basic===1);
-   await check(page,label+' tower form does not select underlying hero blocks',()=>window.__duelPhaseTest.view().slots.length===0);
-   await recipe(page);
-   await recipe(page);
-   await check(page,label+' correct additions accumulate without hatching',()=>window.__duelPhaseTest.peer.state.players[0].egg===2&&Object.values(window.__duelPhaseTest.peer.state.players[0].heroStock??{}).every(count=>count===0)&&window.__duelPhaseTest.peer.state.enemies.length===0);
-   // Exercise the unlimited-growth artwork boundary without making twelve UI recipes.
-   await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[0].egg=11;api.scene.redraw();});
-   await recipe(page);
-   await check(page,label+' growth above ten keeps addition enabled and clamps egg artwork',()=>{const api=window.__duelPhaseTest;return api.peer.state.players[0].egg===12&&api.scene.ui.list.some(o=>o.texture?.key==='duel-eggs'&&o.frame?.name==='egg-10');});
-   await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[0].egg=6;api.scene.redraw();});
-   await check(page,label+' after two minutes the preparation countdown has one minute left',()=>{const api=window.__duelPhaseTest;api.advancePreparation(120);const timer=api.scene.ui.getByName('duel-phase-timer');return api.peer.state.status==='preparing'&&api.peer.state.preparationElapsed===120&&api.scene.controls.has('fuse')&&timer.text==='01:00'&&timer.getData('active')&&timer.getData('state')==='active'&&timer.getData('phase')==='preparation';});
-   // Preserve accumulated growth and stock, but discard both wallet and escrow at the boundary.
-   await control(page,'type:basic');
-   await check(page,label+' preparation has unused wallet outside the displayed calculation before boundary',()=>{const p=window.__duelPhaseTest.peer.state.players[0];return p.money>0&&p.quote&&p.quote.wallet>p.quote.before&&p.stock.basic===1;});
-   // Current preparation quotes keep the full wallet in money. Inject legacy escrow only to verify it is discarded too.
-   await page.evaluate(()=>{const players=window.__duelPhaseTest.peer.state.players;players[0].escrow=333;players[1].escrow=666;});
-   const battleBoundary=await page.evaluate(()=>{const api=window.__duelPhaseTest;api.advanceToBattle();const timer=api.scene.ui.getByName('duel-phase-timer');return{preparationElapsed:api.peer.state.preparationElapsed,status:api.peer.state.status,text:timer.text,active:timer.getData('active'),state:timer.getData('state'),phase:timer.getData('phase'),oldTimers:['duel-preparation-timer','duel-battle-timer','duel-total-timer'].some(name=>api.scene.ui.getByName(name))};});
-   await check(page,label+' battle hides all question controls',()=>window.__duelPhaseTest.peer.state.status==='playing'&&!window.__duelPhaseTest.scene.controls.has('fuse')&&![...window.__duelPhaseTest.scene.controls.keys()].some(id=>id.startsWith('block:'))&&!window.__duelPhaseTest.peer.state.players[0].quote);
-   await check(page,label+' battle starts both players at zero coins and escrow with quotes closed',()=>window.__duelPhaseTest.peer.state.players.every(p=>p&&p.money===0&&p.escrow===0&&p.quote===null));
-   assert.deepEqual(battleBoundary,{preparationElapsed:180,status:'playing',text:'03:00',active:true,state:'active',phase:'battle',oldTimers:false});checks.push(label+' boundary replaces preparation countdown with a fresh three-minute battle countdown');
-   assert.equal(await page.locator('.duel-purchase-panel').isVisible(),false);
-   await check(page,label+' accumulated growth and reserved tower preserved for battle',()=>window.__duelPhaseTest.peer.state.players[0].egg===6&&window.__duelPhaseTest.peer.state.players[0].stock.basic===1&&Object.values(window.__duelPhaseTest.peer.state.players[0].heroStock??{}).every(count=>count===0));
-   await check(page,label+' zero coins disable an unreserved tower while reserved tower stays enabled',()=>{const scene=window.__duelPhaseTest.scene;return scene.controls.get('type:basic')?.enabled&&!scene.controls.get('type:double')?.enabled;});
-   await page.waitForFunction(()=>{const api=window.__duelPhaseTest;return [0,1].every(side=>api.peer.state.enemies.some(e=>e.target===side&&!e.hero&&api.scene.enemies.has(e.id)));},undefined,{timeout:12000});
-   const firstWave=await page.evaluate(()=>{const api=window.__duelPhaseTest;return [0,1].map(side=>{const e=api.peer.state.enemies.find(e=>e.target===side&&!e.hero),sprite=api.scene.enemies.get(e.id).sprite;return{id:e.id,distance:e.pathDistance,x:sprite.x};});});
-   await page.waitForFunction(before=>{const api=window.__duelPhaseTest;return before.every((old,side)=>{const e=api.peer.state.enemies.find(e=>e.id===old.id),sprite=api.scene.enemies.get(old.id)?.sprite;return e&&sprite&&(side===0?e.pathDistance<old.distance&&sprite.x<old.x&&sprite.flipX:e.pathDistance>old.distance&&sprite.x>old.x&&!sprite.flipX);});},firstWave,{timeout:3000});
-   await check(page,label+' live monsters walk left above and right below with matching facing',()=>{const api=window.__duelPhaseTest;return [0,1].every(side=>{const e=api.peer.state.enemies.find(e=>e.target===side&&!e.hero),sprite=api.scene.enemies.get(e.id).sprite;return sprite.flipX===(side===0)&&(side===0?sprite.y<api.scene.boardY+7*38:sprite.y>api.scene.boardY+8*38);});});
-   await check(page,label+' live battle reduces the single countdown',()=>{const timer=window.__duelPhaseTest.scene.ui.getByName('duel-phase-timer');return /^02:5\d$/.test(timer.text)&&timer.getData('active')&&timer.getData('state')==='active'&&timer.getData('phase')==='battle';});
-   await page.screenshot({path:path.join(output,label+'-battle.png')});
-   await check(page,label+' battle waves do not restore discarded preparation coins',()=>window.__duelPhaseTest.peer.state.players.every(p=>p&&p.money===0&&p.escrow===0));
-   await check(page,label+' remaining battle coins display zero with decimal precision',()=>{const api=window.__duelPhaseTest;return api.peer.state.players[0].money===0&&api.scene.ui.getByName('duel-battle-coins').text==='남은 코인 0.0';});
-   await control(page,'type:basic');await cell(page,3,2);
-   await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[0].towers.length===1);
-   assert.equal(await page.evaluate(()=>window.__duelPhaseTest.peer.state.players[0].money),0,label+' free stock placement needs no battle coins');
-   await check(page,label+' reserved tower installs free on own upper lane',()=>{const p=window.__duelPhaseTest.peer.state.players[0];return p.towers.length===1&&p.stock.basic===0&&p.towers[0].prepared&&p.towers[0].x===3&&p.towers[0].y===2;});
-   await check(page,label+' exhausted stock and zero coins disable further tower purchases',()=>!window.__duelPhaseTest.scene.controls.get('type:basic')?.enabled);
-   await cell(page,3,2);await control(page,'sell');
-   await check(page,label+' reserved tower recovery restores stock without creating coins',()=>{const p=window.__duelPhaseTest.peer.state.players[0];return p.towers.length===0&&p.stock.basic===1&&p.money===0;});
-   await control(page,'type:basic');await cell(page,3,2);
-   await check(page,label+' recovered stock can be placed again free at zero coins',()=>{const p=window.__duelPhaseTest.peer.state.players[0];return p.towers.length===1&&p.stock.basic===0&&p.towers[0].prepared&&p.money===0;});
-   // Synthetic money exercises the retained cash-build API; actual battle starts with zero and has no coin income.
-   const syntheticMoney=5000;
-   await page.evaluate(money=>{const api=window.__duelPhaseTest;api.peer.state.players[0].money=money;api.scene.redraw();},syntheticMoney);
-   await control(page,'type:basic');await cell(page,20,10);await cell(page,20,7);
-   await check(page,label+' opponent lane and separator reject installation',()=>window.__duelPhaseTest.peer.state.players[0].towers.length===1);
-   const directCost=await page.evaluate(async()=>{const api=window.__duelPhaseTest,{duelBuildCost}=await import('/src/multiplayer/duel.ts');return duelBuildCost(api.peer.state,0,'basic');});
-   await cell(page,20,2);
-   await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[0].towers.length===2);
-   assert.equal(await page.evaluate(()=>window.__duelPhaseTest.peer.state.players[0].money),syntheticMoney-directCost,label+' synthetic coins direct purchase deducts displayed cost');
-   await check(page,label+' synthetic coins install immediately across whole own lane without math',()=>{const api=window.__duelPhaseTest,p=api.peer.state.players[0];return p.towers.some(t=>t.x===20&&t.y===2&&!t.prepared)&&!p.quote&&!api.scene.controls.has('fuse');});
-   await cell(page,20,2);await control(page,'sell');
-   assert.equal(await page.evaluate(()=>window.__duelPhaseTest.peer.state.players[0].money),syntheticMoney,label+' synthetic coins purchased tower sale refunds cost');
-   await check(page,label+' synthetic coin tower sale leaves stock empty',()=>{const p=window.__duelPhaseTest.peer.state.players[0];return p.towers.length===1&&p.stock.basic===0;});
-   await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[0].money=0;api.scene.redraw();});
-   await cell(page,3,2);await control(page,'sell');
-   await check(page,label+' reclaimed tower returns to inventory at zero coins',()=>window.__duelPhaseTest.peer.state.players[0].towers.length===0&&window.__duelPhaseTest.peer.state.players[0].stock.basic===1&&window.__duelPhaseTest.peer.state.players[0].money===0);
-   await control(page,'hatch');
-   assert.equal(await page.locator('.modal:not(.hidden) [data-hero]').count(),3);
-   assert.equal(await page.locator('[data-hero-level-select] option').count(),6);
-   assert.match(await page.locator('.hero-growth-example').innerText(),/Lv\.1 최대 6명 \/ Lv\.6 최대 1명/);
-   await check(page,label+' growth picker locks canvas input',()=>!window.__duelPhaseTest.scene.input.enabled);
-   await page.locator('[data-hero-level-select]').selectOption('2');
-   assert.equal(await page.locator('.modal:not(.hidden) [data-hero]').count(),3);
-   assert.match(await page.locator('.hero-growth-summary').innerText(),/^소환석 6개$/);
-   await page.screenshot({path:path.join(output,label+'-growth-picker.png')});
-   const pickerTouch=await page.locator('.hero-level-nav button,.hero-level-nav select,.hero-growth-picker [data-hero]').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return{width:r.width,height:r.height};}));
-   assert.ok(pickerTouch.every(r=>Math.min(r.width,r.height)>=44),label+' picker touch controls at least44px');
-   await page.locator('[data-hero="hero-2-0"]').click();await page.waitForTimeout(260);
-   await check(page,label+' first level two hero uses two of six growth at friendly start in opponent lane',()=>{const api=window.__duelPhaseTest;return api.peer.state.players[0].egg===4&&api.peer.state.enemies.some(e=>e.owner===0&&e.target===1&&e.hero==='hero-2-0'&&e.pathDistance>=1&&e.pathDistance<2)&&[...api.scene.enemies.values()].some(v=>v.heroId==='hero-2-0'&&v.sprite.y>=api.scene.boardY+8*38);});
-   await page.locator('[data-hero="hero-2-1"]').click();await page.waitForTimeout(260);
-   await check(page,label+' remaining growth can summon second level two hero',()=>window.__duelPhaseTest.peer.state.players[0].egg===2&&window.__duelPhaseTest.peer.state.enemies.some(e=>e.owner===0&&e.hero==='hero-2-1'));
-   await page.locator('[data-hero="hero-2-2"]').click();await page.waitForTimeout(260);
-   await check(page,label+' six growth can summon three level two heroes',()=>window.__duelPhaseTest.peer.state.players[0].egg===0&&window.__duelPhaseTest.peer.state.enemies.filter(e=>e.owner===0&&e.hero?.startsWith('hero-2-')).length===3);
-   assert.equal(await page.locator('.modal:not(.hidden) [data-hero]:enabled').count(),0);
-   await page.locator('[data-close-heroes]').click();await page.waitForTimeout(260);
-   await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[0].egg=12;api.scene.redraw();});
-   await control(page,'hatch');
-   assert.equal(await page.locator('[data-hero-level-select] option').count(),10);
-   await page.locator('[data-hero-level-select]').selectOption('6');
-   assert.equal(await page.locator('.modal:not(.hidden) [data-hero]').count(),3);
-   assert.match(await page.locator('.hero-growth-summary').innerText(),/^소환석 12개$/);
-   assert.match(await page.locator('.hero-growth-example').innerText(),/소환석 6개가 남아요/);
-   await page.locator('[data-hero-level-select]').selectOption('10');
-   await page.screenshot({path:path.join(output,label+'-growth-picker-high.png')});
-   await page.locator('[data-hero="hero-10-2"]').click();await page.waitForTimeout(260);
-   await check(page,label+' twelve growth summons level ten and preserves two',()=>window.__duelPhaseTest.peer.state.players[0].egg===2&&window.__duelPhaseTest.peer.state.enemies.some(e=>e.owner===0&&e.hero==='hero-10-2'));
-   assert.equal(await page.locator('[data-hero-level-select] option').count(),2);
-   assert.equal(await page.locator('.hero-growth-picker').getAttribute('data-level'),'2');
-   await page.locator('[data-hero="hero-2-0"]').click();await page.waitForTimeout(260);
-   await check(page,label+' high summon remainder is still spendable',()=>window.__duelPhaseTest.peer.state.players[0].egg===0&&window.__duelPhaseTest.peer.state.enemies.filter(e=>e.owner===0&&e.hero==='hero-2-0').length===2);
-   await page.locator('[data-close-heroes]').click();await page.waitForTimeout(260);
-   await control(page,'summon-reward');
-   await check(page,label+' collected hero stays separate from growth',()=>window.__duelPhaseTest.peer.state.players[0].rewardUsed&&window.__duelPhaseTest.peer.state.players[0].egg===0&&window.__duelPhaseTest.peer.state.enemies.some(e=>e.owner===0&&e.rewardSummon));
-   await page.evaluate(()=>{const api=window.__duelPhaseTest;api.peer.state.players[0].heroStock={'hero-5-0':1};api.scene.redraw();});
-   await control(page,'summon:hero-5-0');
-   await check(page,label+' legacy hero stock still summons without growth cost',()=>window.__duelPhaseTest.peer.state.players[0].heroStock['hero-5-0']===0&&window.__duelPhaseTest.peer.state.players[0].egg===0&&window.__duelPhaseTest.peer.state.enemies.some(e=>e.owner===0&&e.hero==='hero-5-0'&&!e.rewardSummon));
-   await page.screenshot({path:path.join(output,label+'-host-battle.png')});
-   // Participant cash placement is also a synthetic-money compatibility check, separate from zero-coin battle entry.
-   await page.evaluate(()=>{const api=window.__duelPhaseTest;api.selectSide(1);const p=api.peer.state.players[1];p.money=5000;p.stock={};p.towers=[];api.scene.redraw();});
-   const guestCost=await page.evaluate(async()=>{const api=window.__duelPhaseTest,{duelBuildCost}=await import('/src/multiplayer/duel.ts');return duelBuildCost(api.peer.state,1,'basic');});
-   await control(page,'type:basic');await cell(page,3,2);
-   await check(page,label+' participant rejects host lane',()=>window.__duelPhaseTest.peer.state.players[1].towers.length===0);
-   await cell(page,3,10);
-   await page.waitForFunction(()=>window.__duelPhaseTest.peer.state.players[1].towers.length===1);
-   assert.equal(await page.evaluate(()=>window.__duelPhaseTest.peer.state.players[1].money),5000-guestCost,label+' synthetic participant coins pay direct tower cost');
-   await check(page,label+' synthetic participant coins buy and render tower on lower lane',()=>{const api=window.__duelPhaseTest,p=api.peer.state.players[1],tower=p.towers[0],visual=api.scene.towerViews.get(tower.id);return api.view().side===1&&tower.y===10&&!tower.prepared&&visual?.side===1&&visual.head.parentContainer.y>=api.scene.boardY+8*38&&!p.quote;});
-   await cell(page,3,10);
-   await check(page,label+' participant tower recovery control stays inside canvas',()=>{const api=window.__duelPhaseTest,c=api.scene.controls.get('sell');return c?.enabled&&c.x+c.w/2<=1280;});
-   await page.screenshot({path:path.join(output,label+'-participant-cash.png')});
-   await control(page,'sell');
-   await check(page,label+' synthetic participant coin tower sale refunds without stock',()=>{const p=window.__duelPhaseTest.peer.state.players[1];return p.towers.length===0&&p.money===5000&&!p.stock.basic;});
-   await page.waitForFunction(()=>JSON.parse(document.getElementById('landscape-proof').textContent).screenReady);
-   const geometry=await page.evaluate(()=>JSON.parse(document.getElementById('landscape-proof').textContent));
-   assert.ok(geometry.controls.every(c=>c.x-c.w/2>=0&&c.x+c.w/2<=1280&&c.y-c.h/2>=0&&c.y+c.h/2<=geometry.canvasHeight),label+' controls in canvas');
-   assert.ok(geometry.purchaseArea.y>=await page.evaluate(()=>window.__duelPhaseTest.scene.boardY+15*38),label+' preparation and summoning controls stay below both fields');
-   const enabled=geometry.controls.filter(c=>c.enabled);
-   assert.ok(enabled.every((a,i)=>enabled.slice(i+1).every(b=>Math.min(a.x+a.w/2,b.x+b.w/2)-Math.max(a.x-a.w/2,b.x-b.w/2)<=.1||Math.min(a.y+a.h/2,b.y+b.h/2)-Math.max(a.y-a.h/2,b.y-b.h/2)<=.1)),label+' enabled pointer controls do not overlap');
-   if(label.startsWith('phone-')){
-    const box=await page.locator('canvas').boundingBox();
-    const scale=box.width/1280;
-    assert.ok(geometry.controls.filter(c=>c.enabled).every(c=>Math.min(c.w,c.h)*scale>=43.9),label+' touch controls at least44px');
+  for(const [label,width,height]of screens){
+   const requestedScreen=process.env.PREPARATION_POPUP_SCREEN||process.env.DUEL_PHASE_SCREEN;
+   if(requestedScreen&&requestedScreen!==label)continue;
+   for(const side of [0,1]){
+    if(process.env.PREPARATION_POPUP_SIDE&&Number(process.env.PREPARATION_POPUP_SIDE)!==side)continue;
+    currentLabel=label+'-side-'+side;
+    const page=await browser.newPage({viewport:{width,height},hasTouch:label.startsWith('phone')});
+    currentPage=page;page.setDefaultTimeout(10000);
+    page.on('pageerror',error=>errors.push(currentLabel+': '+error.message));
+    await page.goto(url);
+    await page.waitForFunction(()=>window.__duelPhaseTest?.scene.ready);
+    await page.waitForFunction(()=>JSON.parse(document.getElementById('landscape-proof').textContent||'{}').screenReady);
+    await fitted(page,currentLabel,'waiting');
+    await exercise(page,currentLabel,side,label.startsWith('phone'));
+    console.log(currentLabel+' passed');
+    await page.close();
    }
-   fs.writeFileSync(path.join(output,label+'-geometry.json'),JSON.stringify(geometry,null,2));
-   const screenRetries=await page.evaluate(()=>window.__duelPhaseRetries??[]);retries.push(...screenRetries.map(retry=>({screen:label,...retry})));
-   await page.screenshot({path:path.join(output,label+'-deployed.png')});
-   await check(page,label+' finished match shows an inactive zero countdown',async()=>{const api=window.__duelPhaseTest;await api.send({type:'surrender'});const timer=api.scene.ui.getByName('duel-phase-timer');return api.peer.state.status==='finished'&&timer.text==='00:00'&&!timer.getData('active')&&timer.getData('state')==='complete'&&timer.getData('phase')==='battle';});
-   await page.close();
   }
-  assert.deepEqual(errors,[],'browser runtime errors');
-  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({checks,errors,retries},null,2));
-  console.log(JSON.stringify({passed:checks.length,screens,errors,retries,output},null,2));
- }catch(e){
-  console.error('Failed screen',currentLabel,e);
+  assert.deepEqual(errors,[],'no browser runtime errors');
+  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({checks,errors,geometry},null,2));
+  console.log(JSON.stringify({passed:checks.length,errors,output},null,2));
+ }catch(error){
   if(currentPage&&!currentPage.isClosed()){
-   await currentPage.screenshot({path:path.join(output,currentLabel+'-failure.png')});
-   const state=await currentPage.evaluate(()=>({phase:window.__duelPhaseTest?.peer.state.status,player:window.__duelPhaseTest?.peer.state.players[0],inputEnabled:window.__duelPhaseTest?.scene.input?.enabled,busy:window.__duelPhaseTest?.view().busy,canvas:{width:document.querySelector('canvas')?.width,height:document.querySelector('canvas')?.height},modal:[...document.querySelectorAll('.modal')].map(e=>({className:e.className,phase:e.dataset.phase})),controls:[...(window.__duelPhaseTest?.scene.controls??[])].map(([id,c])=>({id,x:c.x,y:c.y,enabled:c.enabled,hit:document.elementFromPoint(document.querySelector('canvas').getBoundingClientRect().x+c.x*document.querySelector('canvas').getBoundingClientRect().width/document.querySelector('canvas').width,document.querySelector('canvas').getBoundingClientRect().y+c.y*document.querySelector('canvas').getBoundingClientRect().height/document.querySelector('canvas').height)?.outerHTML.slice(0,300)}))}));
-   const inputs=await currentPage.evaluate(()=>({requests:window.__duelPhaseRequests,clicks:window.__duelPhaseClicks,retries:window.__duelPhaseRetries}));
-   fs.writeFileSync(path.join(output,currentLabel+'-failure.json'),JSON.stringify({checks,errors,state,inputs},null,2));
+   await snapshot(currentPage,currentLabel,'failure');
+   const state=await currentPage.evaluate(()=>({status:window.__duelPhaseTest?.peer.state.status,side:window.__duelPhaseTest?.view().side,player:window.__duelPhaseTest?.peer.state.players[window.__duelPhaseTest?.view().side||0],body:document.body.innerText,popup:document.querySelector('.duel-preparation-panel')?.outerHTML,controls:[...(window.__duelPhaseTest?.scene.controls||[])].map(([id,c])=>({id,x:c.x,y:c.y,w:c.w,h:c.h,enabled:c.enabled}))}));
+   fs.writeFileSync(path.join(output,currentLabel+'-failure.json'),JSON.stringify({error:String(error),checks,errors,geometry,state},null,2));
   }
-  throw e;
+  throw error;
  }finally{await browser.close();}
-})().catch(e=>{console.error(e);process.exitCode=1;});
+})().catch(error=>{console.error(error);process.exitCode=1;});

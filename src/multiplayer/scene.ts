@@ -4,14 +4,13 @@ import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
-import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_START_MONEY,duelScore,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects,duelHeroLearningLevel} from './duel';
+import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_START_MONEY,duelScore,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects} from './duel';
 import {duelCountdown,formatDuelClock} from './duel-clock';
 import {duelMap,duelRoadCell,duelLaneOffset,DUEL_LANE_ROWS,DUEL_BATTLE_ROWS} from './duel-maps';
 import {HEROES,WORKSHEET_HEROES,heroSpec,worksheetHeroSpec,heroesAtLevel} from './heroes';
 import {heroSummonStyle} from '../hero-summon-style';
 import {HERO_SPRITE_CELL,drawHeroSpriteAtlas} from '../hero-sprite';
 import {HitEquationPopups} from '../hit-equations';
-import {learningDescription} from './decimal-boards';
 import {AmbientProps} from '../ambient-props';
 import {playTowerProjectile,clearTowerProjectiles} from '../tower-projectiles';
 import {DuelShotStream} from './shot-stream';
@@ -20,8 +19,7 @@ import {HeroSummonStream} from './hero-summon-stream';
 import {HeroSummonEffects} from './hero-summon-effects';
 import {DuelHeroEffectBadges,loadDuelHeroEffectBadges,registerDuelHeroEffectBadges} from './hero-effect-badges';
 import type {GameScreenLayout} from '../responsive-game';
-const X=37,T=38,LOWER_SHIFT=304;
-const HERO_EFFECT_LABELS={haste:'아군 이동 가속',vitality:'아군 체력 강화',shield:'아군 보호막', 'enemy-slow':'상대 타워 감속', 'tower-haste':'아군 타워 가속'};
+const X=37,T=38;
 export interface DuelPurchaseArea{x:number;y:number;width:number;height:number;compact:boolean;minimumTouch:number;}
 export interface DuelView{state:DuelState|null;side:Side;room:string;selectedType:string;shopPage:number;slots:number[];selectedTower:number;message:string;busy:boolean;connected:boolean;computer?:ComputerView;}
 export class DuelScene extends Phaser.Scene{
@@ -37,22 +35,21 @@ export class DuelScene extends Phaser.Scene{
  private ambient?:AmbientProps;
  private heroSummonStream=new HeroSummonStream();private heroSummonEffects?:HeroSummonEffects;
  private loadingHeroes=new Set<number>();private heroRetry=new Map<number,number>();
- private screenLayout:GameScreenLayout={width:1280,height:1104,compact:false,scale:1,pixelWidth:1280,pixelHeight:1104};
- private blockPage=0;private heroPage=0;
+ private screenLayout:GameScreenLayout={width:1280,height:800,compact:false,scale:1,pixelWidth:1280,pixelHeight:800};
+ private heroPage=0;
  private lastTouchAt=-Infinity;
  private acceptsMouse(p:Phaser.Input.Pointer){const source=(p.event as MouseEvent&{sourceCapabilities?:{firesTouchEvents:boolean}|null}).sourceCapabilities;return source?!source.firesTouchEvents:performance.now()-this.lastTouchAt>=800;}
- private hitBounds={left:X+4,right:X+24*T-4,top:136,bottom:132+DUEL_BATTLE_ROWS*T-4};
- private get minimumTouch(){return Math.max(this.screenLayout.compact?68:56,Math.ceil(44/this.screenLayout.scale));}
- private get boardY(){return this.screenLayout.compact?this.minimumTouch+45:132;}
- private get shopPageSize(){if(!this.screenLayout.compact)return 6;return Math.max(2,Math.min(6,Math.floor((this.screenLayout.height-this.minimumTouch*3-94)/(this.minimumTouch+6))));}
- private get compactBlockColumns(){return this.minimumTouch>114?2:this.minimumTouch>74?4:8;}
- private get blockPageCount(){return Math.ceil(16/(this.compactBlockColumns*2));}
+ private hitBounds={left:X+4,right:X+24*T-4,top:122,bottom:118+DUEL_BATTLE_ROWS*T-4};
+ private get minimumTouch(){return 56;}
+ private get boardY(){return this.screenLayout.compact?112:118;}
+ private get shopPageSize(){return 6;}
  get shopPageCount(){return Math.ceil(TOWERS.length/this.shopPageSize);}
- getPurchaseArea():DuelPurchaseArea{return{x:8,y:this.screenLayout.compact?this.boardY+299+LOWER_SHIFT:445+LOWER_SHIFT,width:this.screenLayout.compact?1264:982,height:this.screenLayout.compact?this.screenLayout.height-this.boardY-307-LOWER_SHIFT:this.screenLayout.height-772,compact:this.screenLayout.compact,minimumTouch:this.minimumTouch};}
- cycleBlockPage(){this.blockPage=(this.blockPage+1)%this.blockPageCount;this.uiSignature='';this.redraw();}
+ getPurchaseArea():DuelPurchaseArea{const y=this.boardY+DUEL_BATTLE_ROWS*T+38;return{x:8,y,width:982,height:this.screenLayout.height-y-8,compact:this.screenLayout.compact,minimumTouch:this.minimumTouch};}
+ // Retained for old preview entry points; preparation answers now live in the popup.
+ cycleBlockPage(){}
  changeHeroPage(change:number){this.heroPage=Math.max(0,this.heroPage+change);this.uiSignature='';this.redraw();}
  setScreenLayout(layout:GameScreenLayout){
-  const previousY=this.boardY;this.screenLayout=layout;this.blockPage=Math.min(this.blockPage,this.blockPageCount-1);this.uiSignature='';this.signature='';
+  const previousY=this.boardY;this.screenLayout=layout;this.uiSignature='';this.signature='';
   Object.assign(this.hitBounds,{top:this.boardY+4,bottom:this.boardY+DUEL_BATTLE_ROWS*T-4});
   if(!this.ready)return;
   if(previousY!==this.boardY){this.clearShotEffects();this.guides.clear();this.heroSummonEffects?.destroy();this.heroSummonEffects=new HeroSummonEffects(this,{left:X,right:X+24*T,top:this.boardY,bottom:this.boardY+DUEL_BATTLE_ROWS*T},this.reduced);
@@ -73,8 +70,7 @@ export class DuelScene extends Phaser.Scene{
   this.terrain=this.add.container(0,0);this.units=this.add.container(0,0);this.guides=this.add.graphics().setDepth(8);this.ui=this.add.container(0,0).setDepth(10);this.hitEquations=new HitEquationPopups(this,this.hitBounds);this.heroSummonEffects=new HeroSummonEffects(this,{left:X,right:X+24*T,top:this.boardY,bottom:this.boardY+DUEL_BATTLE_ROWS*T},this.reduced);this.ready=true;this.redraw();
   const cell=(p:Phaser.Input.Pointer)=>{if(p.x>=X&&p.x<X+24*T&&p.y>=this.boardY&&p.y<this.boardY+DUEL_BATTLE_ROWS*T)this.onCell(Math.floor((p.x-X)/T),Math.floor((p.y-this.boardY)/T));};
   this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{if(p.wasTouch)this.lastTouchAt=performance.now();else if(this.acceptsMouse(p))cell(p);});
-  // Touch scrolls the enlarged view. Commit taps only after release so a swipe
-  // cannot select a problem, summon a hero or place a tower along the way.
+  // Commit touch taps after release so a dragged finger does not place a tower.
   this.input.on('pointerup',(p:Phaser.Input.Pointer)=>{
    if(!p.wasTouch)return;this.lastTouchAt=performance.now();
    if(p.wasCanceled||p.getDistance()*this.screenLayout.scale>10)return;
@@ -100,10 +96,10 @@ export class DuelScene extends Phaser.Scene{
  }
  private towerIcon(g:Phaser.GameObjects.Container,x:number,y:number,id:string,size:number){const spec=towerType(id)!;g.add(this.add.image(x,y,'dungeon-turret-parts-v1','base').setDisplaySize(size,size));const head=this.add.image(x,y-size*.06,'dungeon-tower-heads-'+spec.sheet+'-v1',id).setOrigin(.5,.64).setDisplaySize(size*.84,size*.84);g.add(head);return head;}
  redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];if(s?.status!=='playing')this.guides.clear();if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
-  const compact=this.screenLayout.compact,height=this.screenLayout.height,touch=this.minimumTouch,headerHeight=compact?touch+6:76;
+  const compact=this.screenLayout.compact,height=this.screenLayout.height,touch=this.minimumTouch,headerHeight=76;
   const headerButtonWidth=Math.max(115,touch),settingsWidth=Math.max(80,touch),leaveX=compact?1266-headerButtonWidth/2:1200,lobbyX=compact?leaveX-headerButtonWidth-8:1070,settingsX=compact?lobbyX-(headerButtonWidth+settingsWidth)/2-8:963,headerInfoRight=compact?settingsX-settingsWidth/2-10:980;
   const titleX=compact?headerInfoRight*.14:136,roomX=compact?headerInfoRight*.38:359,budgetX=compact?headerInfoRight*.62:615,clockX=compact?headerInfoRight*.88:850,clock=duelCountdown(s);
-  const signature=JSON.stringify([compact,height,this.blockPage,this.heroPage,v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,s?.mapId,s?.status,s?.learningLevel,clock.seconds,clock.state,clock.phase,s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.accountLevel,p.flame,p.money,p.combatScore,p.questionScore,p.kills,p.answeredQuestions,p.solved,p.heroQuestion,p.stock,p.heroStock,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
+  const signature=JSON.stringify([compact,height,this.heroPage,v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,s?.mapId,s?.status,s?.learningLevel,clock.seconds,clock.state,clock.phase,s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.accountLevel,p.flame,p.money,p.combatScore,p.questionScore,p.kills,p.answeredQuestions,p.solved,p.heroQuestion,p.stock,p.heroStock,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
   if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.syncTowerEffects();this.syncHeroSummons();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,compact?headerHeight/2+3:44,1264,headerHeight);this.text(this.ui,titleX,compact?headerHeight/2:40,'소수 디펜스 · 1:1',compact?20:24);this.text(this.ui,roomX,compact?headerHeight/2-15:25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,roomX,compact?headerHeight/2+16:56,`Lv.${s?duelLevel(s):1} · ${duelMap(s?.mapId).name}`,15,'#ffca7e');
   const preparing=s?.status==='preparing',stockTotal=Object.values(p?.stock??{}).reduce((sum,count)=>sum+count,0);
@@ -116,98 +112,52 @@ export class DuelScene extends Phaser.Scene{
   this.button('lobby',lobbyX,compact?headerHeight/2+3:42,headerButtonWidth,Math.max(touch,55),'대기실',!v.busy);this.button('leave',leaveX,compact?headerHeight/2+3:42,headerButtonWidth,Math.max(touch,55),'나가기',!v.busy);
   const terrainSig=JSON.stringify([s?.mapId,s?.players.map(p=>p?.towers.map(t=>[t.id,t.typeId,t.x,t.y,t.enabled])),v.side]);
   if(terrainSig!==this.signature){this.signature=terrainSig;this.drawTerrain();}
-  for(const side of [0,1] as Side[]){const player=s?.players[side];this.text(this.ui,side===0?265:734,compact?headerHeight+28:117,`점수 ${duelScore(player).toLocaleString('ko-KR')} · 전투 ${(player?.combatScore??0).toLocaleString('ko-KR')} / 문제 ${(player?.questionScore??0).toLocaleString('ko-KR')}`,14,side===0?'#9adbea':'#f7bd85').setName('duel-score-'+side);}
+  for(const side of [0,1] as Side[]){const player=s?.players[side];this.text(this.ui,side===0?265:734,compact?91:97,`점수 ${duelScore(player).toLocaleString('ko-KR')} · 전투 ${(player?.combatScore??0).toLocaleString('ko-KR')} / 문제 ${(player?.questionScore??0).toLocaleString('ko-KR')}`,14,side===0?'#9adbea':'#f7bd85').setName('duel-score-'+side);}
   this.drawCastleNames(s);
   this.drawCastleHealth(s);
-  const shopTop=compact?headerHeight+8:84,shopHeight=compact?height-shopTop-8:preparing?612+LOWER_SHIFT:572+LOWER_SHIFT,shopItems=this.shopPageSize,page=Math.min(v.shopPage,this.shopPageCount-1),cardHeight=compact?touch:Math.max(66,touch),cardTop=compact?headerHeight+60:162,cardGap=compact?6:4,pageY=compact?height-touch*1.5-28:preparing?609+LOWER_SHIFT:622+LOWER_SHIFT;
-  this.panel(this.ui,1130,shopTop+shopHeight/2,266,shopHeight);this.text(this.ui,1130,compact?shopTop+18:113,preparing?'타워 구입 문제':'타워 배치',23);if(s?.status==='playing')this.text(this.ui,1130,compact?shopTop+43:144,`설치 ${p?.towers.length??0}/14 · 비축 ${stockTotal}개`,13,'#c3b8a8').setName('duel-shop-phase-note');
+  const shopTop=84,shopHeight=height-shopTop-8,shopItems=this.shopPageSize,page=Math.min(v.shopPage,this.shopPageCount-1),cardHeight=70,cardTop=162,cardGap=6,pageY=654;
+  this.panel(this.ui,1130,shopTop+shopHeight/2,266,shopHeight);this.text(this.ui,1130,113,preparing?'타워 구입 문제':'타워 배치',23);if(s?.status==='playing')this.text(this.ui,1130,144,`설치 ${p?.towers.length??0}/14 · 비축 ${stockTotal}개`,13,'#c3b8a8').setName('duel-shop-phase-note');
   TOWERS.slice(page*shopItems,page*shopItems+shopItems).forEach((type,i)=>{
    const stored=p?.stock?.[type.id]??0,cost=preparing&&p?.quote?.typeId===type.id?p.quote.cost:s&&p?duelBuildCost(s,v.side,type.id):towerPrice(type,DUEL_START_MONEY,1),unlocked=s?canUseDuelTower(s,v.side,type.id):type.unlock<=1,capacity=preparing||(p?.towers.length??0)<14&&(type.unit!==10||(p?.towers.filter(t=>t.unit===10).length??0)<3),open=!!s&&!!p&&!v.busy&&canPurchaseDuelTower(s)&&capacity&&unlocked&&(stored>0||p.money>=cost);
    const c=this.button('type:'+type.id,1130,cardTop+cardHeight/2+i*(cardHeight+cardGap),228,cardHeight,'',open,v.selectedType===type.id);this.towerIcon(c,-83,0,type.id,53);
    this.text(c,-49,-20,type.name+' · '+GRADE_NAMES[type.grade],15,'#f6ecdf',false).setOrigin(0,.5);this.text(c,-49,1,'공격 '+numberText(type.unit)+` · 비축 ${stored}개`,14,stored?'#a3e9dd':'#c9bbaa',false).setOrigin(0,.5);const priceLabel=s?.status==='playing'?(stored>0?'비축 · 무료 설치':numberText(cost)+' 코인 · '+((p?.money??0)>=cost?'바로 설치':'코인 부족')):unlocked?numberText(cost)+' 코인':`대전 Lv.${type.unlock} 해금`;this.text(c,-49,21,priceLabel,16,'#ffca7e',false).setOrigin(0,.5);
    this.controls.get('type:'+type.id)!.label=type.name+' 공격 '+numberText(type.unit)+` 비축 ${stored}개 `+(preparing?'뺄셈 문제로 비축 가격 '+numberText(cost):priceLabel);
   });
-  if(compact&&touch>124)this.button('page:cycle',1130,pageY,228,touch,`${page+1}/${this.shopPageCount} · 다음 타워 ▶`,this.shopPageCount>1&&!v.busy,false,20);
-  else{this.button('page:prev',compact?1007+Math.max(64,touch)/2:1045,pageY,Math.max(64,touch),Math.max(touch,56),'◀',page>0);this.text(this.ui,1130,pageY,`${page+1}/${this.shopPageCount}`,19);this.button('page:next',compact?1253-Math.max(64,touch)/2:1215,pageY,Math.max(64,touch),Math.max(touch,56),'▶',page<this.shopPageCount-1);}
-  if(preparing&&p){if(compact)this.drawCompactCrafting(p,s,v);else this.drawPreparation(p,v);}
-  else if(s?.status==='playing'&&p)this.drawBattleReserve(p,v);
-  else this.drawWaitingPanel();
+  this.button('page:prev',1045,pageY,64,touch,'◀',page>0);this.text(this.ui,1130,pageY,`${page+1}/${this.shopPageCount}`,19);this.button('page:next',1215,pageY,64,touch,'▶',page<this.shopPageCount-1);
+  if(s?.status==='playing'&&p)this.drawBattleReserve(p,v);
+  else {this.drawWaitingPanel();const area=this.getPurchaseArea();
+   if(preparing)this.button('prepare:heroes',499,area.y+area.height/2,350,touch,'준비 문제 풀기',!v.busy,true,21);
+   else if(s?.status==='waiting')this.button('ready',499,area.y+area.height/2,310,touch,'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
+  }
   const selected=p?.towers.find(t=>t.id===v.selectedTower);
-  const shopBottomY=compact?height-touch/2-10:preparing?667+LOWER_SHIFT:696+LOWER_SHIFT;
-  if(selected){this.text(this.ui,compact?1045:1085,shopBottomY,compact?'자동 공격':'타워 자동 공격',16,'#c1b7aa');this.button('sell',compact?1266-Math.max(105,touch)/2:1210,shopBottomY,Math.max(105,touch),Math.max(touch,57),'회수',!v.busy);}
-  else if(preparing)this.button('prepare:heroes',1130,shopBottomY,228,Math.max(touch,56),'영웅 소환석 문제',!v.busy,true,18);
-  else if(!compact&&s?.status==='playing')this.text(this.ui,1130,697+LOWER_SHIFT,v.selectedType?'내 전장 빈 바닥에 바로 설치':p?.money?'비축 무료 · 코인이 있으면 바로 설치':'비축 타워를 골라 무료 배치',16,'#c1b7aa');
-  const reserve=p?.rewardHero?worksheetHeroSpec(p.rewardHero):null;
+  const shopBottomY=height-42;
+  if(selected){this.text(this.ui,1085,shopBottomY,'타워 자동 공격',16,'#c1b7aa');this.button('sell',1210,shopBottomY,105,touch,'회수',!v.busy);}
+  else if(!v.computer)this.button('heroes',1130,shopBottomY,228,touch,'영웅 도감',true,false,16);
+  if(s?.status==='playing')this.text(this.ui,1130,705,v.selectedType?'내 전장 빈 바닥에 바로 설치':p?.money?'비축 무료 · 코인이 있으면 바로 설치':'비축 타워를 골라 무료 배치',14,'#c1b7aa');
   // Prepare every reserved hero atlas before its manually timed entrance.
   for(const player of s?.players??[]){const companion=player?.rewardHero?worksheetHeroSpec(player.rewardHero):null;if(companion)this.ensureHero(companion.level,true);for(const [id,count]of Object.entries(player?.heroStock??{})){const hero=count>0?heroSpec(id):null;if(hero)this.ensureHero(hero.level);}}
-  if(!compact&&!preparing)this.text(this.ui,1130,657+LOWER_SHIFT,reserve?`✦ ${reserve.name} Lv.${reserve.level} · 효과 3종`:'학습지 암호를 풀면 특별 영웅 획득',11,'#ffca7e');
-  if(!v.computer&&!selected&&(!compact||!preparing))this.button('heroes',compact?1130:1069,compact?shopBottomY:756+LOWER_SHIFT,compact?228:Math.max(113,touch),Math.max(touch,57),'영웅 도감',true,false,16);
-  const companionLabel=p?.rewardUsed?'영웅 출전 완료':reserve?'소환할 때까지 대기':'수집 영웅 없음';
-  if(!v.computer&&!selected&&!compact)this.text(this.ui,1192,756+LOWER_SHIFT,companionLabel,12,p?.rewardUsed?'#a3e9dd':'#c1b7aa');
-  const messageY=compact?this.boardY+283+LOWER_SHIFT:424+LOWER_SHIFT;
-  if(s?.status==='waiting')this.button('ready',485,this.getPurchaseArea().y+touch/2+23,310,Math.max(touch,57),'준비 완료',!!s.players[1]&&!p?.ready&&!v.busy,true,19);
-  else {const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'굽이치는 길을 지켜요 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,messageY,message,compact?16:18,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
+  if(s?.status!=='waiting'){const message=v.busy?'호스트가 조작을 확인하고 있어요':v.message||(!v.connected?'연결을 다시 확인하는 중이에요':s?.log.at(-1)||'굽이치는 길을 지켜요 · 내 영웅은 상대 불꽃으로!');const m=this.text(this.ui,493,this.getPurchaseArea().y-15,message,16,'#ffcf8c');m.setScale(Math.min(1,925/Math.max(1,m.width)));}
   this.syncShots();this.syncEnemies();this.syncTowerEffects();this.syncHeroSummons();this.onControls();
  }
- private drawCompactCrafting(p:DuelPlayer|null|undefined,s:DuelState|null,v:DuelView){
-  const area=this.getPurchaseArea(),touch=area.minimumTouch,columns=this.compactBlockColumns,dense=columns<8,perPage=columns*2,boardWidth=dense?columns*(touch+6)+20:columns*(touch+2)+12,forgeLeft=8+boardWidth+6,forgeWidth=982-boardWidth-6;
-  const rowHeight=Math.max(touch,Math.min(92,(area.height-25)/2)),firstY=area.y+21+rowHeight/2,secondY=firstY+rowHeight+4;
-  this.panel(this.ui,8+boardWidth/2,area.y+area.height/2,boardWidth,area.height);this.panel(this.ui,forgeLeft+forgeWidth/2,area.y+area.height/2,forgeWidth,area.height);
-  const stage=p?duelHeroLearningLevel(p):1,solved=p?.solved??0;
-  this.text(this.ui,8+boardWidth/2,area.y+12,`문제 ${stage}단계 · 정답 ${solved}개`,19,'#ffca7e').setName('duel-hero-stage');
-  const board=p?.board??Array(16).fill(0),start=this.blockPage*perPage,cellWidth=(boardWidth-12)/columns;
-  board.slice(start,start+perPage).forEach((n,index)=>{const i=start+index;this.button('block:'+i,14+cellWidth*(index%columns+.5),index<columns?firstY:secondY,cellWidth-2,rowHeight,p?numberText(n):'?',!!p&&s?.status==='preparing'&&!v.busy&&!v.slots.includes(i),v.slots.includes(i),Math.max(26,touch*.35));});
-  const question=p?`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`:'덧셈의 정답 블록을 골라요';const equation=this.text(this.ui,forgeLeft+forgeWidth/2,area.y+12,question,26,'#ffca7e').setName('duel-hero-question');equation.setScale(Math.min(1,(forgeWidth-12)/Math.max(1,equation.width)));
-  const fuseWidth=Math.max(120,Math.min(touch*1.25,forgeWidth-touch-22)),slotWidth=forgeWidth-fuseWidth-22,slotX=forgeLeft+8+slotWidth/2;
-  this.button('slot:0',slotX,firstY,slotWidth,rowHeight,p&&v.slots[0]!==undefined?numberText(p.board[v.slots[0]]):'정답 블록 선택',!!p&&!v.busy,false,Math.max(26,touch*.26));
-  const fuseX=forgeLeft+forgeWidth-fuseWidth/2-3;this.button('fuse',fuseX,firstY,fuseWidth,rowHeight,'정답 확인',!!p&&v.slots.length===1&&s?.status==='preparing'&&!v.busy,true,21);
-  if(p)this.controls.get('slot:0')!.label=`제시된 덧셈 ${numberText(p.heroQuestion.a)} 더하기 ${numberText(p.heroQuestion.b)}의 정답 ${v.slots[0]===undefined?'선택 전':numberText(p.board[v.slots[0]])} · 선택 해제`;
-  const growth=p?.egg??0,eggX=forgeLeft+45;this.ui.add(this.add.image(eggX,secondY,'duel-eggs','egg-'+Math.max(1,Math.min(10,growth))).setDisplaySize(45,Math.min(76,rowHeight)).setAlpha(growth?1:.3));
-  const infoWidth=forgeWidth-95-(dense?touch+10:0),infoX=forgeLeft+90+infoWidth/2;
-  const stones=this.text(this.ui,infoX,secondY,`영웅 소환석 ${growth}개`,19,'#ffca7e').setName('duel-hero-summon-stones').setData('count',growth);stones.setScale(Math.min(1,infoWidth/Math.max(1,stones.width)));
-  if(dense)this.button('blocks:page',forgeLeft+forgeWidth-touch/2-5,secondY,touch,rowHeight,`${this.blockPage+1}/${this.blockPageCount} ▶`,true,false,20);
- }
- private drawPreparation(p:DuelPlayer,v:DuelView){
-  const area=this.getPurchaseArea(),touch=area.minimumTouch,stage=duelHeroLearningLevel(p),progress=stage<4?`다음 단계까지 정답 ${5-p.solved%5}개`:'최고 단계 유지';this.panel(this.ui,240,area.y+area.height/2,467,area.height-8);this.text(this.ui,240,area.y+12,`정답 블록 · 문제 ${stage}단계`,20).setName('duel-hero-stage');
-  this.text(this.ui,240,area.y+34,learningDescription(stage),12,'#ffca7e').setName('duel-hero-description');
-  const rowHeight=Math.max(touch,(area.height-56)/4-4),firstY=area.y+48+rowHeight/2;
-  p.board.forEach((n,i)=>this.button('block:'+i,76+i%4*110,firstY+Math.floor(i/4)*(rowHeight+4),99,rowHeight,numberText(n),!v.busy&&!v.slots.includes(i),v.slots.includes(i),23));
-  this.panel(this.ui,738,area.y+area.height/2,505,area.height-8);this.text(this.ui,738,area.y+19,'제시된 덧셈의 정답을 골라요',23);
-  this.text(this.ui,738,area.y+55,`내 정답 ${p.solved}개 · ${progress}`,17,'#ffca7e').setName('duel-hero-progress');
-  const equation=this.text(this.ui,738,area.y+105,`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`,36,'#ffdfa1').setName('duel-hero-question');equation.setScale(Math.min(1,465/Math.max(1,equation.width)));
-  this.button('slot:0',654,area.y+174,205,touch,v.slots[0]!==undefined?numberText(p.board[v.slots[0]]):'정답 블록 선택',!v.busy,false,27);this.controls.get('slot:0')!.label=`제시된 덧셈 ${numberText(p.heroQuestion.a)} 더하기 ${numberText(p.heroQuestion.b)}의 정답 ${v.slots[0]===undefined?'선택 전':numberText(p.board[v.slots[0]])} · 선택 해제`;
-  this.button('fuse',880,area.y+174,174,touch,'정답 확인',v.slots.length===1&&!v.busy,true,22);
-  const growth=p.egg;this.ui.add(this.add.image(551,area.y+261,'duel-eggs','egg-'+Math.max(1,Math.min(10,growth))).setDisplaySize(53,84).setAlpha(growth?1:.3));
-  this.text(this.ui,775,area.y+261,`영웅 소환석 ${growth}개`,19,'#ffca7e').setName('duel-hero-summon-stones').setData('count',growth);
- }
  private drawBattleReserve(p:DuelPlayer,v:DuelView){
-  const area=this.getPurchaseArea(),compact=this.screenLayout.compact,touch=area.minimumTouch,mainWidth=670,sideLeft=690,sideWidth=300;
-  const heroes=HEROES.filter(hero=>(p.heroStock?.[hero.id]??0)>0),total=heroes.reduce((sum,hero)=>sum+(p.heroStock?.[hero.id]??0),0),pageSize=compact?2:6,pages=Math.max(1,Math.ceil(heroes.length/pageSize));
+  const area=this.getPurchaseArea(),touch=area.minimumTouch,mainWidth=670,sideLeft=690,sideWidth=300,y=area.y+area.height/2;
+  const heroes=HEROES.filter(hero=>(p.heroStock?.[hero.id]??0)>0),pageSize=3,pages=Math.max(1,Math.ceil(heroes.length/pageSize));
   this.heroPage=Math.min(this.heroPage,pages-1);const page=this.heroPage;
-  this.panel(this.ui,8+mainWidth/2,area.y+area.height/2,mainWidth,area.height);this.panel(this.ui,sideLeft+sideWidth/2,area.y+area.height/2,sideWidth,area.height);
-  this.text(this.ui,8+mainWidth/2,area.y+15,heroes.length?`이전 비축 영웅 ${total}개 · 원하는 때 소환`:`소환석 ${p.egg}개 · 나눠서 소환`,compact?19:22,'#ffca7e');
-  const columns=compact?2:3,cardWidth=(mainWidth-24)/columns,rowHeight=compact?Math.max(touch,(area.height-28)/2):122,firstY=area.y+28+rowHeight/2;
-  heroes.slice(page*pageSize,page*pageSize+pageSize).forEach((hero,index)=>{
-   const count=p.heroStock?.[hero.id]??0,x=20+cardWidth*(index%columns+.5),y=firstY+Math.floor(index/columns)*(rowHeight+8);
-   this.ensureHero(hero.level);this.button('summon:'+hero.id,x,y,cardWidth-8,rowHeight,`${hero.name} · Lv.${hero.level}\n${HERO_EFFECT_LABELS[hero.effect]}\n비축 ${count}개 · 소환 ▶`,!v.busy,true,compact?20:17);
-   this.controls.get('summon:'+hero.id)!.label=`${hero.name} 레벨 ${hero.level} 비축 ${count}개 소환 · ${hero.description}`;
-  });
-  if(!heroes.length){
-   this.button('hatch',8+mainWidth/2,firstY,mainWidth-32,rowHeight,p.egg?'영웅 레벨·종류 선택 ▶\n소환석을 나눠 원하는 때 소환':'소환석을 모두 사용했어요',p.egg>0&&!v.busy,true,compact?21:24);
-   const maximum=Math.min(10,p.egg),secondY=compact?firstY+rowHeight+4:area.y+220;
-   this.text(this.ui,8+mainWidth/2,secondY-15,p.egg?`Lv.1 최대 ${p.egg}명 / Lv.${maximum} 최대 ${Math.floor(p.egg/maximum)}명`:'소환한 영웅과 배치한 타워로 승부해요',compact?18:21,'#ffca7e');
-   this.text(this.ui,8+mainWidth/2,secondY+20,'영웅 레벨만큼 소환석 사용 · 남은 소환석 보관',compact?16:18,'#c1b7aa');
-  }
-  const reward=p.rewardHero?worksheetHeroSpec(p.rewardHero):null,readyReward=!!reward&&!p.rewardUsed;
-  this.text(this.ui,sideLeft+sideWidth/2,area.y+15,'소환 대기',compact?19:22,'#ffca7e');
-  const tacticHeight=compact?rowHeight:84,tacticFirstY=compact?firstY:area.y+77,tacticSecondY=compact?firstY+rowHeight+4:area.y+173;
-  this.button('summon-reward',sideLeft+sideWidth/2,tacticFirstY,sideWidth-18,tacticHeight,readyReward?`✦ ${reward!.name}\n3종 효과 · 소환 ▶`:p.rewardUsed?'특별 영웅 출전 완료':'수집 영웅 없음',readyReward&&!v.busy,true,compact?19:18);
+  this.panel(this.ui,8+mainWidth/2,y,mainWidth,area.height);this.panel(this.ui,sideLeft+sideWidth/2,y,sideWidth,area.height);
+  if(heroes.length){
+   const navWidth=56,cardLeft=80,cardWidth=176;
+   this.button('heroes:prev',44,y,navWidth,touch,`${page+1}/${pages}\n◀`,page>0&&!v.busy,false,14);
+   heroes.slice(page*pageSize,page*pageSize+pageSize).forEach((hero,index)=>{
+    const count=p.heroStock?.[hero.id]??0;this.ensureHero(hero.level);
+    this.button('summon:'+hero.id,cardLeft+cardWidth*(index+.5),y,cardWidth-8,touch,`${hero.name} Lv.${hero.level}\n비축 ${count} · 소환 ▶`,!v.busy,true,15);
+    this.controls.get('summon:'+hero.id)!.label=`${hero.name} 레벨 ${hero.level} 비축 ${count}개 소환 · ${hero.description}`;
+   });
+   this.button('heroes:next',642,y,navWidth,touch,'▶',page<pages-1&&!v.busy,false,21);
+  }else this.button('hatch',8+mainWidth/2,y,mainWidth-24,touch,p.egg?`소환석 ${p.egg}개 · 영웅 선택 ▶`:'소환석을 모두 사용했어요',p.egg>0&&!v.busy,true,21);
+  const reward=p.rewardHero?worksheetHeroSpec(p.rewardHero):null,readyReward=!!reward&&!p.rewardUsed,rewardWidth=heroes.length?140:sideWidth-18;
+  this.button('summon-reward',sideLeft+9+rewardWidth/2,y,rewardWidth,touch,readyReward?`특별 영웅 Lv.${reward!.level}\n3종 효과 · 소환 ▶`:p.rewardUsed?'특별 영웅 출전 완료':'수집 영웅 없음',readyReward&&!v.busy,true,heroes.length?14:18);
   if(reward)this.controls.get('summon-reward')!.label=`학습지 특별 영웅 ${reward.name} 레벨 ${reward.level} · 세 효과 동시 발동 · ${reward.description} · ${p.rewardUsed?'출전 완료':'소환'}`;
-  if(heroes.length)this.button('hatch',sideLeft+sideWidth/2,tacticSecondY,sideWidth-18,tacticHeight,p.egg?`소환석 ${p.egg}개\n레벨 선택 · 소환 ▶`:'남은 소환석 없음',p.egg>0&&!v.busy,true,compact?19:18);
-  else {this.text(this.ui,sideLeft+sideWidth/2,tacticSecondY-16,'특별 영웅은 소환석 없이',compact?16:17,'#c1b7aa');this.text(this.ui,sideLeft+sideWidth/2,tacticSecondY+16,'전투 중 한 번 소환해요',compact?17:18,'#ffca7e');}
-  const pageY=compact?firstY+rowHeight+4:area.y+280;
-  const pageLeft=compact?24:sideLeft+12,pageWidth=compact?mainWidth-32:sideWidth-24,navWidth=compact?Math.max(touch,150):70;
-  if(heroes.length){this.button('heroes:prev',pageLeft+navWidth/2,pageY,navWidth,compact?rowHeight:Math.max(touch,56),'◀',page>0&&!v.busy,false,21);this.text(this.ui,pageLeft+pageWidth/2,pageY,`${page+1}/${pages}`,20,'#ffca7e');this.button('heroes:next',pageLeft+pageWidth-navWidth/2,pageY,navWidth,compact?rowHeight:Math.max(touch,56),'▶',page<pages-1&&!v.busy,false,21);}
+  if(heroes.length)this.button('hatch',sideLeft+sideWidth-79,y,140,touch,p.egg?`소환석 ${p.egg}개\n영웅 선택 ▶`:'남은 소환석 없음',p.egg>0&&!v.busy,true,15);
  }
  private drawWaitingPanel(){
   const area=this.getPurchaseArea();this.panel(this.ui,499,area.y+area.height/2,982,area.height);
