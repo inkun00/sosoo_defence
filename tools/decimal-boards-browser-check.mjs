@@ -22,9 +22,9 @@ async function boardRule(page,owner){
  },owner);
 }
 async function uiRule(page,owner){
- return page.evaluate(owner=>{
+ return page.evaluate(async owner=>{
   const api=window.__personalHeroLevelTest,p=api.state.players[owner],stage=api.duelHeroLearningLevel(p),row=document.querySelector(`#proof [data-side="${owner}"]`),stageText=api.scene.ui.getByName('duel-hero-stage'),progress=api.scene.ui.getByName('duel-hero-progress'),description=api.scene.ui.getByName('duel-hero-description'),question=api.scene.ui.getByName('duel-hero-question');
-  const numberText=n=>String(n/1000);
+  const {numberText}=await import('/src/math.ts');
   return api.view().side===owner&&row?.dataset.stage===String(stage)&&row.dataset.solved===String(p.solved)&&row.textContent.includes(`정답 ${p.solved}개`)&&stageText?.text.includes(`문제 ${stage}단계`)&&progress?.text.includes(stage<4?`다음 단계까지 정답 ${5-p.solved%5}개`:'최고 단계 유지')&&description?.text.includes(stage<=2?'한 자리':'두 자리')&&!stageText.text.includes('학습 Lv')&&question?.text===`${numberText(p.heroQuestion.a)} + ${numberText(p.heroQuestion.b)} = ?`&&[...api.scene.controls.keys()].filter(id=>id.startsWith('slot:')).join()==='slot:0';
  },owner);
 }
@@ -48,7 +48,8 @@ try{
   check(label+' different account levels both start at stage one with the same fixed question and choices',initial[0].account===1&&initial[1].account===8&&initial.every(p=>p.stage===1&&p.solved===0&&p.growth===0)&&JSON.stringify(initial[0].board)===JSON.stringify(initial[1].board)&&JSON.stringify(initial[0].question)===JSON.stringify(initial[1].question));
   check(label+' fixed stage-one question has tenths without carry and one correct answer among sixteen unique choices',await boardRule(page,0));
   check(label+' initial UI states stage one, zero correct and five to next stage',await uiRule(page,0));
-  check(label+' preserves three-minute preparation, three-minute battle and 17.6 budget',await page.evaluate(()=>{const api=window.__personalHeroLevelTest;return api.state.status==='preparing'&&api.state.players.every(p=>p.money===17600)&&api.scene.ui.getByName('duel-total-timer').text==='06:00'&&api.scene.ui.getByName('duel-phase-timer').text==='문제풀이 03:00';}));
+  check(label+' starts preparation-only 17.6 budget with independent preparation/battle clocks',await page.evaluate(()=>{const api=window.__personalHeroLevelTest;return api.state.status==='preparing'&&api.state.players.every(p=>p.money===17600)&&api.scene.ui.getByName('duel-preparation-timer').text==='준비시간 03:00'&&api.scene.ui.getByName('duel-battle-timer').text==='진행시간 03:00'&&!api.scene.ui.getByName('duel-total-timer');}));
+  check(label+' preparation UI explains leftover coins disappear but reserved towers persist',await page.evaluate(()=>window.__personalHeroLevelTest.scene.ui.getByName('duel-shop-phase-note').text==='남은 코인 전투 시 0 · 비축 보존'));
   check(label+' visible canvas actions and preview buttons have 44px touch height',await page.evaluate(()=>{const api=window.__personalHeroLevelTest,canvas=document.querySelector('#field canvas'),box=canvas.getBoundingClientRect(),scale=box.height/canvas.height;return [...api.scene.controls.values()].filter(c=>c.enabled).every(c=>c.h*scale>=43.9)&&[...document.querySelectorAll('.preview-controls button')].every(b=>b.getBoundingClientRect().height>=44);}));
   await page.locator('#game-shell').screenshot({path:`${dir}/${label}-stage-1.png`});
   for(const owner of [0,1]){
@@ -75,6 +76,9 @@ try{
   check(label+' reversing account levels still starts both players at identical stage one',reversed[0].account===8&&reversed[1].account===1&&reversed.every(p=>p.stage===1&&p.solved===0)&&JSON.stringify(reversed[0].board)===JSON.stringify(reversed[1].board)&&await boardRule(page,0));
   await page.locator('#next-stage').click();const advanced=await snapshot(page);
   check(label+' next-stage preview solves five actual additions for only the selected player',advanced[0].solved===5&&advanced[0].round===5&&advanced[0].growth===5&&advanced[0].stage===2&&advanced[1].solved===0&&advanced[1].stage===1&&await uiRule(page,0)&&await boardRule(page,0));
+  await page.evaluate(async()=>{const api=window.__personalHeroLevelTest,s=api.state,{advanceDuel,DUEL_PREPARATION_SECONDS}=await import('/src/multiplayer/duel.ts'),now=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;for(const p of s.players)if(p)p.lastSeen=now;advanceDuel(s,now);api.refresh();});
+  check(label+' real preparation boundary resets both wallets and escrow and starts only progress clock',await page.evaluate(()=>{const api=window.__personalHeroLevelTest;return api.state.status==='playing'&&api.state.players.every(p=>p.money===0&&p.escrow===0&&p.quote===null)&&api.scene.ui.getByName('duel-preparation-timer').text==='준비시간 00:00'&&api.scene.ui.getByName('duel-battle-timer').text==='진행시간 03:00'&&!api.scene.ui.getByName('duel-preparation-timer').getData('active')&&api.scene.ui.getByName('duel-battle-timer').getData('active');}));
+  check(label+' zero-coin battle transition preserves personal addition progress and accumulated growth',JSON.stringify(await snapshot(page))===JSON.stringify(advanced));
   check(label+' preview error output stays empty',(await page.locator('#errors').textContent()).trim()==='');
   await page.close();currentPage=undefined;
  }

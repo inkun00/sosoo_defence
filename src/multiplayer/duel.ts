@@ -161,7 +161,7 @@ export function advanceDuel(s:DuelState,now:number){
   s.preparationElapsed=Math.min(DUEL_PREPARATION_SECONDS,Math.max(0,(now-s.preparationStartedAt)/1000));
   if(s.preparationElapsed>=DUEL_PREPARATION_SECONDS){
    s.status='playing';s.startedAt=s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.updatedAt=s.startedAt;s.elapsed=0;s.wave=0;
-   for(const p of s.players)if(p)release(p);
+   for(const p of s.players)if(p){p.quote=null;p.money=0;p.escrow=0;}
    note(s,'3분 문제풀이 완료 · 3분 동안 모은 타워를 배치하고 영웅을 소환해요!');
    syncHeroAuras(s);
   }

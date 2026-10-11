@@ -14,7 +14,7 @@ function reserve(s:DuelState,typeId='basic',nonce='q',now=NOW){
  const result=applyDuel(s,0,{type:'prepare-quote',typeId},now,nonce);assert.equal(result.ok,true,result.message);
  const q=s.players[0].quote!;const answer=applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},now,'answer');assert.equal(answer.ok,true,answer.message);return q;
 }
-function playing(){const s=preparing();reserve(s);connectedAdvance(s,START);s.players.forEach(p=>p!.money=0);return s;}
+function playing(){const s=preparing();reserve(s);connectedAdvance(s,START);assert.ok(s.players.every(p=>p!.money===0&&p!.escrow===0&&p!.quote===null));return s;}
 function fuse(s:DuelState,now=NOW){
  const p=s.players[0];
  const index=p.board.indexOf(p.heroQuestion.a+p.heroQuestion.b);assert.ok(index>=0);return applyDuel(s,0,{type:'fuse',round:p.round,slots:[index],operation:'+'},now,'fusion');
@@ -95,11 +95,11 @@ test('수집 영웅은 준비와 전투 전환 때 대기하고 전투에서 선
  const q=reserve(s),budget=DUEL_START_MONEY-q.cost;
  connectedAdvance(s,NOW+30000);assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,1);assert.equal(s.enemies.length,0);
  connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);
- assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,1);assert.equal(s.enemies.length,0);
+ assert.equal(s.players[0].money,0);assert.equal(s.players[0].stock.basic,1);assert.equal(s.enemies.length,0);
  assert.equal(applyDuel(s,0,{type:'summon-reward'},START,'reward').ok,true);assert.equal(s.enemies.length,1);assert.equal(s.enemies[0].hero,'hero-3-2');assert.equal(s.players[0].rewardUsed,true);
  assert.equal(applyDuel(s,0,{type:'summon-reward'},START,'duplicate').ok,false);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'stock').ok,true);
- assert.equal(s.players[0].money,budget);assert.equal(s.players[0].stock.basic,0);assert.equal(s.players[0].quote,null);
+ assert.equal(s.players[0].money,0);assert.equal(s.players[0].stock.basic,0);assert.equal(s.players[0].quote,null);
 });
 
 test('타워 선택 후 가격 뺄셈 정답마다 설치 대신 비축이 한 개 늘어난다',()=>{
@@ -138,14 +138,15 @@ test('준비 중에는 설치와 전투가 멈추고 타워 선택에는 좌표�
  assert.equal(s.enemies.length,0);assert.equal(s.shots.length,0);assert.equal(s.players[0].towers.length,0);assert.equal(s.players[0].stock.basic,1);
 });
 
-test('180초가 끝나면 남은 코인과 보관 코인을 돌려주고 열린 견적을 취소한다',()=>{
+test('180초가 끝나면 양쪽 남은 코인과 열린 견적의 보관 코인을 모두 없앤다',()=>{
  const s=preparing();reserve(s);
  assert.equal(applyDuel(s,1,{type:'prepare-quote',typeId:'double'},NOW+55000,'open').ok,true);
  s.players[0].escrow=777;s.players[1]!.escrow=333;
- const budgets=s.players.map(p=>p!.money+p!.escrow);
+ assert.ok(s.players.every(p=>p!.money+p!.escrow>0));
+ const growth=s.players.map(p=>p!.egg),boards=s.players.map(p=>[...p!.board]);
  connectedAdvance(s,START);
  assert.equal(s.status,'playing');assert.equal(s.preparationElapsed,180);assert.equal(s.startedAt,START);assert.equal(s.elapsed,0);assert.equal(s.wave,0);
- assert.deepEqual(s.players.map(p=>p!.money),budgets);assert.ok(s.players.every(p=>p?.escrow===0&&p.quote===null));
+ assert.ok(s.players.every(p=>p?.money===0&&p.escrow===0&&p.quote===null));assert.deepEqual(s.players.map(p=>p!.egg),growth);assert.deepEqual(s.players.map(p=>p!.board),boards);
  assert.equal(s.players[0].stock.basic,1);assert.deepEqual(s.players[1]!.stock,{});assert.equal(s.enemies.length,0);
 });
 
@@ -159,10 +160,10 @@ test('180초 경계에 도착한 정답은 비축을 추가하지 않는다',()=
  const s=preparing();applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},NOW,'late');const q=s.players[0].quote!;
  s.players.forEach(p=>p!.lastSeen=START);
  const result=applyDuel(s,0,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},START,'late-answer');
- assert.equal(result.ok,false);assert.equal(s.status,'playing');assert.equal(s.players[0].money,DUEL_START_MONEY);assert.deepEqual(s.players[0].stock,{});assert.equal(s.players[0].quote,null);
+ assert.equal(result.ok,false);assert.equal(s.status,'playing');assert.equal(s.players[0].money,0);assert.deepEqual(s.players[0].stock,{});assert.equal(s.players[0].quote,null);
 });
 
-test('전투 중 비축 타워를 먼저 무료 배치하고 없으면 남은 코인으로 문제 없이 구입한다',()=>{
+test('이전 유료 상태에서도 비축을 먼저 무료 배치하고 별도 보유 코인으로만 직접 구입한다',()=>{
  const s=playing(),p=s.players[0];p.money=555;
  assert.equal(duelBuildCost(s,0,'basic'),0);
  assert.equal(applyDuel(s,0,{type:'build',typeId:'basic',x:3,y:2},START,'stock').ok,true);
@@ -259,7 +260,7 @@ test('준비 중 다시 시작하거나 취소를 반복해도 180초 마감과 
  assert.equal(s.preparationStartedAt,NOW);assert.equal(p.money,DUEL_START_MONEY);assert.deepEqual(p.stock,{});
  connectedAdvance(s,NOW+30000);advanceDuel(s,NOW+20000);
  assert.equal(s.preparationElapsed,30);assert.equal(s.updatedAt,NOW+30000);
- connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(p.money,DUEL_START_MONEY);
+ connectedAdvance(s,START);assert.equal(s.status,'playing');assert.equal(s.startedAt,START);assert.equal(p.money,0);
 });
 
 test('이전 저장 상태의 유료 타워도 구입 가격으로 회수한다',()=>{

@@ -12,14 +12,14 @@ export function simulateComputerDuel(level:number,seed:number,strategy:Strategy=
  let now=100000;const peer=new ComputerPeer({uid:'baseline',name:'기준 수호자',accountLevel:level},level,{seed,mapId,clock:()=>now,autoTick:false}),s=peer.state,p=s.players[0];
  const burst=strategy==='burst',think=burst?2000:3000,build=burst?7000:10000,fuse=burst?3000:10000,hatch=burst?30000:26000,max=burst?14:8;
  const initialNow=now,preferences=['basic','double','needle','pebble','frost','catapult','lightning','sniper'];
- let nonce=0,nextBuild=now+1800,answerAt=0,nextFuse=now+fuse,nextSummon=0,computerHatched=false,traversedBend=false,battleStarted=false,zeroCombatCoins=false,coinsConserved=false,legalEconomy=true,noBattleFusion=true;
+ let nonce=0,nextBuild=now+1800,answerAt=0,nextFuse=now+fuse,nextSummon=0,computerHatched=false,traversedBend=false,battleStarted=false,zeroCombatCoins=false,legalEconomy=true,noBattleFusion=true;
  let playerPrepared=0,computerPrepared=0,playerStockPlaced=0,computerStockPlaced=0,playerCashBuilt=0,computerCashBuilt=0,playerEarned=0,computerEarned=0;
  let playerPreparedGrowth=0,computerPreparedGrowth=0;let battleSolved:number[]=[];
  const summonedLevels:number[][]=[[],[]],seenHeroIds=new Set<number>();
  const spentGrowth=[0,0];
  const act=(action:DuelAction)=>{const oldGrowth=p.egg,reply=applyDuel(s,0,action,now,'baseline-'+(++nonce));s.revision++;if(reply.ok&&action.type==='hatch')spentGrowth[0]+=oldGrowth-p.egg;return reply;};act({type:'ready'});
  while((s.status==='preparing'||s.status==='playing')&&now-initialNow<(DUEL_TOTAL_SECONDS+1)*1000){
-  const previousBalances=s.players.map(player=>player!.money+player!.escrow);const previousMoney=p.money,previousComputerMoney=s.players[1]!.money,previousComputerGrowth=s.players[1]!.egg,previousComputerTowers=[...s.players[1]!.towers],wasPlaying=s.status==='playing';
+  const previousMoney=p.money,previousComputerMoney=s.players[1]!.money,previousComputerGrowth=s.players[1]!.egg,previousComputerTowers=[...s.players[1]!.towers],wasPlaying=s.status==='playing';
   now+=100;peer.step(now);legalEconomy&&=s.players.every(player=>!!player&&player.money>=0&&player.escrow>=0&&Number.isSafeInteger(player.egg)&&player.egg>=0&&Object.values(player.stock).every(n=>Number.isSafeInteger(n)&&n>=0)&&player.towers.length<=14&&player.towers.filter(t=>t.typeId==='needle').length<=3&&(s.status!=='playing'||player.quote===null));
   for(const e of s.enemies)if(e.hero&&!seenHeroIds.has(e.id)){seenHeroIds.add(e.id);summonedLevels[e.owner].push(e.level);}
   if(wasPlaying){
@@ -41,7 +41,7 @@ export function simulateComputerDuel(level:number,seed:number,strategy:Strategy=
    continue;
   }
   if(!battleStarted&&s.status==='playing'){
-   battleStarted=true;zeroCombatCoins=s.players.every(player=>player!.money===0);coinsConserved=s.players.every((player,i)=>player!.escrow===0&&player!.money+player!.towers.reduce((total,tower)=>total+tower.cost,0)===previousBalances[i]);playerPrepared=Object.values(p.stock).reduce((n,count)=>n+count,0);computerPrepared=Object.values(s.players[1]!.stock).reduce((n,count)=>n+count,0);
+   battleStarted=true;zeroCombatCoins=s.players.every(player=>player!.money===0&&player!.escrow===0&&player!.quote===null);playerPrepared=Object.values(p.stock).reduce((n,count)=>n+count,0);computerPrepared=Object.values(s.players[1]!.stock).reduce((n,count)=>n+count,0);
    playerPreparedGrowth=p.egg;computerPreparedGrowth=s.players[1]!.egg;battleSolved=s.players.map(player=>player!.solved);
    nextBuild=s.startedAt+1800;nextSummon=s.startedAt+hatch;
   }
@@ -61,7 +61,7 @@ export function simulateComputerDuel(level:number,seed:number,strategy:Strategy=
   }
  }
  const growthConserved=playerPreparedGrowth===spentGrowth[0]+p.egg&&computerPreparedGrowth===spentGrowth[1]+s.players[1]!.egg;
- const result={level,seed,strategy,mapId:s.mapId??'legacy-straight',status:s.status,winner:s.winner,reason:s.reason,playerScore:duelScore(p),computerScore:duelScore(s.players[1]!),playerCombatScore:p.combatScore??0,computerCombatScore:s.players[1]!.combatScore??0,playerQuestionScore:p.questionScore??0,computerQuestionScore:s.players[1]!.questionScore??0,preparationSeconds:s.preparationElapsed,seconds:Math.round(s.elapsed),totalSeconds:Math.round((now-initialNow)/1000),zeroCombatCoins,coinsConserved,legalEconomy,noBattleFusion,growthConserved,playerPrepared,computerPrepared,playerPreparedGrowth,computerPreparedGrowth,playerGrowthRemaining:p.egg,computerGrowthRemaining:s.players[1]!.egg,playerSpentGrowth:spentGrowth[0],computerSpentGrowth:spentGrowth[1],playerSummonedLevels:summonedLevels[0],computerSummonedLevels:summonedLevels[1],playerStockPlaced,computerStockPlaced,playerCashBuilt,computerCashBuilt,playerEarned,computerEarned,waves:s.wave,computerHatched,traversedBend,playerFlame:p.flame,computerFlame:s.players[1]!.flame,playerPurchased:p.purchases,computerSolved:s.players[1]!.solved,playerHeroLearningStage:duelHeroLearningLevel(p),computerHeroLearningStage:duelHeroLearningLevel(s.players[1]!),computerPurchased:s.players[1]!.purchases};peer.dispose();return result;
+ const result={level,seed,strategy,mapId:s.mapId??'legacy-straight',status:s.status,winner:s.winner,reason:s.reason,playerScore:duelScore(p),computerScore:duelScore(s.players[1]!),playerCombatScore:p.combatScore??0,computerCombatScore:s.players[1]!.combatScore??0,playerQuestionScore:p.questionScore??0,computerQuestionScore:s.players[1]!.questionScore??0,preparationSeconds:s.preparationElapsed,seconds:Math.round(s.elapsed),totalSeconds:Math.round((now-initialNow)/1000),zeroCombatCoins,legalEconomy,noBattleFusion,growthConserved,playerPrepared,computerPrepared,playerPreparedGrowth,computerPreparedGrowth,playerGrowthRemaining:p.egg,computerGrowthRemaining:s.players[1]!.egg,playerSpentGrowth:spentGrowth[0],computerSpentGrowth:spentGrowth[1],playerSummonedLevels:summonedLevels[0],computerSummonedLevels:summonedLevels[1],playerStockPlaced,computerStockPlaced,playerCashBuilt,computerCashBuilt,playerEarned,computerEarned,waves:s.wave,computerHatched,traversedBend,playerFlame:p.flame,computerFlame:s.players[1]!.flame,playerPurchased:p.purchases,computerSolved:s.players[1]!.solved,playerHeroLearningStage:duelHeroLearningLevel(p),computerHeroLearningStage:duelHeroLearningLevel(s.players[1]!),computerPurchased:s.players[1]!.purchases};peer.dispose();return result;
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
@@ -69,5 +69,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const matches=seeds.map(seed=>simulateComputerDuel(i+1,seed));return {level:i+1,computerWins:matches.filter(m=>m.winner===1).length,playerWins:matches.filter(m=>m.winner===0).length,draws:matches.filter(m=>m.winner===null).length,matches};
  });
  const maps=DUEL_MAPS.map(map=>({mapId:map.id,name:map.name,matches:Array.from({length:10},(_,i)=>simulateComputerDuel(i+1,912,'baseline',map.id))}));
- console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 표시된 덧셈식의 정답 블록을 하나 고를 때마다 성장량 1을 제한 없이 모은다. 영웅 덧셈은 계정 레벨과 무관하게 정답 0·5·10·15개에 따라 1·2·3·4단계로 진행한다. 남은 준비 코인을 보존한 3분 전투 중 비축 타워를 무료로 배치하거나 계산 없이 코인으로 추가 설치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
+ console.log(JSON.stringify({description:'3분 동안 실제 뺄셈 정답으로 타워를 비축하고 표시된 덧셈식의 정답 블록을 하나 고를 때마다 성장량 1을 제한 없이 모은다. 영웅 덧셈은 계정 레벨과 무관하게 정답 0·5·10·15개에 따라 1·2·3·4단계로 진행한다. 준비에서 남은 코인은 전투 시작에 모두 없애고 0 코인으로 시작하는 3분 전투 중 비축 타워를 무료로 배치하고 원하는 레벨 비용만큼 성장량을 사용해 영웅을 소환하는 기준 전략이다. 기존 직선 맵의 5개 시드와 선택 맵 10종 × CPU 10레벨 완주를 검증하며 실제 학생 승률을 예측하지 않는다.',baseline,level10Burst:seeds.map(seed=>simulateComputerDuel(10,seed,'burst')),maps},null,2));
 }

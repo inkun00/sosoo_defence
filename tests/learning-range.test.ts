@@ -42,7 +42,7 @@ test('대전 준비의 큰 지갑·계산 중 별도 적립·취소에서도 한
  assert.equal(s.players[0].money,12700-q.cost);assert.equal(s.players[0].stock.basic,1);assert.equal(s.players[0].towers.length,0);
  assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'double'},now,'q2').ok);const before=s.players[0].money;s.players[0].escrow=300;
  applyDuel(s,0,{type:'cancel'},now,'c');assert.equal(s.players[0].money,before+300);
- const balance=s.players[0].money;startCombat(s,now);assert.equal(s.players[0].money,balance);assert.equal(s.players[0].escrow,0);assert.equal(s.players[0].stock.basic,1);
+ startCombat(s,now);assert.equal(s.players[0].money,0);assert.equal(s.players[0].escrow,0);assert.equal(s.players[0].stock.basic,1);
 });
 
 test('대전에서 합이 10 이상인 오답 조합은 재료·알을 유지하고 범위 밖 복습 문항을 만들지 않는다',()=>{

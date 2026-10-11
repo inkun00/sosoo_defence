@@ -30,7 +30,7 @@ test('선택한 수집 영웅은 준비 중 대기하고 전투에서 원하는 
   assert.ok(applyDuel(s,side,{type:'summon-reward'},START,`summon-${side}`).ok);
   const p=s.players[side]!,e=s.enemies.find(e=>e.owner===side)!;
   assert.equal(e.hero,p.rewardHero);assert.equal(e.target,1-side);assert.equal(e.rewardSummon,true);assert.equal(e.vitalityBaseMax??e.max,heroSpec(p.rewardHero!)!.hp);assert.equal(e.hp,e.max);
-  assert.equal(e.pathDistance,side===0?1:duelMap(s.mapId).length-1);assert.equal(p.rewardUsed,true);assert.equal(p.egg,0);assert.equal(p.money,DUEL_START_MONEY);
+  assert.equal(e.pathDistance,side===0?1:duelMap(s.mapId).length-1);assert.equal(p.rewardUsed,true);assert.equal(p.egg,0);assert.equal(p.money,0);
   assert.ok(e.target===0?e.y!>=0&&e.y!<7:e.y!>=8&&e.y!<15,'each summoned hero stays on its opposing battlefield');
   assert.equal(applyDuel(s,side,{type:'summon-reward'},START,'duplicate').ok,false);
  }

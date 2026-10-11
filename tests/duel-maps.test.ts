@@ -145,6 +145,47 @@ test('부화와 학습지 영웅은 동반 병사 없이 서로 겹치지 않는
  }
 });
 
+test('실제 웨이브·성장 영웅·학습지 영웅은 상단 성에서 왼쪽으로, 하단 성에서 오른쪽으로 경로를 진행한다',()=>{
+ for(const mapId of [undefined,...DUEL_MAPS.map(map=>map.id)])for(const kind of ['wave','growth','reward'] as const){
+  const s=match(mapId,kind==='reward'?'hero-1-1':undefined),map=duelMap(mapId);
+  if(kind==='wave')keepConnected(s,NOW+8000);
+  else for(const side of [0,1] as const){
+   if(kind==='growth')s.players[side]!.egg=1;
+   const action=kind==='growth'?{type:'hatch' as const,heroId:'hero-1-1'}:{type:'summon-reward' as const};
+   assert.ok(applyDuel(s,side,action,NOW,`${kind}-${side}`).ok);
+  }
+  const upper=s.enemies.find(e=>e.target===0)!,lower=s.enemies.find(e=>e.target===1)!;
+  assert.equal(s.enemies.length,2);assert.equal(upper.owner,1);assert.equal(lower.owner,0);
+  assert.ok(upper.pathDistance!>map.length-1.1&&lower.pathDistance!<1.1);
+  assert.ok(Math.abs(upper.x+lower.x-23)<1e-8);assert.ok(Math.abs(lower.y!-upper.y!-8)<1e-8);
+  const before=[upper.pathDistance!,lower.pathDistance!],tickAt=s.updatedAt+100;
+  keepConnected(s,tickAt);assert.ok(upper.pathDistance!<before[0],`${mapId}/${kind}: 상단은 오른쪽 성에서 왼쪽 성으로`);assert.ok(lower.pathDistance!>before[1],`${mapId}/${kind}: 하단은 왼쪽 성에서 오른쪽 성으로`);
+  assert.ok(Math.abs(upper.pathDistance!+lower.pathDistance!-map.length)<1e-8);
+  assert.ok(upper.y!>=0&&upper.y!<=6&&lower.y!>=8&&lower.y!<=14);
+ }
+});
+
+test('모든 굽은 경로의 직선과 모서리에서 표시 방향·예측 좌표·실제 틱은 진영별 진행 순서와 일치한다',()=>{
+ for(const mapId of [undefined,...DUEL_MAPS.map(map=>map.id)]){
+  const s=match(mapId),{points}=duelMap(mapId);s.wave=1000;let traveled=0;
+  for(let i=0;i<points.length-1;i++){
+   const a=points[i],b=points[i+1],length=Math.hypot(b.x-a.x,b.y-a.y);
+   const samples=[{distance:traveled+length/2,segment:i},...(i?[{distance:traveled,segment:i}]:[])];
+   for(const sample of samples){
+    const units=([0,1] as const).map(target=>{
+     const direction=target===0?-1:1,segment=sample.distance===traveled&&target===0?i-1:sample.segment,from=points[segment],to=points[segment+1],size=Math.hypot(to.x-from.x,to.y-from.y);
+     const unit=enemy(s,0,3,{id:100+target,owner:(1-target) as 0|1,target,pathDistance:sample.distance}),position=duelEnemyPosition(s,unit),predicted=duelEnemyPosition(s,unit,.1);
+     assert.equal(position.dx,((to.x-from.x)/size)*direction||0,`${mapId}: target${target} segment${i} x 방향`);assert.equal(position.dy,((to.y-from.y)/size)*direction||0,`${mapId}: target${target} segment${i} y 방향`);
+     return {unit,predicted,direction};
+    });
+    s.enemies=units.map(({unit})=>unit);keepConnected(s,s.updatedAt+100);
+    for(const {unit,predicted,direction} of units){assert.ok((unit.pathDistance!-sample.distance)*direction>0);assert.ok(Math.abs(unit.x-predicted.x)<1e-8);assert.ok(Math.abs(unit.y!-predicted.y)<1e-8);}
+   }
+   traveled+=length;
+  }
+ }
+});
+
 test('맵 선택 미리보기는 두 독립 경로와 가운데 분리줄을 표시한다',()=>{
  for(const map of DUEL_MAPS){
   const html=duelMapPreviewHTML(map.id),routes=[...html.matchAll(/<polyline data-lane-route="([01])" points="([^"]+)"/g)];

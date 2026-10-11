@@ -4,7 +4,7 @@ import {duelMap} from '../src/multiplayer/duel-maps';
 import {HEROES} from '../src/multiplayer/heroes';import {numberText} from '../src/math';
 const NOW=220000,PREP_NOW=NOW-DUEL_PREPARATION_SECONDS*1000;
 function preparation(){const s=createDuel('a','왼쪽',17,PREP_NOW);joinDuel(s,'b','오른쪽',PREP_NOW);applyDuel(s,0,{type:'ready'},PREP_NOW,'r1');applyDuel(s,1,{type:'ready'},PREP_NOW,'r2');assert.equal(s.status,'preparing');return s;}
-function match(){const s=preparation();s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');s.players.forEach(p=>p!.money=0);return s;}
+function match(){const s=preparation();s.players.forEach(p=>p!.lastSeen=NOW);advanceDuel(s,NOW);assert.equal(s.status,'playing');assert.ok(s.players.every(p=>p!.money===0&&p!.escrow===0&&p!.quote===null));return s;}
 function build(s:DuelState,side:0|1,typeId:string,x:number,y:number){const p=s.players[side]!;p.stock[typeId]=(p.stock[typeId]??0)+1;return applyDuel(s,side,{type:'build',typeId,x,y},s.updatedAt,'build');}
 function answer(s:DuelState,side:0|1){const q=s.players[side]!.quote!;return applyDuel(s,side,{type:'answer',nonce:q.nonce,answer:numberText(q.before-q.cost)},s.updatedAt,'a');}
 function enemy(o:Partial<DuelEnemy>={}):DuelEnemy{return {id:90,owner:1,target:0,hero:null,level:1,hp:500,max:500,x:3,slow:0,stun:0,hits:0,...o};}

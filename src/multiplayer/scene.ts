@@ -4,7 +4,8 @@ import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
 import {MONSTERS,MONSTER_KINDS,MonsterKind} from '../monsters';
 import {numberText} from '../math';
-import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_SECONDS,DUEL_TOTAL_SECONDS,DUEL_PREPARATION_SECONDS,DUEL_START_MONEY,duelScore,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects,duelHeroLearningLevel} from './duel';
+import {DuelState,DuelPlayer,Side,DuelTower,DUEL_ROAD,FLAME_MAX,DUEL_START_MONEY,duelScore,duelLevel,duelBuildCost,canUseDuelTower,validDuelCell,canPurchaseDuelTower,duelEnemyPosition,duelEnemyDistance,activeDuelHeroEffects,activeDuelTowerHeroEffects,duelHeroLearningLevel} from './duel';
+import {duelClocks,formatDuelClock} from './duel-clock';
 import {duelMap,duelRoadCell,duelLaneOffset,DUEL_LANE_ROWS,DUEL_BATTLE_ROWS} from './duel-maps';
 import {HEROES,WORKSHEET_HEROES,heroSpec,worksheetHeroSpec,heroesAtLevel} from './heroes';
 import {heroSummonStyle} from '../hero-summon-style';
@@ -90,29 +91,33 @@ export class DuelScene extends Phaser.Scene{
  redraw(){if(!this.ready)return;const v=this.view(),s=v.state,p=s?.players[v.side];this.opponentPortrait?.sync(v.computer);if(s?.status!=='playing')this.guides.clear();if(s&&s.revision!==this.revision){this.revision=s.revision;this.receivedAt=performance.now();}
   const compact=this.screenLayout.compact,height=this.screenLayout.height,touch=this.minimumTouch,headerHeight=compact?touch+6:76;
   const headerButtonWidth=Math.max(115,touch),settingsWidth=Math.max(80,touch),leaveX=compact?1266-headerButtonWidth/2:1200,lobbyX=compact?leaveX-headerButtonWidth-8:1070,settingsX=compact?lobbyX-(headerButtonWidth+settingsWidth)/2-8:963,headerInfoRight=compact?settingsX-settingsWidth/2-10:980;
-  const titleX=compact?headerInfoRight*.14:136,roomX=compact?headerInfoRight*.38:359,budgetX=compact?headerInfoRight*.65:615,clockX=compact?headerInfoRight*.88:861;
-  const signature=JSON.stringify([compact,height,this.blockPage,this.heroPage,v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.mapId,s?.status,s?.learningLevel,Math.ceil(s?.elapsed??0),Math.ceil(DUEL_PREPARATION_SECONDS-(s?.preparationElapsed??0)),s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.accountLevel,p.flame,p.money,p.combatScore,p.questionScore,p.kills,p.answeredQuestions,p.solved,p.heroQuestion,p.stock,p.heroStock,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
+  const titleX=compact?headerInfoRight*.14:136,roomX=compact?headerInfoRight*.38:359,budgetX=compact?headerInfoRight*.62:615,clockX=compact?headerInfoRight*.88:850,clocks=duelClocks(s);
+  const signature=JSON.stringify([compact,height,this.blockPage,this.heroPage,v.side,v.room,v.selectedType,v.shopPage,v.slots,v.selectedTower,v.message,v.busy,v.connected,v.computer?.mood,v.computer?.phrase,s?.mapId,s?.status,s?.learningLevel,clocks.preparationSeconds,clocks.battleSeconds,s?.log,s?.enemies.filter(e=>e.hero).length,s?.players.map(p=>p&&[p.name,p.accountLevel,p.flame,p.money,p.combatScore,p.questionScore,p.kills,p.answeredQuestions,p.solved,p.heroQuestion,p.stock,p.heroStock,p.purchaseVariation?.round,p.egg,p.ready,p.rewardHero,p.rewardUsed,p.board,p.towers.map(t=>[t.id,t.enabled,t.typeId,t.x,t.y])])]);
   if(signature===this.uiSignature){this.syncShots();this.syncEnemies();this.syncTowerEffects();this.syncHeroSummons();this.onControls();return;}this.uiSignature=signature;this.ui.removeAll(true);this.controls.clear();
   this.panel(this.ui,640,compact?headerHeight/2+3:44,1264,headerHeight);this.text(this.ui,titleX,compact?headerHeight/2:40,'소수 디펜스 · 1:1',compact?20:24);this.text(this.ui,roomX,compact?headerHeight/2-15:25,(v.side===0?'호스트 ':'참가자 ')+(v.room||'대기실'),16,'#bcb4aa');this.text(this.ui,roomX,compact?headerHeight/2+16:56,`Lv.${s?duelLevel(s):1} · ${duelMap(s?.mapId).name}`,15,'#ffca7e');
-  const preparing=s?.status==='preparing',stockTotal=Object.values(p?.stock??{}).reduce((sum,count)=>sum+count,0),seconds=Math.max(0,Math.ceil((preparing?DUEL_PREPARATION_SECONDS-(s.preparationElapsed??0):DUEL_SECONDS-(s?.elapsed??0))-1e-7));
-  const totalSeconds=preparing?seconds+DUEL_SECONDS:s?.status==='waiting'||!s?DUEL_TOTAL_SECONDS:seconds,clock=(value:number)=>`${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`;
+  const preparing=s?.status==='preparing',stockTotal=Object.values(p?.stock??{}).reduce((sum,count)=>sum+count,0);
   if(preparing){this.text(this.ui,budgetX,compact?headerHeight/2-15:26,'준비 예산 '+numberText(p?.money??DUEL_START_MONEY)+' 코인',compact?18:21,'#ffcb7b');this.text(this.ui,budgetX,compact?headerHeight/2+17:58,`비축 타워 ${stockTotal}개 · 영웅 성장 ${p?.egg??0}`,14,'#f3dfb9');}
   else if(s?.status==='playing'){this.text(this.ui,budgetX,compact?headerHeight/2-15:26,`남은 코인 ${numberText(p?.money??0)}`,compact?18:21,'#ffcb7b').setName('duel-battle-coins');this.text(this.ui,budgetX,compact?headerHeight/2+17:58,`비축 타워 ${stockTotal} · 영웅 성장 ${p?.egg??0}`,14,'#f3dfb9');}
   else this.text(this.ui,budgetX,compact?headerHeight/2:41,`준비 예산 ${numberText(p?.money??DUEL_START_MONEY)} 코인`,compact?18:21,'#ffcb7b');
-  this.text(this.ui,clockX,compact?headerHeight/2-25:17,'전체 남은 시간',12,'#f3dfb9');this.text(this.ui,clockX,compact?headerHeight/2:40,clock(totalSeconds),26,'#ffcb7b').setName('duel-total-timer');this.text(this.ui,clockX,compact?headerHeight/2+25:64,s?.status==='waiting'||!s?'문제 3분 + 전투 3분':`${preparing?'문제풀이':'전투'} ${clock(seconds)}`,12,'#f3dfb9').setName('duel-phase-timer');this.button('settings',settingsX,compact?headerHeight/2+3:42,compact?settingsWidth:76,Math.max(touch,55),'설정',true,false,18);
+  const clockWidth=compact?headerInfoRight*.2:140;
+  for(const [label,name,seconds,active,state,y]of [
+   ['준비시간','duel-preparation-timer',clocks.preparationSeconds,clocks.preparationActive,clocks.preparationState,compact?headerHeight/2-18:26],
+   ['진행시간','duel-battle-timer',clocks.battleSeconds,clocks.battleActive,clocks.battleState,compact?headerHeight/2+18:58],
+  ] as const){const text=this.text(this.ui,clockX,y,`${label} ${formatDuelClock(seconds)}`,compact?22:18,active?'#ffcb7b':state==='complete'?'#a3e9dd':'#bcb4aa').setName(name).setData('active',active).setData('state',state);text.setScale(Math.min(1,clockWidth/Math.max(1,text.width)));}
+  this.button('settings',settingsX,compact?headerHeight/2+3:42,compact?settingsWidth:76,Math.max(touch,55),'설정',true,false,18);
   this.button('lobby',lobbyX,compact?headerHeight/2+3:42,headerButtonWidth,Math.max(touch,55),'대기실',!v.busy);this.button('leave',leaveX,compact?headerHeight/2+3:42,headerButtonWidth,Math.max(touch,55),'나가기',!v.busy);
   const terrainSig=JSON.stringify([s?.mapId,s?.players.map(p=>p?.towers.map(t=>[t.id,t.typeId,t.x,t.y,t.enabled])),v.side]);
   if(terrainSig!==this.signature){this.signature=terrainSig;this.drawTerrain();}
-  this.text(this.ui,265,compact?headerHeight+10:96,'상단 전장 · '+(s?.players[0]?.name||'호스트 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??9000),19,'#9adbea');
-  this.text(this.ui,734,compact?headerHeight+10:96,'하단 전장 · '+(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??9000),19,'#f7bd85');
+  this.text(this.ui,265,compact?headerHeight+10:96,'상단 전장 ← · '+(s?.players[0]?.name||'호스트 수호자')+(v.side===0?' · 나':'')+'  🔥 '+numberText(s?.players[0]?.flame??9000),19,'#9adbea');
+  this.text(this.ui,734,compact?headerHeight+10:96,'하단 전장 → · '+(s?.players[1]?.name||'상대 기다리는 중')+(v.side===1?' · 나':'')+'  🔥 '+numberText(s?.players[1]?.flame??9000),19,'#f7bd85');
   for(const side of [0,1] as Side[]){const player=s?.players[side];this.text(this.ui,side===0?265:734,compact?headerHeight+28:117,`점수 ${duelScore(player).toLocaleString('ko-KR')} · 전투 ${(player?.combatScore??0).toLocaleString('ko-KR')} / 문제 ${(player?.questionScore??0).toLocaleString('ko-KR')}`,14,side===0?'#9adbea':'#f7bd85').setName('duel-score-'+side);}
   this.drawCastleHealth(s);
   const shopTop=compact?headerHeight+8:84,shopHeight=compact?height-shopTop-8:preparing?612+LOWER_SHIFT:572+LOWER_SHIFT,shopItems=this.shopPageSize,page=Math.min(v.shopPage,this.shopPageCount-1),cardHeight=compact?touch:Math.max(66,touch),cardTop=compact?headerHeight+60:162,cardGap=compact?6:4,pageY=compact?height-touch*1.5-28:preparing?609+LOWER_SHIFT:622+LOWER_SHIFT;
-  this.panel(this.ui,1130,shopTop+shopHeight/2,266,shopHeight);this.text(this.ui,1130,compact?shopTop+18:113,preparing?'타워 구입 문제':'타워 배치',23);this.text(this.ui,1130,compact?shopTop+43:144,preparing?`타워 선택 → 뺄셈 정답 → 1개 비축`:s?.status==='waiting'?'문제풀이 3분 뒤 전투 3분':`설치 ${p?.towers.length??0}/14 · 비축 ${stockTotal}개`,13,'#c3b8a8');
+  this.panel(this.ui,1130,shopTop+shopHeight/2,266,shopHeight);this.text(this.ui,1130,compact?shopTop+18:113,preparing?'타워 구입 문제':'타워 배치',23);this.text(this.ui,1130,compact?shopTop+43:144,preparing?'남은 코인 전투 시 0 · 비축 보존':s?.status==='waiting'?'문제풀이 3분 뒤 전투 3분':`설치 ${p?.towers.length??0}/14 · 비축 ${stockTotal}개`,13,'#c3b8a8').setName('duel-shop-phase-note');
   TOWERS.slice(page*shopItems,page*shopItems+shopItems).forEach((type,i)=>{
    const stored=p?.stock?.[type.id]??0,cost=preparing&&p?.quote?.typeId===type.id?p.quote.cost:s&&p?duelBuildCost(s,v.side,type.id):towerPrice(type,DUEL_START_MONEY,1),unlocked=s?canUseDuelTower(s,v.side,type.id):type.unlock<=1,capacity=preparing||(p?.towers.length??0)<14&&(type.unit!==10||(p?.towers.filter(t=>t.unit===10).length??0)<3),open=!!s&&!!p&&!v.busy&&canPurchaseDuelTower(s)&&capacity&&unlocked&&(stored>0||p.money>=cost);
    const c=this.button('type:'+type.id,1130,cardTop+cardHeight/2+i*(cardHeight+cardGap),228,cardHeight,'',open,v.selectedType===type.id);this.towerIcon(c,-83,0,type.id,53);
-   this.text(c,-49,-20,type.name+' · '+GRADE_NAMES[type.grade],15,'#f6ecdf',false).setOrigin(0,.5);this.text(c,-49,1,'공격 '+numberText(type.unit)+` · 비축 ${stored}개`,14,stored?'#a3e9dd':'#c9bbaa',false).setOrigin(0,.5);const priceLabel=s?.status==='playing'?(stored>0?'비축 · 무료 설치':numberText(cost)+' 코인 · 바로 설치'):unlocked?numberText(cost)+' 코인':`대전 Lv.${type.unlock} 해금`;this.text(c,-49,21,priceLabel,16,'#ffca7e',false).setOrigin(0,.5);
+   this.text(c,-49,-20,type.name+' · '+GRADE_NAMES[type.grade],15,'#f6ecdf',false).setOrigin(0,.5);this.text(c,-49,1,'공격 '+numberText(type.unit)+` · 비축 ${stored}개`,14,stored?'#a3e9dd':'#c9bbaa',false).setOrigin(0,.5);const priceLabel=s?.status==='playing'?(stored>0?'비축 · 무료 설치':numberText(cost)+' 코인 · '+((p?.money??0)>=cost?'바로 설치':'코인 부족')):unlocked?numberText(cost)+' 코인':`대전 Lv.${type.unlock} 해금`;this.text(c,-49,21,priceLabel,16,'#ffca7e',false).setOrigin(0,.5);
    this.controls.get('type:'+type.id)!.label=type.name+' 공격 '+numberText(type.unit)+` 비축 ${stored}개 `+(preparing?'뺄셈 문제로 비축 가격 '+numberText(cost):priceLabel);
   });
   if(compact&&touch>124)this.button('page:cycle',1130,pageY,228,touch,`${page+1}/${this.shopPageCount} · 다음 타워 ▶`,this.shopPageCount>1&&!v.busy,false,20);
@@ -124,7 +129,7 @@ export class DuelScene extends Phaser.Scene{
   const shopBottomY=compact?height-touch/2-10:preparing?667+LOWER_SHIFT:696+LOWER_SHIFT;
   if(selected){this.text(this.ui,compact?1045:1085,shopBottomY,compact?'자동 공격':'타워 자동 공격',16,'#c1b7aa');this.button('sell',compact?1266-Math.max(105,touch)/2:1210,shopBottomY,Math.max(105,touch),Math.max(touch,57),'회수',!v.busy);}
   else if(preparing)this.button('prepare:heroes',1130,shopBottomY,228,Math.max(touch,56),'영웅 성장 문제',!v.busy,true,18);
-  else if(!compact)this.text(this.ui,1130,697+LOWER_SHIFT,v.selectedType?'내 전장 빈 바닥에 바로 설치':'비축 무료 · 코인으로도 바로 설치',16,'#c1b7aa');
+  else if(!compact)this.text(this.ui,1130,697+LOWER_SHIFT,v.selectedType?'내 전장 빈 바닥에 바로 설치':p?.money?'비축 무료 · 코인이 있으면 바로 설치':'비축 타워를 골라 무료 배치',16,'#c1b7aa');
   const reserve=p?.rewardHero?worksheetHeroSpec(p.rewardHero):null;
   // Prepare every reserved hero atlas before its manually timed entrance.
   for(const player of s?.players??[]){const companion=player?.rewardHero?worksheetHeroSpec(player.rewardHero):null;if(companion)this.ensureHero(companion.level,true);for(const [id,count]of Object.entries(player?.heroStock??{})){const hero=count>0?heroSpec(id):null;if(hero)this.ensureHero(hero.level);}}
@@ -202,7 +207,8 @@ export class DuelScene extends Phaser.Scene{
  private drawInstructions(compact:boolean){
   const area=this.getPurchaseArea();this.panel(this.ui,499,area.y+area.height/2,982,area.height);
   const center=compact?area.y+area.minimumTouch+74:area.y+area.height/2;this.text(this.ui,493,center-30,'전반부 3분 · 타워 비축과 영웅 성장량 모으기',compact?21:25,'#ffca7e');
-  this.text(this.ui,493,center+(compact?-2:16),'후반부 3분 · 비축 무료·남은 코인으로 타워 설치와 영웅 소환',compact?19:23,'#a3e9dd');
+  this.text(this.ui,493,center+(compact?-2:16),'후반부 3분 · 비축 타워 무료 배치와 영웅 소환',compact?19:23,'#a3e9dd');
+  this.text(this.ui,493,center+(compact?31:53),'준비 남은 코인은 전투 시작에 0 · 비축과 성장량 보존',compact?16:17,'#c1b7aa');
  }
  private drawCastleHealth(s:DuelState|null){
   const map=duelMap(s?.mapId),width=60,height=22;
@@ -231,7 +237,7 @@ export class DuelScene extends Phaser.Scene{
    const y=row+duelLaneOffset(side),cx=X+(x+.5)*T,cy=this.boardY+(y+.5)*T;if(duelRoadCell(s?.mapId,x,y,side))this.terrain.add(this.add.image(cx,cy,'dungeon-terrain','path').setDisplaySize(T,T));
    else{grid.lineStyle(1,side===0?0x55aec3:0xe2a569,.22).strokeRect(cx-T/2,cy-T/2,T,T);}
   }grid.fillStyle(0x101825,.97).fillRect(X,this.boardY+DUEL_LANE_ROWS*T,24*T,T).lineStyle(2,0xbca476,.75).lineBetween(X,this.boardY+(DUEL_LANE_ROWS+.5)*T,X+24*T,this.boardY+(DUEL_LANE_ROWS+.5)*T);this.terrain.add(grid);
-  this.text(this.terrain,493,this.boardY+(DUEL_LANE_ROWS+.5)*T,'상단 호스트 전장  ·  하단 참가자 전장  ·  각자 자신의 길을 방어해요',14,'#e2cda4').setBackgroundColor('#101825').setName('duel-lane-divider');
+  this.text(this.terrain,493,this.boardY+(DUEL_LANE_ROWS+.5)*T,'상단 ← 오른쪽 성에서 왼쪽 성으로  ·  하단 → 왼쪽 성에서 오른쪽 성으로',14,'#e2cda4').setBackgroundColor('#101825').setName('duel-lane-divider');
   // Joined stone tiles keep every turn readable and leave the surrounding
   // floor clear for towers. Outline only the exposed road edges, not its seams.
   const route=this.add.graphics();route.lineStyle(2,0xbaa17a,.48);
@@ -243,9 +249,24 @@ export class DuelScene extends Phaser.Scene{
   }
   for(let i=0;i<map.points.length-1;i++){const a=map.points[i],b=map.points[i+1];route.lineStyle(1.5,side===0?0x98d6df:0xe8ba88,.28).lineBetween(X+(a.x+.5)*T,this.boardY+(a.y+offset+.5)*T,X+(b.x+.5)*T,this.boardY+(b.y+offset+.5)*T);}}
   this.terrain.add(route);
+  for(const side of [0,1] as Side[]){
+   const arrows=this.add.graphics().setName('duel-route-arrows-'+side),color=side===0?0x9adbea:0xf7bd85,sign=side===0?-1:1,offset=duelLaneOffset(side);
+   const directions:{x:number;y:number;dx:number;dy:number}[]=[];
+   for(let i=0;i<map.points.length-1;i++){
+    const a=map.points[i],b=map.points[i+1],length=Math.hypot(b.x-a.x,b.y-a.y);if(length<2)continue;
+    const dx=(b.x-a.x)/length*sign,dy=(b.y-a.y)/length*sign,count=Math.max(1,Math.floor(length/4));
+    for(let j=0;j<count;j++){
+     const fraction=(j+.5)/count,x=X+(a.x+(b.x-a.x)*fraction+.5)*T,y=this.boardY+(a.y+(b.y-a.y)*fraction+offset+.5)*T;
+     arrows.lineStyle(2.5,color,.72).lineBetween(x-dx*9,y-dy*9,x+dx*7,y+dy*7);
+     arrows.fillStyle(color,.78).fillTriangle(x+dx*12,y+dy*12,x-dx*2-dy*6,y-dy*2+dx*6,x-dx*2+dy*6,y-dy*2-dx*6);
+     directions.push({x,y,dx,dy});
+    }
+   }
+   arrows.setData('directions',directions);this.terrain.add(arrows);
+  }
   for(const side of [0,1] as Side[]){for(const owner of [0,1] as Side[]){const end=map.points[owner===0?0:map.points.length-1],x=X+(end.x+.5)*T,y=this.boardY+(end.y+duelLaneOffset(side)+.5)*T;
    this.ambient?.add(this.terrain,owner===side?'guardian-'+owner:'enemy-start-'+side,'flame',x,y-10,94,92).setTint(owner===0?0xa6e8ff:0xffc382).setAlpha(owner===side?1:.65);
-   this.text(this.terrain,x,y+46,owner===side?'방어 성':'적군 출발',11,owner===0?'#9adbea':'#f7bd85').setBackgroundColor('#111722dd');
+   this.text(this.terrain,x,y+46,owner===side?'방어 성':`적군 출발 ${side===0?'←':'→'}`,11,owner===0?'#9adbea':'#f7bd85').setBackgroundColor('#111722dd');
   }
    for(const t of s?.players[side]?.towers??[]){const x=X+(t.x+.5)*T,y=this.boardY+(t.y+.5)*T,c=this.add.container(x,y-4);this.units.add(c);c.setAlpha(t.enabled?1:.5);const head=this.towerIcon(c,0,0,t.typeId,47);this.text(c,0,30,numberText(t.unit),15,'#ffe4a6').setBackgroundColor('#11131be8');this.towerViews.set(t.id,{head,tower:t,side,effects:new DuelHeroEffectBadges(this,this.reduced)});}
   }
