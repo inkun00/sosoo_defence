@@ -1,5 +1,6 @@
 import {artURL} from './art';
 import {Sound} from './audio';
+import {SCREEN_MOTION_SPEED,screenMotionEase} from './screen-motion';
 import './boss-finale.css';
 
 export const BOSS_FINALE_DURATION=5.8;
@@ -10,12 +11,12 @@ const ease=(value:number)=>1-Math.pow(1-clamp(value),3);
 const fade=(time:number,start:number,end:number)=>clamp((time-start)/(end-start));
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
 
-/** Time is measured in visible, unpaused seconds, independent of the game clock. */
+/** Time is the presentation timeline, independent of the game clock. */
 export function bossFinaleFrame(seconds:number){
  const time=Math.max(0,Math.min(BOSS_FINALE_DURATION,Number.isFinite(seconds)?seconds:0));
  return {time,phase:time<1.25?'charge':time<2.3?'shatter':time<3.35?'release':'victory',
-  travel:ease(time/.8),collapse:fade(time,1.25,2.3),release:fade(time,2.25,3.4),
-  title:ease(fade(time,3.2,3.8)),out:1-fade(time,5.35,BOSS_FINALE_DURATION)} as const;
+  travel:screenMotionEase(time/.8),collapse:fade(time,1.25,2.3),release:fade(time,2.25,3.4),
+  title:screenMotionEase(fade(time,3.2,3.8)),out:1-fade(time,5.35,BOSS_FINALE_DURATION)} as const;
 }
 
 const shards=Array.from({length:35},(_,i)=>({
@@ -143,7 +144,7 @@ export async function playBossFinale(preferences:BossFinalePreferences,origin:Bo
  if(disposed)return done;
  function cue(name:string,at:number){if(time<at||cues.has(name)||paused||document.hidden)return;cues.add(name);sound.play(name);}
  function tick(now:number){
-  if(disposed)return;if(last&&!paused&&!document.hidden)time+=Math.min(.1,(now-last)/1000);last=now;
+  if(disposed)return;if(last&&!paused&&!document.hidden)time+=Math.min(.1,(now-last)/1000)*(reduced?1:SCREEN_MOTION_SPEED);last=now;
   cue('boss-charge',0);cue('boss-shatter',1.25);cue('boss-release',2.25);cue('victory',3.35);
   if(!victory&&time>=3.35){victory=true;sound.setPaused(paused||document.hidden);status.textContent='저주 마법사 격파. 어둠의 지배가 끝났습니다.';}
   if(ctx)drawBossFinale(ctx,canvas.width,canvas.height,time,origin,reduced,art);

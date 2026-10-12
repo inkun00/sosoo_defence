@@ -1,5 +1,6 @@
 // The curse recedes into dawn. These story effects contain no gameplay,
 // numbers, equations or teaching demonstrations.
+import {screenMotionDuration,screenMotionEase} from './screen-motion';
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const ease=(n:number)=>1-(1-clamp(n))**3;
 export const ENDING_CHAPTERS=['어둠의 끝','저주의 해제','되찾은 세상','새로운 아침'] as const;
@@ -43,7 +44,7 @@ export function drawEndingMotion(ctx:CanvasRenderingContext2D,scene:number,local
   }
  }
  // A fine, luminous ornament frames the serif lettering without obscuring it.
- const alpha=ease(local/.9)*clamp((6-local)/.5);ctx.globalAlpha=alpha*.65;ctx.strokeStyle='#e6c58c';ctx.lineWidth=1.4;
+ const alpha=reduced?ease(local/.9)*clamp((6-local)/.5):screenMotionEase(local/screenMotionDuration(.9))*screenMotionEase((6-local)/screenMotionDuration(.5));ctx.globalAlpha=alpha*.65;ctx.strokeStyle='#e6c58c';ctx.lineWidth=1.4;
  for(const side of [-1,1]){
   ctx.beginPath();ctx.moveTo(800+side*24,611);ctx.lineTo(800+side*210,611);ctx.stroke();
   for(let i=0;i<3;i++){

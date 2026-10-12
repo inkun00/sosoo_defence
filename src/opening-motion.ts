@@ -1,6 +1,7 @@
 // Cinematic story effects: the world fragments into decimals, a spell summons
 // monsters, and several layers of the army advance toward the viewer.
 // Nothing here simulates a tower attack, a purchase, or a learning question.
+import {screenMotionDuration,screenMotionEase} from './screen-motion';
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const ease=(n:number)=>1-(1-clamp(n))**3;
 const value=(i:number)=>(((i*17)%99+1)/10).toFixed(1);
@@ -27,7 +28,7 @@ export function drawOpeningMotion(ctx:CanvasRenderingContext2D,scene:number,loca
   if(!reduced&&spread<.99){ctx.strokeStyle='#d29aff';ctx.globalAlpha=.65;ctx.lineWidth=5;ctx.beginPath();ctx.arc(1280,120,radius,0,Math.PI*2);ctx.stroke();}
  }
  if(scene===2||scene===3){
-  const strength=reduced?1:ease(local/1.5),cx=780,cy=350;
+  const strength=reduced?1:screenMotionEase(local/screenMotionDuration(1.5)),cx=780,cy=350;
   const glow=ctx.createRadialGradient(cx,cy,10,cx,cy,220);glow.addColorStop(0,'#eed2ff55');glow.addColorStop(1,'#bb6eff00');ctx.fillStyle=glow;ctx.globalAlpha=strength;ctx.fillRect(cx-220,cy-220,440,440);
   for(let ring=0;ring<3;ring++){
    ctx.save();ctx.translate(cx,cy);ctx.scale(1,.42);ctx.rotate(t*(ring%2?-.4:.3)+ring);ctx.strokeStyle=ring===1?'#eee0ff':'#c08aff';ctx.lineWidth=2;ctx.globalAlpha=strength*.7;ctx.beginPath();ctx.arc(0,0,95+ring*48,.2,Math.PI*1.7);ctx.stroke();ctx.restore();
@@ -44,7 +45,7 @@ export function drawOpeningMotion(ctx:CanvasRenderingContext2D,scene:number,loca
  };
  if(scene===3){
   OPENING_ASSETS.forEach((name,i)=>{
-   const born=reduced?1:ease((local-.7-i*.4)/1.6),x=435+i*365,y=365+(1-born)*90,size=(160+i*42)*born;
+   const born=reduced?1:screenMotionEase((local-.7-i*.4)/screenMotionDuration(1.6)),x=435+i*365,y=365+(1-born)*90,size=(160+i*42)*born;
    if(born<=0)return;ctx.save();ctx.globalAlpha=born*.7;ctx.strokeStyle='#d5a3ff';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,458,85,20,0,0,Math.PI*2);ctx.stroke();ctx.restore();
    monster(name,x,y,size,t+i,born);
    ctx.globalAlpha=born;ctx.font="800 30px 'Malgun Gothic',sans-serif";ctx.fillStyle='#efd5ff';ctx.fillText(['0.2','1.5','2.4'][i],x,480);

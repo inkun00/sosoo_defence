@@ -1,24 +1,25 @@
 /* Original heraldic motion, composed with the game's existing menu frame. */
-.game-motion{position:fixed;inset:0;z-index:190;pointer-events:none;overflow:hidden;contain:strict;color:var(--motion-color);animation:game-motion-dismiss var(--motion-duration) linear both}
-.game-motion-shade{position:absolute;inset:0;background:radial-gradient(ellipse at center,#070b12e8 0%,#090d15ce 24%,#090d1560 55%,transparent 84%);animation:game-motion-veil var(--motion-duration) ease-out both}
+.game-motion,.game-motion-departure{--motion-speed:var(--screen-motion-speed,.7);--motion-ease:var(--screen-motion-easing,cubic-bezier(.42,0,.58,1))}
+.game-motion{position:fixed;inset:0;z-index:190;pointer-events:none;overflow:hidden;contain:strict;color:var(--motion-color);animation:game-motion-dismiss var(--motion-duration) var(--motion-ease) both}
+.game-motion-shade{position:absolute;inset:0;background:radial-gradient(ellipse at center,#070b12e8 0%,#090d15ce 24%,#090d1560 55%,transparent 84%);animation:game-motion-veil var(--motion-duration) var(--motion-ease) both}
 .game-motion-particles{position:absolute;inset:0;width:100%;height:100%}
 .game-motion-announcement{position:absolute;left:50%;top:50%;width:min(760px,92vw);transform:translate(-50%,-50%);display:grid;justify-items:center;filter:drop-shadow(0 12px 16px #000b)}
-.game-motion-crest{width:clamp(80px,18dvh,148px);height:clamp(86px,19.2dvh,158px);margin-bottom:-9px;z-index:1;animation:game-motion-crest-in .52s cubic-bezier(.15,.84,.24,1.22) both}
+.game-motion-crest{width:clamp(80px,18dvh,148px);height:clamp(86px,19.2dvh,158px);margin-bottom:-9px;z-index:1;animation:game-motion-crest-in calc(.52s / var(--motion-speed)) var(--motion-ease) both}
 .game-motion-crest svg{display:block;width:100%;height:100%;overflow:visible}
-.game-motion-ribbon{position:relative;width:100%;min-height:138px;padding:25px 68px 29px;text-align:center;background:var(--motion-menu-art) center 40%/100% 163% no-repeat;animation:game-motion-ribbon-in .5s .16s cubic-bezier(.16,.76,.25,1) both;box-sizing:border-box}
-.game-motion-ribbon:after{content:'';position:absolute;left:17%;right:17%;bottom:21px;height:1px;background:linear-gradient(90deg,transparent,var(--motion-color),transparent);animation:game-motion-line .45s .35s ease-out both}
+.game-motion-ribbon{position:relative;width:100%;min-height:138px;padding:25px 68px 29px;text-align:center;background:var(--motion-menu-art) center 40%/100% 163% no-repeat;animation:game-motion-ribbon-in calc(.5s / var(--motion-speed)) calc(.16s / var(--motion-speed)) var(--motion-ease) both;box-sizing:border-box}
+.game-motion-ribbon:after{content:'';position:absolute;left:17%;right:17%;bottom:21px;height:1px;background:linear-gradient(90deg,transparent,var(--motion-color),transparent);animation:game-motion-line calc(.45s / var(--motion-speed)) calc(.35s / var(--motion-speed)) var(--motion-ease) both}
 .game-motion-label{display:block;font-size:clamp(10px,1.5vw,13px);letter-spacing:.16em;color:#e7cda1;line-height:1.5;margin-bottom:3px;text-shadow:0 2px 3px #000}
 .game-motion-ribbon strong{display:block;color:var(--motion-color);font:800 clamp(25px,4.8vw,47px)/1.12 'Malgun Gothic',sans-serif;letter-spacing:.055em;overflow-wrap:anywhere;text-shadow:0 3px 3px #150c06,0 0 18px #c7924355}
 .game-motion-ribbon small{display:block;color:#e0d4bc;font:600 clamp(11px,1.8vw,16px)/1.4 'Malgun Gothic',sans-serif;margin-top:8px;text-shadow:0 2px 3px #000;overflow-wrap:anywhere}
 .game-motion-ribbon small:empty{display:none}
-.game-motion-sigil{position:absolute;left:50%;top:50%;width:clamp(220px,53dvh,420px);aspect-ratio:1;transform:translate(-50%,-50%);opacity:.35;animation:game-motion-seal .85s ease-out both}
-.game-motion-orbit{position:absolute;inset:0;border:1px solid var(--motion-color);border-radius:50%;background:repeating-conic-gradient(from 0deg,transparent 0deg 28deg,#e7c48677 28deg 29deg,transparent 29deg 30deg);mask:radial-gradient(transparent 65%,#000 65.5%,#000 71%,transparent 71.5%);animation:game-motion-orbit 2.4s linear both}
+.game-motion-sigil{position:absolute;left:50%;top:50%;width:clamp(220px,53dvh,420px);aspect-ratio:1;transform:translate(-50%,-50%);opacity:.35;animation:game-motion-seal calc(.85s / var(--motion-speed)) var(--motion-ease) both}
+.game-motion-orbit{position:absolute;inset:0;border:1px solid var(--motion-color);border-radius:50%;background:repeating-conic-gradient(from 0deg,transparent 0deg 28deg,#e7c48677 28deg 29deg,transparent 29deg 30deg);mask:radial-gradient(transparent 65%,#000 65.5%,#000 71%,transparent 71.5%);animation:game-motion-orbit calc(2.4s / var(--motion-speed)) var(--motion-ease) both}
 .game-motion-orbit.inner{inset:13%;animation-direction:reverse;border:1px dashed var(--motion-color);background:none;mask:none}
 .game-motion-sigil i{position:absolute;left:calc(50% - 4px);top:-4px;width:8px;height:8px;border:1px solid var(--motion-color);background:#30353d;transform:rotate(45deg)}
 .game-motion-sigil i:nth-of-type(2){top:calc(50% - 4px);left:auto;right:-4px}.game-motion-sigil i:nth-of-type(3){top:auto;bottom:-4px}.game-motion-sigil i:nth-of-type(4){top:calc(50% - 4px);left:-4px}
-.game-motion--defeat .game-motion-ribbon{filter:saturate(.55);animation:game-motion-ribbon-in .5s .18s ease-out both}
-.game-motion--defeat .game-motion-crest{filter:saturate(.5);animation:game-motion-defeat-in .55s ease-out both}
-.game-motion-shield-left{animation:game-motion-shield-left .75s .2s ease-out both}.game-motion-shield-right{animation:game-motion-shield-right .75s .2s ease-out both}
+.game-motion--defeat .game-motion-ribbon{filter:saturate(.55);animation:game-motion-ribbon-in calc(.5s / var(--motion-speed)) calc(.18s / var(--motion-speed)) var(--motion-ease) both}
+.game-motion--defeat .game-motion-crest{filter:saturate(.5);animation:game-motion-defeat-in calc(.55s / var(--motion-speed)) var(--motion-ease) both}
+.game-motion-shield-left{animation:game-motion-shield-left calc(.75s / var(--motion-speed)) calc(.2s / var(--motion-speed)) var(--motion-ease) both}.game-motion-shield-right{animation:game-motion-shield-right calc(.75s / var(--motion-speed)) calc(.2s / var(--motion-speed)) var(--motion-ease) both}
 .game-motion--defeat .game-motion-orbit{border-style:dashed;animation-direction:reverse}.game-motion--defeat .game-motion-shade{background:radial-gradient(ellipse,#180e19ed,#0d0c18aa 46%,transparent 88%)}
 .game-motion--review .game-motion-ribbon,.game-motion--prepare .game-motion-ribbon{filter:saturate(.78)}
 @keyframes game-motion-dismiss{0%,78%{opacity:1}100%{opacity:0}}
@@ -32,13 +33,13 @@
 @keyframes game-motion-shield-left{from{transform:none}to{transform:translate(-5px,4px) rotate(-4deg)}}
 @keyframes game-motion-shield-right{from{transform:none}to{transform:translate(5px,8px) rotate(4deg)}}
 .game-motion-departure{position:fixed;inset:0;z-index:220;pointer-events:none;overflow:hidden;contain:strict}
-.game-motion-gate{position:absolute;top:0;bottom:0;width:50.2%;background:linear-gradient(110deg,#343c44,#151a22 46%,#30353c);box-shadow:inset 0 0 30px #05080e;border:3px solid #786d56;box-sizing:border-box;animation:game-motion-gate-close .25s cubic-bezier(.2,.7,.3,1) both}
+.game-motion-gate{position:absolute;top:0;bottom:0;width:50.2%;background:linear-gradient(110deg,#343c44,#151a22 46%,#30353c);box-shadow:inset 0 0 30px #05080e;border:3px solid #786d56;box-sizing:border-box;animation:game-motion-gate-close calc(.25s / var(--motion-speed)) var(--motion-ease) both}
 .game-motion-gate:after{content:'';position:absolute;inset:10%;border:1px solid #6d6654;box-shadow:inset 0 0 0 8px #141c24}
 .game-motion-gate.left{left:0;--gate-offset:-101%}.game-motion-gate.right{right:0;--gate-offset:101%}
-.game-motion-gate-seal{position:absolute;left:50%;top:50%;display:grid;place-items:center;width:62px;height:62px;border:2px solid #c39a5d;background:#202630;color:#ffce7e;font-size:36px;box-shadow:0 0 30px #ffbd4750;transform:translate(-50%,-50%) rotate(45deg);animation:game-motion-gate-seal .26s ease-out both}
+.game-motion-gate-seal{position:absolute;left:50%;top:50%;display:grid;place-items:center;width:62px;height:62px;border:2px solid #c39a5d;background:#202630;color:#ffce7e;font-size:36px;box-shadow:0 0 30px #ffbd4750;transform:translate(-50%,-50%) rotate(45deg);animation:game-motion-gate-seal calc(.26s / var(--motion-speed)) var(--motion-ease) both}
 @keyframes game-motion-gate-close{from{transform:translateX(var(--gate-offset))}to{transform:translateX(0)}}
 @keyframes game-motion-gate-seal{0%,65%{opacity:0}100%{opacity:1}}
-.duel-auth-form,.adventure-hall-card,.workbook-header,.workbook-toolbar,.workbook-dialog:not(.hidden) .workbook-card{animation:game-motion-panel-in .26s cubic-bezier(.18,.72,.24,1) both}
+.duel-auth-form,.adventure-hall-card,.workbook-header,.workbook-toolbar,.workbook-dialog:not(.hidden) .workbook-card{animation:game-motion-panel-in calc(.26s / var(--screen-motion-speed,.7)) var(--screen-motion-easing,cubic-bezier(.42,0,.58,1)) both}
 @keyframes game-motion-panel-in{from{opacity:.2;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @media(orientation:landscape) and (max-height:500px){.game-motion-crest{width:69px;height:74px;margin-bottom:-8px}.game-motion-ribbon{min-height:100px;padding:19px 47px 21px}.game-motion-ribbon strong{font-size:clamp(25px,5vw,34px)}.game-motion-ribbon small{font-size:12px;margin-top:5px}.game-motion-ribbon:after{bottom:14px}.game-motion-label{font-size:10px}}
 @media(orientation:portrait){.game-motion-ribbon{min-height:136px;padding:25px 30px 29px}.game-motion-ribbon strong{font-size:clamp(24px,7.4vw,38px)}.game-motion-crest{width:110px;height:117px}.game-motion-sigil{width:min(330px,90vw)}}

@@ -13,6 +13,7 @@ import {DIFFICULTIES,Difficulty,balanceFor} from './difficulty';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from './towers';
 import {stageMap} from './maps';
 import type {GameScreenLayout} from './responsive-game';
+import {screenMotionDuration,SCREEN_MOTION_PHASER_EASING} from './screen-motion';
 
 export type Panel='forge'|'map'|'menu'|'difficulty'|'purchase'|'goals'|'result'|null;
 export interface UIState{
@@ -251,7 +252,7 @@ export class GameUI extends Phaser.Scene{
    const scale=reflowed?1:Math.min(1,(height-20)/panelHeight);this.popup.setScale(scale).setPosition(640*(1-scale),reflowed?0:height/2-410*scale);
    veil.setPosition((640-this.popup.x)/scale,(height/2-this.popup.y)/scale).setSize(1280/scale,height/scale);
   }
-  if(s.panel!==this.previousPanel&&!this.reducedMotion){const y=this.popup.y;this.popup.setAlpha(.2).setY(y+12);this.tweens.add({targets:this.popup,alpha:1,y,duration:240,ease:'Cubic.easeOut'});}
+  if(s.panel!==this.previousPanel&&!this.reducedMotion){const y=this.popup.y;this.popup.setAlpha(.2).setY(y+12);this.tweens.add({targets:this.popup,alpha:1,y,duration:screenMotionDuration(240),ease:SCREEN_MOTION_PHASER_EASING});}
   this.previousPanel=s.panel;
  }
  private modalFrame(title:string,w=900,h=540){
@@ -330,7 +331,7 @@ export class GameUI extends Phaser.Scene{
  }
  private drawResult(){
   const s=this.getState(),m=s.model,won=m.phase==='won',review=m.phase==='review';this.modalFrame(won?'소수의 성을 지켰어요!':review?'성은 지켰어요! 학습 목표를 연습해요':'성 체력 5개가 모두 소진됐어요',940,650);
-  [0,1,2].forEach(i=>{const star=this.add.image(562+i*78,214,'dungeon-icons','star').setDisplaySize(64,64).setAlpha(won&&i<m.stars?1:.24);this.popup.add(star);if(won&&i<m.stars&&this.previousPanel!=='result'&&!this.reducedMotion)this.tweens.add({targets:star,angle:{from:-20,to:0},scaleX:{from:star.scaleX*.2,to:star.scaleX},scaleY:{from:star.scaleY*.2,to:star.scaleY},delay:200+i*130,duration:450,ease:'Back.easeOut'});});
+  [0,1,2].forEach(i=>{const star=this.add.image(562+i*78,214,'dungeon-icons','star').setDisplaySize(64,64).setAlpha(won&&i<m.stars?1:.24);this.popup.add(star);if(won&&i<m.stars&&this.previousPanel!=='result'&&!this.reducedMotion)this.tweens.add({targets:star,angle:{from:-20,to:0},scaleX:{from:star.scaleX*.2,to:star.scaleX},scaleY:{from:star.scaleY*.2,to:star.scaleY},delay:screenMotionDuration(200+i*130),duration:screenMotionDuration(450),ease:SCREEN_MOTION_PHASER_EASING});});
   this.text(this.popup,640,275,`성 체력 ${m.castle}/5   ·   ${m.kills}마리 방어   ·   유효 타격 ${m.successfulHits}회`,24).setOrigin(.5);
   this.text(this.popup,640,307,`이번 단계 ${m.score.toLocaleString('ko-KR')}점 · 누적 ${campaignTotal(s.save).toLocaleString('ko-KR')}점`,21,'#ffdf9b').setName('adventure-result-score').setOrigin(.5);
   m.goals.forEach((g,i)=>this.text(this.popup,265,333+i*42,`${g.done?'✓':'○'}  ${g.label}`,22,g.done?'#8bd3a0':'#dfb28e',740));

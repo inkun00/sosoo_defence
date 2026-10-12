@@ -31,6 +31,7 @@ export function heroRevealHTML(h:HeroSpec,copies:number){
  h=worksheetHeroSpec(h.id)??h;
  const rank=heroSummonStyle(h.level),sparks=Array.from({length:rank.particles},(_,i)=>{
   const angle=i/rank.particles*Math.PI*2,radius=48+(i%3)*16;
+  // CSS scales this base stagger once alongside the acquisition duration.
   return '<i style="--spark-x:'+Math.round(Math.cos(angle)*radius)+'px;--spark-y:'+Math.round(Math.sin(angle)*radius)+'px;--spark-delay:'+(i%7)*35+'ms"></i>';
  }).join('');
  return '<div class="hero-reveal worksheet-hero" data-rank="'+rank.rank+'" data-hero-family="'+h.variant+'" data-effects="'+(h.effects??[h.effect]).join(',')+'" style="'+rankStyle(h)+'"><span class="hero-reveal-rank">✦ 특별 '+rank.label+' 영웅 · Lv.'+h.level+'</span><div class="hero-reveal-stage" aria-hidden="true"><span class="hero-reveal-column"></span><span class="hero-reveal-ring"></span>'+(rank.rank>2?'<span class="hero-reveal-ring hero-reveal-ring-outer"></span>':'')+'<span class="hero-reveal-sparks">'+sparks+'</span><span class="hero-reveal-figure">'+heroArt(h)+'</span></div><h2>'+h.name+'</h2><p class="collection-abilities" aria-label="'+h.description+'">'+abilityHTML(h)+'</p><p class="collection-note">'+(copies===1?'새로운 영웅 획득':copies+'회 획득')+' · 영구 보관</p><button id="ws-equip">이 영웅을 대전 동료로 선택</button></div>';

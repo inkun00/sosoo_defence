@@ -1,4 +1,5 @@
 import {artURL} from './art';
+import {SCREEN_MOTION_SPEED,SCREEN_MOTION_EASING,screenMotionDuration,screenMotionEase} from './screen-motion';
 import './game-motion.css';
 
 export type MotionKind='entry'|'prepare'|'battle'|'victory'|'defeat'|'draw'|'review'|'stage';
@@ -13,7 +14,7 @@ const THEMES:Record<MotionKind,{title:string;label:string;color:string;duration:
  draw:{title:'무승부',label:'팽팽한 결투',color:'#bfcafa',duration:1500},
  review:{title:'성을 지켰어요',label:'수호자의 발걸음',color:'#98dfc6',duration:1500},
 };
-const ease=(value:number)=>1-(1-Math.max(0,Math.min(1,value)))**3;
+const ease=screenMotionEase;
 let serial=0;
 function crest(id:string,broken:boolean){
  const shield=`<path fill="url(#${id}-metal)" stroke="#dfb873" stroke-width="2" d="M60 7 104 23 100 73Q95 105 60 120 25 105 20 73L16 23Z"/><path fill="#111923" stroke="#78634b" stroke-width="2" d="M60 17 93 30 90 73Q86 97 60 109 34 97 30 73L27 30Z"/><path fill="url(#${id}-stone)" stroke="#b6b6ab" stroke-width="1.5" d="M35 87V55H42V45H49V55H55V37H65V55H71V45H78V55H85V87ZM49 87V70H56V87M64 87V70H71V87"/><path fill="#fbd48c" d="M60 77C39 64 60 50 55 29 78 45 71 53 76 59 80 68 68 78 60 77Z"/><path fill="#fff4ca" d="M60 75C50 67 60 59 60 47 69 59 71 70 60 75Z"/>`;
@@ -29,16 +30,19 @@ export class GameMotion{
  private reveals=new Map<HTMLElement,Animation>();
  private disposed=false;
  private onHide=()=>this.dispose();
- constructor(){if(typeof window!=='undefined')window.addEventListener('pagehide',this.onHide);}
+ constructor(){
+  if(typeof document!=='undefined'){document.documentElement.style.setProperty('--screen-motion-speed',String(SCREEN_MOTION_SPEED));document.documentElement.style.setProperty('--screen-motion-easing',SCREEN_MOTION_EASING);}
+  if(typeof window!=='undefined')window.addEventListener('pagehide',this.onHide);
+ }
  play(kind:MotionKind,options:MotionOptions={}):Promise<void>{
   if(this.disposed||typeof document==='undefined'||(options.key&&this.played.has(options.key)))return Promise.resolve();
   if(options.key){this.played.add(options.key);if(this.played.size>128)this.played.delete(this.played.values().next().value!);}
   if(matchMedia('(prefers-reduced-motion: reduce)').matches||document.hidden)return Promise.resolve();
   // A new event replaces the old celebration; its completion still resolves.
   for(const overlay of this.overlays)overlay.finish();
-  const theme=THEMES[kind],id='game-motion-'+(++serial),root=document.createElement('div');
+  const theme=THEMES[kind],duration=screenMotionDuration(theme.duration),id='game-motion-'+(++serial),root=document.createElement('div');
   root.className=`game-motion game-motion--${kind}`;root.dataset.motionKind=kind;root.setAttribute('aria-hidden','true');
-  root.style.setProperty('--motion-color',theme.color);root.style.setProperty('--motion-duration',theme.duration+'ms');
+  root.style.setProperty('--motion-color',theme.color);root.style.setProperty('--motion-duration',duration+'ms');
   root.style.setProperty('--motion-menu-art',`url("${artURL('menu-button-v1')}")`);
   root.innerHTML=`<div class="game-motion-shade"></div><canvas class="game-motion-particles"></canvas><div class="game-motion-sigil"><div class="game-motion-orbit"></div><div class="game-motion-orbit inner"></div><i></i><i></i><i></i><i></i></div><div class="game-motion-announcement"><div class="game-motion-crest">${crest(id,kind==='defeat')}</div><div class="game-motion-ribbon"><span class="game-motion-label"></span><strong></strong><small></small></div></div>`;
   root.querySelector('.game-motion-label')!.textContent=theme.label;
@@ -56,14 +60,14 @@ export class GameMotion{
    this.overlays.add(overlay);
    const frame=(now:number)=>{
     if(done)return;
-    const local=(now-began)/theme.duration;
+    const local=(now-began)/duration;
     if(local>=1||document.hidden){overlay.finish();return;}
     if(context)drawMotionParticles(context,kind,local,width,height,dpr);
     raf=requestAnimationFrame(frame);
    };
    raf=requestAnimationFrame(frame);
    // Background tabs, unsupported rendering, or a suspended RAF cannot strand it.
-   timer=setTimeout(overlay.finish,theme.duration+120);
+   timer=setTimeout(overlay.finish,duration+120);
   });
  }
  reveal(element:HTMLElement,delay=0):void{
@@ -72,7 +76,7 @@ export class GameMotion{
   const style=getComputedStyle(element),base=style.transform==='none'?'':style.transform,filter=style.filter==='none'?'':style.filter;
   // A live canvas must keep its bounds: Phaser maps pointer coordinates against it.
   const offset=element instanceof HTMLCanvasElement||element.querySelector('canvas')?'':' translateY(10px)';
-  const animation=element.animate([{opacity:.15,transform:`${base}${offset}`||'none',filter:`${filter} brightness(.75)`},{opacity:style.opacity,transform:base||'none',filter:filter||'none'}],{duration:260,delay,fill:'backwards',easing:'cubic-bezier(.18,.72,.24,1)'});
+  const animation=element.animate([{opacity:.15,transform:`${base}${offset}`||'none',filter:`${filter} brightness(.75)`},{opacity:style.opacity,transform:base||'none',filter:filter||'none'}],{duration:screenMotionDuration(260),delay:screenMotionDuration(delay),fill:'backwards',easing:SCREEN_MOTION_EASING});
   this.reveals.set(element,animation);
   const finish=()=>{if(this.reveals.get(element)===animation)this.reveals.delete(element);};
   animation.addEventListener('finish',finish,{once:true});animation.addEventListener('cancel',finish,{once:true});
@@ -83,7 +87,7 @@ export class GameMotion{
 
 function drawMotionParticles(ctx:CanvasRenderingContext2D,kind:MotionKind,t:number,w:number,h:number,dpr:number){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
- const cx=w/2,cy=h/2,unit=Math.min(w*.28,h*.39,280),arrival=ease(t*4),fade=Math.min(1,(1-t)*5);
+ const cx=w/2,cy=h/2,unit=Math.min(w*.28,h*.39,280),arrival=ease(t*4),fade=ease((1-t)*5);
  const win=kind==='victory',loss=kind==='defeat',cool=kind==='prepare'||kind==='draw'||kind==='review';
  const color=loss?'#eaa08d':cool?'#9cdde6':'#ffe0a0';
  ctx.save();ctx.translate(cx,cy);ctx.globalAlpha=fade;
@@ -117,11 +121,11 @@ function drawMotionParticles(ctx:CanvasRenderingContext2D,kind:MotionKind,t:numb
  }
  const count=loss?26:win?44:24;
  for(let i=0;i<count;i++){
-  const a=i*2.399,seed=(i*137%100)/100,progress=Math.max(0,(t-seed*.17)/(1-seed*.17));
-  const distance=unit*(.3+progress*(win?1.7:1.15)),x=Math.cos(a)*distance;
-  const y=loss?-unit*.4+progress*h*.5+Math.sin(a)*unit*.5:Math.sin(a)*distance*.66-progress*unit*.45;
+  const a=i*2.399,seed=(i*137%100)/100,progress=Math.max(0,(t-seed*.17)/(1-seed*.17)),travel=ease(progress);
+  const distance=unit*(.3+travel*(win?1.7:1.15)),x=Math.cos(a)*distance;
+  const y=loss?-unit*.4+travel*h*.5+Math.sin(a)*unit*.5:Math.sin(a)*distance*.66-travel*unit*.45;
   ctx.globalAlpha=fade*Math.sin(Math.min(1,progress)*Math.PI)*(.3+i%4*.12);ctx.fillStyle=color;
-  ctx.save();ctx.translate(x,y);ctx.rotate(a+progress*(loss?1.4:3));
+  ctx.save();ctx.translate(x,y);ctx.rotate(a+travel*(loss?1.4:3));
   if(loss){ctx.fillStyle=i%3?'#b89886':'#d86b71';ctx.fillRect(-2,-2,3+i%3,5+i%4);}
   else if(win&&i%7===0){ctx.beginPath();for(let point=0;point<8;point++){const r=point%2?2:7,angle=point*Math.PI/4;point?ctx.lineTo(Math.cos(angle)*r,Math.sin(angle)*r):ctx.moveTo(r,0);}ctx.closePath();ctx.fill();}
   else{ctx.fillRect(-1.5,-1.5,3+i%3,3+i%3);}
@@ -139,6 +143,6 @@ export function navigateWithMotion(url:string):void{
  cover.innerHTML='<div class="game-motion-gate left"></div><div class="game-motion-gate right"></div><div class="game-motion-gate-seal">✦</div>';
  document.body.append(cover);
  // A CSS event alone is not reliable when a tab is backgrounded.
- const timer=setTimeout(()=>location.assign(url),280);
+ const timer=setTimeout(()=>location.assign(url),screenMotionDuration(280));
  window.addEventListener('pagehide',()=>{clearTimeout(timer);cover.remove();},{once:true});
 }

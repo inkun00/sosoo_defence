@@ -1,4 +1,6 @@
-export const COMPUTER_SELECTION_DELAY_MS=1800;
+import {screenMotionDuration} from '../screen-motion';
+
+export const COMPUTER_SELECTION_DELAY_MS=screenMotionDuration(1800);
 
 /** Each opponent keeps their own voice, with a shuffled bag across selections. */
 export const COMPUTER_SELECTION_TAUNTS:readonly (readonly string[])[]=[

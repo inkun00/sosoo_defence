@@ -4,6 +4,7 @@ import {Sound} from './audio';
 import {Save} from './save';
 import {drawOpeningMotion,OPENING_ASSETS} from './opening-motion';
 import {drawEndingMotion,drawRestoredWorld,ENDING_CHAPTERS} from './ending-motion';
+import {screenMotionDuration,screenMotionEase} from './screen-motion';
 import './cinematic.css';
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 const ease=(n:number)=>1-Math.pow(1-clamp(n),3);
@@ -39,14 +40,14 @@ export async function playCinematic(kind:StoryKind,preferences:Save,onComplete:(
  function draw(){
   const f=storyFrame(kind,time),b=f.beat,p=f.local/b.duration;ctx.fillStyle='#080a10';ctx.fillRect(0,0,1600,900);background(b.art,p);
   if(kind==='ending'&&f.index===0)drawRestoredWorld(ctx,f.local,reduced,()=>background('story-dawn-v1',p));
-  if(kind==='opening'&&f.index>0&&f.local<.8&&!reduced)background(STORY[kind][f.index-1].art,1,1-ease(f.local/.8));
+  if(kind==='opening'&&f.index>0&&f.local<screenMotionDuration(.8)&&!reduced)background(STORY[kind][f.index-1].art,1,1-screenMotionEase(f.local/screenMotionDuration(.8)));
   const shade=ctx.createLinearGradient(0,0,0,900);shade.addColorStop(0,'#080b16aa');shade.addColorStop(.45,'#0a0c161c');shade.addColorStop(1,'#060912ef');ctx.fillStyle=shade;ctx.fillRect(0,0,1600,900);
   if(!reduced){for(let i=0;i<52;i++){const x=(i*397.31+time*(i%3-1)*8+1600)%1600,y=900-((i*147.7+time*(15+i%9*2))%920);ctx.globalAlpha=.15+.45*Math.pow(Math.sin(time+i),2);ctx.fillStyle=b.accent;ctx.beginPath();ctx.arc(x,y,1.2+i%3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;}
   // A broad ring and travelling ribbons create a reveal, never rapid flashing.
-  if(!reduced&&f.local<1.6){ctx.save();ctx.globalAlpha=.18*(1-f.local/1.6);ctx.strokeStyle=b.accent;ctx.lineWidth=4;ctx.beginPath();ctx.arc(800,445,90+ease(f.local/1.6)*850,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  if(!reduced&&f.local<screenMotionDuration(1.6)){const reveal=screenMotionEase(f.local/screenMotionDuration(1.6));ctx.save();ctx.globalAlpha=.18*(1-reveal);ctx.strokeStyle=b.accent;ctx.lineWidth=4;ctx.beginPath();ctx.arc(800,445,90+reveal*850,0,Math.PI*2);ctx.stroke();ctx.restore();}
   if(kind==='opening')drawOpeningMotion(ctx,f.index,f.local,reduced,art);
   else drawEndingMotion(ctx,f.index,f.local,reduced);
-  const entry=ease(f.local/.9),end=clamp((b.duration-f.local)/.5);ctx.save();ctx.globalAlpha=entry*end;ctx.translate(0,reduced?0:30*(1-entry));
+  const entry=reduced?ease(f.local/.9):screenMotionEase(f.local/screenMotionDuration(.9)),end=reduced?clamp((b.duration-f.local)/.5):screenMotionEase((b.duration-f.local)/screenMotionDuration(.5));ctx.save();ctx.globalAlpha=entry*end;ctx.translate(0,reduced?0:30*(1-entry));
   const ending=kind==='ending';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=ending?"700 70px 'HahmletEnding','Batang',serif":"900 68px 'Malgun Gothic',sans-serif";ctx.shadowColor='#000';ctx.shadowBlur=20;ctx.fillStyle='#fff1d8';ctx.fillText(b.title,800,552,1350);ctx.shadowBlur=0;
   if(!ending){ctx.fillStyle=b.accent;ctx.fillRect(748,610,104,3);}
   ctx.font=ending?"500 30px 'HahmletEnding','Batang',serif":"500 26px 'Malgun Gothic',sans-serif";ctx.fillStyle='#eee4d5';ctx.fillText(b.subtitle,800,657,1350);

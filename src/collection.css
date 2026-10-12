@@ -49,13 +49,13 @@
 .hero-reveal{--hero-rank:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 0 0}
 .hero-reveal-rank{color:var(--hero-accent);font-size:15px;letter-spacing:.17em;padding:7px 18px;border:1px solid var(--hero-color);border-radius:30px;background:#111b29}
 .hero-reveal-stage{position:relative;width:310px;height:218px;display:grid;place-items:center;isolation:isolate;margin:15px auto 0}
-.hero-reveal-column{position:absolute;bottom:32px;left:25%;width:50%;height:calc(75px + var(--hero-rank)*17px);background:linear-gradient(0deg,var(--hero-color),transparent);clip-path:polygon(30% 0,70% 0,100% 100%,0 100%);opacity:0;animation:hero-column 1.5s ease-out forwards;filter:blur(2px);z-index:-1}
-.hero-reveal-ring{position:absolute;left:15%;bottom:24px;width:70%;height:50px;border:2px solid var(--hero-color);border-radius:50%;box-shadow:0 0 15px var(--hero-color),inset 0 0 12px var(--hero-color);animation:hero-ring 1.2s ease-out both;z-index:-1}
-.hero-reveal-ring-outer{left:7%;bottom:16px;width:86%;height:68px;border-style:dashed;animation-delay:.15s}
-.hero-reveal-figure{animation:hero-materialize .75s cubic-bezier(.2,.8,.2,1) both;filter:drop-shadow(0 0 calc(3px + var(--hero-rank)*2px) var(--hero-color))}
+.hero-reveal-column{position:absolute;bottom:32px;left:25%;width:50%;height:calc(75px + var(--hero-rank)*17px);background:linear-gradient(0deg,var(--hero-color),transparent);clip-path:polygon(30% 0,70% 0,100% 100%,0 100%);opacity:0;animation:hero-column calc(1.5s / var(--screen-motion-speed,.7)) var(--screen-motion-easing,cubic-bezier(.42,0,.58,1)) forwards;filter:blur(2px);z-index:-1}
+.hero-reveal-ring{position:absolute;left:15%;bottom:24px;width:70%;height:50px;border:2px solid var(--hero-color);border-radius:50%;box-shadow:0 0 15px var(--hero-color),inset 0 0 12px var(--hero-color);animation:hero-ring calc(1.2s / var(--screen-motion-speed,.7)) var(--screen-motion-easing,cubic-bezier(.42,0,.58,1)) both;z-index:-1}
+.hero-reveal-ring-outer{left:7%;bottom:16px;width:86%;height:68px;border-style:dashed;animation-delay:calc(.15s / var(--screen-motion-speed,.7))}
+.hero-reveal-figure{animation:hero-materialize calc(.75s / var(--screen-motion-speed,.7)) var(--screen-motion-easing,cubic-bezier(.42,0,.58,1)) both;filter:drop-shadow(0 0 calc(3px + var(--hero-rank)*2px) var(--hero-color))}
 .hero-reveal-figure .collection-art{width:215px;height:192px}
 .hero-reveal-sparks{position:absolute;left:50%;top:50%;pointer-events:none}
-.hero-reveal-sparks i{position:absolute;width:4px;height:4px;border-radius:1px;background:var(--hero-accent);box-shadow:0 0 7px var(--hero-color);animation:hero-spark 1.1s var(--spark-delay) ease-out both}
+.hero-reveal-sparks i{position:absolute;width:4px;height:4px;border-radius:1px;background:var(--hero-accent);box-shadow:0 0 7px var(--hero-color);animation:hero-spark calc(1.1s / var(--screen-motion-speed,.7)) calc(var(--spark-delay) / var(--screen-motion-speed,.7)) var(--screen-motion-easing,cubic-bezier(.42,0,.58,1)) both}
 .hero-reveal h2{margin:2px 0 10px!important;color:var(--hero-accent)}
 .hero-reveal p{margin:5px 0;line-height:1.6;font-size:14px}
 :is(.workbook,.hero-collection-preview) .hero-reveal button{margin:18px 0 12px;background:transparent var(--menu-art) center/100% 150% no-repeat!important;border:0!important;border-radius:0;min-height:65px;color:#ffe5b4;padding:12px 38px;font:700 15px 'Malgun Gothic',sans-serif}

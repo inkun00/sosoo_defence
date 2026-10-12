@@ -1,12 +1,11 @@
 import {artURL} from './art';
 import {Sound} from './audio';
 import {bossIntroFrame,BossIntroClock,BOSS_INTRO_DURATION,BOSS_INTRO_MECHANICS} from './boss-intro-story';
+import {screenMotionDuration,screenMotionEase} from './screen-motion';
 import './boss-intro.css';
 
 export interface BossIntroPreferences{sfx:boolean;music:boolean;}
 export interface BossIntroPresentation{readonly done:Promise<void>;cancel():void;}
-const clamp=(value:number)=>Math.max(0,Math.min(1,value));
-const ease=(value:number)=>1-Math.pow(1-clamp(value),3);
 function circle(ctx:CanvasRenderingContext2D,x:number,y:number,radius:number){ctx.beginPath();ctx.arc(x,y,Math.max(.01,radius),0,Math.PI*2);}
 function glow(ctx:CanvasRenderingContext2D,x:number,y:number,radius:number,color:string){
  const gradient=ctx.createRadialGradient(x,y,0,x,y,radius);gradient.addColorStop(0,color);gradient.addColorStop(1,'#00000000');ctx.fillStyle=gradient;circle(ctx,x,y,radius);ctx.fill();
@@ -25,7 +24,7 @@ function loadImage(name:string,signal:AbortSignal):Promise<HTMLImageElement|unde
 /** Only the existing sorcerer illustration and 4×4 wizard atlas are used. */
 export function drawBossIntro(ctx:CanvasRenderingContext2D,width:number,height:number,seconds:number,reduced:boolean,art:ReadonlyMap<string,HTMLImageElement>){
  const frame=bossIntroFrame(seconds,reduced),time=frame.time,unit=width/1600,portrait=height>width,cx=width*.5,cy=height*(portrait?.34:.4);
- const size=Math.min(width*(portrait?.64:.36),height*.54),entry=reduced?1:ease(time/.9),breath=reduced?0:Math.sin(time*1.45)*size*.009;
+ const size=Math.min(width*(portrait?.64:.36),height*.54),entry=reduced?1:screenMotionEase(time/screenMotionDuration(.9)),breath=reduced?0:Math.sin(time*1.45)*size*.009;
  const background=art.get('story-sorcerer-v2'),wizard=art.get('monster-wizard-v1');
  ctx.clearRect(0,0,width,height);ctx.fillStyle='#090613';ctx.fillRect(0,0,width,height);
  if(background){
