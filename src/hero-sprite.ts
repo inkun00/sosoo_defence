@@ -1,9 +1,11 @@
-import frames from './hero-sprite-frames.json';
+import packedFrames from './hero-sprite-frames.generated.json';
+import {decodeSpriteFrames} from './sprite-frame-packing';
 import {artURL} from './art';
 
 export const HERO_SPRITE_CELL=224;
 interface HeroFrame{x:number;y:number;width:number;height:number;polygon?:number[][];}
 interface HeroSheet{width:number;height:number;rows:HeroFrame[][];}
+const frames=decodeSpriteFrames(packedFrames) as Record<string,HeroSheet>;
 let portraitSerial=0;
 
 export function heroSpriteSheet(sheet:string):HeroSheet{
