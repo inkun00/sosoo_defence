@@ -135,7 +135,9 @@ Windows에서 `게임실행.cmd`를 열고 `http://localhost:4173`으로 접속�
 
 원본은 `public`에 보관하고 배포에는 `web-public`의 최적화된 현재 이미지만 포함합니다. 제작용 프롬프트 JSON/TXT 약 100KB는 배포에서 제외하고 필요한 이미지·음원·폰트 라이선스와 출처는 보존합니다. 전장은 현재 단계에 필요한 몬스터만 사전 로드하고, 1:1 영웅은 등장할 때 로드합니다. 이미지·음원·폰트·코드 주소에는 내용 해시를 붙이며 Vercel과 로컬 실행 서버에서 1년 캐시를 사용합니다. 파일이 바뀌면 주소도 바뀌어 새 파일을 가져옵니다. `npm run optimize:assets`가 원본 또는 압축 설정의 변경분만 변환하고 개발·빌드 전에 자동 실행됩니다. `npm run build` 뒤 `npm run check:assets`로 현재 57개 전체의 크기·정확한 알파값·파일 해시·배포 누락/중복과 출처 보존을 검증합니다. 기존 41개는 7 MiB 미만, 이후 추가한 CPU·영웅 팝업·효과 이미지 15개는 별도 2 MiB 미만으로 제한합니다. 두 그룹은 각각 6,758,686바이트와 1,900,740바이트입니다. 학습지 전용 영웅 시트는 별도 256 KiB 미만으로 제한하며 768×512 WebP 89,634바이트입니다. 전체 57개 합계는 약 8.34 MiB입니다.
 
-영웅 시트는 실제 실루엣의 위치에 맞춰 `src/hero-sprite-frames.json`의 경계로 표시합니다. 선택 카드·도감·학습지·전투는 같은 경계를 사용하며, 걷기 네 동작은 공통 정사각형 영역에서 비율과 상대 위치를 유지합니다. `npm run check:heroes`는 일반 영웅 120프레임과 학습지 영웅 12프레임의 알파 픽셀 유실·다른 영웅 혼입이 없는지 확인합니다. 원본이나 압축 해상도를 바꾼 뒤에는 `npm run optimize:assets`와 `node tools/audit-hero-sprites.mjs`로 경계를 다시 만들고 `test-results/hero-crop-audit`의 검사용 이미지를 확인합니다.
+영웅 시트는 실제 실루엣의 위치에 맞춰 `src/hero-sprite-frames.generated.json`의 경계로 표시합니다. 선택 카드·도감·학습지·전투는 같은 경계를 사용하며, 걷기 네 동작은 공통 정사각형 영역에서 비율과 상대 위치를 유지합니다. 영웅·CPU 경계 좌표는 정수 차이값을 VLQ로 저장하고 모듈 초기화 때 한 번 정확히 복원합니다. 좌표를 단순화하거나 반올림하지 않습니다. `npm run check:heroes`는 일반 영웅 120프레임과 학습지 영웅 12프레임의 알파 픽셀 유실·다른 영웅 혼입이 없는지 확인합니다. 원본이나 압축 해상도를 바꾼 뒤에는 `npm run optimize:assets`와 `node tools/audit-hero-sprites.mjs`로 경계를 다시 만들고 `test-results/hero-crop-audit`의 검사용 이미지를 확인합니다. CPU 선택 경계는 `node tools/audit-computer-sprites.mjs`로 재생성합니다. 자동 생성 JSON은 직접 수정하지 않습니다.
+
+제작용 PNG의 무손실 최적화는 `npm run optimize:sources`로 후보를 검사하고 `npm run optimize:sources -- --write`로 적용합니다. 더 작은 파일만 채택하며 모든 RGBA 픽셀·해상도·색상 메타데이터를 비교합니다. 원본 파일 바이트에 서명된 C2PA 인증 청크는 재압축한 PNG에서 분리해 `docs/source-image-credentials.generated.json.gz`에 원본 해시와 함께 보관합니다. 해당 인증은 압축본의 유효한 서명이 아니며, 서명된 원본 PNG는 Git `80c9359`에 있습니다. 인증 보관 파일은 게임 배포에 포함하지 않습니다. 현재 WebP·음원·폰트의 화질과 재생 품질은 유지합니다.
 
 BGM·UI·충돌 효과음은 Web Audio로 브라우저에서 합성하므로 별도 음원 파일이 없습니다. 타워 발사에는 CC0·CC-BY 공개 무기·마법 음원을 편집한 12개 샘플(총 65,472바이트)을 사용하며 설치한 종류만 지연 로드하고 캐시합니다. 이미 모노·24kHz·64kbps로 압축되어 있어 추가 손실압축은 적용하지 않습니다. 게임의 오디오 manifest는 재생에 필요한 URL·바이트·길이만 담고 출처는 공개 라이선스 파일에서 확인합니다. 개발용 청취 페이지에서도 개별 청취 시 필요한 한 종류만 로드합니다. 엔딩 글꼴은 필요한 한글만 담은 WOFF2 53.6KiB입니다. 외부 오디오 생성 API와 음성 나레이션은 사용하지 않습니다. 첫 화면, 이야기, 모험, 대전, 학습지는 필요한 코드만 별도로 로드합니다.
 
@@ -144,6 +146,8 @@ BGM·UI·충돌 효과음은 Web Audio로 브라우저에서 합성하므로 별
 `npm test`: 규칙·구매·저장·난이도·한 자리 자연수 범위·기록 증분 동기화·오디오 테스트. 세 난이도 × 11단계의 실제 코인 뺄셈 정답·준비 구매·발사 조절·합성 공략을 포함합니다. 공략은 예산·설치 제한을 지키며 방어 시작 후 추가 구매·회수·타워 이동 없이 고정 배치로 진행합니다. 학생 대상 난이도 평가는 별도로 필요합니다.
 
 `npm run build`: TypeScript 검사와 배포용 Vite 빌드.
+
+`npm run check:file-lines`: 사람이 작성하는 코드의 1,000줄 상한과 800줄 분리 경고를 검사합니다. 테스트와 빌드 전에 자동 실행됩니다.
 
 개발 서버를 실행한 뒤 `node tools/browser-check.cjs`로 구매 문제·오답·취소·정답 설치·전투 정지·재개·성벽·지도·저장·PC·태블릿을 확인합니다. `turret-check.cjs`, `combat-fx-check.cjs`, `difficulty-check.cjs`, `inventory-check.cjs`는 세부 검증입니다. `production-check.cjs`는 완성본의 실제 구매·전투 흐름을 확인합니다. Chromium이 없다면 `npx playwright install chromium`, 다른 실행 경로는 `PLAYWRIGHT_CHROMIUM_EXECUTABLE`로 지정합니다.
 

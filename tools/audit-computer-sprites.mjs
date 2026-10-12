@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import {readFile, writeFile, mkdir} from 'node:fs/promises';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {packSpriteFrames} from './encode-sprite-frames.mjs';
 
 // The sheets are illustrations, not an evenly spaced sprite grid. Keep their
 // source files unchanged and describe the space belonging to each silhouette.
@@ -190,7 +191,8 @@ for(const name of names){
  console.log(`${name}: 12 complete frames; ${rows.flat().filter(frame=>frame.polygon).length} vector masks`);
 }
 
-const metadataPath=resolve(root,'src/multiplayer/computer-selection-frames.json'),serialized=JSON.stringify(metadata)+'\n';
+const metadataPath=resolve(root,'src/multiplayer/computer-selection-frames.generated.json');
+const serialized=JSON.stringify(packSpriteFrames(metadata))+'\n';
 if(checkOnly){
  if(await readFile(metadataPath,'utf8')!==serialized)throw Error('Computer frame metadata is stale; run node tools/audit-computer-sprites.mjs to regenerate it.');
  console.log('Checked-in computer cast frame metadata matches the audited sheets.');

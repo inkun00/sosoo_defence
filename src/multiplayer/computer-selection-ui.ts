@@ -1,9 +1,11 @@
 import {artURL} from '../art';
 import type {ComputerOpponent} from './computer-opponents';
-import frames from './computer-selection-frames.json';
+import packedFrames from './computer-selection-frames.generated.json';
+import {decodeSpriteFrames} from '../sprite-frame-packing';
 
 interface ComputerFrame{x:number;y:number;width:number;height:number;polygon?:number[][];}
 interface ComputerSheet{width:number;height:number;poses:ComputerFrame[];}
+const frames=decodeSpriteFrames(packedFrames) as Record<string,ComputerSheet>;
 let portraitSerial=0;
 
 function escapeHTML(text:string){return text.replace(/[&<>"']/g,value=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[value]!));}
