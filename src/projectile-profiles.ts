@@ -6,6 +6,7 @@ export const PROJECTILE_SHEETS=Object.freeze([
  {atlas:'fx-flight-magic-v1',key:'dungeon-fx-flight-magic-v1',rows:['lightning','crystal','sniper','rune'] as readonly ProjectileTypeId[]}
 ]);
 export interface ProjectilePoint{x:number;y:number;}
+export const REDUCED_PROJECTILE_DURATION=220;
 export type ProjectileTrail='smoke'|'dust'|'needle'|'chips'|'frost'|'ice'|'spark'|'tracer'|'rune'|'none';
 export interface TowerProjectileProfile{
  readonly id:ProjectileTypeId;readonly atlas:string;readonly row:number;readonly grade:1|2|3|4;
@@ -20,21 +21,22 @@ const profile=(p:Omit<TowerProjectileProfile,'core'|'roundDelay'>&{core?:Project
 
 // Duration, silhouette and path belong to the weapon, independently of damage.
 // A double shot still represents one model event and a lightning beam one target.
-// Core origins follow each generated row's illustrated head, excluding its
-// left-hand trail, so rotating stones turn around their own center.
+// Sizes describe the trimmed illustration, not its transparent atlas cell.
+// Core origins retain their original cell coordinates; frame registration
+// remaps them so stones still rotate and arrive around their own center.
 export const PROJECTILE_PROFILES:Readonly<Record<ProjectileTypeId,TowerProjectileProfile>>=Object.freeze({
- basic:profile({id:'basic',atlas:stone,row:0,grade:1,signature:'iron-ball-smoke',duration:235,width:34,height:29,core:{x:.76,y:.59},spin:0,arc:0,beam:false,rounds:1,trail:'smoke',color:0xa59f96,emissions:4,maxTrails:3}),
- double:profile({id:'double',atlas:stone,row:1,grade:1,signature:'separated-twin-stones',duration:260,width:29,height:26,core:{x:.78,y:.54},roundDelay:65,spin:.15,arc:0,beam:false,rounds:2,trail:'dust',color:0xc5b6a0,emissions:5,maxTrails:3}),
- needle:profile({id:'needle',atlas:stone,row:2,grade:1,signature:'slender-fast-needle',duration:125,width:43,height:12,core:{x:.74,y:.48},spin:0,arc:0,beam:false,rounds:1,trail:'needle',color:0xe5e3cf,emissions:2,maxTrails:2}),
- pebble:profile({id:'pebble',atlas:stone,row:3,grade:1,signature:'spinning-gravel-chips',duration:205,width:26,height:23,core:{x:.76,y:.38},spin:1.8,arc:0,beam:false,rounds:1,trail:'chips',color:0xc9ad84,emissions:5,maxTrails:3}),
- frost:profile({id:'frost',atlas:element,row:0,grade:2,signature:'swirling-frost-orb',duration:300,width:37,height:34,core:{x:.8,y:.58},spin:.35,arc:0,beam:false,rounds:1,trail:'frost',color:0xa4f3ff,emissions:7,maxTrails:5}),
- ice:profile({id:'ice',atlas:element,row:1,grade:2,signature:'spinning-long-ice-spear',duration:215,width:58,height:20,core:{x:.73,y:.53},spin:0,arc:0,beam:false,rounds:1,trail:'ice',color:0xd5fbff,emissions:6,maxTrails:4}),
- catapult:profile({id:'catapult',atlas:element,row:2,grade:2,signature:'gravity-arc-boulder-shadow',duration:420,width:39,height:35,core:{x:.74,y:.49},spin:1.15,arc:90,beam:false,rounds:1,trail:'dust',color:0xbaa18a,emissions:5,maxTrails:4}),
- lightning:profile({id:'lightning',atlas:magic,row:0,grade:3,signature:'connected-flickering-lightning',duration:245,width:1,height:33,spin:0,arc:0,beam:true,rounds:1,trail:'none',color:0xc8c1ff,emissions:0,maxTrails:0}),
- crystal:profile({id:'crystal',atlas:magic,row:1,grade:3,signature:'rotating-crystal-sparkles',duration:280,width:41,height:31,core:{x:.65,y:.51},spin:1.25,arc:0,beam:false,rounds:1,trail:'spark',color:0xe3aaff,emissions:8,maxTrails:5}),
- sniper:profile({id:'sniper',atlas:magic,row:2,grade:3,signature:'very-fast-long-tracer',duration:85,width:79,height:11,core:{x:.78,y:.47},spin:0,arc:0,beam:false,rounds:1,trail:'tracer',color:0xffedac,emissions:2,maxTrails:2}),
- siege:profile({id:'siege',atlas:element,row:3,grade:3,signature:'heavy-cannonball-pressure-smoke',duration:345,width:47,height:39,core:{x:.77,y:.42},spin:.2,arc:0,beam:false,rounds:1,trail:'smoke',color:0xcfa36f,emissions:8,maxTrails:6}),
- rune:profile({id:'rune',atlas:magic,row:3,grade:4,signature:'rising-rotating-runic-bolt',duration:340,width:60,height:36,core:{x:.7,y:.41},spin:0,arc:22,beam:false,rounds:1,trail:'rune',color:0xa8ffde,emissions:9,maxTrails:6})
+ basic:profile({id:'basic',atlas:stone,row:0,grade:1,signature:'iron-ball-smoke',duration:360,width:54,height:26,core:{x:.76,y:.59},spin:0,arc:0,beam:false,rounds:1,trail:'smoke',color:0xffcc8d,emissions:4,maxTrails:3}),
+ double:profile({id:'double',atlas:stone,row:1,grade:1,signature:'separated-twin-stones',duration:340,width:50,height:26,core:{x:.78,y:.54},roundDelay:65,spin:.15,arc:0,beam:false,rounds:2,trail:'dust',color:0xffdba5,emissions:5,maxTrails:3}),
+ needle:profile({id:'needle',atlas:stone,row:2,grade:1,signature:'slender-fast-needle',duration:260,width:74,height:22,core:{x:.74,y:.48},spin:0,arc:0,beam:false,rounds:1,trail:'needle',color:0xf6f2d8,emissions:3,maxTrails:2}),
+ pebble:profile({id:'pebble',atlas:stone,row:3,grade:1,signature:'spinning-gravel-chips',duration:320,width:50,height:25,core:{x:.76,y:.38},spin:1.8,arc:0,beam:false,rounds:1,trail:'chips',color:0xeac18c,emissions:5,maxTrails:3}),
+ frost:profile({id:'frost',atlas:element,row:0,grade:2,signature:'swirling-frost-orb',duration:420,width:58,height:36,core:{x:.8,y:.58},spin:.35,arc:0,beam:false,rounds:1,trail:'frost',color:0xa4f3ff,emissions:7,maxTrails:5}),
+ ice:profile({id:'ice',atlas:element,row:1,grade:2,signature:'spinning-long-ice-spear',duration:350,width:76,height:30,core:{x:.73,y:.53},spin:0,arc:0,beam:false,rounds:1,trail:'ice',color:0xd5fbff,emissions:6,maxTrails:4}),
+ catapult:profile({id:'catapult',atlas:element,row:2,grade:2,signature:'gravity-arc-boulder-shadow',duration:560,width:64,height:40,core:{x:.74,y:.49},spin:1.15,arc:90,beam:false,rounds:1,trail:'dust',color:0xe6bf8b,emissions:5,maxTrails:4}),
+ lightning:profile({id:'lightning',atlas:magic,row:0,grade:3,signature:'connected-flickering-lightning',duration:380,width:1,height:38,spin:0,arc:0,beam:true,rounds:1,trail:'none',color:0xc8c1ff,emissions:0,maxTrails:0}),
+ crystal:profile({id:'crystal',atlas:magic,row:1,grade:3,signature:'rotating-crystal-sparkles',duration:420,width:66,height:34,core:{x:.65,y:.51},spin:1.25,arc:0,beam:false,rounds:1,trail:'spark',color:0xe3aaff,emissions:8,maxTrails:5}),
+ sniper:profile({id:'sniper',atlas:magic,row:2,grade:3,signature:'very-fast-long-tracer',duration:220,width:92,height:24,core:{x:.78,y:.47},spin:0,arc:0,beam:false,rounds:1,trail:'tracer',color:0xffedac,emissions:3,maxTrails:2}),
+ siege:profile({id:'siege',atlas:element,row:3,grade:3,signature:'heavy-cannonball-pressure-smoke',duration:480,width:70,height:46,core:{x:.77,y:.42},spin:.2,arc:0,beam:false,rounds:1,trail:'smoke',color:0xffc27c,emissions:8,maxTrails:6}),
+ rune:profile({id:'rune',atlas:magic,row:3,grade:4,signature:'rising-rotating-runic-bolt',duration:450,width:72,height:42,core:{x:.7,y:.41},spin:0,arc:22,beam:false,rounds:1,trail:'rune',color:0xa8ffde,emissions:9,maxTrails:6})
 });
 
 export function projectileProfile(typeId:string):TowerProjectileProfile{
@@ -42,14 +44,21 @@ export function projectileProfile(typeId:string):TowerProjectileProfile{
 }
 
 export function projectileFlightDuration(profile:TowerProjectileProfile,reducedMotion=false):number{
- return (reducedMotion?100:profile.duration)+profile.roundDelay*(profile.rounds-1);
+ return (reducedMotion?REDUCED_PROJECTILE_DURATION:profile.duration)+profile.roundDelay*(profile.rounds-1);
+}
+
+/** A modest detail boost keeps the art readable when the whole field is fitted. */
+export function projectileVisibilityScale(scale=1,pixelsPerWorld=1):number{
+ const base=Math.max(.35,Math.min(2,Number.isFinite(scale)?scale:1));
+ const pixels=Number.isFinite(pixelsPerWorld)&&pixelsPerWorld>0?pixelsPerWorld:1;
+ return base*Math.max(1,Math.min(1.5,.75/pixels));
 }
 
 // A null progress means that round has not left the tower yet. Both visual
 // rounds share the flight's one completion, after the delayed round arrives.
 export function projectileRoundProgress(profile:TowerProjectileProfile,elapsed:number,round:0|1,reducedMotion=false):number|null{
  const launch=profile.roundDelay*round;
- return elapsed<launch?null:Math.max(0,Math.min(1,(elapsed-launch)/(reducedMotion?100:profile.duration)));
+ return elapsed<launch?null:Math.max(0,Math.min(1,(elapsed-launch)/(reducedMotion?REDUCED_PROJECTILE_DURATION:profile.duration)));
 }
 
 export function projectileArcHeight(profile:TowerProjectileProfile,from:ProjectilePoint,to:ProjectilePoint,scale=1):number{

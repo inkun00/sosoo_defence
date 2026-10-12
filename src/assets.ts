@@ -4,6 +4,7 @@ import {MonsterKind,MONSTER_KINDS,MONSTERS} from './monsters';
 import {TOWERS} from './towers';
 import {AMBIENT_TEXTURES,registerAmbientFrames} from './ambient-props';
 import {PROJECTILE_SHEETS} from './projectile-profiles';
+import {registerProjectileFrames} from './projectile-frames';
 import {CASTLE_EFFECT_SHEETS,registerCastleDamageFrames} from './castle-damage-effects';
 
 // Every illustrated texture in this skin is an original built-in imagegen output.
@@ -44,7 +45,7 @@ export function registerDungeon(scene:Phaser.Scene){
  for(const sheet of ['a','b'])cells(scene,'tower-heads-'+sheet+'-v1',3,2,TOWERS.filter(t=>t.sheet===sheet).sort((a,b)=>a.frame-b.frame).map(t=>t.id));
  cells(scene,'fx-impact-v1',6,4,['basic','slow','stun','range'].flatMap(effect=>Array.from({length:6},(_,i)=>effect+'-'+i)));
  cells(scene,'fx-utility-v1',6,4,[...['muzzle','defeat','shockwave'].flatMap(effect=>Array.from({length:6},(_,i)=>effect+'-'+i)),'projectile-basic','projectile-slow','projectile-stun','projectile-range','particle-stone','particle-spark']);
- for(const sheet of PROJECTILE_SHEETS)cells(scene,sheet.atlas,6,4,sheet.rows.flatMap(id=>Array.from({length:6},(_,i)=>id+'-'+i)));
+ registerProjectileFrames(scene);
  for(const kind of MONSTER_KINDS)registerMonster(scene,kind);
  // Align every skin to its visible opaque frame, rather than the atlas cell's
  // uneven transparent margins. Original source images remain untouched.

@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import {projectileFlightDuration,projectileLifecycle,projectilePath,projectileProfile,projectileRotation,projectileRoundProgress,type ProjectilePoint,type TowerProjectileProfile} from './projectile-profiles';
+import {REDUCED_PROJECTILE_DURATION,projectileFlightDuration,projectileLifecycle,projectilePath,projectileProfile,projectileRotation,projectileRoundProgress,projectileVisibilityScale,type ProjectilePoint,type TowerProjectileProfile} from './projectile-profiles';
+import {projectileFrameOrigin} from './projectile-frames';
 
 export interface TowerProjectileOptions{
  typeId:string;from:ProjectilePoint;to:ProjectilePoint;scale?:number;reducedMotion?:boolean;
@@ -8,7 +9,7 @@ export interface TowerProjectileOptions{
 
 interface SceneFlights{objects:Set<Phaser.GameObjects.GameObject>;cancel:Set<()=>void>;}
 const sceneFlights=new WeakMap<Phaser.Scene,SceneFlights>();
-const MAX_SCENE_OBJECTS=120,FRAME_MS=42;
+const MAX_SCENE_OBJECTS=120,FRAME_MS=42,PROJECTILE_DEPTH=7.6;
 type FlightSprite=Phaser.GameObjects.Sprite&{flightProgress:number};
 
 function flightsFor(scene:Phaser.Scene):SceneFlights{
@@ -28,14 +29,17 @@ export function playTowerProjectile(scene:Phaser.Scene,options:TowerProjectileOp
  const {from,to,onImpact}=options,profile=projectileProfile(options.typeId),flights=flightsFor(scene);
  // Skipping art under load must not skip the logical impact or its equation.
  if(flights.objects.size>=MAX_SCENE_OBJECTS||![from.x,from.y,to.x,to.y].every(Number.isFinite)){onImpact();return;}
- const scale=Math.max(.35,Math.min(2,Number.isFinite(options.scale)?options.scale!:1)),reduced=!!options.reducedMotion;
- const duration=projectileFlightDuration(profile,reduced),roundDuration=reduced?100:profile.duration,bearing=Math.atan2(to.y-from.y,to.x-from.x),distance=Math.hypot(to.x-from.x,to.y-from.y);
+ const canvas=scene.game?.canvas,rect=canvas?.getBoundingClientRect(),worldWidth=scene.scale?.gameSize?.width;
+ const pixels=Math.max(.15,Math.min(4,rect&&worldWidth?rect.width/worldWidth*Math.abs(scene.cameras?.main?.zoom??1):1));
+ const scale=projectileVisibilityScale(options.scale,pixels),reduced=!!options.reducedMotion;
+ const duration=projectileFlightDuration(profile,reduced),roundDuration=reduced?REDUCED_PROJECTILE_DURATION:profile.duration,bearing=Math.atan2(to.y-from.y,to.x-from.x),distance=Math.hypot(to.x-from.x,to.y-from.y);
  const owned=new Set<Phaser.GameObjects.GameObject>(),tweens=new Set<Phaser.Tweens.Tween>(),trails=new Set<Phaser.GameObjects.Graphics>();
+ const glows=new Map<Phaser.GameObjects.Sprite,Phaser.GameObjects.Graphics>();
  let emitted=0,secondEmitted=0,secondAttempted=false,cleaning=false;
  const lifecycle=projectileLifecycle(onImpact,()=>{
   cleaning=true;flights.cancel.delete(lifecycle.cancel);scene.events.off('shutdown',lifecycle.cancel);scene.events.off('destroy',lifecycle.cancel);
   for(const tween of tweens)tween.remove();tweens.clear();
-  for(const object of [...owned]){scene.tweens.killTweensOf(object);object.destroy();}owned.clear();trails.clear();
+  for(const object of [...owned]){scene.tweens.killTweensOf(object);object.destroy();}owned.clear();trails.clear();glows.clear();
  });
  const own=<T extends Phaser.GameObjects.GameObject>(object:T):T=>{
   owned.add(object);flights.objects.add(object);
@@ -44,7 +48,23 @@ export function playTowerProjectile(scene:Phaser.Scene,options:TowerProjectileOp
  const room=()=>flights.objects.size<MAX_SCENE_OBJECTS;
  const generated=scene.textures.exists(profile.atlas)&&scene.textures.get(profile.atlas).has(profile.id+'-0');
  const atlas=generated?profile.atlas:'dungeon-fx-utility-v1',fallback=profile.grade>=3?'projectile-range':profile.id==='frost'||profile.id==='ice'?'projectile-slow':'projectile-basic';
- const makeRound=()=>own(scene.add.sprite(from.x,from.y,atlas,generated?profile.id+'-0':fallback).setName('battle-projectile-'+profile.id).setOrigin(generated?profile.core.x:.5,generated?profile.core.y:.5).setDisplaySize(profile.width*scale,profile.height*scale).setRotation(bearing).setDepth(5.1+profile.grade*.05));
+ const origin=generated?projectileFrameOrigin(scene,profile):{x:.5,y:.5};
+ const makeRound=()=>{
+  // Keep the illustrated head above monster labels, with a small luminous rim
+  // that also renders in Canvas. Both objects are cancelled on the same clock.
+  const sprite=own(scene.add.sprite(from.x,from.y,atlas,generated?profile.id+'-0':fallback).setName('battle-projectile-'+profile.id).setOrigin(origin.x,origin.y).setDisplaySize(profile.width*scale,profile.height*scale).setRotation(bearing).setDepth(PROJECTILE_DEPTH+profile.grade*.04));
+  if(room()){
+   const glow=own(scene.add.graphics().setName('tower-projectile-glow-'+profile.id).setDepth(PROJECTILE_DEPTH-.08));
+   if(profile.beam)glow.lineStyle(Math.max(3*scale,2/pixels),profile.color,.45).lineBetween(0,0,distance,0).setPosition(from.x,from.y).setRotation(bearing);
+   else{
+    const radius=Math.max(profile.height*.2*scale,2.4/pixels);
+    glow.fillStyle(profile.color,.14).fillCircle(0,0,radius*1.4).fillStyle(profile.color,.2).fillCircle(0,0,radius);
+    if(['needle','tracer','ice'].includes(profile.trail))glow.lineStyle(Math.max(1.8*scale,1.5/pixels),0xfff3d9,.85).lineBetween(-10*scale,0,5*scale,0);
+   }
+   glows.set(sprite,glow);
+  }
+  return sprite;
+ };
  const lead=Object.assign(makeRound(),{flightProgress:0}) as FlightSprite;
  let second:Phaser.GameObjects.Sprite|undefined;
  lead.once('destroy',()=>{if(!cleaning)lifecycle.cancel();});
@@ -54,15 +74,15 @@ export function playTowerProjectile(scene:Phaser.Scene,options:TowerProjectileOp
  // These supporting shapes stay behind the illustrated projectile. Their
  // tweens share the scene clock, including pause and battle speed changes.
  const shadow=!reduced&&profile.id==='catapult'&&room()?own(scene.add.graphics().fillStyle(0x16151c,.38).fillEllipse(0,0,27*scale,9*scale).setDepth(3.7)):undefined;
- const launch=!reduced&&(profile.id==='siege'||profile.id==='rune'||profile.id==='lightning')&&room()?own(scene.add.graphics().setPosition(from.x,from.y).setRotation(bearing).setDepth(4.9)):undefined;
- const endGlow=!reduced&&profile.beam&&room()?own(scene.add.graphics().fillStyle(profile.color,.5).fillCircle(0,0,7*scale).setPosition(to.x,to.y).setDepth(5.0)):undefined;
+ const launch=!reduced&&(profile.id==='siege'||profile.id==='rune'||profile.id==='lightning')&&room()?own(scene.add.graphics().setPosition(from.x,from.y).setRotation(bearing).setDepth(PROJECTILE_DEPTH-.2)):undefined;
+ const endGlow=!reduced&&profile.beam&&room()?own(scene.add.graphics().fillStyle(profile.color,.5).fillCircle(0,0,7*scale).setPosition(to.x,to.y).setDepth(PROJECTILE_DEPTH-.09)):undefined;
 
  const addTrail=(x:number,y:number,rotation:number,step:number)=>{
   if(reduced||profile.trail==='none'||trails.size>=profile.maxTrails||!room())return;
-  const trail=own(scene.add.graphics().setName('tower-trail-'+profile.id).setPosition(x,y).setRotation(rotation).setDepth(4.7));
+  const trail=own(scene.add.graphics().setName('tower-trail-'+profile.id).setPosition(x,y).setRotation(rotation).setDepth(PROJECTILE_DEPTH-.15));
   trails.add(trail);trail.once('destroy',()=>trails.delete(trail));drawTrail(trail,profile,scale,step);
   let fade:Phaser.Tweens.Tween;
-  fade=scene.tweens.add({targets:trail,alpha:0,x:x-Math.cos(bearing)*(profile.trail==='smoke'?9:3)*scale,y:y-Math.sin(bearing)*5*scale,duration:profile.grade>=3?175:135,onComplete:()=>{tweens.delete(fade);trail.destroy();}});tweens.add(fade);
+  fade=scene.tweens.add({targets:trail,alpha:0,x:x-Math.cos(bearing)*(profile.trail==='smoke'?9:3)*scale,y:y-Math.sin(bearing)*5*scale,duration:profile.grade>=3?230:190,onComplete:()=>{tweens.delete(fade);trail.destroy();}});tweens.add(fade);
  };
 
  const render=(t:number)=>{
@@ -76,7 +96,7 @@ export function playTowerProjectile(scene:Phaser.Scene,options:TowerProjectileOp
   if(profile.beam){
    // A single, center-anchored illustrated bolt always spans both endpoints.
    // No traveling pellet, chained target, or additional impact is created.
-   lead.setAlpha(reduced?.7:.68+.28*Math.abs(Math.sin(t*Math.PI*11))).setDisplaySize(Math.max(1,distance),profile.height*scale*(reduced?1:.9+.14*Math.sin(t*Math.PI*13)));
+   lead.setAlpha(reduced?.9:.82+.18*Math.abs(Math.sin(t*Math.PI*11))).setDisplaySize(Math.max(1,distance),profile.height*scale*(reduced?1:.9+.14*Math.sin(t*Math.PI*13)));
    endGlow?.setAlpha(.5+.35*Math.abs(Math.sin(t*Math.PI*9)));
   }else{
    const roundPoint=(progress:number,side:number)=>{
@@ -84,9 +104,11 @@ export function playTowerProjectile(scene:Phaser.Scene,options:TowerProjectileOp
     return {x:p.x-Math.sin(bearing)*separation*side,y:p.y+Math.cos(bearing)*separation*side};
    };
    const p=roundPoint(firstProgress,1),rotation=reduced?bearing:projectileRotation(profile,from,to,firstProgress,scale);
-   lead.setPosition(p.x,p.y).setRotation(rotation).setAlpha(firstProgress>=1&&profile.rounds===2?0:reduced?.85-.3*firstProgress:1);
+   lead.setPosition(p.x,p.y).setRotation(rotation).setAlpha(firstProgress>=1&&profile.rounds===2?0:1);
+   glows.get(lead)?.setPosition(p.x,p.y).setRotation(rotation).setAlpha(lead.alpha);
    if(second&&secondProgress!==null){
-    const q=roundPoint(secondProgress,-1);second.setPosition(q.x,q.y).setRotation(reduced?bearing:projectileRotation(profile,from,to,secondProgress,scale)).setAlpha(reduced?.85-.3*secondProgress:1);
+    const q=roundPoint(secondProgress,-1);second.setPosition(q.x,q.y).setRotation(reduced?bearing:projectileRotation(profile,from,to,secondProgress,scale)).setAlpha(1);
+    glows.get(second)?.setPosition(q.x,q.y).setRotation(second.rotation);
     const wanted=Math.min(profile.emissions,Math.floor(secondProgress*(profile.emissions+1)));
     if(wanted>secondEmitted){secondEmitted=wanted;addTrail(q.x,q.y,bearing,secondEmitted);}
    }
@@ -111,9 +133,9 @@ export function playTowerProjectile(scene:Phaser.Scene,options:TowerProjectileOp
 function drawTrail(g:Phaser.GameObjects.Graphics,p:TowerProjectileProfile,scale:number,step:number):void{
  const s=scale,color=p.color,turn=step%2?1:-1;
  switch(p.trail){
-  case 'smoke':g.fillStyle(color,.35).fillCircle(0,0,(p.id==='siege'?8:4)*s).fillCircle(-5*s,turn*3*s,(p.id==='siege'?5:3)*s);break;
-  case 'dust':g.fillStyle(color,.4).fillCircle(-2*s,turn*3*s,3*s).fillCircle(2*s,-turn*2*s,2*s);break;
-  case 'needle':g.lineStyle(s,color,.45).lineBetween(-13*s,0,4*s,0);break;
+  case 'smoke':g.fillStyle(color,.45).fillCircle(0,0,(p.id==='siege'?8:4)*s).fillCircle(-5*s,turn*3*s,(p.id==='siege'?5:3)*s);break;
+  case 'dust':g.fillStyle(color,.55).fillCircle(-2*s,turn*3*s,3*s).fillCircle(2*s,-turn*2*s,2*s);break;
+  case 'needle':g.lineStyle(2*s,color,.8).lineBetween(-18*s,0,4*s,0);break;
   case 'chips':g.fillStyle(color,.65).fillTriangle(-4*s,-3*s,-s,2*s,-6*s,2*s).fillTriangle(2*s,2*s,6*s,3*s,4*s,6*s);break;
   case 'frost':g.lineStyle(2*s,color,.55).strokeCircle(0,0,8*s).fillStyle(0xe0ffff,.7).fillCircle(turn*6*s,-5*s,2*s).fillCircle(-turn*5*s,6*s,1.5*s);break;
   case 'ice':g.fillStyle(color,.65).fillTriangle(-8*s,turn*4*s,-2*s,0,-5*s,-turn*5*s).fillTriangle(s,0,5*s,3*s,4*s,-3*s);break;

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
 import type Phaser from 'phaser';
-import {PROJECTILE_IDS,PROJECTILE_PROFILES,projectileArcHeight,projectileFlightDuration,projectileLifecycle,projectilePath,projectileProfile,projectileRotation,projectileRoundProgress} from '../src/projectile-profiles';
+import {REDUCED_PROJECTILE_DURATION,PROJECTILE_IDS,PROJECTILE_PROFILES,projectileArcHeight,projectileFlightDuration,projectileLifecycle,projectilePath,projectileProfile,projectileRotation,projectileRoundProgress,projectileVisibilityScale} from '../src/projectile-profiles';
 import {clearTowerProjectiles,playTowerProjectile,towerProjectileEffectCount} from '../src/tower-projectiles';
 import {TOWERS} from '../src/towers';
 
@@ -21,7 +21,7 @@ test('flight profiles encode distinct twin rounds, connected beam, fast tracer a
  assert.deepEqual(PROJECTILE_IDS.filter(id=>projectileProfile(id).beam),['lightning']);
  assert.equal(projectileProfile('lightning').trail,'none');assert.equal(projectileProfile('lightning').emissions,0);
  assert.ok(projectileProfile('sniper').duration<projectileProfile('needle').duration);
- assert.ok(projectileProfile('sniper').width/projectileProfile('sniper').height>6);
+ assert.ok(projectileProfile('sniper').width/projectileProfile('sniper').height>3);
  assert.ok(projectileProfile('ice').width/projectileProfile('ice').height>2);
  assert.ok(projectileProfile('catapult').arc>projectileProfile('rune').arc);
  assert.ok(projectileProfile('rune').maxTrails>projectileProfile('basic').maxTrails);
@@ -29,10 +29,17 @@ test('flight profiles encode distinct twin rounds, connected beam, fast tracer a
 });
 
 test('double launch timing follows its 65ms sound gap and ends after the last round',()=>{
- const p=projectileProfile('double');assert.equal(p.roundDelay,65);assert.equal(projectileFlightDuration(p),325);
+ const p=projectileProfile('double');assert.equal(p.roundDelay,65);assert.equal(projectileFlightDuration(p),p.duration+65);
  assert.equal(projectileRoundProgress(p,0,0),0);assert.equal(projectileRoundProgress(p,0,1),null);assert.equal(projectileRoundProgress(p,64,1),null);assert.equal(projectileRoundProgress(p,65,1),0);
- assert.equal(projectileRoundProgress(p,260,0),1);assert.equal(projectileRoundProgress(p,260,1),.75);assert.equal(projectileRoundProgress(p,325,1),1);
- assert.equal(projectileFlightDuration(p,true),165);assert.equal(projectileRoundProgress(p,165,1,true),1);
+ assert.equal(projectileRoundProgress(p,p.duration,0),1);assert.equal(projectileRoundProgress(p,p.duration,1),(p.duration-65)/p.duration);assert.equal(projectileRoundProgress(p,p.duration+65,1),1);
+ assert.equal(projectileFlightDuration(p,true),REDUCED_PROJECTILE_DURATION+65);assert.equal(projectileRoundProgress(p,REDUCED_PROJECTILE_DURATION+65,1,true),1);
+});
+
+test('all signatures remain readable long enough, including reduced motion and fitted fields',()=>{
+ for(const id of PROJECTILE_IDS){const p=projectileProfile(id);assert.ok(projectileFlightDuration(p)>=220);assert.ok(projectileFlightDuration(p,true)>=220);}
+ assert.equal(projectileVisibilityScale(1,1),1);assert.equal(projectileVisibilityScale(38/58,.3),(38/58)*1.5);
+ assert.equal(projectileVisibilityScale(1,.01),1.5);assert.equal(projectileVisibilityScale(1,4),1);
+ for(const value of [NaN,Infinity,-1,0])assert.equal(projectileVisibilityScale(1,value),1);
 });
 
 test('every flight path reaches its recorded endpoints and parabolas remain bounded',()=>{
@@ -63,11 +70,11 @@ test('reset cancellation cleans up exactly once and suppresses delayed impacts',
 // A minimal scene clock exercises the production renderer without loading a
 // browser/WebGL context. Killing a tween matches Phaser's silent removal.
 class TestObject extends EventEmitter{
- x=0;y=0;alpha=1;rotation=0;displayWidth=0;displayHeight=0;originX=.5;originY=.5;name='';frame='';texture='';destroyed=false;flightProgress=0;
+ x=0;y=0;alpha=1;rotation=0;depth=0;displayWidth=0;displayHeight=0;originX=.5;originY=.5;name='';frame='';texture='';destroyed=false;flightProgress=0;
  constructor(x=0,y=0,texture='',frame=''){super();this.x=x;this.y=y;this.texture=texture;this.frame=frame;}
  setName(v:string){this.name=v;return this;}setOrigin(x:number,y=x){this.originX=x;this.originY=y;return this;}
  setDisplaySize(w:number,h:number){this.displayWidth=w;this.displayHeight=h;return this;}
- setRotation(v:number){this.rotation=v;return this;}setDepth(){return this;}
+ setRotation(v:number){this.rotation=v;return this;}setDepth(v:number){this.depth=v;return this;}
  setAlpha(v:number){this.alpha=v;return this;}setScale(){return this;}
  setPosition(x:number,y:number){this.x=x;this.y=y;return this;}setFrame(v:string){this.frame=v;return this;}
  fillStyle(){return this;}lineStyle(){return this;}fillCircle(){return this;}fillEllipse(){return this;}
@@ -103,7 +110,7 @@ test('illustrated lightning is a connected beam at every animation frame',()=>{
   const a=endpoint(-1),b=endpoint(1);assert.ok(Math.abs(a.x-from.x)<1e-9&&Math.abs(a.y-from.y)<1e-9);assert.ok(Math.abs(b.x-to.x)<1e-9&&Math.abs(b.y-to.y)<1e-9);
   mock.tick(45);
  }
- assert.notEqual(beam.frame,'lightning-0');assert.equal(impacts,0);mock.tick(100);assert.equal(impacts,1);assert.equal(towerProjectileEffectCount(mock.scene),0);
+ assert.notEqual(beam.frame,'lightning-0');assert.equal(impacts,0);mock.tick(projectileFlightDuration(projectileProfile('lightning'))-180);assert.equal(impacts,1);assert.equal(towerProjectileEffectCount(mock.scene),0);
 });
 
 test('double displays one round at launch and two after 65ms, with one final impact',()=>{
@@ -112,7 +119,7 @@ test('double displays one round at launch and two after 65ms, with one final imp
  const rounds=()=>mock.objects.filter(o=>o.name==='battle-projectile-double');assert.equal(rounds().length,1);
  mock.tick(64);assert.equal(rounds().length,1);mock.tick(1);assert.equal(rounds().length,2);
  assert.notDeepEqual({x:rounds()[0].x,y:rounds()[0].y},{x:rounds()[1].x,y:rounds()[1].y});assert.equal(impacts,0);
- mock.tick(195);assert.equal(impacts,0);assert.equal(rounds()[0].alpha,0);mock.tick(64);assert.equal(impacts,0);
+ mock.tick(projectileProfile('double').duration-65);assert.equal(impacts,0);assert.equal(rounds()[0].alpha,0);mock.tick(64);assert.equal(impacts,0);
  mock.tick(1);mock.tweens[0].config.onComplete?.();assert.equal(impacts,1);assert.ok(mock.objects.every(o=>o.destroyed));assert.equal(towerProjectileEffectCount(mock.scene),0);
 });
 
@@ -121,7 +128,7 @@ test('rotating catapult keeps its illustrated stone core on the parabola',()=>{
  playTowerProjectile(mock.scene,{typeId:'catapult',from,to,onImpact:()=>{}});const stone=mock.objects.find(o=>o.name==='battle-projectile-catapult')!;
  assert.deepEqual({x:stone.originX,y:stone.originY},profile.core);assert.notEqual(stone.originX,.5);
  for(let i=0;i<3;i++){
-  mock.tick(105);const point=projectilePath(profile,from,to,(i+1)/4),coreX=(profile.core.x-stone.originX)*stone.displayWidth,coreY=(profile.core.y-stone.originY)*stone.displayHeight;
+  mock.tick(profile.duration/4);const point=projectilePath(profile,from,to,(i+1)/4),coreX=(profile.core.x-stone.originX)*stone.displayWidth,coreY=(profile.core.y-stone.originY)*stone.displayHeight;
   const actual={x:stone.x+coreX*Math.cos(stone.rotation)-coreY*Math.sin(stone.rotation),y:stone.y+coreX*Math.sin(stone.rotation)+coreY*Math.cos(stone.rotation)};
   assert.ok(Math.abs(actual.x-point.x)<1e-9&&Math.abs(actual.y-point.y)<1e-9);
  }
@@ -133,7 +140,7 @@ test('pausing before the second launch freezes the double shot sound gap clock',
  playTowerProjectile(mock.scene,{typeId:'double',from:{x:0,y:0},to:{x:200,y:0},onImpact:()=>impacts++});mock.tick(50);
  mock.clock.timeScale=0;mock.tick(1000);assert.equal(mock.objects.filter(o=>o.name==='battle-projectile-double').length,1);assert.equal(impacts,0);
  mock.clock.timeScale=1;mock.tick(15);assert.equal(mock.objects.filter(o=>o.name==='battle-projectile-double').length,2);
- mock.tick(260);assert.equal(impacts,1);assert.equal(towerProjectileEffectCount(mock.scene),0);
+ mock.tick(projectileProfile('double').duration);assert.equal(impacts,1);assert.equal(towerProjectileEffectCount(mock.scene),0);
 });
 
 test('the scene tween clock pauses frames, paths and trails together',()=>{
@@ -141,7 +148,7 @@ test('the scene tween clock pauses frames, paths and trails together',()=>{
  playTowerProjectile(mock.scene,{typeId:'rune',from:{x:0,y:0},to:{x:150,y:0},onImpact:()=>impacts++});mock.tick(80);
  const snapshot=mock.objects.map(o=>[o.x,o.y,o.frame,o.alpha]),count=towerProjectileEffectCount(mock.scene);
  mock.clock.timeScale=0;mock.tick(1000);assert.deepEqual(mock.objects.map(o=>[o.x,o.y,o.frame,o.alpha]),snapshot);assert.equal(towerProjectileEffectCount(mock.scene),count);assert.equal(impacts,0);
- mock.clock.timeScale=1;mock.tick(300);assert.equal(impacts,1);assert.equal(towerProjectileEffectCount(mock.scene),0);
+ mock.clock.timeScale=1;mock.tick(projectileProfile('rune').duration-80);assert.equal(impacts,1);assert.equal(towerProjectileEffectCount(mock.scene),0);
 });
 
 test('destroying a tracked lead or clearing a scene cancels all delayed impacts',()=>{
@@ -156,13 +163,25 @@ test('destroying a tracked lead or clearing a scene cancels all delayed impacts'
 test('reduced motion preserves each signature without trails or missed impacts',()=>{
  const mock=testScene();let impacts=0;
  for(const typeId of PROJECTILE_IDS)playTowerProjectile(mock.scene,{typeId,from:{x:0,y:0},to:{x:200,y:0},reducedMotion:true,onImpact:()=>impacts++});
- assert.equal(new Set(mock.objects.map(o=>o.name)).size,12);assert.equal(mock.objects.length,12);assert.ok(mock.objects.every(o=>o.name.startsWith('battle-projectile-')));
+ const rounds=()=>mock.objects.filter(o=>o.name.startsWith('battle-projectile-'));
+ assert.equal(new Set(rounds().map(o=>o.name)).size,12);assert.equal(rounds().length,12);assert.ok(mock.objects.every(o=>!o.name.startsWith('tower-trail-')));
  const snapshot=mock.objects.map(o=>[o.x,o.y,o.frame,o.rotation]);mock.tick(50);assert.deepEqual(mock.objects.map(o=>[o.x,o.y,o.frame,o.rotation]),snapshot);
- mock.tick(15);assert.equal(mock.objects.length,13);mock.tick(35);assert.equal(impacts,11);mock.tick(65);assert.equal(impacts,12);assert.equal(towerProjectileEffectCount(mock.scene),0);
+ mock.tick(15);assert.equal(rounds().length,13);mock.tick(REDUCED_PROJECTILE_DURATION-65);assert.equal(impacts,11);mock.tick(65);assert.equal(impacts,12);assert.equal(towerProjectileEffectCount(mock.scene),0);
 });
 
 test('effect saturation skips visual allocation while retaining one impact per shot',()=>{
  const mock=testScene();let impacts=0;
  for(let i=0;i<150;i++)playTowerProjectile(mock.scene,{typeId:'basic',from:{x:0,y:0},to:{x:200,y:0},reducedMotion:true,onImpact:()=>impacts++});
- assert.equal(towerProjectileEffectCount(mock.scene),120);assert.equal(impacts,30);mock.tick(100);assert.equal(impacts,150);assert.equal(towerProjectileEffectCount(mock.scene),0);
+ const visibleRounds=mock.objects.filter(o=>o.name.startsWith('battle-projectile-')).length;
+ assert.equal(towerProjectileEffectCount(mock.scene),120);assert.equal(impacts,150-visibleRounds);mock.tick(REDUCED_PROJECTILE_DURATION);assert.equal(impacts,150);assert.equal(towerProjectileEffectCount(mock.scene),0);
+});
+
+test('projectiles pass above monster labels while their glow follows the same paused path',()=>{
+ const mock=testScene();let impacts=0;
+ playTowerProjectile(mock.scene,{typeId:'needle',from:{x:0,y:0},to:{x:150,y:45},onImpact:()=>impacts++});
+ const round=mock.objects.find(o=>o.name==='battle-projectile-needle')!,glow=mock.objects.find(o=>o.name==='tower-projectile-glow-needle')!;
+ assert.ok(round.depth>7&&round.depth<11);assert.ok(glow.depth>7&&glow.depth<round.depth);
+ mock.tick(70);assert.deepEqual([glow.x,glow.y,glow.rotation],[round.x,round.y,round.rotation]);
+ mock.clock.timeScale=0;const position=[glow.x,glow.y];mock.tick(1000);assert.deepEqual([glow.x,glow.y],position);
+ clearTowerProjectiles(mock.scene);mock.tick(1000);assert.equal(impacts,0);assert.ok(round.destroyed&&glow.destroyed);
 });
