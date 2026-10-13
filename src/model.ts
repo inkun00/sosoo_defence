@@ -69,7 +69,10 @@ export class Defense{
  random(){this.randomState=(Math.imul(this.randomState,1664525)+1013904223)>>>0;return this.randomState/4294967296;}
  start(){if(this.phase==='ready'){if(!this.towers.length)return this.notice('먼저 타워를 선택해 빈 칸에 설치하세요.');if(this.pendingPurchase)return this.notice('열린 설치 문제를 풀거나 취소한 뒤 방어를 시작해요.');this.phase='playing';this.emit({type:'notice',message:'타워 준비 완료! 전투 중에는 자동으로 공격해요. 몬스터의 체력 변화를 살펴보세요.'});return true;}return false;}
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
- get canBuild(){return this.phase==='ready';}
+ get monstersAppeared(){return this.spawned>0||this.bossSpawned;}
+ get canBuild(){return this.phase==='ready'&&!this.monstersAppeared;}
+ get canPlaceWall(){return ['ready','playing','paused'].includes(this.phase)&&!this.monstersAppeared;}
+ get wallPlacementMessage(){return this.monstersAppeared?'몬스터가 등장한 뒤에는 성벽을 추가로 설치할 수 없어요. 다음 준비 때 설치해요.':'방어가 끝났어요. 다음 방어 전에 성벽을 준비해요.';}
  // Adjacent towers keep their normal firing interval at every stage.
  reloadFactor(_c:Cell){return 1;}
  reloadTime(t:Tower){return towerType(t.typeId)!.cooldown;}
@@ -131,7 +134,7 @@ export class Defense{
  }
  get wallStock(){return this.storedWallHealth.length;}
  previewWall(c:Cell):WallPreview{
-  const reason=!['ready','playing','paused'].includes(this.phase)?'방어가 끝났어요. 다음 방어 전에 성벽을 준비해요.':!this.wallStock?'먼저 벽돌을 합성해 성벽을 준비해요.':this.walls.length>=this.balance.wallLimit?`성벽은 ${this.balance.wallLimit}개까지 설치해요. 다른 성벽을 회수해요.`:!this.candidate(c,true)?'몬스터가 없는 길 위의 칸을 골라요. 입구와 불꽃에는 설치할 수 없어요.':'';
+  const reason=!this.canPlaceWall?this.wallPlacementMessage:!this.wallStock?'먼저 벽돌을 합성해 성벽을 준비해요.':this.walls.length>=this.balance.wallLimit?`성벽은 ${this.balance.wallLimit}개까지 설치해요. 다른 성벽을 회수해요.`:!this.candidate(c,true)?'몬스터가 없는 길 위의 칸을 골라요. 입구와 불꽃에는 설치할 수 없어요.':'';
   return {...c,valid:!reason,message:reason||`길 위에 설치 · 내구도 ${this.storedWallHealth[0]}/${WALL_DURABILITY} · 충돌할 때마다 1 감소`};
  }
  requestWall(c:Cell){this.pendingWall=this.previewWall(c);return this.pendingWall.valid;}
@@ -142,7 +145,7 @@ export class Defense{
   if(!this.placeWall({x:shown.x,y:shown.y}))return false;this.pendingWall=null;return true;
  }
  placeWall(c:Cell):boolean{
-  if(!['ready','playing','paused'].includes(this.phase))return false;
+  if(!this.canPlaceWall)return this.notice(this.wallPlacementMessage);
   if(!this.wallStock)return this.notice('벽돌 세 개를 먼저 합성해 성벽을 얻어요.');
   if(this.walls.length>=this.balance.wallLimit)return this.notice(`성벽은 ${this.balance.wallLimit}개까지 배치해요. 설치한 성벽을 회수해 옮겨 보세요.`);
   if(!this.candidate(c,true))return this.notice('성벽은 몬스터가 없는 길 위에만 놓을 수 있어요.');
@@ -153,18 +156,20 @@ export class Defense{
   if(!['ready','playing','paused'].includes(this.phase))return false;
   const index=this.walls.findIndex(w=>key(w)===key(c));if(index<0)return false;
   const [wall]=this.walls.splice(index,1);this.storedWallHealth.push(wall.durability);
-  this.emit({type:'wall',message:`성벽을 회수했어요. 내구도 ${wall.durability}/${WALL_DURABILITY}를 유지해서 다시 설치해요.`});return true;
+  this.emit({type:'wall',message:this.canPlaceWall?`성벽을 회수했어요. 내구도 ${wall.durability}/${WALL_DURABILITY}를 유지해서 다시 설치해요.`:`성벽을 보관했어요. 내구도 ${wall.durability}/${WALL_DURABILITY}를 유지해 다음 준비 때 다시 설치해요.`});return true;
  }
  spawn(){
   if(this.spawned>=this.level.hp.length)return;
   const p=this.path()!,xy=world(this.map.start),hp=this.level.hp[this.spawned],kind=monsterKind(this.level.id,this.spawned,hp);
   this.enemies.push({id:this.nextId++,kind,hp,max:hp,...xy,path:p,next:1,hits:0,slow:0,stun:0,hitFlash:0,age:0});this.spawned++;
+  this.cancelWall();this.cancelPurchase();
   if(MONSTERS[kind].boss)this.emit({type:'notice',message:`보스 ${MONSTERS[kind].name} 등장! 체력 ${decimal(hp,this.level.digits)} · 1로 줄이고 작은 포탄으로 마무리해요.`});
  }
  get enemyCount(){return this.level.hp.length+(this.level.boss?1:0);}
  spawnBoss(){
   const boss=this.level.boss;if(!boss||this.bossSpawned)return false;
   const xy=world(this.map.start);this.enemies.push({id:this.nextId++,kind:boss.kind,hp:boss.hp,max:boss.hp,...xy,path:this.path()!,next:1,hits:0,slow:0,stun:0,hitFlash:0,age:0});this.bossSpawned=true;
+  this.cancelWall();this.cancelPurchase();
   this.emit({type:'notice',message:`최종 보스 ${MONSTERS[boss.kind].name} 등장! 체력 ${numberText(boss.hp)} · 몬스터 웨이브도 계속돼요.`});return true;
  }
  get goals(){return [

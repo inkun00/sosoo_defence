@@ -77,6 +77,7 @@ function persistInventory(){
  if(!writeSave(save))notify('이 브라우저에서는 벽돌·성벽 저장이 제한되어 있어요.');
 }
 function update(){
+ if(field.mode.kind==='wall'&&!model.canPlaceWall)leaveWallPlacement();
  if(tutorial){tutorial.sync();if(tutorial.completed){field.presentationHeld=true;field.input.enabled=false;}}
  if(bossIntroFlow.held){movie=true;field.presentationHeld=true;if(field.input)field.input.enabled=false;}
  if(selectedWall&&!model.walls.some(w=>w.x===selectedWall!.x&&w.y===selectedWall!.y)){selectedWall=null;field.selectedWall=undefined;field.clearWallPreview();}
@@ -140,6 +141,7 @@ async function showAdventureHall(){
 function cancelAdventureHall(){hallToken++;hallOpening=false;const view=hallPresentation;hallPresentation=undefined;view?.close();}
 function nextWallCell(){return model.path()?.find(c=>model.previewWall(c).valid);}
 function beginWallPlacement(){
+ if(!model.canPlaceWall){notify(model.wallPlacementMessage);return;}
  // Transfer the forge's pause ownership without briefly restarting combat.
  const resumeBattle=resumeAfterPanel||model.phase==='playing';panel=null;resumeAfterPanel=false;field.input.enabled=true;
  if(field.mode.kind!=='wall'){resumeAfterWall=resumeBattle;if(model.phase==='playing')model.togglePause();}
@@ -237,9 +239,9 @@ function action(key:string){
   case 'purchase-cancel':closePanel();break;
   case 'purchase-confirm':if(panel==='purchase'){const q=model.pendingPurchase;if(q&&parseMoney(purchaseInput)!==q.before-q.cost)purchaseLearning('wrong',q);if(model.answerPurchase(purchaseInput)){purchaseLearning('correct',q);const t=model.towers.at(-1)!;if(sound.sfx)void sound.preloadTowerShots([t.typeId]);closePanel();selected=t.id;field.selected=t.id;field.mode.kind='inspect';field.drawTerrain();}}break;
   case 'forge':{if(tutorial&&!tutorial.openForge())return;const resume=field.mode.kind==='wall'&&resumeAfterWall;if(field.mode.kind==='wall')leaveWallPlacement(false);slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);setPanel('forge',resume);break;}
-  case 'fuse':{const ids=slots.filter((s):s is number=>s!==null),values=ids.map(id=>model.bricks.find(b=>b.id===id)?.value);if(!tutorial&&values.length===3&&new Set(ids).size===3&&values.every(v=>v!==undefined)){const [a,b,c]=values as number[];recordLearning({a,b,operation:'+',digits:model.level.digits,context:'wall'},a+b===c?'correct':'wrong');}if(model.fuse(ids)){slots=[null,null,null];beginWallPlacement();}break;}
+  case 'fuse':{const ids=slots.filter((s):s is number=>s!==null),values=ids.map(id=>model.bricks.find(b=>b.id===id)?.value);if(!tutorial&&values.length===3&&new Set(ids).size===3&&values.every(v=>v!==undefined)){const [a,b,c]=values as number[];recordLearning({a,b,operation:'+',digits:model.level.digits,context:'wall'},a+b===c?'correct':'wrong');}if(model.fuse(ids)){slots=[null,null,null];if(model.canPlaceWall)beginWallPlacement();else notify('성벽을 보관했어요. 다음 준비 때 설치할 수 있어요.');}break;}
   case 'wall':if(model.wallStock)beginWallPlacement();break;
-  case 'wall-recover':if(selectedWall&&model.recoverWall(selectedWall)){beginWallPlacement();field.drawTerrain();notify('회수한 성벽을 다시 놓을 칸을 골라요. 취소하면 재고에 보관해요.');}break;
+  case 'wall-recover':if(selectedWall&&model.recoverWall(selectedWall)){field.drawTerrain();if(model.canPlaceWall){beginWallPlacement();notify('회수한 성벽을 다시 놓을 칸을 골라요. 취소하면 재고에 보관해요.');}else{selectedWall=null;field.selectedWall=undefined;field.mode.kind='inspect';field.clearWallPreview();notify('회수한 성벽을 보관했어요. 다음 준비 때 다시 설치해요.');}}break;
   case 'wall-cancel':leaveWallPlacement();notify(`배치를 마쳤어요. 남은 성벽 ${model.wallStock}개는 보관돼요.`);break;
   case 'goals':setPanel('goals');break;
   case 'menu':setPanel('menu');break;

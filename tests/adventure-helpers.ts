@@ -5,7 +5,8 @@ import type {Difficulty} from '../src/difficulty';
 import {numberText} from '../src/math';
 
 // Legal fixed formations found during the gameplay audit. This runner uses
-// only purchases before battle, automatic fire, earned brick fusion and walls.
+// only purchases and wall placement before battle, automatic fire, and earned
+// brick fusion for inventory carried into the next preparation.
 // It deliberately never calls toggleTower, which is unavailable in the UI.
 const formations=[
  'double@2,6;basic@10,2;basic@10,3;double@6,6',
@@ -22,6 +23,19 @@ const formations=[
 ];
 const challengeFinal='rune@3,2;rune@6,2;catapult@2,5;catapult@6,5;crystal@1,2;frost@5,2;basic@9,2;pebble@9,5;needle@11,2';
 
+function fuseAvailable(m:Defense){
+ // A stage can end with unused drops. Find actual addition recipes among
+ // carried and newly earned bricks, without assuming fixed drop groups.
+ let fused=true;
+ while(fused){
+  fused=false;
+  for(let a=0;a<m.bricks.length&&!fused;a++)for(let b=a+1;b<m.bricks.length&&!fused;b++){
+   const result=m.bricks.find((brick,c)=>c!==a&&c!==b&&brick.value===m.bricks[a].value+m.bricks[b].value);
+   if(result){assert.ok(m.fuse([m.bricks[a].id,m.bricks[b].id,result.id]));fused=true;}
+  }
+ }
+}
+
 export function playAutomaticStage(stage:number,difficulty:Difficulty,inventory:Inventory){
  const m=new Defense(LEVELS[stage-1],inventory,difficulty);
  const placement=stage===11&&difficulty==='challenge'?challengeFinal:formations[stage-1];
@@ -31,29 +45,21 @@ export function playAutomaticStage(stage:number,difficulty:Difficulty,inventory:
   const purchase=m.pendingPurchase!;
   assert.ok(m.answerPurchase(numberText(purchase.before-purchase.cost)));
  }
- const original=m.towers.map(t=>({...t}));assert.ok(m.start());
+ fuseAvailable(m);
+ while(m.wallStock&&m.walls.length<m.balance.wallLimit){
+  const cell=m.path()!.slice(1,-1).reverse().find(c=>m.previewWall(c).valid);
+  if(!cell)break;assert.ok(m.placeWall(cell));
+ }
+ const original=m.towers.map(t=>({...t})),preparationWalls=m.wallPlacements;assert.ok(m.start());
  for(let frame=0;frame<3001&&m.phase==='playing';frame++){
   m.step(.1);
-   // A stage can end with two unused drops. Find an actual addition recipe
-   // among carried and newly earned bricks, rather than assuming the first
-   // three still belong to one drop group after a tighter wave.
-   let fused=true;
-   while(fused){
-    fused=false;
-    for(let a=0;a<m.bricks.length&&!fused;a++)for(let b=a+1;b<m.bricks.length&&!fused;b++){
-     const result=m.bricks.find((brick,c)=>c!==a&&c!==b&&brick.value===m.bricks[a].value+m.bricks[b].value);
-     if(result){assert.ok(m.fuse([m.bricks[a].id,m.bricks[b].id,result.id]));fused=true;}
-    }
-   }
-  if(m.wallStock&&m.walls.length<m.balance.wallLimit){
-   const cell=m.path()!.slice(1,-1).reverse().find(c=>m.previewWall(c).valid);
-   if(cell)assert.ok(m.placeWall(cell));
-  }
+  fuseAvailable(m);
   m.events=[];
  }
  assert.equal(m.phase,'won',`${difficulty} stage ${stage}: ${m.goals.filter(g=>!g.done).map(g=>g.label)}`);
  assert.ok(m.castle>0);assert.ok(m.goals.every(g=>g.done));assert.equal(m.enemies.length,0);
  assert.equal(m.switches,0);assert.equal(m.purchases,original.length);assert.ok(m.towers.every(t=>t.enabled));
+ assert.equal(m.wallPlacements,preparationWalls,'no walls are added during combat');
  assert.deepEqual(m.towers.map(({cooldown,...t})=>t),original.map(({cooldown,...t})=>t));
  assert.ok(Number.isSafeInteger(m.money)&&m.money>=0&&m.money%10===0);
  assert.ok((m.inventory.wallDurabilities??[]).every(h=>h>=1&&h<=3));

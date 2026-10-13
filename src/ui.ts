@@ -93,11 +93,11 @@ export class GameUI extends Phaser.Scene{
   this.castleText?.setText(`${m.castle}/5`);
   this.fitText(this.waveText.setText(`방어 ${m.kills}/${m.enemyCount} · ${s.save.started?'누적':'연습'} ${campaignVisibleTotal(s.save,m).toLocaleString('ko-KR')}점`).setName('adventure-score').setScale(1),218,22);
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
-  const shopSig=[s.towerTypeId,s.shopPage,s.selected,s.selectedWall?.x,s.selectedWall?.y,s.mode.kind,m.money,m.level.id,m.phase,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length,m.walls.map(w=>`${w.id}:${w.durability}`)].join('|');
+  const shopSig=[s.towerTypeId,s.shopPage,s.selected,s.selectedWall?.x,s.selectedWall?.y,s.mode.kind,m.money,m.level.id,m.phase,m.monstersAppeared,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length,m.walls.map(w=>`${w.id}:${w.durability}`)].join('|');
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
-  const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.walls.map(w=>`${w.id}:${w.durability}`),m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,s.speed].join('|');
+  const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.walls.map(w=>`${w.id}:${w.durability}`),m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,m.monstersAppeared,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
-  const popupSig=[s.panel,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level+':'+m.score+':'+campaignTotal(s.save):'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
+  const popupSig=[s.panel,m.canPlaceWall,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level+':'+m.score+':'+campaignTotal(s.save):'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
   if(force||popupSig!==this.signatures[2]){this.signatures[2]=popupSig;this.drawPopup();}
   this.onControls(this.controls);
  }
@@ -171,7 +171,7 @@ export class GameUI extends Phaser.Scene{
    }else{
     const wall=m.walls.find(w=>w.x===s.selectedWall!.x&&w.y===s.selectedWall!.y);
     this.text(this.shop,1135,158,'성벽',26,C.cream).setOrigin(.5);this.text(this.shop,1135,195,`내구도 ${wall?.durability??0}/${WALL_DURABILITY}`,24,C.cream).setOrigin(.5);
-    this.button(this.shop,'wall-recover',1135,pageY-pitch,218,rowHeight,'회수 · 재배치',!['won','review','lost'].includes(m.phase),'button_brown',22);
+    this.button(this.shop,'wall-recover',1135,pageY-pitch,218,rowHeight,m.canPlaceWall?'회수 · 재배치':'회수 · 보관',!['won','review','lost'].includes(m.phase),'button_brown',22);
     this.button(this.shop,'inspect-back',1135,pageY,218,rowHeight,'타워 목록',true,'button_brown',22);
    }
    return;
@@ -231,7 +231,7 @@ export class GameUI extends Phaser.Scene{
   }else if(s.selectedWall){
    const w=m.walls.find(w=>w.x===s.selectedWall!.x&&w.y===s.selectedWall!.y);
    this.text(this.dock,450,710,`성벽 · 내구도 ${w?.durability??0}/${WALL_DURABILITY} · 충돌하면 반동`,21,C.cream).setOrigin(0,.5);
-   this.button(this.dock,'wall-recover',640,750,310,58,'성벽 회수 · 다시 배치',!['won','review','lost'].includes(m.phase),'button_brown',23);
+   this.button(this.dock,'wall-recover',640,750,310,58,m.canPlaceWall?'성벽 회수 · 다시 배치':'성벽 회수 · 보관',!['won','review','lost'].includes(m.phase),'button_brown',23);
   }else{
    const placing=s.mode.kind==='tower';this.text(this.dock,450,713,placing?'설치할 칸을 골라 주세요':'타워를 누르면 정보와 회수를 확인해요',21,C.cream,520).setOrigin(0,.5);
    const max=m.level.boss?.hp??Math.max(...m.level.hp),i=m.level.hp.indexOf(max),strongest=MONSTERS[m.level.boss?.kind??monsterKind(m.level.id,i,max)];
@@ -268,13 +268,13 @@ export class GameUI extends Phaser.Scene{
   this.text(this.popup,640,91,m.level.id<=3?'두 벽돌의 합을 찾아요 · 한 자리 소수':'소수점을 맞추어 더해요 · 받아올림을 확인해요',22,'#f1ce94').setOrigin(.5);
   [330,520,710].forEach((x,i)=>{const brick=m.bricks.find(b=>b.id===s.slots[i]);const slot=this.button(this.popup,`slot:${i}`,x,174,158,slotHeight,brick?numberText(brick.value):'?',true,'button_brown',34);if(brick){slot.container.addAt(this.add.image(0,2,'dungeon-props','brick').setDisplaySize(164,92),1);slot.label.setStroke('#14151d',4);}});
   this.text(this.popup,425,174,'+',34).setOrigin(.5);this.text(this.popup,615,174,'=',34).setOrigin(.5);
-  this.button(this.popup,'fuse',938,174,200,slotHeight,'합성 · 설치',s.slots.every(v=>v!==null),'button_red',25);
+  this.button(this.popup,'fuse',938,174,200,slotHeight,m.canPlaceWall?'합성 · 설치':'합성 · 보관',s.slots.every(v=>v!==null),'button_red',25);
   this.text(this.popup,640,236,`벽돌 ${m.bricks.length}개 · 아래 숫자를 골라요`,21,C.muted).setOrigin(.5);
   m.bricks.slice(s.brickPage*6,s.brickPage*6+6).forEach((brick,i)=>{const tile=this.button(this.popup,`brick:${brick.id}`,190+i*180,303,162,brickHeight,numberText(brick.value),!s.slots.includes(brick.id),'button_brown',29);tile.container.addAt(this.add.image(0,3,'dungeon-props','brick').setDisplaySize(170,87),1);tile.label.setStroke('#14151d',4);});
   const pages=Math.ceil(m.bricks.length/6);if(pages>1){this.button(this.popup,'brick-page:prev',400,pagerY,180,pagerHeight,'◀ 이전',s.brickPage>0,'button_brown',23);this.text(this.popup,640,pagerY,`${s.brickPage+1} / ${pages}`,22,C.muted).setOrigin(.5);this.button(this.popup,'brick-page:next',880,pagerY,180,pagerHeight,'다음 ▶',s.brickPage<pages-1,'button_brown',23);}
   if(!m.bricks.length)this.text(this.popup,640,303,'돌 몬스터를 처치하면 숫자 벽돌을 얻어요.',23,C.muted).setOrigin(.5);
-  this.fitText(this.text(this.popup,640,pages>1?Math.max(456,pagerY+pagerHeight/2+28):456,s.message||'□ + □ = □가 맞으면 바로 길에 놓을 수 있어요.',23,'#dfb987').setOrigin(.5),1080,50);
-  const wallHeight=Math.max(80,touch);this.button(this.popup,'wall',940,height-8-wallHeight/2,370,wallHeight,`성벽 설치 (${m.wallStock})`,m.wallStock>0,'button_red',27);
+  this.fitText(this.text(this.popup,640,pages>1?Math.max(456,pagerY+pagerHeight/2+28):456,s.message||(m.canPlaceWall?'□ + □ = □가 맞으면 바로 길에 놓을 수 있어요.':'전투 중 만든 성벽은 다음 준비 때 설치해요.'),23,'#dfb987').setOrigin(.5),1080,50);
+  const wallHeight=Math.max(80,touch);this.button(this.popup,'wall',940,height-8-wallHeight/2,370,wallHeight,`성벽 설치 (${m.wallStock})`,m.wallStock>0&&m.canPlaceWall,'button_red',27);
  }
  private drawCompactPurchase(){
   const s=this.getState(),q=s.model.pendingPurchase;if(!q)return;const type=towerType(q.typeId)!,height=this.screenLayout!.height,touch=this.minimumTouch,wide=this.screenLayout!.scale<=.6,before=numberText(q.before,q.digits),cost=numberText(q.cost,q.digits);
@@ -296,17 +296,17 @@ export class GameUI extends Phaser.Scene{
  private drawForge(){
   if(this.screenLayout?.compact){this.drawCompactForge();return;}
   const s=this.getState(),m=s.model;this.modalFrame('벽돌을 합쳐 성벽으로',920,530);
-  this.text(this.popup,640,208,'식이 맞으면 바로 길에 성벽을 놓을 수 있어요.',18,'#c2b7a4').setOrigin(.5);
+  this.text(this.popup,640,208,m.canPlaceWall?'몬스터가 등장하기 전에 성벽을 설치해요.':'전투 중 만든 성벽은 다음 준비 때 설치해요.',18,'#c2b7a4').setOrigin(.5);
   this.text(this.popup,640,252,m.level.id<=3?'두 벽돌의 합을 찾아요 · 한 자리 소수':m.level.id<=4?'소수점을 맞추어 더해요 · 두 자리 소수':'단계가 높아질수록 받아올림과 큰 수를 더해요',20,'#f1ce94').setOrigin(.5);
   [350,540,730].forEach((x,i)=>{const brick=m.bricks.find(b=>b.id===s.slots[i]);const slot=this.button(this.popup,`slot:${i}`,x,330,140,86,brick?numberText(brick.value):'?',true,'button_brown',32);if(brick){const stone=this.add.image(0,2,'dungeon-props','brick').setDisplaySize(156,92);slot.container.addAt(stone,1);slot.label.setStroke('#14151d',4);}});
   this.text(this.popup,445,328,'+',34).setOrigin(.5);this.text(this.popup,635,328,'=',34).setOrigin(.5);
-  this.button(this.popup,'fuse',917,330,158,84,'합성·설치',s.slots.every(v=>v!==null),'button_red',23);
+  this.button(this.popup,'fuse',917,330,158,84,m.canPlaceWall?'합성·설치':'합성·보관',s.slots.every(v=>v!==null),'button_red',23);
   this.text(this.popup,243,378,`보관 중인 벽돌 ${m.bricks.length}개  ·  누르면 빈 슬롯에 들어가요`,19);
   m.bricks.slice(s.brickPage*6,s.brickPage*6+6).forEach((b,i)=>{const tile=this.button(this.popup,`brick:${b.id}`,295+i*137,442,118,64,numberText(b.value),!s.slots.includes(b.id),'button_brown',26);const stone=this.add.image(0,3,'dungeon-props','brick').setDisplaySize(126,77);tile.container.addAt(stone,1);tile.label.setStroke('#14151d',4);});
   const pages=Math.ceil(m.bricks.length/6);if(pages>1){this.button(this.popup,'brick-page:prev',403,508,134,56,'◀ 이전',s.brickPage>0,'button_brown',18);this.text(this.popup,640,508,`${s.brickPage+1} / ${pages}`,18,C.muted).setOrigin(.5);this.button(this.popup,'brick-page:next',877,508,134,56,'다음 ▶',s.brickPage<pages-1,'button_brown',18);}
   if(!m.bricks.length)this.text(this.popup,640,453,'돌 몬스터를 처치하면 숫자 벽돌을 얻어요.',21,'#bdb7ae').setOrigin(.5);
   this.text(this.popup,247,540,s.message||'□ + □ = □가 맞으면 벽돌 세 개를 소비해요.',19,'#dfb987',500);
-  this.button(this.popup,'wall',914,602,220,64,`성벽 설치 (${m.wallStock})`,m.wallStock>0,'button_red',24);
+  this.button(this.popup,'wall',914,602,220,64,`성벽 설치 (${m.wallStock})`,m.wallStock>0&&m.canPlaceWall,'button_red',24);
  }
  private drawMap(){
   const s=this.getState();this.frame(this.popup,640,410,1120,640,'panel_brown');

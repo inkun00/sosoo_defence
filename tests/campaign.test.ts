@@ -12,19 +12,23 @@ for(const difficulty of ['practice','standard','challenge'] as const)for(let sta
    assert.ok(operands.every(n=>n>=0&&n<(bossEquation?100:10)),e.message);
   }
  };
- // Fixed formations must succeed without buying, selling or moving mid-wave.
- let m=playLevel(stage,difficulty,checkEvents);
- for(let layout=1;layout<10&&m.phase!=='won';layout++)m=playLevel(stage,difficulty,checkEvents,layout);
+ // Fixed formations use only stocked walls before the first monster appears.
+ // Wall-learning stages start with the required inventory carried from earlier stages.
+ const level=LEVELS[stage-1],inventory={bricks:[],walls:level.goal==='wall'||level.goal==='both'?level.requiredFusions??1:0};
+ let m=playLevel(stage,difficulty,checkEvents,0,undefined,inventory);
+ for(let layout=1;layout<10&&m.phase!=='won';layout++)m=playLevel(stage,difficulty,checkEvents,layout,undefined,inventory);
  assert.deepEqual(m.towers.map(t=>({id:t.id,x:t.x,y:t.y,typeId:t.typeId})),m.formation);assert.equal(m.purchases,m.formation.length);
  assert.ok(equations>0);
  assert.equal(m.phase,'won');assert.ok(m.goals.every(g=>g.done));
+ assert.equal(m.wallPlacements,inventory.walls);assert.equal(m.canPlaceWall,false);assert.equal(m.canBuild,false);
  if(m.level.boss){assert.ok(m.bossSpawned&&m.bossDefeated);assert.equal(m.enemies.length,0);}
  assert.equal(m.elapsed,120);assert.ok(m.simulationSeconds>=120&&m.simulationSeconds<=300);assert.ok(m.money>=0);assert.ok(m.castle>0);
  assert.ok(m.towers.length<=m.balance.towerLimit);assert.ok(m.towers.filter(t=>t.unit===10).length<=m.balance.precisionLimit);assert.ok(m.walls.length<=m.balance.wallLimit);
 });
 
 test('후반에는 같은 혼합 타워를 한곳에 몰거나 기본 포탑만 채우면 실패하고 분산 배치로 통과한다',()=>{
- const spread=playLevel(10,'standard'),cluster=playLevel(10,'standard',undefined,-1),spam=playLevel(10,'standard',undefined,0,Array(14).fill('basic'));
+ const inventory={bricks:[],walls:1};
+ const spread=playLevel(10,'standard',undefined,0,undefined,inventory),cluster=playLevel(10,'standard',undefined,-1,undefined,inventory),spam=playLevel(10,'standard',undefined,0,Array(14).fill('basic'),inventory);
  assert.equal(spread.phase,'won');assert.equal(cluster.phase,'lost');assert.equal(spam.phase,'lost');
  assert.deepEqual(cluster.towers.map(t=>t.typeId),spread.towers.map(t=>t.typeId));
  assert.equal(cluster.money,spread.level.budget-cluster.towers.reduce((sum,t)=>sum+t.cost,0));

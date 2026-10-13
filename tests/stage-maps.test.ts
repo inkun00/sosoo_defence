@@ -36,8 +36,8 @@ test('단계마다 이동한 불꽃 칸을 예약하고 성벽 설치·회수 �
  for(const level of LEVELS){
   const m=new Defense(level,{bricks:[],walls:2});
   for(const cell of [m.map.start,m.map.end]){assert.equal(m.candidate(cell),null);assert.equal(m.candidate(cell,true),null);}
+  const wall=m.path()!.slice(4,-2).find(c=>m.candidate(c,true));assert.ok(wall);assert.ok(m.placeWall(wall));
   m.spawn();const e=m.enemies[0];assert.deepEqual({x:e.x,y:e.y},world(m.map.start));assert.deepEqual(e.path.at(-1),m.map.end);
-  const wall=m.path()!.slice(4,-2).find(c=>m.candidate(c,true));assert.ok(wall);assert.ok(m.placeWall(wall));assert.deepEqual(e.path.at(-1),m.map.end);
   assert.ok(m.recoverWall(wall));assert.deepEqual(e.path.at(-1),m.map.end);
   e.next=e.path.length;m.phase='playing';m.step(.1);assert.equal(m.castle,4);assert.equal(m.leaks,1);assert.equal(m.phase,'playing');
  }

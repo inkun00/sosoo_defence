@@ -16,20 +16,21 @@ function untilBreak(m:Defense){for(let i=0;i<300&&m.walls.length;i++)m.step(.02)
 
 test('모든 단계: 길 위에만 설치하고 기존 길·바위·몬스터 경로는 바꾸지 않는다',()=>{
  for(const level of LEVELS){
-  const m=new Defense(level,{bricks:[],walls:2});m.spawn();m.phase='paused';const road=m.path()!,c=road.slice(3,-1).find(c=>m.candidate(c,true))!,before=snapshot(m),p=m.previewWall(c);
+  const m=new Defense(level,{bricks:[],walls:2});m.phase='paused';const road=m.path()!,c=road.slice(3,-1).find(c=>m.candidate(c,true))!,before=snapshot(m),p=m.previewWall(c);
   assert.ok(p.valid);assert.equal(snapshot(m),before);assert.ok(m.requestWall(c));assert.equal(snapshot(m),before);
   assert.ok(m.confirmWall());assert.equal(m.pendingWall,null);assert.equal(m.wallStock,1);assert.equal(m.walls[0].durability,3);
-  assert.deepEqual(m.path(),road);assert.deepEqual(m.enemies[0].path,road);assert.equal(m.enemies[0].next,1);assert.equal(m.phase,'paused');
+  assert.deepEqual(m.path(),road);assert.equal(m.phase,'paused');
   assert.equal(m.confirmWall(),false);assert.equal(m.wallStock,1);
   assert.equal(m.requestWall({x:1,y:3}),false);assert.equal(m.confirmWall(),false);
+  m.spawn();assert.deepEqual(m.enemies[0].path,road);assert.equal(m.enemies[0].next,1);
  }
 });
 
 test('입구·불꽃·바위·몬스터가 있는 칸·완료된 단계·재고 없음은 설치 불가, 취소는 소비 없음',()=>{
- const m=new Defense(LEVELS[0],{bricks:[],walls:1});m.spawn();const before=snapshot(m);
+ const m=new Defense(LEVELS[0],{bricks:[],walls:1});const before=snapshot(m);
  for(const c of [m.map.start,m.map.end,{x:4,y:0},{x:1,y:3},{x:-1,y:0},{x:.5,y:4}]){assert.equal(m.requestWall(c),false);assert.equal(m.confirmWall(),false);}
  assert.equal(snapshot(m),before);const c=roadCell(m);assert.ok(m.requestWall(c));m.cancelWall();assert.equal(snapshot(m),before);
- const p=world(c);m.enemies[0].x=p.x;m.enemies[0].y=p.y;assert.equal(m.requestWall(c),false);
+ m.spawn();const p=world(c);m.enemies[0].x=p.x;m.enemies[0].y=p.y;assert.equal(m.candidate(c,true),null);assert.equal(m.requestWall(c),false);
  const empty=new Defense(LEVELS[0]);assert.equal(empty.previewWall(c).valid,false);
  m.phase='won';assert.equal(m.previewWall(c).valid,false);
 });
@@ -68,9 +69,9 @@ test('느린 프레임에서도 충돌을 건너뛰지 않고 파괴 시 학습 
  }
 });
 
-test('회수·재배치·저장·다음 단계에도 남은 내구도가 유지되며 파괴된 성벽은 돌아오지 않는다',()=>{
+test('전투 중 회수한 성벽은 재설치하지 못하며 다음 준비까지 내구도를 보관한다',()=>{
  const {m,wall,c}=collisionSetup();m.step(.02);assert.equal(wall.durability,2);assert.ok(m.recoverWall(c));assert.equal(m.wallStock,1);
- const target=m.path()!.slice(4).find(c=>m.candidate(c,true))!;assert.ok(m.placeWall(target));assert.equal(m.walls[0].durability,2);
+ const target=m.path()!.slice(4).find(c=>m.candidate(c,true))!;assert.equal(m.placeWall(target),false);assert.equal(m.walls.length,0);assert.equal(m.wallStock,1);assert.deepEqual(m.inventory.wallDurabilities,[2]);
  const data=new Map<string,string>();Object.assign(globalThis,{localStorage:{getItem:(k:string)=>data.get(k)??null,setItem:(k:string,v:string)=>data.set(k,v)}});
  const save=loadSave();save.inventory=m.inventory;assert.ok(writeSave(save));const next=new Defense(LEVELS[1],loadSave().inventory);
  assert.equal(next.inventory.wallDurabilities![0],2);assert.ok(next.placeWall(roadCell(next)));assert.equal(next.walls[0].durability,2);

@@ -144,16 +144,18 @@ test('설치한 성벽과 남은 벽돌은 다음 단계·재도전에서 재고
   assert.equal(next.money,level.budget);assert.equal(next.towers.length,0);
  }
 });
-test('성벽 회수·재배치는 재고를 늘리지 않고 자연 장애물과 몬스터 경로를 유지한다',()=>{
+test('몬스터 등장 후 성벽 회수는 재고와 경로를 유지하고 재배치는 다음 준비에서만 한다',()=>{
  const m=new Defense(LEVELS[6],{bricks:[],walls:2});
  assert.equal(m.recoverWall({x:4,y:0}),false);assert.ok(m.blocks.has('4,0'));
- assert.equal(m.placeWall({x:1,y:4}),true);m.spawn();const e=m.enemies[0],before={x:e.x,y:e.y};
+ assert.equal(m.placeWall({x:1,y:4}),true);m.spawn();m.phase='playing';const e=m.enemies[0],before={x:e.x,y:e.y};
  assert.equal(m.recoverWall({x:1,y:4}),true);assert.equal(m.wallStock,2);assert.ok(!m.blocks.has('1,4'));
  assert.deepEqual({x:e.x,y:e.y},before);assert.ok(m.path(m.blocks,e.path[0]));
  assert.equal(m.recoverWall({x:1,y:4}),false);assert.equal(m.wallStock,2);
  const other=m.path()!.slice(4).find(c=>m.candidate(c,true))!;
- assert.equal(m.placeWall(other),true);assert.equal(m.wallStock,1);
- assert.equal(m.recoverWall(other),true);assert.equal(m.wallStock,2);assert.equal(m.inventory.walls,2);
+ assert.equal(m.placeWall(other),false);assert.equal(m.wallStock,2);assert.equal(m.inventory.walls,2);
+ const next=new Defense(LEVELS[6],m.inventory);
+ assert.equal(next.placeWall(other),true);assert.equal(next.wallStock,1);
+ assert.equal(next.recoverWall(other),true);assert.equal(next.wallStock,2);assert.equal(next.inventory.walls,2);
 });
 test('과거 저장은 빈 재고로 호환되고 손상된 재료·성벽 값만 제거한다',()=>{
  const map=new Map<string,string>();Object.assign(globalThis,{localStorage:{getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>map.set(k,v)}});

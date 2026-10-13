@@ -326,6 +326,7 @@ export class Field extends Phaser.Scene{
   }
  }
  update(_time:number,delta:number){
+  const couldPlaceWall=this.model.canPlaceWall;
   const paused=this.model.phase==='paused';this.tweens.timeScale=paused?0:1;if(paused)this.cameras.main.shakeEffect.reset();
   this.ambient?.setPaused(paused);
   this.castleEffects?.setPaused(paused);
@@ -334,7 +335,7 @@ export class Field extends Phaser.Scene{
   this.bossAura?.sync(this.model);
   for(const v of this.visuals.values()){if(paused)v.sprite.anims.pause();else if(v.sprite.anims.isPaused)v.sprite.anims.resume();}
   const live=new Set(this.model.enemies.map(e=>e.id));for(const [id,v]of this.visuals){if(live.has(id))continue;v.text.destroy();v.name.destroy();v.bar.destroy();this.trackEffect(v.sprite);v.sprite.play((this.anims.exists(v.kind+'-fall')?v.kind:'slime')+'-fall');this.tweens.add({targets:v.sprite,alpha:0,duration:550,onComplete:()=>v.sprite.destroy()});this.visuals.delete(id);}
-  if(this.layoutSignature!==this.signature())this.drawTerrain();this.castleEffects?.sync('guardian',this.model.castle);this.animateWalls();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(this.heartbeat>=120){this.heartbeat=0;this.onChange();}
+  if(this.layoutSignature!==this.signature())this.drawTerrain();this.castleEffects?.sync('guardian',this.model.castle);this.animateWalls();this.animateTowers(delta);this.flush();this.heartbeat+=delta;if(couldPlaceWall!==this.model.canPlaceWall||this.heartbeat>=120){this.heartbeat=0;this.onChange();}
  }
 }
 
