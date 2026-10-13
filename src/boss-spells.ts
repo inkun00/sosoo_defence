@@ -5,9 +5,9 @@ export interface BossSpellState{sourceId:number;spell:BossSpell;cycle:number;pha
 export const BOSS_SPELL_WARNING_SECONDS=3,BOSS_SPELL_ACTIVE_SECONDS=5,BOSS_SPELL_REST_SECONDS=4;
 export const BOSS_SPELL_CYCLE_SECONDS=BOSS_SPELL_WARNING_SECONDS+BOSS_SPELL_ACTIVE_SECONDS+BOSS_SPELL_REST_SECONDS;
 export const BOSS_SPELLS:readonly BossSpell[]=[
- {id:'haste',name:'광폭 질주',taunt:'내 군단아, 성문을 짓밟아라!',description:'반경 3칸의 다른 몬스터 이동 속도 +25%',color:0xf28b63},
- {id:'frost-ward',name:'서리 파괴',taunt:'얼음을 부숴라! 멈추지 마라!',description:'반경 3칸의 다른 몬스터가 감속 중에도 속도 80% 유지',color:0x73d9f4},
- {id:'iron-will',name:'불굴의 의지',taunt:'정신을 깨워라! 저항하라!',description:'반경 3칸의 다른 몬스터 기절 회복 속도 2배',color:0xd9b8ff},
+ {id:'haste',name:'광폭 질주',taunt:'더 빨리 달려! 저 성을 무너뜨려!',description:'반경 3칸의 다른 몬스터 이동 속도 +25%',color:0xf28b63},
+ {id:'frost-ward',name:'서리 파괴',taunt:'얼음으로 막겠다고? 그 정도로는 못 멈춰!',description:'반경 3칸의 다른 몬스터가 감속 중에도 속도 80% 유지',color:0x73d9f4},
+ {id:'iron-will',name:'불굴의 의지',taunt:'정신 차려! 아직 싸움은 안 끝났어!',description:'반경 3칸의 다른 몬스터 기절 회복 속도 2배',color:0xd9b8ff},
 ];
 
 /** Spell time follows the living boss's age, independent of the wave clock. */

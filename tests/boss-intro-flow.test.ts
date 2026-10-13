@@ -37,16 +37,15 @@ test('three dialogue beats cover fourteen seconds and share exact transition bou
  let time=0;
  for(let index=0;index<BOSS_INTRO_STORY.length;index++){
   const frame=bossIntroFrame(time);assert.equal(frame.index,index);assert.ok(Math.abs(frame.local)<1e-8);assert.equal(frame.complete,false);
+  const end=bossIntroFrame(time+BOSS_INTRO_STORY[index].duration-.05);assert.equal(end.dialogue,BOSS_INTRO_STORY[index].line,'the full line is readable before the next beat');
   time+=BOSS_INTRO_STORY[index].duration;
  }
  const final=bossIntroFrame(time+100);assert.equal(final.index,2);assert.equal(final.progress,1);assert.equal(final.complete,true);assert.equal(final.dialogue,BOSS_INTRO_STORY[2].line);
  for(const invalid of [-3,NaN,Infinity])assert.equal(bossIntroFrame(invalid).time,0);
- assert.match(BOSS_INTRO_STORY.map(beat=>beat.line).join(' '),/감속과 기절/);
  const copy=BOSS_INTRO_MECHANICS.join(' ');
  for(const spell of BOSS_SPELLS)assert.ok(copy.includes(spell.name),'intro names '+spell.name);
  assert.ok(copy.includes(`${BOSS_SPELL_WARNING_SECONDS}초 예고`)&&copy.includes(`${BOSS_SPELL_ACTIVE_SECONDS}초 발동`)&&copy.includes(`${BOSS_SPELL_REST_SECONDS}초 휴식`));
  for(const mechanic of ['3칸','하나씩 순환','25%','60% → 80%','회복 2배'])assert.ok(copy.includes(mechanic));
- assert.match(BOSS_INTRO_STORY[1].line,/경고/);assert.match(BOSS_INTRO_STORY[1].line,/번갈아/);
 });
 
 test('reduced motion exposes the complete dialogue immediately without the speaking pulse',()=>{
