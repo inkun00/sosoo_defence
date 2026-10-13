@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {numberText,precision} from './math';
 import {hitEquationsEnabled,onHitEquationsChange} from './combat-preferences';
+import {combatLabelPosition,type LabelBounds} from './combat-label-layout';
 type Anchor=()=>{x:number;y:number};
 interface Popup{label:Phaser.GameObjects.Text;anchor:Anchor;age:number;equation:boolean;}
 // One readable equation per monster; a new hit replaces that monster's previous
@@ -8,7 +9,7 @@ interface Popup{label:Phaser.GameObjects.Text;anchor:Anchor;age:number;equation:
 export class HitEquationPopups{
  private popups=new Map<number,Popup>();private latest=new Map<number,number>();private unsubscribe:()=>void;
  private reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- constructor(private scene:Phaser.Scene,private bounds:{left:number;right:number;top:number;bottom:number},private paused=()=>false){
+ constructor(private scene:Phaser.Scene,private bounds:LabelBounds,private paused=()=>false,private blocked:(id:number)=>LabelBounds[]=()=>[]){
   this.unsubscribe=onHitEquationsChange(value=>{if(!value)for(const [id,popup]of this.popups)if(popup.equation){popup.label.destroy();this.popups.delete(id);}});
   const update=(_time:number,delta:number)=>this.update(delta);
   scene.events.on(Phaser.Scenes.Events.UPDATE,update);
@@ -32,12 +33,12 @@ export class HitEquationPopups{
   popup.anchor=anchor;popup.age=0;popup.equation=equation;this.position(popup);
  }
  private position(p:Popup){
-  const at=p.anchor(),half=p.label.width/2+3;
-  p.label.setPosition(Phaser.Math.Clamp(at.x,this.bounds.left+half,this.bounds.right-half),Phaser.Math.Clamp(at.y-(this.reduced?0:Math.min(16,p.age/100)),this.bounds.top+p.label.height/2,this.bounds.bottom-p.label.height/2));
+  const at=p.anchor(),position=combatLabelPosition({x:at.x,y:at.y-(this.reduced?0:Math.min(16,p.age/100))},p.label.width+6,p.label.height,this.bounds,this.blocked(p.label.getData('monsterId')));
+  p.label.setPosition(position.x,position.y);
  }
  private update(delta:number){
-  if(this.paused())return;
-  for(const [id,p]of this.popups){p.age+=delta;if(p.age>=2200){p.label.destroy();this.popups.delete(id);continue;}this.position(p);p.label.setAlpha(p.age<1700?1:(2200-p.age)/500);}
+  const paused=this.paused();
+  for(const [id,p]of this.popups){if(!paused)p.age+=delta;if(p.age>=2200){p.label.destroy();this.popups.delete(id);continue;}this.position(p);p.label.setAlpha(p.age<1700?1:(2200-p.age)/500);}
  }
  clear(){for(const p of this.popups.values())p.label.destroy();this.popups.clear();this.latest.clear();}
 }

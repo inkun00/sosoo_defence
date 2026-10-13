@@ -15,6 +15,7 @@ import {CastleDamageEffects} from './castle-damage-effects';
 import type {GameScreenLayout} from './responsive-game';
 import {playTowerProjectile,clearTowerProjectiles} from './tower-projectiles';
 import {BossAuraView} from './boss-aura-view';
+import type {LabelBounds} from './combat-label-layout';
 export interface Mode{kind:'tower'|'wall'|'inspect';unit:number;effect:Effect;typeId?:string;}
 interface TowerVisual{root:Phaser.GameObjects.Container;base:Phaser.GameObjects.Image;pivot:Phaser.GameObjects.Container;head:Phaser.GameObjects.Image;angle:number;recoilTime:number;}
 interface ShotData{towerId:number;typeId:string;targetId:number;toX:number;toY:number;kind:MonsterKind;effect:Effect;unit:number;before:number;after:number;valid:boolean;killed:boolean;}
@@ -47,10 +48,13 @@ export class Field extends Phaser.Scene{
  preload(){loadDungeon(this,stageMonsterKinds(this.model.level));this.load.image('dungeon-wall-collapse-v1',artURL('wall-collapse-v1'));}
  create(){
   this.readyFlag=true;this.layoutCamera();registerDungeon(this);this.floor=this.add.container(0,0);this.towersView=this.add.container(0,0);this.overlay=this.add.graphics().setDepth(8);
-  this.ambient=new AmbientProps(this,this.reducedMotion);this.castleEffects=new CastleDamageEffects(this,this.reducedMotion);this.bossAura=new BossAuraView(this,this.reducedMotion);
+  this.ambient=new AmbientProps(this,this.reducedMotion);this.castleEffects=new CastleDamageEffects(this,this.reducedMotion);this.bossAura=new BossAuraView(this,this.reducedMotion,id=>{
+   const v=this.visuals.get(id);if(!v)return null;const name=v.name.getBounds(),hp=v.text.getBounds();
+   return {x:v.name.x,y:Math.max(23,v.name.y-32),head:{x:v.text.x,y:v.text.y},labels:{left:Math.min(name.left,hp.left),top:name.top,right:Math.max(name.right,hp.right),bottom:hp.bottom}};
+  });
   this.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.castleEffects?.destroy();this.castleEffects=undefined;this.readyFlag=false;});
   if(this.presentationHeld)this.input.enabled=false;
-  this.hitEquations=new HitEquationPopups(this,{left:16,right:FIELD_WIDTH-16,top:12,bottom:FIELD_HEIGHT-16},()=>this.model.phase==='paused');
+  this.hitEquations=new HitEquationPopups(this,{left:16,right:FIELD_WIDTH-16,top:12,bottom:FIELD_HEIGHT-16},()=>this.model.phase==='paused',id=>this.combatLabelBlockers(id));
   for(const kind of MONSTER_KINDS)this.monsterAnimations(kind);
   for(const effect of ['basic','slow','stun','range'])this.anims.create({key:'impact-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-impact-v1',frame:effect+'-'+i})),frameRate:22,repeat:0});
   for(const effect of ['muzzle','defeat','shockwave'])this.anims.create({key:'fx-'+effect,frames:Array.from({length:6},(_,i)=>({key:'dungeon-fx-utility-v1',frame:effect+'-'+i})),frameRate:effect==='muzzle'?36:18,repeat:0});
@@ -73,6 +77,20 @@ export class Field extends Phaser.Scene{
  }
  /** Canvas coordinates, shared by the finale overlay and responsive UI effects. */
  worldToScreen(x:number,y:number){const c=this.cameras.main;return {x:c.x+c.width/2+(x-FIELD_WIDTH/2)*c.zoom,y:c.y+c.height/2+(y-FIELD_HEIGHT/2)*c.zoom};}
+ private combatLabelBlockers(id:number):LabelBounds[]{
+  const blocked:LabelBounds[]=[],speech=this.bossAura?.speechBounds;
+  if(speech){
+   const box=this.game.canvas.getBoundingClientRect(),sx=this.scale.width/Math.max(1,box.width),sy=this.scale.height/Math.max(1,box.height),c=this.cameras.main;
+   const a=c.getWorldPoint((speech.left-box.left)*sx,(speech.top-box.top)*sy),b=c.getWorldPoint((speech.right-box.left)*sx,(speech.bottom-box.top)*sy);
+   blocked.push({left:a.x,top:a.y,right:b.x,bottom:b.y});
+  }
+  const enemy=this.model.enemies.find(e=>e.id===id),v=this.visuals.get(id);
+  if(v&&(speech||enemy&&this.model.isBossEmpowered(enemy))){
+   const name=v.name.getBounds(),hp=v.text.getBounds();blocked.push({left:Math.min(name.left,hp.left)-3,top:name.top-3,right:Math.max(name.right,hp.right)+3,bottom:hp.bottom+10});
+   if(enemy&&this.model.isBossEmpowered(enemy)){const x=v.name.x,y=Math.max(23,v.name.y-32);blocked.push({left:x-19,top:y-19,right:x+19,bottom:y+21});}
+  }
+  return blocked;
+ }
  private inField(p:Phaser.Input.Pointer){const c=this.cameras.main;return p.x>=c.x&&p.x<c.x+c.width&&p.y>=c.y&&p.y<c.y+c.height;}
  actCell(c:Cell){
   if(!this.beforeCellAction(c))return;
@@ -159,7 +177,7 @@ export class Field extends Phaser.Scene{
  private enemyVisual(e:Enemy){
   this.ensureMonster(e.kind);const renderedKind=this.textures.exists('dungeon-'+MONSTERS[e.kind].atlas)?e.kind:'slime';
   const art=MONSTERS[e.kind],size=monsterSize(e.kind,this.model.level.id),sy=e.y+32-size*.4;
-  const tx=Phaser.Math.Clamp(e.x,art.boss?69:48,FIELD_WIDTH-69),ty=Math.max(hitEquationsEnabled()?106:62,sy-size*.46);
+  const tx=Phaser.Math.Clamp(e.x,art.boss?69:48,FIELD_WIDTH-69),ty=Math.max(hitEquationsEnabled()?106:this.model.level.boss?.kind==='wizard'?86:62,sy-size*.46);
   let v=this.visuals.get(e.id);if(!v){
    const sprite=this.add.sprite(e.x,sy,'dungeon-'+MONSTERS[renderedKind].atlas,renderedKind+'-0').setDisplaySize(size,size).setDepth(4).setData('kind',e.kind);sprite.play(renderedKind+'-walk');
    const text=this.label(tx,ty,'',art.boss?32:25,'#fff0cb').setBackgroundColor('#11141de8').setDepth(7);
