@@ -16,8 +16,16 @@ export function opponentUid(r:MatchRecord){return r.side===0?r.guestUid:r.hostUi
 // table free of browser storage also lets the callable validate CPU identity.
 const computerIds=['moss-apprentice','lantern-scout','ember-smith','frost-sage','lightning-alchemist','rune-knight','crystal-oracle','shadow-warden','storm-dragon-sage','archmage'] as const;
 export function computerOpponentLevel(uid:string):number|null{const index=computerIds.findIndex(id=>uid==='computer-'+id);return index<0?null:index+1;}
-export function matchExperience(r:MatchRecord,opponent=r.opponentLevel??1){return r.duration<10?0:(r.outcome==='win'?100*level(opponent):r.outcome==='loss'?40:60)+Math.min(30,count(r.solved))*5+Math.min(20,count(r.purchases))*5;}
-export function progressAfter(value:Progress,r:MatchRecord):Progress{const p=normalizeProgress(value),experience=Math.min(Number.MAX_SAFE_INTEGER,p.experience+matchExperience(r));return {wins:Math.min(Number.MAX_SAFE_INTEGER,p.wins+Number(r.outcome==='win')),losses:Math.min(Number.MAX_SAFE_INTEGER,p.losses+Number(r.outcome==='loss')),draws:Math.min(Number.MAX_SAFE_INTEGER,p.draws+Number(r.outcome==='draw')),experience,level:accountLevel(experience)};}
+export function matchExperience(r:MatchRecord,opponent=r.opponentLevel??1,playerLevel=1){
+ if(r.duration<10)return 0;
+ const computerLevel=computerOpponentLevel(opponentUid(r)),opponentLevel=computerLevel??level(opponent);
+ // Only CPU victories scale with the owner's level before this result is saved.
+ // Keep learning bonuses unchanged, even when a familiar opponent is easier.
+ const percent=computerLevel===null?100:Math.max(20,100+10*(computerLevel-level(playerLevel)));
+ const base=r.outcome==='win'?Math.round(100*opponentLevel*percent/100):r.outcome==='loss'?40:60;
+ return base+Math.min(30,count(r.solved))*5+Math.min(20,count(r.purchases))*5;
+}
+export function progressAfter(value:Progress,r:MatchRecord):Progress{const p=normalizeProgress(value),experience=Math.min(Number.MAX_SAFE_INTEGER,p.experience+matchExperience(r,r.opponentLevel??1,p.level));return {wins:Math.min(Number.MAX_SAFE_INTEGER,p.wins+Number(r.outcome==='win')),losses:Math.min(Number.MAX_SAFE_INTEGER,p.losses+Number(r.outcome==='loss')),draws:Math.min(Number.MAX_SAFE_INTEGER,p.draws+Number(r.outcome==='draw')),experience,level:accountLevel(experience)};}
 export function finishedRecord(s:DuelState,side:Side,matchId:string):MatchRecord|null{
  if(s.status!=='finished'||!s.startedAt||!s.players[1])return null;
  const p=s.players[side]!,opponent=s.players[(1-side) as Side]!,computerLevel=computerOpponentLevel(opponent.uid);return {version:1,matchId,hostUid:s.players[0].uid,guestUid:s.players[1].uid,side,outcome:s.winner===null?'draw':s.winner===side?'win':'loss',endedAt:Date.now(),duration:Math.min(300,Math.max(0,s.elapsed)),solved:p.solved,purchases:p.purchases??0,wrongQuestions:structuredClone(p.wrongQuestions??[]),opponentType:computerLevel===null?'player':'computer',opponentLevel:computerLevel??level(opponent.accountLevel)};

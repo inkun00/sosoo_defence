@@ -32,6 +32,11 @@
 .duel-card button:active:not(:disabled){transform:translateY(1px)}
 .duel-card button:focus-visible{outline:2px solid #ffc774;outline-offset:3px}
 .duel-card button:disabled{opacity:.43;cursor:default;filter:grayscale(.7)}
+.duel-account-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 18px;margin:0 0 18px}
+.duel-account-bar #profile-name{flex:1 1 250px;min-width:0;margin:0}
+.duel-card .duel-logout-button{flex:none;min-height:44px;padding:8px 20px;font-size:14px;white-space:nowrap}
+.duel-account-bar .duel-logout-button{margin-left:auto}
+.duel-settings-actions{margin-top:18px}
 .duel-card .duel-primary{min-height:66px;font-size:19px;color:#ffe0a0;filter:drop-shadow(0 3px 10px #c2822333);flex:1;border:0;background:transparent var(--menu-art) center 40%/100% 163% no-repeat}
 .duel-card .duel-primary:disabled{filter:grayscale(.7)}
 .duel-card form>.duel-primary{width:100%;margin-top:5px}
