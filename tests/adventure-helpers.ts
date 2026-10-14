@@ -21,7 +21,7 @@ const formations=[
  'catapult@2,2;catapult@5,2;crystal@2,5;basic@8,2;pebble@9,5;needle@10,2',
  'rune@3,2;rune@5,2;catapult@2,5;catapult@5,5;crystal@1,2;frost@3,3;basic@7,2;pebble@9,2;needle@10,5',
 ];
-const challengeFinal='rune@3,2;rune@6,2;catapult@2,5;catapult@6,5;crystal@1,2;frost@5,2;basic@9,2;pebble@9,5;needle@11,2';
+const pressureFinal='rune@5,6;rune@7,6;catapult@5,5;catapult@7,5;crystal@5,3;frost@7,3;basic@11,6;pebble@11,5;needle@11,3';
 
 function fuseAvailable(m:Defense){
  // A stage can end with unused drops. Find actual addition recipes among
@@ -38,7 +38,7 @@ function fuseAvailable(m:Defense){
 
 export function playAutomaticStage(stage:number,difficulty:Difficulty,inventory:Inventory){
  const m=new Defense(LEVELS[stage-1],inventory,difficulty);
- const placement=stage===11&&difficulty==='challenge'?challengeFinal:formations[stage-1];
+ const placement=stage===11&&difficulty!=='practice'?pressureFinal:formations[stage-1];
  for(const entry of placement.split(';').slice(0,m.balance.towerLimit)){
   const [typeId,coordinates]=entry.split('@'),[x,y]=coordinates.split(',').map(Number);
   assert.ok(m.requestPurchase({x,y},typeId),`${difficulty} stage ${stage}: ${entry}`);

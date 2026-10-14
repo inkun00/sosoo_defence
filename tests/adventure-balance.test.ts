@@ -5,8 +5,9 @@ import {LEVELS} from '../src/levels';
 import type {Difficulty} from '../src/difficulty';
 import {numberText} from '../src/math';
 
-function automatic(stage:number,difficulty:Difficulty,formation:string){
+function automatic(stage:number,difficulty:Difficulty,formation:string,previousInterval?:number){
  const m=new Defense(LEVELS[stage-1],undefined,difficulty);
+ if(previousInterval!==undefined){const balance=m.balance;Object.defineProperty(m,'balance',{get:()=>({...balance,spawnInterval:previousInterval})});}
  for(const entry of formation.split(';')){
   const [id,coordinates]=entry.split('@'),[x,y]=coordinates.split(',').map(Number);
   assert.ok(m.requestPurchase({x,y},id));const q=m.pendingPurchase!;
@@ -22,6 +23,16 @@ test('첫 안내 단계의 한 포탑은 표준에서 여유가 있지만 도전
  const standard=automatic(1,'standard','basic@10,3'),challenge=automatic(1,'challenge','basic@10,3');
  assert.equal(standard.phase,'won');assert.equal(standard.castle,5);assert.equal(standard.kills,12);
  assert.equal(challenge.phase,'lost');assert.equal(challenge.castle,0);
+});
+
+test('최종 결전의 촘촘한 웨이브는 이전에 통과하던 같은 자동 배치를 실패하게 한다',()=>{
+ const formation='rune@3,2;rune@6,2;catapult@2,5;catapult@6,5;crystal@1,2;frost@5,2;basic@9,2;pebble@9,5;needle@11,2';
+ const previous=automatic(11,'challenge',formation,8.4),current=automatic(11,'challenge',formation);
+ assert.equal(previous.phase,'won');assert.ok(previous.bossDefeated);
+ assert.ok(current.phase==='lost'||current.phase==='review');assert.notEqual(current.phase,'won');
+ assert.equal(current.level.budget,previous.level.budget);assert.equal(current.level.boss!.hp,previous.level.boss!.hp);
+ assert.deepEqual(current.towers.map(t=>({x:t.x,y:t.y,typeId:t.typeId,cost:t.cost})),previous.towers.map(t=>({x:t.x,y:t.y,typeId:t.typeId,cost:t.cost})));
+ assert.equal(current.switches,0);assert.equal(current.wallPlacements,0);
 });
 test('2단계 도전은 같은 세 개의 작은 타워만으로 표준의 무손실 방어를 반복하지 못한다',()=>{
  const formation='basic@11,3;pebble@13,3;needle@13,2';

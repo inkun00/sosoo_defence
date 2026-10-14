@@ -13,9 +13,9 @@ test('최종 11단계에 일반 몬스터 12마리와 별도로 체력 99.9인 �
  assert.equal(m.level.boss!.hp,99900);assert.ok(m.level.hp.every(hp=>hp<10000));
  assert.ok(stageMonsterKinds(m.level).includes('wizard'));m.phase='playing';
  for(let i=0;i<159;i++)m.step(.1);assert.equal(m.bossSpawned,false);m.step(.1);
- assert.equal(m.spawned,1);assert.equal(m.bossSpawned,true);const boss=m.enemies.find(e=>e.kind==='wizard')!;
+ assert.equal(m.spawned,2);assert.equal(m.bossSpawned,true);const boss=m.enemies.find(e=>e.kind==='wizard')!;
  assert.equal(boss.hp,99900);assert.equal(m.spawnBoss(),false);m.step(.1);
- for(let i=0;i<5;i++)m.step(.1);assert.equal(m.spawned,2,'기존 8.4초 간격 웨이브를 보스가 대체하지 않는다');
+ for(let i=0;i<5;i++)m.step(.1);assert.equal(m.spawned,2,'6초 간격의 일반 웨이브를 보스가 대체하지 않는다');
  assert.equal(m.enemies.filter(e=>e.kind==='wizard').length,1);
  assert.equal(FIRST_SPAWN_DELAY,8);assert.equal(SPAWN_INTERVAL,8.4);
 });

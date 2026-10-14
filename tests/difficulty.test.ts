@@ -18,10 +18,10 @@ test('표준은 후반까지 속도가 증가하고 연습·표준·도전의 �
 test('초반 예산은 실제 단계 정의 한 곳에 있고 후반 준비금은 보존한다',()=>{
  assert.deepEqual(LEVELS.map(level=>level.budget),[900,3500,6560,6630,8860,8760,8790,8950,8950,9760,19980]);
 });
-test('표준 중반과 도전 초반은 몬스터 간격을 줄이고 연습·후반 방어 시간은 유지한다',()=>{
- assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'practice').spawnInterval),Array(11).fill(8.4));
- assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'standard').spawnInterval),[8.4,8.4,6.4,4.4,4.4,8.4,8.4,8.4,8.4,8.4,8.4]);
- assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'challenge').spawnInterval),[3.2,2.8,4.4,4.4,4.4,8.4,8.4,8.4,8.4,8.4,8.4]);
+test('초반 난이도별 간격과 1~10단계는 유지하며 최종 결전은 6초 간격으로 몰려온다',()=>{
+ assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'practice').spawnInterval),[...Array(10).fill(8.4),6]);
+ assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'standard').spawnInterval),[8.4,8.4,6.4,4.4,4.4,8.4,8.4,8.4,8.4,8.4,6]);
+ assert.deepEqual(LEVELS.map(level=>balanceFor(level.id,'challenge').spawnInterval),[3.2,2.8,4.4,4.4,4.4,8.4,8.4,8.4,8.4,8.4,6]);
  for(const level of LEVELS)for(const difficulty of ['practice','standard','challenge'] as const)assert.ok(8+(level.hp.length-1)*balanceFor(level.id,difficulty).spawnInterval<=120);
 });
 test('실제 몬스터 예약은 난이도별 간격을 사용하고 일시정지에서는 멈춘다',()=>{

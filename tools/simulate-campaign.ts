@@ -1,6 +1,6 @@
 import {mkdir,writeFile} from 'node:fs/promises';
 import {LEVELS} from '../src/levels';
-import type {Difficulty} from '../src/difficulty';
+import {balanceFor,type Difficulty} from '../src/difficulty';
 import {Defense,BOSS_AURA_RADIUS,BOSS_AURA_SPEED,BOSS_AURA_SLOW,BOSS_AURA_STUN,STAGE_DURATION,type Inventory} from '../src/model';
 import {BOSS_SPELLS,BOSS_SPELL_WARNING_SECONDS,BOSS_SPELL_ACTIVE_SECONDS,BOSS_SPELL_REST_SECONDS,BOSS_SPELL_CYCLE_SECONDS,bossSpellAt,type BossSpellPhase} from '../src/boss-spells';
 import {TILE} from '../src/path';
@@ -69,16 +69,20 @@ function observeStage(stage:number,difficulty:Difficulty,inventory:Inventory){
   bossSpells:{counts,transitions,events,empoweredTargetIds:[...empoweredTargets]}}};
 }
 
-const results:(ReturnType<typeof observeStage>['result']&{carry:boolean;difficulty:Difficulty;carrySequenceValid:boolean})[]=[];
+const results:(ReturnType<typeof observeStage>['result']&{carry:boolean;difficulty:Difficulty;carrySequenceValid:boolean;expectedLearningReview:boolean})[]=[];
 for(const carry of [false,true])for(const difficulty of difficulties){
  let inventory:Inventory={bricks:[],walls:0},previousStagePassed=true;
  for(const level of LEVELS){
   const run=observeStage(level.id,difficulty,carry?inventory:{bricks:[],walls:0});
-  results.push({carry,difficulty,carrySequenceValid:!carry||previousStagePassed,...run.result});
+  // Fresh wall lessons cannot complete their preparation goal without carried
+  // inventory now that combat placement is locked. Their review is expected.
+  const expectedLearningReview=!carry&&run.result.phase==='review'&&run.result.castle>0&&run.model.enemies.length===0&&run.result.goals.filter(goal=>!goal.done).every(goal=>goal.label.startsWith('성벽'));
+  results.push({carry,difficulty,carrySequenceValid:!carry||previousStagePassed,...run.result,status:expectedLearningReview?'review':run.result.status,expectedLearningReview});
   if(carry){inventory=inventoryCopy(run.model.inventory);previousStagePassed=previousStagePassed&&run.result.status==='passed';}
  }
 }
-const failures=results.filter(r=>r.status!=='passed'||!r.carrySequenceValid),passed=results.length-failures.length;
+const failures=results.filter(r=>r.status!=='passed'&&!r.expectedLearningReview||!r.carrySequenceValid),passed=results.length-failures.length;
+const cleared=results.filter(r=>r.status==='passed').length,reviews=results.filter(r=>r.expectedLearningReview).length;
 const bossSpells={stage:finalLevel.id,radiusTiles:BOSS_AURA_RADIUS/TILE,radiusPixels:BOSS_AURA_RADIUS,
  warningSeconds:BOSS_SPELL_WARNING_SECONDS,activeSeconds:BOSS_SPELL_ACTIVE_SECONDS,restSeconds:BOSS_SPELL_REST_SECONDS,cycleSeconds:BOSS_SPELL_CYCLE_SECONDS,
  order:BOSS_SPELLS.map(spell=>({id:spell.id,name:spell.name,taunt:spell.taunt,description:spell.description,color:spell.color})),
@@ -86,11 +90,15 @@ const bossSpells={stage:finalLevel.id,radiusTiles:BOSS_AURA_RADIUS/TILE,radiusPi
  oneEffectPerActiveWindow:true,clock:'living boss age',excludesBoss:true,healthUnchanged:true,endsOnBossDeathOrArrival:true};
 const lines=[
  '# 최종 스테이지 시뮬레이션 검증','',
- `1~${LEVELS.length}단계 × 연습·표준·도전 × 개별 시작·인벤토리 연속 보관 = ${results.length}회. 성공 ${passed}회, 실패 ${failures.length}회.`,
+ `1~${LEVELS.length}단계 × 연습·표준·도전 × 개별 시작·인벤토리 연속 보관 = ${results.length}회. 클리어 ${cleared}회, 재고 없는 성벽 학습의 예상 복습 ${reviews}회, 예상 밖 실패 ${failures.length}회.`,
  '',
- 'tests/adventure-helpers.ts의 고정 배치를 실제 Defense 모델의 0.1초 프레임으로 재현한다. 준비 단계에서 합법적인 구매 문제를 풀어 타워를 설치하고, 전투 중에는 모든 타워가 계속 자동 공격한다. 실제 드롭·보관 벽돌의 덧셈 합성과 얻은 성벽의 길 위 배치만 수행한다. 타워 발사 전환·추가 구매·회수·이동, 돈·체력 보정과 실패 시 다른 배치 탐색은 없다. 자동 조작 검증이며 학생의 실제 플레이 난이도 평가는 별도다.',
+ '아래 결과는 잘 계획한 고정 배치의 클리어 가능성을 확인한다. 다양한 배치의 조정 전후 성공률은 [보스 난이도 보정 검증](boss-stage-hardening.md)에 따로 기록한다.',
  '',
- `11단계는 일반 몬스터 12마리의 기존 8.4초 간격 웨이브와 별도로 ${finalLevel.boss!.spawnAt}초에 체력 99.9의 저주 마법사 한 명이 등장한다. 방어 성공과 마법사의 정확한 0 처치가 모두 필요하다. 웨이브 시간은 ${STAGE_DURATION}초이며, 남은 몬스터가 있으면 기존 추가 방어 규칙에 따라 전투가 계속된다.`,
+ '몬스터 등장 후 성벽 설치 제한에 따라, 성벽 준비가 목표인 6·7·9·10단계에 재고 없이 바로 진입하면 성을 지켜도 복습으로 끝난다. 이 결과를 클리어로 세지 않는다. 실제 연속 진행에서는 이전 단계의 벽돌·성벽을 준비에 사용하며 모든 단계를 클리어한다.',
+ '',
+ 'tests/adventure-helpers.ts의 고정 배치를 실제 Defense 모델의 0.1초 프레임으로 재현한다. 준비 단계에서 합법적인 구매 문제를 풀어 타워를 설치하고, 전투 중에는 모든 타워가 계속 자동 공격한다. 준비 중 보관 벽돌을 합성하고 성벽을 길 위에 설치한다. 전투 중 얻은 벽돌은 합성하여 다음 준비의 재고로 보관한다. 타워 발사 전환·추가 구매·회수·이동, 돈·체력 보정과 실패 시 다른 배치 탐색은 없다. 자동 조작 검증이며 학생의 실제 플레이 난이도 평가는 별도다.',
+ '',
+ `11단계는 일반 몬스터 ${finalLevel.hp.length}마리의 ${balanceFor(finalLevel.id,'standard').spawnInterval}초 간격 웨이브와 별도로 ${finalLevel.boss!.spawnAt}초에 체력 99.9의 저주 마법사 한 명이 등장한다. 방어 성공과 마법사의 정확한 0 처치가 모두 필요하다. 웨이브 시간은 ${STAGE_DURATION}초이며, 남은 몬스터가 있으면 기존 추가 방어 규칙에 따라 전투가 계속된다.`,
  '',
  `마법사 자신의 생존 시간으로 ${bossSpells.warningSeconds}초 시전 준비 → ${bossSpells.activeSeconds}초 발동 → ${bossSpells.restSeconds}초 휴식을 반복한다. ${bossSpells.cycleSeconds}초마다 광폭 질주(이동 속도 +25%) → 서리 파괴(감속 계수 0.6→0.8) → 불굴의 의지(기절 회복 2배) 순서로 바뀐다. 발동 중 반경 ${bossSpells.radiusTiles}칸의 다른 몬스터에게 해당 주문 한 가지가 적용된다. 마법사 본인, 준비·휴식 시간, 범위 밖에는 적용하지 않는다. 마법사 사망·성 도착 시 끝나며 현재·최대 체력과 소수 뺄셈은 바꾸지 않는다.`,
  '',
@@ -101,7 +109,7 @@ const lines=[
 for(const carry of [false,true]){
  lines.push(`## ${carry?'벽돌·성벽을 보관하며 연속 진행':'재고 없이 각 단계에서 독립 시작'}`,'','| 단계 | 연습: 결과 / 처치 / 성 / 시간 | 표준: 결과 / 처치 / 성 / 시간 | 도전: 결과 / 처치 / 성 / 시간 |','|---|---|---|---|');
  for(const level of LEVELS){
-  const values=difficulties.map(difficulty=>{const r=results.find(r=>r.carry===carry&&r.difficulty===difficulty&&r.stage===level.id)!;return `${r.status==='passed'&&r.carrySequenceValid?'성공':'실패'} / ${r.kills} / ${r.castle} / ${r.seconds.toFixed(1)}초`;});
+  const values=difficulties.map(difficulty=>{const r=results.find(r=>r.carry===carry&&r.difficulty===difficulty&&r.stage===level.id)!;return `${r.expectedLearningReview?'복습':r.status==='passed'&&r.carrySequenceValid?'성공':'실패'} / ${r.kills} / ${r.castle} / ${r.seconds.toFixed(1)}초`;});
   lines.push(`| ${level.id}. ${level.name} | ${values.join(' | ')} |`);
  }
  lines.push('');
@@ -111,7 +119,7 @@ for(const r of results.filter(r=>r.stage===finalLevel.id)){
  const counts=r.bossSpells.counts.map(c=>`${c.warnings}/${c.casts}`);
  lines.push(`| ${r.carry?'연속':'독립'} ${r.difficulty} | ${r.status} | ${r.preparationCoins} → ${r.remainingCoins} | ${r.bossDefeatedAtSeconds===null?'미처치':r.bossDefeatedAtSeconds.toFixed(1)+'초'} | ${counts.join(' | ')} |`);
 }
-lines.push('','## 최종 스테이지 표준 난이도 고정 배치','','좌표는 왼쪽 위 (0,0) 기준이다. 도전 난이도는 같은 9개 타워를 별도 고정 좌표에 배치하며 JSON에 기록한다.','');
+lines.push('','## 최종 스테이지 표준 난이도 고정 배치','','좌표는 왼쪽 위 (0,0) 기준이다. 표준·도전은 같은 9개 타워의 검증된 분산 배치를 사용하며 전체 좌표는 JSON에 기록한다.','');
 const final=results.find(r=>!r.carry&&r.difficulty==='standard'&&r.stage===finalLevel.id)!;
 for(const tower of final.formation)lines.push(`- ${tower.typeId}: (${tower.x}, ${tower.y})`);
 lines.push('',`표준 독립 실행: ${final.status}, 총 ${final.kills}마리 처치, 성 체력 ${final.castle}/5, ${final.seconds.toFixed(1)}초, 남은 ${final.remainingCoins}코인.`,
@@ -119,8 +127,8 @@ lines.push('',`표준 독립 실행: ${final.status}, 총 ${final.kills}마리 �
  '재현: `npx tsx tools/simulate-campaign.ts` (동일 자동 전술 회귀: `npm test`)','');
 await mkdir('docs',{recursive:true});
 await writeFile('docs/final-stage-simulation.md',lines.join('\n'));
-await writeFile('docs/final-stage-simulation.json',JSON.stringify({status:failures.length?'failed':'passed',runs:results.length,passed,failed:failures.length,
- tactic:'tests/adventure-helpers.ts / fixed legal purchases, always-enabled automatic towers, real drop fusion and walls',frameSeconds:FRAME_SECONDS,
+await writeFile('docs/final-stage-simulation.json',JSON.stringify({status:failures.length?'failed':'passed',runs:results.length,passed,cleared,expectedLearningReviews:reviews,failed:failures.length,
+ tactic:'tests/adventure-helpers.ts / fixed legal purchases, always-enabled automatic towers, preparation walls, combat fusion for later inventory',frameSeconds:FRAME_SECONDS,
  waveSeconds:STAGE_DURATION,bossHP:finalLevel.boss!.hp/1000,bossSpawnAtSeconds:finalLevel.boss!.spawnAt,bossSpells,
  bossIntro:{seconds:BOSS_INTRO_DURATION,modelTimePaused:true,includedInSimulationSeconds:false},results},null,2)+'\n');
 console.log(`Verified ${passed}/${results.length} stage runs. Reports: docs/final-stage-simulation.md / .json`);
