@@ -8,7 +8,7 @@ import {onAuthStateChanged,signOut,User} from 'firebase/auth';
 import {auth,firebaseEmulator} from './firebase';
 import {mountAccountForm} from '../account-form';
 import {DuelScene,DuelView} from './scene';
-import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,duelScore,duelHeroLearningLevel,duelBuildCost,DUEL_KILL_BASE_SCORE,DUEL_KILL_EFFICIENCY_SCORE,DUEL_QUESTION_BASE_SCORE} from './duel';
+import {DuelState,DuelAction,Side,validDuelCell,canPurchaseDuelTower,DUEL_SECONDS,duelScore,duelHeroLearningLevel,DUEL_KILL_BASE_SCORE,DUEL_KILL_EFFICIENCY_SCORE,DUEL_QUESTION_BASE_SCORE} from './duel';
 import {duelCountdown,formatDuelClock} from './duel-clock';
 import {HostPeer} from './peer';
 import {loadPeerConfiguration} from './relay-store';
@@ -404,7 +404,7 @@ scene.onCell=async(x,y)=>{if(!dialog.classList.contains('hidden')||preparationPa
 scene.onAction=async key=>{if(loggingOut)return;sound.resume();sound.play('ui');
  if(key.startsWith('type:')&&(!state||!canPurchaseDuelTower(state))){status('게임을 시작한 뒤 타워를 설치할 수 있어요.');return;}
  if(key.startsWith('type:')&&state?.players[side]?.quote){preparationPanel.open();status('비축 문제를 풀거나 취소해 주세요.');return;}
- if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;scene.preview(-1,-1);if(state?.status==='preparing'){preparationPanel.open();await send({type:'prepare-quote',typeId:selectedType});}else if(state){const stored=state.players[side]?.stock?.[selectedType]??0;status(`내 ${side===0?'상단':'하단'} 전장의 빈 칸을 선택하면 ${stored>0?'비축 타워 1개를 무료로 설치해요':numberText(duelBuildCost(state,side,selectedType))+' 코인으로 바로 설치해요'}. 회수하면 비축 타워 또는 구입 코인을 돌려받아요.`);}return;}
+ if(key.startsWith('type:')){selectedType=key.slice(5);selectedTower=0;scene.preview(-1,-1);if(state?.status==='preparing'){preparationPanel.open();await send({type:'prepare-quote',typeId:selectedType});}else if(state){const stored=state.players[side]?.stock?.[selectedType]??0;status(`내 ${side===0?'상단':'하단'} 전장의 빈 칸을 선택하면 ${stored>0?'비축 타워 1개를 무료로 설치해요':'타워 목록에 표시된 코인으로 바로 설치해요'}. 회수하면 비축 타워 또는 구입 코인을 돌려받아요.`);}return;}
  if(key.startsWith('summon:')){await send({type:'summon',heroId:key.slice(7)});return;}
  if(key.startsWith('block:')){if(state?.status!=='preparing')return;const i=Number(key.slice(6));if(Number.isInteger(i)&&state.players[side]?.board[i]!==undefined)slots=[i];refresh();return;}
  if(key.startsWith('slot:')){slots.splice(Number(key.slice(5)),1);refresh();return;}

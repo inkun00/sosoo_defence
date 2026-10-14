@@ -46,6 +46,7 @@
 .duel-preparation-purchase{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:center}
 .duel-preparation-purchase-copy{display:grid;gap:12px;min-width:0}
 .duel-preparation-purchase-name{margin:0;text-align:center;font-size:16px;line-height:20px;color:#ebc686}
+.duel-preparation-wallet{margin:0;text-align:center;font-size:13px;line-height:18px;color:#c8b89f;overflow-wrap:anywhere}
 .duel-preparation-input-label{display:block;width:min(280px,100%);margin-inline:auto;color:#d6c29f;font-size:13px;line-height:18px}
 .duel-preparation-input-label .duel-preparation-input-surface{margin-top:4px}
 .duel-preparation-input-label input{display:block;min-height:44px;width:100%;margin:0;padding:5px 10px;border:1px solid transparent;color:#ffe9ba;font:700 26px/1.2 Consolas,monospace;text-align:center}

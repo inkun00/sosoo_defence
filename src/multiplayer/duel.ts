@@ -32,6 +32,7 @@ export function canUseDuelTower(s:DuelState,side:Side,typeId:string){
 /** Battle placement uses prepared stock first, then the remaining coins. */
 export function duelBuildCost(s:DuelState,side:Side,typeId:string){
  const p=s.players[side],type=towerType(typeId);if(!p||!type)return Infinity;
+ if(s.status==='preparing'&&p.quote?.typeId===typeId)return p.quote.cost;
  if(s.status==='playing'&&(p.stock?.[typeId]??0)>0)return 0;
  return towerPrice(type,p.money,duelTowerLevel(s),p.purchaseVariation);
 }
@@ -274,16 +275,18 @@ export function applyDuel(s:DuelState,side:Side,action:DuelAction,now:number,non
   if(p.quote)return bad('열린 구매 문제를 먼저 풀거나 취소해요.');
   const type=towerType(action.typeId),lv=duelTowerLevel(s);if(!type||!canUseDuelTower(s,side,action.typeId))return bad('타워를 다시 선택해 주세요.');
   const variation=p.purchaseVariation??{round:0},cost=towerPrice(type,p.money,lv,variation);if(cost>p.money)return bad('코인이 부족해요.');
-  // Cancelling and rerolling a quote cannot erase mistakes before the next correct answer.
+  // Cancelling or choosing another tower preserves prices and accumulated mistakes.
   const before=purchaseCoins(p.money);p.quote={x:-1,y:-1,typeId:type.id,before,wallet:p.money,cost,digits:lv===1?1:2,nonce,expires:s.preparationStartedAt+DUEL_PREPARATION_SECONDS*1000,purpose:'preparation',wrongAttempts:p.towerWrongAttempts??0};
-  p.purchaseVariation={round:variation.round+1,lastBefore:before,lastCost:cost};return ok('');
+  return ok('');
  }
  if(action.type==='answer'){
   if(s.status!=='preparing')return bad('문제풀이 시간이 끝났어요. 모은 타워를 설치해요.');
   const q=p.quote;if(!q||q.nonce!==action.nonce)return bad('새 구매 문제를 열어 주세요.');
   if(typeof action.answer!=='string'||action.answer.length>12)return bad('답을 12글자 이내로 입력해 주세요.');
+  if(p.money!==q.wallet){release(p);return bad('보유 코인이 바뀌었어요. 타워를 다시 선택해 주세요.');}
   if(parseMoney(action.answer)!==q.before-q.cost){q.wrongAttempts=(p.towerWrongAttempts??q.wrongAttempts??0)+1;p.towerWrongAttempts=q.wrongAttempts;wrong(s,p,{id:q.nonce,kind:'tower',a:q.before,b:q.cost,operation:'-',submitted:action.answer,correct:q.before-q.cost},duelTowerLevel(s));return bad('소수점을 맞추고 다시 빼 보세요. 돈은 그대로예요.');}
   const type=towerType(q.typeId);if(!type)return bad('타워를 다시 선택해 주세요.');p.money=q.wallet-q.cost;(p.stock??={})[type.id]=(p.stock[type.id]??0)+1;
+  p.purchaseVariation={round:(p.purchaseVariation?.round??0)+1,lastBefore:q.before,lastCost:q.cost};
   p.purchases++;awardQuestion(p,p.towerWrongAttempts??q.wrongAttempts??0);p.towerWrongAttempts=0;note(s,`${p.name}: ${numberText(q.before)} − ${numberText(q.cost)} = ${numberText(q.before-q.cost)} · ${type.name} +1`);release(p);return ok('정답! 설치할 타워를 한 개 모았어요.');
  }
  if(action.type==='build'){

@@ -24,16 +24,16 @@ test('전투 중 타워는 문제 없이 비축 재고로 설치하고 상대 �
  assert.equal(applyDuel(s,0,{type:'answer',nonce:'q',answer:'8.7'},NOW,'repeat').ok,false);
  assert.ok(applyDuel(s,0,{type:'sell',towerId:p.towers[0].id},NOW,'reclaim').ok);assert.equal(p.money,0);assert.equal(p.stock.basic,1);assert.ok(validDuelCell(s,0,3,2));
 });
-test('준비 문제는 취소할 때도 바뀌고 오답 재시도와 상대의 준비 예산은 유지된다',()=>{
+test('준비 문제 취소는 가격을 바꾸지 않고 오답 재시도와 상대의 준비 예산은 유지된다',()=>{
  const s=preparation(),p=s.players[0];let previous='';const formulas=new Set<string>();
  for(let i=0;i<12;i++){
   const nonce=`q-${i}`;assert.ok(applyDuel(s,0,{type:'prepare-quote',typeId:'basic'},PREP_NOW,nonce).ok);
-  const q=p.quote!,formula=`${q.before}-${q.cost}`;assert.notEqual(formula,previous);previous=formula;formulas.add(formula);
+  const q=p.quote!,formula=`${q.before}-${q.cost}`;if(previous)assert.equal(formula,previous);previous=formula;formulas.add(formula);
   assert.equal(applyDuel(s,0,{type:'answer',nonce,answer:'0'},PREP_NOW,`wrong-${i}`).ok,false);assert.equal(p.quote,q);
   applyDuel(s,0,{type:'cancel'},PREP_NOW,`cancel-${i}`);
   assert.equal(p.money,DUEL_START_MONEY);assert.equal(s.players[1]!.purchaseVariation,undefined);assert.equal(p.towers.length,0);
  }
- assert.ok(formulas.size>=3);
+ assert.equal(formulas.size,1);assert.equal(p.purchaseVariation,undefined);assert.equal(p.towerWrongAttempts,12);
 });
 test('준비 종료 뒤에는 전투 보상을 점수로만 반영하고 설치 문제를 띄우지 않는다',()=>{
  const s=match();assert.ok(build(s,0,'basic',3,2).ok);s.players[0].money=0;s.enemies=[enemy({hp:100,max:100})];advanceDuel(s,NOW+100);

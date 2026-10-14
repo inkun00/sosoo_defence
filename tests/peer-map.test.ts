@@ -93,7 +93,7 @@ test('all ten map ids travel through offer, echoed answer, host state and guest 
 test('different account levels start equally and host snapshots preserve each player’s five-answer addition progression',async()=>{
  for(const levels of [[1,8],[8,1]] as const){
   const {host,guest,offer,answer}=await pair(DUEL_MAPS[4].id,false,levels),s=host.state!;
-  assert.equal(invitation(offer).rules,'split-phase-zero-coins-v14');assert.equal(invitation(answer).rules,'split-phase-zero-coins-v14');
+  assert.equal(invitation(offer).rules,'stable-tower-coins-v15');assert.equal(invitation(answer).rules,'stable-tower-coins-v15');
   assert.equal((invitation(offer).host as {accountLevel:number}).accountLevel,levels[0]);
   assert.equal(s.players[0].accountLevel,levels[0]);assert.equal(s.players[1]!.accountLevel,levels[1]);assert.equal(s.learningLevel,1);
   for(const side of [0,1] as Side[])assert.deepEqual(s.players[side]!.board,decimalBoard(s.seed,0,1));
@@ -213,13 +213,13 @@ test('unknown map ids in create, offer and answer are rejected before RTC descri
 test('guest snapshots accept only the agreed map and preserve the last valid state after mismatches',async()=>{
  const {host,guest,guestChannel}=await pair(DUEL_MAPS[6].id);let emitted=0;guest.onState=()=>{emitted++;};
  const snapshot=structuredClone(host.state!) as DuelState;snapshot.revision=20;
- guestChannel.receive(JSON.stringify({kind:'state',rules:'split-phase-zero-coins-v14',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
+ guestChannel.receive(JSON.stringify({kind:'state',rules:'stable-tower-coins-v15',id:host.id,state:snapshot}));assert.equal(guest.state?.revision,20);assert.equal(emitted,1);
  const baseline=guest.state;
  for(const mapId of [DUEL_MAPS[7].id,undefined,'unknown-map']){
   const wrong=structuredClone(snapshot);wrong.revision=1000;wrong.mapId=mapId;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'split-phase-zero-coins-v14',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'stable-tower-coins-v15',id:host.id,state:wrong}));assert.equal(guest.state,baseline);assert.equal(emitted,1);
  }
- const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'split-phase-zero-coins-v14',id:host.id,state:fresh}));
+ const fresh=structuredClone(snapshot);fresh.revision=21;guestChannel.receive(JSON.stringify({kind:'state',rules:'stable-tower-coins-v15',id:host.id,state:fresh}));
  assert.equal(guest.state?.revision,21);assert.equal(guest.state?.mapId,DUEL_MAPS[6].id);assert.equal(emitted,2);
 });
 
@@ -244,7 +244,7 @@ test('fresh host snapshots clear the guest outage notice so another interruption
  for(let attempt=0;attempt<2;attempt++){
   fakePC(guest).changeConnection('disconnected');assert.equal(guest.connected,false);
   const snapshot=structuredClone(host.state!);snapshot.revision+=attempt+1;
-  guestChannel.receive(JSON.stringify({kind:'state',rules:'split-phase-zero-coins-v14',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
+  guestChannel.receive(JSON.stringify({kind:'state',rules:'stable-tower-coins-v15',id:host.id,state:snapshot}));assert.equal(guest.connected,true);
  }
  assert.equal(messages.length,2);
 });
@@ -259,14 +259,14 @@ test('a missing map in an old guest answer cannot silently change a newly select
 test('older preparation and combat rules cannot join or replace a banked hero-growth match',async()=>{
  const host=peer('left'),guest=peer('right'),offer=await host.create(DUEL_MAPS[0].id);
  await assert.rejects(guest.join(changed(offer,v=>{delete v.rules;})),/새로고침/);
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8','hero-growth-17-6-v9','preparation-3min-growth-v10','hero-addition-progress-v11','fixed-addition-two-lanes-cash-v12','split-phase-zero-coins-v13'])await assert.rejects(guest.join(changed(offer,v=>{v.rules=rules;})),/새로고침/);
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8','hero-growth-17-6-v9','preparation-3min-growth-v10','hero-addition-progress-v11','fixed-addition-two-lanes-cash-v12','split-phase-zero-coins-v13','split-phase-zero-coins-v14'])await assert.rejects(guest.join(changed(offer,v=>{v.rules=rules;})),/새로고침/);
  assert.equal(fakePC(guest).remoteDescription,null);
  const answer=await guest.join(offer);await assert.rejects(host.accept(changed(answer,v=>{delete v.rules;})),/새로고침/);
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8','hero-growth-17-6-v9','preparation-3min-growth-v10','hero-addition-progress-v11','fixed-addition-two-lanes-cash-v12','split-phase-zero-coins-v13'])await assert.rejects(host.accept(changed(answer,v=>{v.rules=rules;})),/새로고침/);
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8','hero-growth-17-6-v9','preparation-3min-growth-v10','hero-addition-progress-v11','fixed-addition-two-lanes-cash-v12','split-phase-zero-coins-v13','split-phase-zero-coins-v14'])await assert.rejects(host.accept(changed(answer,v=>{v.rules=rules;})),/새로고침/);
  assert.equal(fakePC(host).remoteDescription,null);await host.accept(answer);
  const paired=await pair(DUEL_MAPS[1].id),baseline=paired.guest.state,snapshot=structuredClone(paired.host.state!);snapshot.revision+=100;
  paired.guestChannel.receive(JSON.stringify({kind:'state',id:paired.host.id,state:snapshot}));
- for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8','hero-growth-17-6-v9','preparation-3min-growth-v10','hero-addition-progress-v11','fixed-addition-two-lanes-cash-v12','split-phase-zero-coins-v13'])paired.guestChannel.receive(JSON.stringify({kind:'state',rules,id:paired.host.id,state:snapshot}));
+ for(const rules of ['preparation-60-v1','hero-auras-5-v3','personal-hero-level-v4','score-5min-v5','score-5min-v6','stock-2min-battle-3min-v7','worksheet-heroes-triple-effects-v8','hero-growth-17-6-v9','preparation-3min-growth-v10','hero-addition-progress-v11','fixed-addition-two-lanes-cash-v12','split-phase-zero-coins-v13','split-phase-zero-coins-v14'])paired.guestChannel.receive(JSON.stringify({kind:'state',rules,id:paired.host.id,state:snapshot}));
  assert.equal(paired.guest.state,baseline);
 });
 
@@ -278,4 +278,23 @@ test('host and guest discard leftover money and escrow then synchronize zero-coi
  assert.deepEqual(s.players.map(p=>p!.money),[0,0]);assert.deepEqual(guest.state!.players.map(p=>p!.money),[0,0]);assert.ok(s.players.every(p=>p!.quote===null&&p!.escrow===0));
  for(const side of [0,1] as Side[]){const active=side===0?host:guest,p=s.players[side]!,y=side===0?2:10;p.lastRequest=0;assert.ok((await active.send({type:'build',typeId:'basic',x:3,y})).ok);assert.equal(p.money,0);assert.equal(p.stock.basic,0);assert.equal(p.towers[0].cost,0);assert.equal(p.towers[0].prepared,true);assert.ok(duelBuildCost(s,side,'basic')>0);p.lastRequest=0;assert.equal((await active.send({type:'build',typeId:'basic',x:4,y})).ok,false);assert.equal(p.money,0);assert.equal(p.towers.length,1);p.lastRequest=0;assert.equal((await active.send({type:'build',typeId:'double',x:5,y:side===0?10:2})).ok,false);}
  assert.deepEqual(s.players.map(p=>p!.answeredQuestions),questions);assert.deepEqual(s.players.map(p=>p!.questionScore),scores);assert.deepEqual(guest.state!.players.map(p=>[p!.money,p!.escrow,p!.quote,p!.stock,p!.towers,p!.heroQuestion]),s.players.map(p=>[p!.money,p!.escrow,p!.quote,p!.stock,p!.towers,p!.heroQuestion]));
+});
+
+test('both peers keep quoted prices and wallets stable through errors and cancellations, then debit once',async()=>{
+ const {host,guest}=await pair(),s=host.state!;await host.send({type:'ready'});await guest.send({type:'ready'});
+ for(const side of [0,1] as Side[]){
+  const active=side===0?host:guest,p=s.players[side]!,wallet=p.money,price=duelBuildCost(s,side,'basic');
+  const send=(action:Parameters<typeof active.send>[0])=>{p.lastRequest=0;return active.send(action);};
+  assert.ok((await send({type:'prepare-quote',typeId:'basic'})).ok);const first=p.quote!;
+  assert.equal(first.wallet,wallet);assert.equal(first.cost,price);assert.equal(duelBuildCost(guest.state!,side,'basic'),price);
+  assert.equal((await send({type:'answer',nonce:first.nonce,answer:'0'})).ok,false);assert.equal(p.money,wallet);
+  assert.ok((await send({type:'cancel'})).ok);assert.equal(p.money,wallet);assert.equal(duelBuildCost(s,side,'basic'),price);
+  assert.equal(guest.state!.players[side]!.money,wallet);assert.equal(duelBuildCost(guest.state!,side,'basic'),price);
+  assert.ok((await send({type:'prepare-quote',typeId:'basic'})).ok);const second=p.quote!;assert.equal(second.cost,price);
+  assert.ok((await send({type:'answer',nonce:second.nonce,answer:numberText(second.before-second.cost)})).ok);
+  assert.equal(p.money,wallet-price);assert.equal(p.stock.basic,1);assert.equal(p.purchases,1);assert.equal(p.questionScore,12);
+  assert.equal((await send({type:'answer',nonce:second.nonce,answer:numberText(second.before-second.cost)})).ok,false);
+  assert.equal(p.money,wallet-price);assert.equal(p.stock.basic,1);assert.equal(p.purchases,1);
+  assert.deepEqual(guest.state!.players[side]!.stock,p.stock);assert.equal(guest.state!.players[side]!.money,p.money);
+ }
 });
