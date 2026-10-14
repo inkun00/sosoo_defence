@@ -55,7 +55,7 @@ test('고정 문제의 자릿수·받아올림과 중복 없는 정답 후보를
  }
 });
 
-test('덧셈 단계만 여덟 단계로 정규화하고 계정·타워 레벨의 기존 범위는 유지한다',()=>{
+test('덧셈은 여덟 단계, 타워는 열 단계, 계정은 오십 레벨로 정규화한다',()=>{
  for(const invalid of [NaN,Infinity,-1,0,2.5]){
   assert.deepEqual(decimalBoard(918,0,invalid),decimalBoard(918,0,1));
   assert.deepEqual(decimalTriples(918,0,invalid),decimalTriples(918,0,1));
@@ -67,7 +67,7 @@ test('덧셈 단계만 여덟 단계로 정규화하고 계정·타워 레벨의
  }
  assert.equal(learningDescription(99),learningDescription(8));
  assert.equal(learningLevel(NaN),1);assert.equal(learningLevel(-1),1);assert.equal(learningLevel(2.5),1);assert.equal(learningLevel(99),10);
- assert.equal(normalizedAccountLevel(99),99);assert.equal(normalizedAccountLevel(1000001),1000000);
+ assert.equal(normalizedAccountLevel(99),50);assert.equal(normalizedAccountLevel(1000001),50);
  for(const [solved,expected]of [[0,1],[4,1],[5,2],[9,2],[10,3],[14,3],[15,4],[19,4],[20,5],[24,5],[25,6],[29,6],[30,7],[34,7],[35,8],[100,8],[NaN,1],[-1,1],[2.5,1]])assert.equal(duelHeroLearningLevel({solved}),expected);
 });
 
@@ -116,7 +116,7 @@ test('진행 순서와 계정 레벨에 관계없이 같은 개인 정답 수·�
     assert.deepEqual(s.players[(1-side) as Side],otherBefore);personalBoard(s,side);
    }
   }
-  assert.deepEqual(s.players.map(p=>p!.accountLevel),levels);assert.equal(s.learningLevel,Math.min(10,...levels));
+  assert.deepEqual(s.players.map(p=>p!.accountLevel),levels.map(level=>Math.min(50,level)));assert.equal(s.learningLevel,Math.min(10,...levels));
  }
 });
 
@@ -142,8 +142,8 @@ test('타워 구매와 성장량·비축·학습지 영웅 소환은 덧셈 진�
 
 test('계정 승리 경험치는 다음 대전 타워 난이도에만 반영하고 덧셈은 다시 0정답부터 시작한다',()=>{
  let p=emptyProgress();const record:MatchRecord={version:1,matchId:'00000000-0000-4000-8000-000000000000',hostUid:'a',guestUid:'b',side:0,outcome:'win',endedAt:Date.now(),duration:120,solved:0,purchases:0,wrongQuestions:[]};
- for(let i=0;i<6;i++)p=progressAfter(p,record);assert.equal(p.wins,6);assert.equal(p.level,4);
- const s=createDuel('a','가',18,NOW,p.level);joinDuel(s,'b','나',NOW,p.level);assert.equal(s.learningLevel,4);
+ for(let i=0;i<6;i++)p=progressAfter(p,record);assert.equal(p.wins,6);assert.equal(p.level,2);
+ const s=createDuel('a','가',18,NOW,p.level);joinDuel(s,'b','나',NOW,p.level);assert.equal(s.learningLevel,2);
  for(const player of s.players){assert.equal(player!.solved,0);assert.equal(duelHeroLearningLevel(player!),1);assertStage(player!.heroQuestion,player!.board,1);}
 });
 

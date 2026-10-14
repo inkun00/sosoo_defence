@@ -32,10 +32,11 @@ test('순위 응답에 섞인 계정 ID, 이메일, 오답과 기타 필드는 �
 });
 
 test('레벨은 누적 경험치 경계와 맞아야 하며 오래된 클라이언트 레벨을 거부한다',()=>{
- for(const [experience,level]of [[0,1],[99,1],[100,2],[299,2],[300,3],[600,4]]){
+ for(const [experience,level]of [[0,1],[99,1],[100,2],[299,2],[300,3],[600,4],[4500,10],[12000,16],[117600,49],[122499,49],[122500,50],[150000,50]]){
   const row=entry({experience,level,isMe:true});assert.equal(parseDuelLeaderboard({entries:[row],me:row,limit:50}).me.level,level);
  }
  const stale=board();stale.entries[0].level=99;assert.throws(()=>parseDuelLeaderboard(stale));
+ const formerlyCapped=entry({experience:12000,level:10,isMe:true});assert.throws(()=>parseDuelLeaderboard({entries:[formerlyCapped],me:formerlyCapped,limit:50}));
 });
 
 test('내림차순, 공동 순위와 경쟁 순위의 관계를 검증한다',()=>{

@@ -1,5 +1,5 @@
 import {artURL} from '../art';
-import {accountBadgeURL,badgeLevel} from '../account-level-badge';
+import {accountBadgeAssets,badgeLevel,badgeTier} from '../account-level-badge';
 import Phaser from 'phaser';
 import {loadDungeon,registerDungeon,terrainTileScale} from '../assets';
 import {TOWERS,towerType,towerPrice,GRADE_NAMES} from '../towers';
@@ -64,7 +64,7 @@ export class DuelScene extends Phaser.Scene{
   this.redraw();
  }
  constructor(public view:()=>DuelView){super('duel');}
- preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));loadDuelHeroEffectBadges(this);for(let level=1;level<=10;level++){const url=accountBadgeURL(level);if(url)this.load.image('duel-account-badge-'+level,url);}}
+ preload(){loadDungeon(this,MONSTER_KINDS.filter(k=>k!=='warden'&&k!=='wizard'));this.load.image('duel-eggs',artURL('hero-eggs-v1'));loadDuelHeroEffectBadges(this);for(const {tier,url} of accountBadgeAssets())if(url)this.load.image('duel-account-badge-'+tier,url);}
  create(){
   registerDungeon(this);registerDuelHeroEffectBadges(this);
   const pauseCastles=()=>this.castleEffects?.setPaused(true),resumeCastles=()=>this.castleEffects?.setPaused(false);
@@ -177,8 +177,10 @@ export class DuelScene extends Phaser.Scene{
   for(const lane of [0,1] as Side[])for(const owner of [0,1] as Side[]){
    // The two lanes share castle owners: left is player 0, right is player 1.
    const end=map.points[owner===0?0:map.points.length-1],x=X+(end.x+.5)*T,y=this.boardY+(end.y+duelLaneOffset(lane)+.5)*T;
-   const player=s?.players[owner],name=player?.name||(owner===0?'플레이어':'상대 기다리는 중'),level=badgeLevel(player?.accountLevel??1),badge='duel-account-badge-'+level,hasBadge=!!player&&this.textures.exists(badge);
-   if(hasBadge){const emblem=this.add.image(x-35,y+55,badge).setName(`castle-account-badge-${lane}-${owner}`).setData('accountLevel',level);emblem.setScale(Math.min(25/emblem.width,25/emblem.height));this.ui.add(emblem);}
+   const player=s?.players[owner],name=player?.name||(owner===0?'플레이어':'상대 기다리는 중'),level=badgeLevel(player?.accountLevel??1),tier=badgeTier(level),badge='duel-account-badge-'+tier,hasBadge=!!player&&this.textures.exists(badge);
+   if(hasBadge){const emblem=this.add.image(x-35,y+55,badge).setName(`castle-account-badge-${lane}-${owner}`).setData('accountLevel',level).setData('badgeTier',tier);emblem.setScale(Math.min(25/emblem.width,25/emblem.height));this.ui.add(emblem);
+    this.text(this.ui,x-35,y+65,String(level),10,'#fff1cc').setStroke('#080b12',2).setBackgroundColor('#111722ee').setName(`castle-account-level-${lane}-${owner}`).setData('accountLevel',level);
+   }
    this.text(this.ui,x+(hasBadge?8:0),y+42,name,14,owner===0?'#9adbea':'#f7bd85',false)
     .setWordWrapWidth(hasBadge?74:90,true).setAlign('center').setOrigin(.5,0)
     .setStroke('#080b12',2).setBackgroundColor('#111722dd')

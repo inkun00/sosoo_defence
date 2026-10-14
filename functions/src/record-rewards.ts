@@ -1,7 +1,7 @@
-import {computerOpponentLevel,normalizeProgress,type MatchRecord} from '../../src/multiplayer/records';
+import {ACCOUNT_LEVEL_MAX,computerOpponentLevel,normalizeProgress,type MatchRecord} from '../../src/multiplayer/records';
 
 export interface MatchLevels{hostLevel:number;guestLevel:number;}
-const validLevel=(value:unknown):value is number=>Number.isSafeInteger(value)&&Number(value)>=1&&Number(value)<=10;
+const validLevel=(value:unknown):value is number=>Number.isSafeInteger(value)&&Number(value)>=1&&Number(value)<=ACCOUNT_LEVEL_MAX;
 
 /** Freeze both levels before awarding either player's XP for this match. */
 export function matchLevels(record:MatchRecord,hostProgress:unknown,guestProgress:unknown,previous?:Partial<MatchLevels>|null):MatchLevels{

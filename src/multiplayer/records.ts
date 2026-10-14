@@ -4,7 +4,7 @@ export interface WrongQuestion {id:string;kind:'tower'|'fusion';a:number;b:numbe
 export interface MatchRecord {version:1;matchId:string;hostUid:string;guestUid:string;side:Side;outcome:'win'|'loss'|'draw';endedAt:number;duration:number;solved:number;purchases:number;wrongQuestions:WrongQuestion[];opponentType?:'computer'|'player';opponentLevel?:number;}
 export interface Progress {wins:number;losses:number;draws:number;experience:number;level:number;}
 export const emptyProgress=():Progress=>({wins:0,losses:0,draws:0,experience:0,level:1});
-export const ACCOUNT_LEVEL_MAX=10;
+export const ACCOUNT_LEVEL_MAX=50;
 const count=(value:unknown)=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0?value:0;
 const level=(value:number)=>Math.max(1,Math.min(ACCOUNT_LEVEL_MAX,Number.isFinite(value)?Math.floor(value):1));
 // Level 2 requires 100 XP, level 3 a total of 300, level 4 a total of 600.
@@ -20,10 +20,10 @@ export function matchExperience(r:MatchRecord,opponent=r.opponentLevel??1,player
  if(r.duration<10)return 0;
  const computerLevel=computerOpponentLevel(opponentUid(r)),opponentLevel=computerLevel??level(opponent);
  // Only CPU victories scale with the owner's level before this result is saved.
- // Keep learning bonuses unchanged, even when a familiar opponent is easier.
- const percent=computerLevel===null?100:Math.max(20,100+10*(computerLevel-level(playerLevel)));
- const base=r.outcome==='win'?Math.round(100*opponentLevel*percent/100):r.outcome==='loss'?40:60;
- return base+Math.min(30,count(r.solved))*5+Math.min(20,count(r.purchases))*5;
+ // Bonuses remain available against easier opponents, with a smaller per-match reward.
+ const percent=computerLevel===null?100:Math.max(20,Math.min(150,100+10*(computerLevel-level(playerLevel))));
+ const base=r.outcome==='win'?Math.round(30*opponentLevel*percent/100):r.outcome==='loss'?12:18;
+ return base+Math.min(30,count(r.solved))+Math.min(20,count(r.purchases));
 }
 export function progressAfter(value:Progress,r:MatchRecord):Progress{const p=normalizeProgress(value),experience=Math.min(Number.MAX_SAFE_INTEGER,p.experience+matchExperience(r,r.opponentLevel??1,p.level));return {wins:Math.min(Number.MAX_SAFE_INTEGER,p.wins+Number(r.outcome==='win')),losses:Math.min(Number.MAX_SAFE_INTEGER,p.losses+Number(r.outcome==='loss')),draws:Math.min(Number.MAX_SAFE_INTEGER,p.draws+Number(r.outcome==='draw')),experience,level:accountLevel(experience)};}
 export function finishedRecord(s:DuelState,side:Side,matchId:string):MatchRecord|null{
@@ -39,7 +39,7 @@ export function validRecord(value:unknown,uid:string,now=Date.now()):MatchRecord
  const localId=r.matchId.match(/^computer-(\d{13})-(\d{1,10})$/);
  const validLocalId=computer&&localId&&integer(Number(localId[1]),now+120000)&&Number(localId[1])>=1577836800000&&integer(Number(localId[2]),0xffffffff);
  if(!/^[a-f0-9-]{36}$/.test(r.matchId)&&!validLocalId)throw Error('경기 번호의 형식을 확인해 주세요.');
- if(r.opponentType!==undefined&&!['computer','player'].includes(r.opponentType)||r.opponentLevel!==undefined&&(!integer(r.opponentLevel,10)||r.opponentLevel<1)||computer&&(r.side!==0||r.opponentType==='player'||r.opponentLevel!==undefined&&r.opponentLevel!==computerLevel)||!computer&&r.opponentType==='computer'||computerOpponentLevel(r.hostUid)!==null)throw Error('대전 상대와 레벨을 확인해 주세요.');
+ if(r.opponentType!==undefined&&!['computer','player'].includes(r.opponentType)||r.opponentLevel!==undefined&&(!integer(r.opponentLevel,ACCOUNT_LEVEL_MAX)||r.opponentLevel<1)||computer&&(r.side!==0||r.opponentType==='player'||r.opponentLevel!==undefined&&r.opponentLevel!==computerLevel)||!computer&&r.opponentType==='computer'||computerOpponentLevel(r.hostUid)!==null)throw Error('대전 상대와 레벨을 확인해 주세요.');
  if(new Set(r.wrongQuestions.map(q=>q?.id)).size!==r.wrongQuestions.length)throw Error('오답 문항이 중복되어 있어요.');
  for(const q of r.wrongQuestions){if(!q||typeof q.id!=='string'||q.id.length>80||!['tower','fusion'].includes(q.kind)||!integer(q.a,1e9)||!integer(q.b,1e9)||!['+','-'].includes(q.operation)||typeof q.submitted!=='string'||q.submitted.length>12||!Number.isSafeInteger(q.correct)||q.correct!==(q.operation==='+'?q.a+q.b:q.a-q.b)||parseMoney(q.submitted)===q.correct||!integer(q.level,10)||q.level<1||!Number.isFinite(q.elapsed)||q.elapsed<0||q.elapsed>300||!integer(q.attempts,10000)||q.attempts<1)throw Error('오답 문항의 형식을 확인해 주세요.');}
  // Store only these fields, never a submitted battle snapshot or account stats.

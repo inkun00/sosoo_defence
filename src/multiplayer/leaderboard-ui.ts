@@ -1,6 +1,7 @@
 import type {DuelLeaderboard,LeaderboardEntry} from './leaderboard';
 import {escapeLeaderboardText} from './leaderboard';
 import {accountBadgeHTML} from '../account-level-badge';
+import {ACCOUNT_LEVEL_MAX} from './records';
 import './leaderboard.css';
 
 export type LeaderboardViewState='loading'|'error'|'ready';
@@ -20,5 +21,5 @@ function table(data:DuelLeaderboard){
 
 export function leaderboardHTML(data?:DuelLeaderboard,state:LeaderboardViewState='ready',errorText?:string){
  const body=state==='loading'?'<div class="leaderboard-status" role="status"><span class="leaderboard-loading" aria-hidden="true"></span><strong>수호자들의 순위를 불러오는 중이에요…</strong></div>':state==='error'?`<div class="leaderboard-status leaderboard-error" role="alert"><strong>명예의 전당을 불러오지 못했어요</strong><p>${escapeLeaderboardText((errorText||'연결을 확인하고 다시 시도해 주세요.').slice(0,240))}</p></div>`:data?myRank(data.me)+table(data):'<div class="leaderboard-status" role="status">순위 자료를 새로 불러와 주세요.</div>';
- return `<section class="leaderboard-screen"${state==='loading'?' aria-busy="true"':''}><header class="leaderboard-heading"><span class="leaderboard-heading-mark" aria-hidden="true">♛</span><div><h2>명예의 전당</h2><p class="leaderboard-order">레벨 높은 순 · 같은 레벨에서는 누적 경험치 높은 순</p></div></header><div class="leaderboard-content">${body}</div><footer class="leaderboard-footer"><p>상위 50명과 내 순위를 표시해요. 레벨과 경험치가 같으면 공동 순위예요.<br>컴퓨터·플레이어 대전의 누적 경험치를 반영해요. 최고 계정 레벨은 10이에요.</p><div class="duel-row"><button type="button" id="leaderboard-refresh"${state==='loading'?' disabled':''}>${state==='error'?'다시 불러오기':'순위 새로고침'}</button><button type="button" class="duel-primary" id="leaderboard-back">대기실로</button></div></footer></section>`;
+ return `<section class="leaderboard-screen"${state==='loading'?' aria-busy="true"':''}><header class="leaderboard-heading"><span class="leaderboard-heading-mark" aria-hidden="true">♛</span><div><h2>명예의 전당</h2><p class="leaderboard-order">레벨 높은 순 · 같은 레벨에서는 누적 경험치 높은 순</p></div></header><div class="leaderboard-content">${body}</div><footer class="leaderboard-footer"><p>상위 50명과 내 순위를 표시해요. 레벨과 경험치가 같으면 공동 순위예요.<br>컴퓨터·플레이어 대전의 누적 경험치를 반영해요. 최고 계정 레벨은 ${ACCOUNT_LEVEL_MAX}이에요.</p><div class="duel-row"><button type="button" id="leaderboard-refresh"${state==='loading'?' disabled':''}>${state==='error'?'다시 불러오기':'순위 새로고침'}</button><button type="button" class="duel-primary" id="leaderboard-back">대기실로</button></div></footer></section>`;
 }

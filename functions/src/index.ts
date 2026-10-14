@@ -16,9 +16,9 @@ export const duelSaveResult=onCall({region:'asia-northeast3',maxInstances:10,min
   if(finished.exists){const old=finished.data()!;if(old.hostUid!==record.hostUid||old.guestUid!==record.guestUid||old.winnerUid!==winnerUid)throw new HttpsError('failed-precondition','상대가 저장한 승패와 달라요. 연결 중단 기록을 확인해 주세요.');}
   let levels;try{levels=matchLevels(record,record.side===0?user.data()?.progress:opponent?.data()?.progress,record.side===1?user.data()?.progress:opponent?.data()?.progress,finished.data());}catch(e){throw new HttpsError('data-loss',(e as Error).message);}
   const canonical=rewardedRecord(record,levels),before=normalizeProgress(user.data()?.progress),progress=progressAfter(before,canonical),experienceGain=matchExperience(canonical,canonical.opponentLevel??1,before.level);
-  if(!finished.exists)tx.set(match,{hostUid:record.hostUid,guestUid:record.guestUid,winnerUid,endedAt:record.endedAt,...levels,rewardVersion:3});
-  else if(finished.data()?.hostLevel===undefined&&finished.data()?.guestLevel===undefined)tx.set(match,{...levels,rewardVersion:3},{merge:true});
-  tx.set(entry,{...canonical,experienceGain,progress,rewardVersion:3,savedAt:Date.now()});tx.set(profile,{progress},{merge:true});
+  if(!finished.exists)tx.set(match,{hostUid:record.hostUid,guestUid:record.guestUid,winnerUid,endedAt:record.endedAt,...levels,rewardVersion:4});
+  else if(finished.data()?.hostLevel===undefined&&finished.data()?.guestLevel===undefined)tx.set(match,{...levels,rewardVersion:4},{merge:true});
+  tx.set(entry,{...canonical,experienceGain,progress,rewardVersion:4,savedAt:Date.now()});tx.set(profile,{progress},{merge:true});
   return {saved:true,duplicate:false,progress,experienceGain};
  });
 });

@@ -1,7 +1,8 @@
+import {ACCOUNT_LEVEL_MAX} from './records';
 export type DecimalTriple=readonly [number,number,number];
 export interface DecimalAdditionQuestion{a:number;b:number;}
 export function learningLevel(accountLevel:number){return Number.isSafeInteger(accountLevel)&&accountLevel>0?Math.min(10,accountLevel):1;}
-export function normalizedAccountLevel(value:number){return Number.isSafeInteger(value)&&value>0?Math.min(1000000,value):1;}
+export function normalizedAccountLevel(value:number){return Number.isSafeInteger(value)&&value>0?Math.min(ACCOUNT_LEVEL_MAX,value):1;}
 export const HERO_ADDITION_STAGES=8;
 function additionStage(stage:number){return Number.isSafeInteger(stage)&&stage>0?Math.min(HERO_ADDITION_STAGES,stage):1;}
 function precisionStage(stage:number){return (stage-1)%4+1;}
