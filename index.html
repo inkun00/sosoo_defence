@@ -1,2 +1,58 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/><meta name="theme-color" content="#172a25"/><title>소수의 성 · Decimal Defense</title></head><body><div id="app"></div><script type="module" src="/src/main.ts"></script></body></html>
+<html lang="ko">
+<head>
+ <meta charset="UTF-8"/>
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+ <meta name="theme-color" content="#172a25"/>
+ <title>소수의 성 · Decimal Defense</title>
+ <style>
+  #startup-help[hidden],#startup-help [hidden]{display:none!important}
+  #startup-help{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:#11151bef;color:#f1e9dd;font:16px/1.7 'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif}
+  .startup-card{box-sizing:border-box;width:min(100%,620px);max-height:90vh;overflow:auto;padding:28px;border:3px solid #9b895d;background:linear-gradient(#282b33,#171c24);box-shadow:0 0 0 5px #14161b,0 16px 60px #0008}
+  #startup-help h1{margin:0 0 16px;font-size:25px;color:#ffe0a0}
+  #startup-help p{margin:12px 0}
+  .startup-actions{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 12px}
+  #startup-help button,#startup-help a{box-sizing:border-box;display:inline-block;border:1px solid #a88b52;padding:9px 15px;color:#ffe9bd;background:#30323a;font:inherit;text-decoration:none;cursor:pointer}
+  #startup-help a:focus-visible,#startup-help button:focus-visible{outline:3px solid #ffc96b;outline-offset:3px}
+  #startup-help small{display:block;color:#c8c2b5;font-size:13px}
+ </style>
+</head>
+<body>
+ <div id="app"></div>
+ <section id="startup-help" hidden role="alert" aria-labelledby="startup-title">
+  <div class="startup-card">
+   <h1 id="startup-title">게임 연결을 확인하고 있어요</h1>
+   <p id="startup-message">게임을 불러오는 데 시간이 걸리고 있어요. 다시 시도하거나 아래 공식 주소로 접속해 주세요.</p>
+   <div class="startup-actions"><button id="startup-retry" type="button">다시 시도</button><a href="/?mode=title">시작 화면으로</a><a href="/network-check.html">연결 확인</a></div>
+   <div class="startup-actions"><a data-school-address href="https://sosoo-defense-20261005.web.app/">교실용 주소</a><a data-school-address href="https://sosoo-defense-20261005.firebaseapp.com/">보조 주소</a></div>
+   <small>다른 주소에서는 다시 로그인해야 하며, 브라우저에 저장된 모험 진행은 주소별로 보관돼요.</small>
+   <small>모든 주소가 차단된다면 학교 네트워크 관리자에게 접속 허용을 요청해 주세요.</small>
+  </div>
+ </section>
+ <script id="startup-guard">
+  (function(){
+   var app=document.getElementById('app'),help=document.getElementById('startup-help'),failed=false;
+   var title=document.getElementById('startup-title'),message=document.getElementById('startup-message');
+   document.getElementById('startup-retry').onclick=function(){location.reload();};
+   document.querySelectorAll('[data-school-address]').forEach(function(link){
+    var target=new URL(link.href);target.search=location.search;target.hash=location.hash;link.href=target.href;
+    if(target.host===location.host)link.hidden=true;
+   });
+   function show(kind){
+    if(kind!=='account'&&kind!=='load'&&app.childElementCount)return;
+    failed=kind==='account'||kind==='load';
+    title.textContent=kind==='account'?'계정 서버에 연결하지 못했어요':'게임을 불러오는 데 시간이 걸리고 있어요';
+    message.textContent=kind==='account'?'현재 네트워크에서 계정을 확인하지 못했어요. 다시 시도하거나 시작 화면에서 혼자 모험을 즐길 수 있어요.':navigator.onLine===false?'인터넷 연결이 끊어졌어요. 연결을 확인한 뒤 다시 시도해 주세요.':'현재 네트워크에서 게임 파일을 불러오지 못했을 수 있어요. 다시 시도하거나 아래 공식 주소로 접속해 주세요.';
+    help.hidden=false;
+   }
+   var timer=setTimeout(function(){show('waiting');},8000);
+   var observer=new MutationObserver(function(){if(app.childElementCount&&!failed){clearTimeout(timer);help.hidden=true;observer.disconnect();}});
+   observer.observe(app,{childList:true});
+   window.addEventListener('decimal-startup-failed',function(event){clearTimeout(timer);show(event.detail&&event.detail.kind==='account'?'account':'load');});
+   window.addEventListener('error',function(event){var target=event.target;if(!app.childElementCount&&target&&(target.tagName==='SCRIPT'||target.tagName==='LINK'&&target.rel==='stylesheet')){clearTimeout(timer);show('load');}},true);
+  })();
+ </script>
+ <noscript><p>이 게임을 실행하려면 브라우저의 자바스크립트를 켜 주세요.</p></noscript>
+ <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

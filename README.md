@@ -2,6 +2,12 @@
 
 초등학교 4학년 소수의 덧셈과 뺄셈을 배우는 한국어 타워 디펜스입니다. TypeScript·Phaser 3, PC·태블릿 브라우저의 가로 화면을 사용합니다. 전장·상점·구매 계산·성벽 합성·지도·결과 화면을 1280×800 캔버스에 통합하고 기기 크기에 맞춰 축소합니다.
 
+## 교실에서 접속하기
+
+공식 교실용 주소는 [Firebase Hosting](https://sosoo-defense-20261005.web.app/?mode=adventure)이며 [추가 주소](https://sosoo-defense-20261005.firebaseapp.com/?mode=adventure)도 제공합니다. 기존 [Vercel 주소](https://sosoo-defence.vercel.app/?mode=adventure)는 계속 사용할 수 있습니다. 세 주소는 같은 게임과 Firebase 프로젝트를 사용하며 Vercel로 자동 이동하지 않습니다. 브라우저의 모험 진도는 주소별로 보관되므로 다른 주소에서 이전 진도가 자동으로 이어지지는 않습니다.
+
+학교 와이파이에서만 열리지 않으면 [연결 확인](https://sosoo-defense-20261005.web.app/network-check.html)에서 현재 기기를 검사하고 학교 전산 담당자에게 결과를 전달합니다. 학교망 차단은 앱 코드로 해제할 수 없으며 필요한 접속 주소의 허용을 요청해야 합니다. 실제 확인 범위와 배포 절차는 [학교망 접속 안내](docs/school-network-access.md)를 참고하세요.
+
 ## 실행
 
 Windows에서 `게임실행.cmd`를 열고 `http://localhost:4173`으로 접속합니다. Node.js가 필요하며 실행 창을 열어 두세요. 1인 모험은 인터넷 연결 없이 실행할 수 있습니다. 회원가입·온라인 1:1 대전은 운영 Firebase 연결과 인터넷이 필요합니다. 운영 프로젝트 sosoo-defense-20261005의 Authentication·Firestore·방 목록·경기 기록 함수를 연결했습니다. 로컬 테스트 절차와 배포 안내는 [FIREBASE.md](FIREBASE.md)를 확인하세요. 태블릿은 같은 네트워크에서 `http://PC의IPv4주소:4173`으로 접속합니다. 방화벽 설정에 따라 접속이 제한될 수 있습니다.

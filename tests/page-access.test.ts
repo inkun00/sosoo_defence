@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {AccountSession,PageRequest,pageRequest,openAuthorizedPage,requiresAccount,runAccountAction} from '../src/page-access';
+import {AccountSession,PageRequest,pageRequest,openAuthorizedPage,requiresAccount,runAccountAction,AccountConnectionTimeout,ACCOUNT_CONNECTION_TIMEOUT_MS} from '../src/page-access';
 function pending<T=void>(){let resolve!:(value:T|PromiseLike<T>)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve};}
 test('title and adventure load without initializing Firebase or showing login',async()=>{
  for(const search of ['', '?mode=title','?mode=adventure','?mode=tutorial','?mode=https://example.com']){
@@ -21,7 +21,7 @@ test('anonymous protected requests stay on login until an account is available',
  for(const mode of ['duel','worksheet'] as const){
   const login=pending(),events:string[]=[],session:AccountSession={currentUser:null,authStateReady:async()=>{events.push('ready');}};
   const entering=openAuthorizedPage(pageRequest('?mode='+mode),{session:async()=>session,login:()=>{events.push('login');return login.promise;},load:async()=>events.push('import')});
-  await Promise.resolve();await Promise.resolve();assert.deepEqual(events,['ready','login']);
+  for(let i=0;i<5;i++)await Promise.resolve();assert.deepEqual(events,['ready','login']);
   session.currentUser={uid:'guardian'};login.resolve();assert.equal(await entering,true);assert.deepEqual(events,['ready','login','import']);
  }
 });
@@ -42,6 +42,25 @@ test('a readiness failure never imports or starts a worksheet',async()=>{
  let loaded=false;
  await assert.rejects(openAuthorizedPage(pageRequest('?mode=worksheet&print=1'),{session:async()=>({currentUser:{uid:'unresolved'},authStateReady:async()=>{throw Error('not ready');}}),login:async()=>{},load:async()=>{loaded=true;}}),/not ready/);
  assert.equal(loaded,false);
+});
+test('blocked account initialization stops after ten seconds without importing protected pages, even after late recovery',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
+ for(const mode of ['duel','worksheet'] as const){
+  const ready=pending(),events:string[]=[],session:AccountSession={currentUser:{uid:'persisted'},authStateReady:()=>ready.promise};
+  const entering=openAuthorizedPage(pageRequest('?mode='+mode),{session:async()=>session,login:async()=>{events.push('login');},load:async()=>{events.push('import');}});
+  const rejected=assert.rejects(entering,AccountConnectionTimeout);
+  await Promise.resolve();t.mock.timers.tick(ACCOUNT_CONNECTION_TIMEOUT_MS);await rejected;
+  ready.resolve();for(let i=0;i<5;i++)await Promise.resolve();
+  assert.deepEqual(events,[]);
+ }
+});
+test('successful account initialization clears its deadline while a person fills in the login form',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
+ const login=pending(),session:AccountSession={currentUser:null,authStateReady:async()=>{}},events:string[]=[];
+ const entering=openAuthorizedPage(pageRequest('?mode=duel'),{session:async()=>session,login:()=>{events.push('login');return login.promise;},load:async()=>{events.push('import');}});
+ for(let i=0;i<5;i++)await Promise.resolve();assert.deepEqual(events,['login']);
+ t.mock.timers.tick(ACCOUNT_CONNECTION_TIMEOUT_MS*5);await Promise.resolve();assert.deepEqual(events,['login']);
+ session.currentUser={uid:'guardian'};login.resolve();assert.equal(await entering,true);assert.deepEqual(events,['login','import']);
 });
 test('unauthorized worksheet printing does not prepare fonts, artwork or print',async()=>{
  const calls:string[]=[];
