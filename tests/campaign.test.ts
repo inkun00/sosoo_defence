@@ -7,9 +7,16 @@ for(const difficulty of ['practice','standard','challenge'] as const)for(let sta
  let equations=0;
  const checkEvents=(events:BattleEvent[])=>{
   for(const e of events)if(e.message.includes(' = ')){
-   equations++;const operands=e.message.split(' · ')[0].match(/\d+(?:\.\d+)?/g)!.map(Number);
+   equations++;const equation=e.message.split(' · ')[0],tokens=equation.match(/\d+(?:\.\d+)?/g)!;
+   assert.equal(tokens.length,3,e.message);
+   const operands=tokens.map(token=>{assert.match(token,/^\d+(?:\.\d{1,2})?$/,e.message);const [whole,fraction='']=token.split('.');return Number(whole)*1000+Number(fraction.padEnd(3,'0'));});
+   assert.ok(operands.every(n=>Number.isSafeInteger(n)&&n>=0&&n%10===0),e.message);
    const bossEquation=e.type==='hit'&&(e.data as {kind?:string})?.kind==='wizard';
-   assert.ok(operands.every(n=>n>=0&&n<(bossEquation?100:10)),e.message);
+   const fullWalletPurchase=e.type==='money'&&(e.data as {reason?:string})?.reason==='purchase';
+   if(fullWalletPurchase)assert.ok(operands[1]<10000,e.message);
+   else assert.ok(operands.every(n=>n<(bossEquation?100000:10000)),e.message);
+   assert.ok(equation.includes(' − ')||equation.includes(' + '),e.message);
+   assert.equal(equation.includes(' − ')?operands[0]-operands[1]:operands[0]+operands[1],operands[2],e.message);
   }
  };
  // Fixed formations use only stocked walls before the first monster appears.

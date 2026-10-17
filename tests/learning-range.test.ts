@@ -9,7 +9,7 @@ import {learningValue,numberText,recipe,creditMessage,purchaseCoins} from '../sr
 function preparation(now:number,level=1){const s=createDuel('a','가',17,now,level);joinDuel(s,'b','나',now,level);assert.ok(applyDuel(s,0,{type:'ready'},now,'r0').ok);assert.ok(applyDuel(s,1,{type:'ready'},now,'r1').ok);assert.equal(s.status,'preparing');return s;}
 function startCombat(s:DuelState,preparationStartedAt:number){const now=preparationStartedAt+DUEL_PREPARATION_SECONDS*1000;s.players.forEach(p=>p!.lastSeen=now);advanceDuel(s,now);assert.equal(s.status,'playing');assert.equal(s.elapsed,0);return now;}
 
-test('보스 체력 예외 외의 일반 몬스터·영웅·포탄·재료·구매 수식은 10 미만이다',()=>{
+test('보스 체력과 스토리 전체 지갑 구매를 제외한 일반 몬스터·영웅·포탄·재료·타워 가격은 10 미만이다',()=>{
  for(const l of LEVELS){
   assert.ok([purchaseCoins(l.budget),...l.hp,...l.bricks,...(l.extraBricks??[])].every(learningValue));
   if(l.boss)assert.equal(l.boss.hp,99900);else assert.ok(learningValue(l.budget));
@@ -21,11 +21,11 @@ test('보스 체력 예외 외의 일반 몬스터·영웅·포탄·재료·구�
  assert.equal(recipe(10000,1000,9000,'-'),false);
 });
 
-test('누적 보유금이 커져도 구매 수식은 10 미만이고 나머지 코인과 회수액은 보존한다',()=>{
+test('스토리의 누적 보유금은 구매 수식에 전액 표시되고 정답·실제 잔액·회수액이 일치한다',()=>{
  for(const l of LEVELS){const m=new Defense(l);m.money=98760;
   assert.ok(m.requestPurchase({x:1,y:3},'basic'));const q=m.pendingPurchase!;
-  assert.equal(q.wallet,98760);assert.ok([q.before,q.cost,q.before-q.cost].every(learningValue));
-  assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,98760-q.cost);
+  assert.equal(q.wallet,98760);assert.equal(q.before,98760);assert.ok(learningValue(q.cost));assert.equal(q.before%10,0);assert.equal((q.before-q.cost)%10,0);
+  assert.ok(m.answerPurchase(numberText(q.before-q.cost)));assert.equal(m.money,98760-q.cost);assert.equal(m.money,q.before-q.cost);
   m.sellTower(m.towers[0].id);assert.equal(m.money,98760);
   assert.ok(!m.events.at(-1)!.message.includes(' = '));
  }

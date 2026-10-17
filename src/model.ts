@@ -103,9 +103,11 @@ export class Defense{
   if(this.pendingPurchase)return false;
   const type=towerType(typeId);if(!type||!this.canPurchase(c,type))return false;
   const cost=towerPrice(type,this.money,this.level.id,this.purchaseVariation);if(this.money<cost)return this.notice('돈이 부족해요. 다른 타워를 고르거나 보상을 모아 보세요.');
-  const before=purchaseCoins(this.money);
+  const before=this.money;
   this.pendingPurchase={...c,typeId,before,wallet:this.money,cost,digits:this.level.digits,borrowing:borrowingPlaces(before,cost)};
-  this.purchaseVariation={round:this.purchaseVariation.round+1,lastBefore:before,lastCost:cost};return true;
+  // Price selection keeps its existing fractional practice key; the exercise
+  // itself always subtracts from the player's entire current wallet.
+  this.purchaseVariation={round:this.purchaseVariation.round+1,lastBefore:purchaseCoins(before),lastCost:cost};return true;
  }
  cancelPurchase(){this.pendingPurchase=null;}
  answerPurchase(text:string):boolean{

@@ -16,7 +16,8 @@ export const validLearningKind=(kind:string):kind is LearningKind=>!!kindParts(k
 function carries(a:number,b:number){let carry=0,count=0;for(const p of [10,100,1000]){carry=Math.floor(a/p)%10+Math.floor(b/p)%10+carry>=10?1:0;count+=carry;}return count;}
 export function classify(s:LearningSample):ArithmeticLearningKind|null{
  const answer=s.operation==='+'?s.a+s.b:s.a-s.b;
- if(![s.a,s.b,answer].every(n=>learningValue(n)&&n%10===0)||!['+','-'].includes(s.operation))return null;
+ const money=s.context==='money'&&s.operation==='-',walletValue=(n:number)=>Number.isSafeInteger(n)&&n>=0&&n%10===0;
+ if(!['+','-'].includes(s.operation)||!(money?walletValue(s.a)&&learningValue(s.b)&&walletValue(answer):[s.a,s.b,answer].every(learningValue)))return null;
  const digits=Math.min(2,Math.max(s.digits??1,precision(s.a),precision(s.b))) as 1|2;
  const changes=s.operation==='+'?carries(s.a,s.b):borrowingPlaces(s.a,s.b).length;
  const mode:LearningMode=changes>=2?'chain':changes?'regroup':precision(s.a)!==precision(s.b)?'align':'basic';

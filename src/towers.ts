@@ -66,7 +66,7 @@ export function towerPrice(type:TowerType,money:number,stage:number,variation?:P
 function gcd(a:number,b:number):number{return b?gcd(b,a%b):a;}
 export function borrowingPlaces(before:number,cost:number):number[]{
  const result:number[]=[];let borrow=0;
- for(let place=1;place<=1000;place*=10){
+ for(let place=1;place<=Math.max(1000,before,cost)&&Number.isSafeInteger(place);place*=10){
   const a=Math.floor(before/place)%10-borrow,b=Math.floor(cost/place)%10;
   borrow=a<b?1:0;if(borrow)result.push(place);
  }
