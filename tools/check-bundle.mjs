@@ -25,13 +25,25 @@ function dependencies(entries){
  entries.forEach(visit);return [...loaded];
 }
 const reports={};
+function modeEntry(source){
+ if(manifest[source])return source;
+ // Rollup may give a routed entry a shared-chunk key when a deferred ending
+ // also imports its sprite helpers. Require one named, actually routed entry.
+ const name=source.split('/').at(-1).replace(/\.ts$/,''),routes=manifest['index.html'].dynamicImports??[];
+ const matches=Object.keys(manifest).filter(key=>routes.includes(key)&&manifest[key].isDynamicEntry&&manifest[key].name===name);
+ assert.equal(matches.length,1,`Cannot identify routed bundle entry ${source}`);
+ return matches[0];
+}
 for(const [mode,entry]of Object.entries({title:'src/title.ts',worksheet:'src/worksheet-controller.ts',adventure:'src/controller.ts',duel:'src/multiplayer/controller.ts',siege:'src/secret-siege-controller.ts'})){
- const keys=dependencies(['index.html',entry,...(mode==='worksheet'||mode==='duel'?['src/account-gate.ts']:[])]);
+ const keys=dependencies(['index.html',modeEntry(entry),...(mode==='worksheet'||mode==='duel'?['src/account-gate.ts']:[])]);
  const files=keys.map(key=>manifest[key].file).filter(file=>file.endsWith('.js'));
  if(mode==='title'||mode==='worksheet')assert.ok(!files.some(file=>/phaser-|tower-projectiles-/.test(file)),`${mode} must not fetch the game engine`);
  if(mode==='title')assert.ok(!files.some(file=>/cinematic-/.test(file)),'Story and ending font must wait until the user opens a cinematic');
  if(mode==='worksheet')assert.ok(!files.some(file=>/worksheet-pdf-/.test(file)),'PDF libraries must wait for Save');
- if(mode==='siege')assert.ok(!files.some(file=>/phaser-|firebase-|worksheet-pdf-/.test(file)),'Secret siege uses local assets and no multiplayer or PDF runtime');
+ if(mode==='siege'){
+  assert.ok(!files.some(file=>/phaser-|firebase-|worksheet-pdf-/.test(file)),'Secret siege uses local assets and no multiplayer or PDF runtime');
+  assert.ok(!files.some(file=>/secret-siege-ending-/.test(file)),'Expedition ending must wait until final victory or replay');
+ }
  if(mode==='adventure'||mode==='duel')for(const chunk of ['phaser-engine','phaser-renderer'])assert.ok(keys.some(key=>manifest[key].name===chunk),`${mode} requires ${chunk}`);
  reports[mode]=await total(files);
 }

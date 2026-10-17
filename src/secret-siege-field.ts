@@ -8,6 +8,7 @@ import {decodeSpriteFrames} from './sprite-frame-packing';
 import {numberText} from './math';
 import {ARMY,SIEGE_PATH_LENGTH,type SiegeTarget,type SiegeUnit,type SiegeProjectile} from './secret-siege-types';
 import type {SecretSiege} from './secret-siege-model';
+import {secretSiegeWorldLight} from './secret-siege-ending-state';
 
 const WIDTH=1200,HEIGHT=620,CITADEL_SIZE=220;
 const ROAD=[{x:82,y:402},{x:242,y:402},{x:242,y:266},{x:478,y:266},{x:478,y:414},{x:756,y:414},{x:756,y:266},{x:1110,y:266}];
@@ -46,6 +47,8 @@ export class SecretSiegeField{
  private sprites=new Map<string,HTMLCanvasElement>();
  private grounds=new Map<string,SpriteGround>();
  private backdrop?:HTMLCanvasElement;
+ private restoredBackdrop?:HTMLCanvasElement;
+ private worldLight=0;
  private flame?:HTMLCanvasElement;
  private collapse?:HTMLCanvasElement;
  private disposed=false;
@@ -59,7 +62,7 @@ export class SecretSiegeField{
   element.width=WIDTH;element.height=HEIGHT;
   const context=element.getContext('2d');if(!context)throw Error('Canvas 2D is unavailable');this.context=context;
  }
- setModel(model:SecretSiege){this.model=model;this.previousPhase='';this.previousWallTime=undefined;this.animationTime=0;}
+ setModel(model:SecretSiege){this.model=model;this.previousPhase='';this.previousWallTime=undefined;this.animationTime=0;this.backdrop=undefined;this.restoredBackdrop=undefined;this.worldLight=0;}
  load():Promise<void>{
   return this.loadTask??=this.loadImages();
  }
@@ -108,8 +111,10 @@ export class SecretSiegeField{
   if(this.model.phase!=='paused')this.animationTime+=delta;
   if(this.model.phase==='won'&&this.previousPhase!=='won')this.victoryTime=timeSeconds;
   this.previousPhase=this.model.phase;this.lastDraw=timeSeconds;
+  this.worldLight=this.model.phase==='won'&&this.model.stageId===10?secretSiegeWorldLight(timeSeconds-this.victoryTime,reducedMotion):0;
   const context=this.context;context.clearRect(0,0,WIDTH,HEIGHT);
   this.backdrop??=this.createBackdrop();context.drawImage(this.backdrop,0,0);
+  if(this.worldLight>0){this.restoredBackdrop??=this.createBackdrop(true);context.save();context.globalAlpha=this.worldLight;context.drawImage(this.restoredBackdrop,0,0);context.restore();}
   this.camp(reducedMotion);
   const units=[...this.model.units].filter(unit=>unit.hp>0),targets=this.model.targets;
   const objects=[...targets.map(target=>({y:siegeTargetPoint(target).y,draw:()=>this.target(target,reducedMotion)})),...units.map(unit=>({y:this.unitPoint(unit).y,draw:()=>this.unit(unit,reducedMotion)}))];
@@ -118,18 +123,21 @@ export class SecretSiegeField{
   this.embers(reducedMotion);
   context.save();context.strokeStyle='#c1aa7960';context.lineWidth=2;context.strokeRect(10,10,WIDTH-20,HEIGHT-20);context.restore();
  }
- private createBackdrop(){
+ private createBackdrop(restored=false){
   const output=canvas(WIDTH,HEIGHT),context=output.getContext('2d')!;context.fillStyle='#182026';context.fillRect(0,0,WIDTH,HEIGHT);
   const terrain=this.images.get('terrain');
+  if(restored)context.filter='brightness(1.9) saturate(.85)';
   if(terrain)for(let y=0;y<HEIGHT;y+=120)for(let x=0;x<WIDTH;x+=120)context.drawImage(terrain,0,0,terrain.width/2,terrain.height/2,x,y,120,120);
-  context.fillStyle='#09101cb3';context.fillRect(0,0,WIDTH,HEIGHT);
+  context.filter='none';context.fillStyle=restored?'#7da16a3b':`rgba(9,16,28,${.48+this.model.stage.darkness*.18})`;context.fillRect(0,0,WIDTH,HEIGHT);
+  if(restored){for(const[x,y,radius]of [[110,115,210],[430,570,260],[870,100,230],[1160,520,240]]){const growth=context.createRadialGradient(x,y,10,x,y,radius);growth.addColorStop(0,'#8eaf6466');growth.addColorStop(1,'#57875600');context.fillStyle=growth;context.fillRect(x-radius,y-radius,radius*2,radius*2);}}
   const path=()=>{context.beginPath();ROAD.forEach((point,index)=>index?context.lineTo(point.x,point.y):context.moveTo(point.x,point.y));};
   context.lineJoin='round';context.lineCap='round';path();context.lineWidth=84;context.strokeStyle='#05090cb3';context.stroke();path();context.lineWidth=68;context.strokeStyle='#9c81564d';context.stroke();
   for(let index=0;index<ROAD.length-1;index++){
    const first=ROAD[index],second=ROAD[index+1],x=Math.min(first.x,second.x)-29,y=Math.min(first.y,second.y)-29,width=Math.abs(first.x-second.x)+58,height=Math.abs(first.y-second.y)+58;
    context.save();context.beginPath();context.rect(x,y,width,height);context.clip();context.fillStyle='#645035';context.fillRect(x,y,width,height);
+   if(restored)context.filter='brightness(1.55) saturate(.9)';
    if(terrain)for(let ty=y;ty<y+height;ty+=72)for(let tx=x;tx<x+width;tx+=72)context.drawImage(terrain,terrain.width/2,0,terrain.width/2,terrain.height/2,tx,ty,72,72);
-   context.fillStyle='#3b2d1d4d';context.fillRect(x,y,width,height);context.restore();
+   context.filter='none';context.fillStyle=restored?'#c1a45619':'#3b2d1d4d';context.fillRect(x,y,width,height);context.restore();
   }
   const props=this.images.get('props');
   if(props){
@@ -138,9 +146,9 @@ export class SecretSiegeField{
    for(const[x,y,index,size]of decorations)this.cell(context,props,3,3,index,x-size/2,y-size/2,size,size);
    context.restore();
   }
-  const vignette=context.createRadialGradient(600,320,170,600,320,710);vignette.addColorStop(0,'#02061200');vignette.addColorStop(1,'#020612b3');context.fillStyle=vignette;context.fillRect(0,0,WIDTH,HEIGHT);
+  const vignette=context.createRadialGradient(600,320,170,600,320,710);vignette.addColorStop(0,restored?'#fff3af18':'#02061200');vignette.addColorStop(1,restored?'#b6ca7710':`rgba(2,6,18,${.52+this.model.stage.darkness*.2})`);context.fillStyle=vignette;context.fillRect(0,0,WIDTH,HEIGHT);
   context.strokeStyle='#bb9d654d';context.lineWidth=1;context.beginPath();context.moveTo(34,68);context.lineTo(310,68);context.moveTo(890,548);context.lineTo(1166,548);context.stroke();
-  context.font='600 17px system-ui,sans-serif';context.fillStyle='#c6b28a';context.fillText('새벽 원정대',34,51);context.textAlign='right';context.fillStyle='#d4afca';context.fillText('마법사의 마지막 요새',1166,576);
+  context.font='600 17px system-ui,sans-serif';context.fillStyle=restored?'#ffe6a9':'#c6b28a';context.fillText(restored?'세계를 구하는 원정대':'새벽 원정대',34,51);context.textAlign='right';context.fillStyle=restored?'#fff3c6':'#d4afca';context.fillText(restored?'빛을 되찾은 왕국':`${this.model.stageId} · ${this.model.stage.name}`,1166,576);
   return output;
  }
  private cell(context:CanvasRenderingContext2D,image:CanvasImageSource,columns:number,rows:number,index:number,x:number,y:number,width:number,height:number){
@@ -221,8 +229,9 @@ export class SecretSiegeField{
  }
  private embers(reducedMotion:boolean){
   if(reducedMotion)return;const context=this.context;context.save();
-  for(let index=0;index<10;index++){const x=930+(index*67)%220,y=130+(index*43+this.animationTime*11)%150,alpha=.13+Math.sin(this.animationTime*.8+index)*.09;context.fillStyle=`rgba(215,145,255,${alpha})`;context.beginPath();context.arc(x,y,1.5,0,Math.PI*2);context.fill();}
+  for(let index=0;index<10;index++){const x=930+(index*67)%220,y=130+(index*43+this.animationTime*11)%150,alpha=(.13+Math.sin(this.animationTime*.8+index)*.09)*(1-this.worldLight);context.fillStyle=`rgba(215,145,255,${alpha})`;context.beginPath();context.arc(x,y,1.5,0,Math.PI*2);context.fill();}
+  if(this.worldLight>0){context.globalAlpha=this.worldLight;const dawn=context.createRadialGradient(1050,100,10,1000,140,950);dawn.addColorStop(0,'#ffe4a53b');dawn.addColorStop(1,'#ffe4a500');context.fillStyle=dawn;context.fillRect(0,0,WIDTH,HEIGHT);for(let index=0;index<14;index++){const x=(index*193+this.animationTime*9)%WIDTH,y=80+(index*71)%450+Math.sin(this.animationTime*.5+index)*8;context.fillStyle='#ffe8af88';context.beginPath();context.ellipse(x,y,3.5,1.5,index,0,Math.PI*2);context.fill();}}
   context.restore();
  }
- dispose(){this.disposed=true;this.images.clear();this.sprites.clear();this.grounds.clear();this.backdrop=undefined;this.flame=undefined;this.collapse=undefined;}
+ dispose(){this.disposed=true;this.images.clear();this.sprites.clear();this.grounds.clear();this.backdrop=undefined;this.restoredBackdrop=undefined;this.flame=undefined;this.collapse=undefined;}
 }

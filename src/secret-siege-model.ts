@@ -1,6 +1,7 @@
 import type {Difficulty} from './difficulty';
 import {hit,learningValue,numberText} from './math';
 import {parseMoney} from './towers';
+import {SIEGE_STAGE_COUNT,siegeStage,type SiegeStage} from './secret-siege-stages';
 import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit} from './secret-siege-types';
 
 const EPSILON=1e-7,HEAL=600;
@@ -16,8 +17,10 @@ export class SecretSiege{
  private unitSerial=0;private shotSerial=0;private questionSerial=0;private nextDeploy=0;
  private owners=new Map<number,ShotOwner>();private reservedDamage=new Map<string,number>();
  private quotes=new Map<string,SiegeQuestion>();
- constructor(readonly difficulty:Difficulty){
-  const cooldowns=enemyCooldowns[difficulty];
+ readonly stage:SiegeStage;
+ constructor(readonly difficulty:Difficulty,readonly stageId=1){
+  this.stage=siegeStage(stageId);const stage=this.stage;
+  const cooldowns=enemyCooldowns[difficulty].map(cooldown=>cooldown*stage.cooldownScale);
   this.targets=[
    {id:'gate-tower',kind:'tower',towerKind:'arcane',name:'성문 마력탑',distance:240,placement:{x:-30,y:-76},hp:2400,maxHp:2400,attack:100,cooldown:cooldowns[0],range:175,reload:0,lastHit:-999,lastShot:-999},
    {id:'venom-tower',kind:'tower',towerKind:'venom',name:'맹독 수호탑',distance:430,placement:{x:-92,y:23},hp:3600,maxHp:3600,attack:150,cooldown:cooldowns[1],range:185,reload:0,lastHit:-999,lastShot:-999},
@@ -25,6 +28,12 @@ export class SecretSiege{
    {id:'citadel-tower',kind:'tower',towerKind:'venom',name:'성채 수호탑',distance:800,placement:{x:32,y:-76},hp:5400,maxHp:5400,attack:250,cooldown:cooldowns[3],range:205,reload:0,lastHit:-999,lastShot:-999},
    {id:'wizard-castle',kind:'castle',name:'마법사의 성',distance:950,hp:9990,maxHp:9990,attack:300,cooldown:cooldowns[4],range:240,reload:0,lastHit:-999,lastShot:-999},
   ];
+  for(let index=0;index<this.targets.length;index++){
+   const target=this.targets[index],tower=target.kind==='tower';
+   target.hp=target.maxHp=tower?stage.towerHp[index]:stage.castleHp;
+   target.attack=tower?stage.towerAttack[index]:stage.castleAttack;
+   target.range=tower?stage.towerRanges[index]:stage.castleRange;
+  }
  }
  get castle(){return this.targets.find(target=>target.kind==='castle')!.hp;}
  get armyCount(){return this.units.filter(unit=>unit.hp>0).length+Object.values(this.reserve).reduce((sum,count)=>sum+count,0);}
@@ -142,7 +151,7 @@ export class SecretSiege{
    if(target.hp===0){
     this.events.push({type:'destroy',message:shot.source==='army'?`${(target as SiegeTarget).name} 파괴!`:'아군이 쓰러졌어요.',targetId:target.id,friendly:shot.source==='army'});
     if(shot.source==='army'&&(target as SiegeTarget).kind==='castle'){
-     this.phase='won';this.clearShots();this.events.push({type:'won',message:'마법사의 성을 무너뜨리고 마지막 저주를 없앴어요!'});return;
+     this.phase='won';this.clearShots();this.events.push({type:'won',message:this.stageId===SIEGE_STAGE_COUNT?'마지막 저주 핵을 깨뜨리고 세상에 빛을 되찾았어요!':`${this.stage.name}의 저주를 걷어 냈어요. 다음 원정길이 열렸어요!`});return;
     }
    }
   }

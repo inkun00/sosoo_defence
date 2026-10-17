@@ -329,7 +329,7 @@ export class GameUI extends Phaser.Scene{
    [0,1,2].forEach(j=>{const star=this.add.image(p.x+(j-1)*25,p.y+114,'dungeon-icons','star').setDisplaySize(26,26).setAlpha(j<s.save.stars[i]?1:.17);this.popup.add(star);});
    if(!open)b.container.setAlpha(.7);
   });
-  if(secretSiegeUnlocked(s.save))this.button(this.popup,'secret-siege',640,675,430,60,'비밀 원정 · 마법사의 성 ▶',true,'button_red',23);
+  if(secretSiegeUnlocked(s.save))this.button(this.popup,'secret-siege',640,675,430,60,'비밀 원정 · 10개의 성채 ▶',true,'button_red',23);
  }
  private drawResult(){
   const s=this.getState(),m=s.model,won=m.phase==='won',review=m.phase==='review';this.modalFrame(won?'소수의 성을 지켰어요!':review?'성은 지켰어요! 학습 목표를 연습해요':'성 체력 5개가 모두 소진됐어요',940,650);
