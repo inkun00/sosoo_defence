@@ -6,6 +6,7 @@ export function imageProfile(name){
  if(name==='adventure-map-v1')return {...profile,width:1536,quality:78};
  if(name.startsWith('heroes-level-'))return {...profile,width:768};
  if(name==='worksheet-heroes-v1')return {...profile,width:768};
+ if(/^siege-human-(guard|striker|scout)-v2$/.test(name))return {...profile,width:1024,quality:84};
  if(name==='siege-human-army-walk-v1'||name==='siege-human-army-attack-v1'||name==='siege-corrupted-fortifications-v1')return {...profile,width:768};
  if(name==='siege-corrupted-citadel-collapse-v1')return {...profile,width:768,quality:84};
  if(name.startsWith('hero-effect-'))return {...profile,width:96,quality:88,trim:true};

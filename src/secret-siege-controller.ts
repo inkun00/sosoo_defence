@@ -1,7 +1,7 @@
 import {loadSave,writeSave} from './save';
 import {secretSiegeUnlocked,recordSecretSiegeVictory,secretSiegeResumeStage,secretSiegeStageUnlocked,secretSiegeStageRecord,selectSecretSiegeStage,markSecretSiegeEndingSeen} from './secret-siege-progress';
 import {SIEGE_STAGE_COUNT,siegeStage} from './secret-siege-stages';
-import {SecretSiege} from './secret-siege-model';
+import {SecretSiege,SIEGE_RECRUIT_INCREMENT} from './secret-siege-model';
 import {SecretSiegeField} from './secret-siege-field';
 import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeQuestion} from './secret-siege-types';
 import {numberText} from './math';
@@ -62,7 +62,7 @@ function mount(){
   if(model.pendingQuestion||held)return;
   infoPaused=model.phase==='playing';if(infoPaused)model.togglePause();
   const boss=model.boss;
-  showDialog('guide',`<p class="siege-eyebrow">10개의 성채를 해방하는 원정</p><h2 id="siege-dialog-title">${boss?'마지막 성채에서 마법사가 부활했어요':'이번에는 우리가 진격할 차례예요'}</h2><p>${boss?`부활한 마법사 · 체력 <b>${numberText(boss.maxHp,2)}</b> · 마력탄 공격 <b>${numberText(boss.attack,2)}</b>. 네 타워를 돌파하면 마법사가 직접 해방군을 공격해요. 마법사와 성채를 모두 쓰러뜨려야 마지막 원정이 끝나요.`:'마법사는 쓰러졌지만, 열 개의 성채에는 악의 세력이 남아 있어요. 인간 해방군과 함께 하나씩 돌파하세요. 마지막 성채에는 부활한 마법사가 기다리고 있어요.'}</p><ol><li>코인에서 모집 비용을 빼고 군대를 편성해요.</li><li>출정한 뒤 병종별 <b>출격</b>을 눌러 진격 순서를 정해요. 방패대로 작은 정찰대를 보호해요.</li><li>${boss?'마법사의 시전과 바닥의 위험 표시를 살피세요. 회복 지원과 후속 부대 출격 시점을 신중하게 정하세요.':'큰 공격으로 성의 힘을 줄이고, <b>0.01 정찰대</b>로 정확히 0을 만들어요.'}</li></ol><p>${boss?'체력이 줄어들면 마법사가 격노해요. 공격 부대와 회복을 끝까지 남겨 두세요. ':''}문제를 푸는 동안 전투 시간은 흐르지 않아요. 단계별 기록은 원정 지도에서 확인해요.</p><button id="siege-guide-done" data-preparation-surface="active">군대 편성으로</button>`);
+  showDialog('guide',`<p class="siege-eyebrow">10개의 성채를 해방하는 원정</p><h2 id="siege-dialog-title">${boss?'마지막 성채에서 마법사가 부활했어요':'이번에는 우리가 진격할 차례예요'}</h2><p>${boss?`부활한 마법사 · 체력 <b>${numberText(boss.maxHp,2)}</b> · 마력탄 공격 <b>${numberText(boss.attack,2)}</b>. 네 타워를 돌파하면 마법사가 직접 해방군을 공격해요. 마법사와 성채를 모두 쓰러뜨려야 마지막 원정이 끝나요.`:'마법사는 쓰러졌지만, 열 개의 성채에는 악의 세력이 남아 있어요. 인간 해방군과 함께 하나씩 돌파하세요. 마지막 성채에는 부활한 마법사가 기다리고 있어요.'}</p><ol><li>코인에서 모집 비용을 빼고 군대를 편성해요. 한 명을 모집할 때마다 모든 병종의 다음 모집 비용이 ${numberText(SIEGE_RECRUIT_INCREMENT,2)}코인씩 올라요. 비축 병력도 포함하며 출격할 때 다시 차감하지 않아요.</li><li>출정한 뒤 병종별 <b>출격</b>을 눌러 진격 순서를 정해요. 방패대로 작은 정찰대를 보호해요.</li><li>${boss?'마법사의 시전과 바닥의 위험 표시를 살피세요. 회복 지원과 후속 부대 출격 시점을 신중하게 정하세요.':'큰 공격으로 성의 힘을 줄이고, <b>0.01 정찰대</b>로 정확히 0을 만들어요.'}</li></ol><p>${boss?'체력이 줄어들면 마법사가 격노해요. 공격 부대와 회복을 끝까지 남겨 두세요. ':''}문제를 푸는 동안 전투 시간은 흐르지 않아요. 단계별 기록은 원정 지도에서 확인해요.</p><button id="siege-guide-done" data-preparation-surface="active">군대 편성으로</button>`);
   $('siege-guide-done').onclick=closeDialog;
  }
  function question(q:SiegeQuestion){
@@ -100,7 +100,8 @@ function mount(){
   for(const spec of ARMY){
    text('reserve-'+spec.id,String(model.reserve[spec.id]));
    const recruit=root.querySelector<HTMLButtonElement>(`[data-recruit="${spec.id}"]`)!,deploy=root.querySelector<HTMLButtonElement>(`[data-deploy="${spec.id}"]`)!;
-   recruit.disabled=finished||held||model.phase==='paused'||!!model.pendingQuestion||model.money<spec.cost||model.armyCount>=SIEGE_ARMY_LIMIT;
+   const recruitLabel=recruit.querySelector(':scope > span:not(.duel-preparation-skin)');if(recruitLabel)recruitLabel.textContent=`모집 · ${numberText(model.recruitCost(spec.id),2)} 코인`;
+   recruit.disabled=held||!model.canRecruit(spec.id);
    deploy.disabled=!playing||held||!!model.pendingQuestion||!model.reserve[spec.id];
   }
   enabled('siege-pause',!held&&!finished&&model.phase!=='ready'&&!model.pendingQuestion);
@@ -111,7 +112,7 @@ function mount(){
   const record=secretSiegeStageRecord(save,model.stageId);
   text('siege-clear-record',`${save.secretSiege?.stages.length??0} / ${SIEGE_STAGE_COUNT} 해방${record?' · '+'★'.repeat(record.stars):''}`);
   enabled('siege-stage-map',!held&&!model.pendingQuestion);
-  text('siege-plan-hint',model.phase==='ready'?boss?'최종 결전: 부활 마법사와 성채를 모두 쓰러뜨리세요.':'돌격대 또는 방패대와 정찰대를 함께 편성하세요.':model.phase==='paused'?'전투를 멈췄어요. 계속하기를 누르면 진격해요.':finished?'원정을 다시 시작하면 코인과 군대를 새로 준비해요.':active.length?boss&&boss.hp>0?'시전 예고를 살피고 회복과 후속 병력을 아껴 두세요.':'방패대가 앞장서고 정찰대가 마무리해요.':'대기 중인 병력의 출격 버튼을 눌러요.');
+  text('siege-plan-hint',model.phase==='ready'?`모집 1명마다 다음 비용 +${numberText(SIEGE_RECRUIT_INCREMENT,2)} 코인. `+(boss?'최종 결전: 부활 마법사와 성채를 모두 쓰러뜨리세요.':'돌격대 또는 방패대와 정찰대를 함께 편성하세요.'):model.phase==='paused'?'전투를 멈췄어요. 계속하기를 누르면 진격해요.':finished?'원정을 다시 시작하면 코인과 군대를 새로 준비해요.':active.length?boss&&boss.hp>0?'시전 예고를 살피고 회복과 후속 병력을 아껴 두세요.':'방패대가 앞장서고 정찰대가 마무리해요.':'대기 중인 병력의 출격 버튼을 눌러요.');
   text('siege-accessible',`비밀 원정 ${model.stageId}단계 ${model.stage.name}, ${model.phase}, 원정 코인 ${numberText(model.money)}, 출격 병력 ${active.length}명, 대기 병력 ${Object.values(model.reserve).reduce((a,b)=>a+b,0)}명, 마법사 타워 ${towers.filter(target=>target.hp>0).length}기, ${boss?`부활한 마법사 체력 ${numberText(boss.hp)}, 공격력 ${numberText(boss.attack)}, 상태 ${bossState?.phase}, `:''}저주 핵 체력 ${numberText(model.castle)}, 정답 ${model.correctAnswers}개.`);
   skin.sync();
  }

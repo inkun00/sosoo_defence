@@ -13,3 +13,12 @@ test('secret siege atlases preserve padding and use lossless alpha at the measur
   assert.equal(profile.quality,name==='siege-corrupted-citadel-collapse-v1'?84:80);
  }
 });
+
+test('human v2 atlases retain all sixteen cells and transparent weapon margins',async()=>{
+ const {imageProfile}=await import(profileModuleURL);
+ for(const role of ['guard','striker','scout']){
+  const profile=imageProfile(`siege-human-${role}-v2`);
+  assert.equal(profile.width,1024);assert.equal(profile.quality,84);
+  assert.equal(profile.alphaQuality,100);assert.equal(profile.trim,undefined);
+ }
+});

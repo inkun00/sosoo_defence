@@ -7,6 +7,7 @@ import {REVIVED_WIZARD,revivedWizard,newSiegeBossState,type SiegeBossState} from
 import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit} from './secret-siege-types';
 
 const EPSILON=1e-7,HEAL=600;
+export const SIEGE_RECRUIT_INCREMENT=10;
 const spec=(id:ArmyId)=>ARMY.find(army=>army.id===id);
 const enemyCooldowns:Record<Difficulty,readonly number[]>={practice:[2.1,2,1.9,1.8,1.65],standard:[1.6,1.55,1.5,1.4,1.2],challenge:[1.25,1.2,1.15,1.1,.95]};
 interface ShotOwner{sourceId:string;}
@@ -45,18 +46,26 @@ export class SecretSiege{
  get canRally(){return this.phase==='playing'&&!this.pendingQuestion&&this.ralliesLeft>0&&this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp);}
  get stars(){return this.phase==='won'?this.elapsed<=105&&this.wrongAnswers===0?3:this.elapsed<=150?2:1:0;}
  private interactive(){return this.phase==='ready'||this.phase==='playing';}
- requestRecruit(id:ArmyId):boolean{
+ recruitCost(id:ArmyId):number{const army=spec(id);return army&&Number.isSafeInteger(this.recruited)&&this.recruited>=0?Math.min(9990,army.cost+this.recruited*SIEGE_RECRUIT_INCREMENT):Infinity;}
+ private recruitmentAllowed(id:ArmyId):boolean{
   const army=spec(id);
-  if(!army||!this.interactive()||this.pendingQuestion||this.money<army.cost||this.armyCount>=SIEGE_ARMY_LIMIT)return false;
+  const cost=this.recruitCost(id);
+  if(!army||!this.interactive()||this.money<cost||this.armyCount>=SIEGE_ARMY_LIMIT)return false;
   // Keep a legal starting formation affordable. Otherwise spending the last
   // coin or filling every slot with scouts would strand the preparation UI.
   if(this.phase==='ready'){
    const scouts=this.reserve.scout+(id==='scout'?1:0),others=this.reserve.guard+this.reserve.striker+(id!=='scout'?1:0);
-   const stillNeeded=(scouts?0:450)+(others?0:900),slotsNeeded=(scouts?0:1)+(others?0:1);
-   if(this.money-army.cost<stillNeeded||SIEGE_ARMY_LIMIT-this.armyCount-1<slotsNeeded)return false;
+   const missing:ArmyId[]=[...(scouts?[]:['scout'] as const),...(others?[]:['striker'] as const)];
+   const stillNeeded=missing.reduce((sum,next,index)=>sum+spec(next)!.cost+(this.recruited+1+index)*SIEGE_RECRUIT_INCREMENT,0);
+   if(this.money-cost<stillNeeded||SIEGE_ARMY_LIMIT-this.armyCount-1<missing.length)return false;
   }
-  const key=`recruit:${id}:${this.money}`,cached=this.quotes.get(key);
-  const question=cached??{id:++this.questionSerial,kind:'recruit',armyId:id,a:this.money,b:army.cost,operation:'-',answer:this.money-army.cost} as const;
+  return true;
+ }
+ canRecruit(id:ArmyId):boolean{return !this.pendingQuestion&&this.recruitmentAllowed(id);}
+ requestRecruit(id:ArmyId):boolean{
+  if(!this.canRecruit(id))return false;
+  const cost=this.recruitCost(id),key=`recruit:${id}:${this.money}:${this.recruited}:${cost}`,cached=this.quotes.get(key);
+  const question=cached??{id:++this.questionSerial,kind:'recruit',armyId:id,a:this.money,b:cost,operation:'-',answer:this.money-cost} as const;
   this.quotes.set(key,question);this.pendingQuestion=question;return true;
  }
  requestRally():boolean{
@@ -72,8 +81,8 @@ export class SecretSiege{
   if(value===null||!learningValue(value)||value!==question.answer){this.wrongAnswers++;return false;}
   if(question.kind==='recruit'){
    const army=question.armyId?spec(question.armyId):undefined;
-   if(!army||this.money!==question.a||this.money<army.cost||this.armyCount>=SIEGE_ARMY_LIMIT)return false;
-   this.money-=army.cost;this.reserve[army.id]++;this.recruited++;
+   if(!army||this.money!==question.a||question.b!==this.recruitCost(army.id)||question.answer!==question.a-question.b||!this.recruitmentAllowed(army.id))return false;
+   this.money-=question.b;this.reserve[army.id]++;this.recruited++;
    this.events.push({type:'recruit',message:`${army.name} 모집 완료`});
   }else{
    if(this.ralliesLeft<=0||!this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp))return false;
@@ -124,7 +133,7 @@ export class SecretSiege{
    this.shoot('enemy',target.id,target.distance,unit.distance,target.attack,unit.id,.5);target.reload=target.cooldown*(enraged?.8:1);target.lastShot=this.elapsed;
   }
   if(this.elapsed>=SIEGE_DURATION-EPSILON)this.lose('시간이 다 되었어요. 군대의 구성과 출격 순서를 바꿔 다시 도전해요.');
-  else if(!this.units.some(unit=>unit.hp>0)&&Object.values(this.reserve).every(count=>count===0)&&this.money<Math.min(...ARMY.map(army=>army.cost)))this.lose('출격할 군대와 모집 코인이 모두 소진되었어요.');
+  else if(!this.units.some(unit=>unit.hp>0)&&Object.values(this.reserve).every(count=>count===0)&&this.money<Math.min(...ARMY.map(army=>this.recruitCost(army.id))))this.lose('출격할 군대와 모집 코인이 모두 소진되었어요.');
  }
  private advanceBoss(){
   const boss=this.boss,state=this.bossState;if(!boss||!state)return;

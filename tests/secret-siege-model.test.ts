@@ -48,18 +48,19 @@ test('취소한 같은 모집 견적은 ID와 비용을 유지하고 다른 모�
 test('정찰병과 다른 병력이 있어야 출전하고 준비 중 필수 병력의 코인과 자리를 남긴다',()=>{
  const game=new SecretSiege('standard');assert.equal(game.start(),false);recruit(game,'guard');assert.equal(game.start(),false);recruit(game,'scout');
  assert.ok(game.requestRecruit('striker'));assert.equal(game.start(),false);game.cancelQuestion();assert.ok(game.start());assert.equal(game.start(),false);
- const noScout=new SecretSiege('standard');recruit(noScout,'guard',7);assert.equal(noScout.requestRecruit('guard'),false,'정찰병 비용 0.45는 남겨야 한다');
+ const noScout=new SecretSiege('standard');recruit(noScout,'guard',7);assert.equal(noScout.requestRecruit('guard'),false,'다음에 인상될 정찰병 비용까지 남겨야 한다');
  recruit(noScout,'scout');assert.ok(noScout.start());
  const onlyScouts=new SecretSiege('standard');recruit(onlyScouts,'scout',11);assert.equal(onlyScouts.requestRecruit('scout'),false,'다른 병력 자리 하나를 남겨야 한다');
  recruit(onlyScouts,'striker');assert.ok(onlyScouts.start());
 });
 
 test('한도는 비축과 생존 병력의 합계 12명이고 돈은 부족해지면 음수가 되지 않는다',()=>{
- const game=new SecretSiege('standard');recruit(game,'guard',2);recruit(game,'striker',5);recruit(game,'scout',5);
- assert.equal(game.armyCount,12);assert.equal(game.money,750);assert.equal(game.requestRecruit('scout'),false);assert.ok(game.start());
- assert.ok(game.deploy('guard'));assert.equal(game.armyCount,12);assert.equal(game.reserve.guard,1);assert.equal(game.requestRecruit('scout'),false);
- const spent=new SecretSiege('standard');recruit(spent,'guard',3);recruit(spent,'striker',6);recruit(spent,'scout',2);
- assert.equal(spent.money,0);for(const army of ARMY)assert.equal(spent.requestRecruit(army.id),false);assert.equal(spent.money,0);
+ const game=new SecretSiege('standard');recruit(game,'guard');recruit(game,'scout',11);
+ assert.equal(game.armyCount,12);assert.equal(game.money,3090);assert.equal(game.requestRecruit('scout'),false);assert.ok(game.start());
+ assert.ok(game.deploy('guard'));assert.equal(game.armyCount,12);assert.equal(game.reserve.guard,0);assert.equal(game.requestRecruit('scout'),false);
+ const spent=new SecretSiege('standard');recruit(spent,'guard',3);recruit(spent,'striker',4);recruit(spent,'scout',2);
+ while(spent.canRecruit('scout'))recruit(spent,'scout');const money=spent.money;
+ assert.ok(money>=0&&money<spent.recruitCost('scout'));for(const army of ARMY)assert.equal(spent.requestRecruit(army.id),false);assert.equal(spent.money,money);
 });
 
 test('출격은 전투 시작 후 실제 비축만 소모하며 전체 병종에 0.65초 간격을 적용한다',()=>{
@@ -129,8 +130,8 @@ test('네 타워 각각의 비행 중인 공격은 문제와 일시 정지에 �
 });
 
 test('다수 아군의 동시 발사는 남은 체력을 예약해 초과 피해 경쟁 없이 정확히 처리한다',()=>{
- const game=new SecretSiege('standard');recruit(game,'guard',3);recruit(game,'striker',6);recruit(game,'scout',2);assert.ok(game.start());
- const order:ArmyId[]=[...Array<ArmyId>(3).fill('guard'),...Array<ArmyId>(6).fill('striker'),...Array<ArmyId>(2).fill('scout')];let next=0,totalDamage=0,hits=0;
+ const game=new SecretSiege('standard');recruit(game,'guard',3);recruit(game,'striker',4);recruit(game,'scout',2);assert.ok(game.start());
+ const order:ArmyId[]=[...Array<ArmyId>(3).fill('guard'),...Array<ArmyId>(4).fill('striker'),...Array<ArmyId>(2).fill('scout')];let next=0,totalDamage=0,hits=0;
  const firingTowers=new Set<number>(),destroyed:string[]=[];
  for(let tick=0;tick<1800&&game.phase==='playing';tick++){
   if(next<order.length&&game.deploy(order[next]))next++;
@@ -148,8 +149,8 @@ test('다수 아군의 동시 발사는 남은 체력을 예약해 초과 피해
 });
 
 test('파괴된 타워가 이미 발사한 공격도 뒤늦게 아군 체력을 깎지 않는다',()=>{
- const game=new SecretSiege('challenge');recruit(game,'guard',3);recruit(game,'striker',6);recruit(game,'scout',2);game.start();
- const order:ArmyId[]=['guard','guard','guard','striker','striker','striker','striker','striker','striker','scout','scout'];let next=0;
+ const game=new SecretSiege('challenge');recruit(game,'guard',3);recruit(game,'striker',4);recruit(game,'scout',2);game.start();
+ const order:ArmyId[]=['guard','guard','guard','striker','striker','striker','striker','scout','scout'];let next=0;
  for(let tick=0;tick<500&&game.targets[0].hp>0;tick++){if(next<order.length&&game.deploy(order[next]))next++;game.step(.1);}
  assert.equal(game.targets[0].hp,0);assert.ok(game.units.every(unit=>unit.distance<300));
  const total=game.units.reduce((sum,unit)=>sum+unit.hp,0);game.events.length=0;advance(game,.6);
@@ -191,8 +192,8 @@ test('난이도는 표시되는 체력과 공격 소수는 유지하면서 적 �
 });
 
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 합법적인 균형 편성과 정확한 계산만으로 성을 파괴할 수 있다`,()=>{
- const result=simulateSecretSiege(difficulty,{name:'검증',guard:3,striker:6,scout:2,order:'guard-first',rally:false});
- assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,0);assert.equal(result.deployed,11);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
+ const result=simulateSecretSiege(difficulty,{name:'검증',guard:3,striker:4,scout:2,order:'guard-first',rally:false});
+ assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,1440);assert.equal(result.deployed,9);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
  assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);assert.ok(result.enemyShots>10);assert.ok(result.armyDamage>0);
 });
 

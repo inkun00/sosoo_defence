@@ -838,6 +838,48 @@
       "width": 768
     }
   },
+  "siege-human-guard-v2": {
+    "url": "/assets/dungeon/siege-human-guard-v2.7e6aca922d85.webp",
+    "sourceHash": "4beff7214baf499d74bf3d85d9679dda4bab4a7e89e554dc405e45b7aa290e0e",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 2082343,
+    "bytes": 329868,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
+  "siege-human-scout-v2": {
+    "url": "/assets/dungeon/siege-human-scout-v2.536ab9612fe8.webp",
+    "sourceHash": "f419925c5f62908dfba54639b8c17b9c75bab7cb3b2824c40f5502495c742d02",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 1763132,
+    "bytes": 321704,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
+  "siege-human-striker-v2": {
+    "url": "/assets/dungeon/siege-human-striker-v2.5f0fadfce7f9.webp",
+    "sourceHash": "1fff6e80784289fb81ef4944884e5dde3cf3ca58fee73020aa48dc57e7cc1028",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 1566348,
+    "bytes": 289480,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
   "slime": {
     "url": "/assets/dungeon/slime.4f87fcca6e41.webp",
     "sourceHash": "797f09e959e83cac1b73cd8595af064028d11c10fd8534cad37ba9d18c9cec48",

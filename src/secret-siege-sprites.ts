@@ -1,9 +1,14 @@
 import {artURL} from './art';
 import {heroSpriteSheet,HERO_SPRITE_CELL} from './hero-sprite';
+import humanAtlases from './secret-siege-human-atlas.json';
+import {siegeHumanFramePath,type SiegeHumanAtlas} from './secret-siege-human-atlas';
+import type {ArmyId} from './secret-siege-types';
 
 export const SIEGE_ARMY_WALK='siege-human-army-walk-v1';
 export const SIEGE_ARMY_ATTACK='siege-human-army-attack-v1';
 export const SIEGE_FORTIFICATIONS='siege-corrupted-fortifications-v1';
+export const SIEGE_HUMAN_IDS:readonly ArmyId[]=['guard','striker','scout'];
+export function siegeHumanAtlas(id:ArmyId):SiegeHumanAtlas{return humanAtlases[id] as SiegeHumanAtlas;}
 type Frame=ReturnType<typeof heroSpriteSheet>['rows'][number][number];
 const viewports=new Map<string,{scale:number;x:number;y:number}>();
 let portraitSerial=0;
@@ -46,7 +51,7 @@ export function drawSiegeSpriteAtlas(context:CanvasRenderingContext2D,sheet:stri
 }
 
 export function siegeArmySpriteHTML(row:number,className:string){
- const sheet=SIEGE_ARMY_WALK,source=heroSpriteSheet(sheet),frame=source.rows[row][0],viewport=siegeSpriteViewport(sheet,row),unit=768/source.width,scale=viewport.scale*unit,id='siege-human-clip-'+(++portraitSerial);
- const points=frame.polygon??[[frame.x,frame.y],[frame.x+frame.width,frame.y],[frame.x+frame.width,frame.y+frame.height],[frame.x,frame.y+frame.height]],path='M'+points.map(point=>point.join(' ')).join('L')+'Z';
- return `<span class="${className}" aria-hidden="true"><svg class="hero-sprite siege-army-sprite" data-hero-sheet="${sheet}" data-hero-row="${row}" viewBox="0 0 ${HERO_SPRITE_CELL} ${HERO_SPRITE_CELL}" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${path}"/></clipPath></defs><g transform="matrix(${scale} 0 0 ${scale} ${viewport.x*viewport.scale} ${(viewport.y/unit-row*source.height/3)*scale})"><image href="${artURL(sheet)}" x="0" y="0" width="${source.width}" height="${source.height}" clip-path="url(#${id})"/></g></svg></span>`;
+ const army=SIEGE_HUMAN_IDS[row];if(!army)throw new RangeError('Unknown human army row: '+row);
+ const source=siegeHumanAtlas(army),frame=source.frames[0],id='siege-human-clip-'+(++portraitSerial);
+ return `<span class="${className}" aria-hidden="true"><svg class="hero-sprite siege-army-sprite" data-hero-sheet="${source.texture}" data-hero-row="${row}" data-human-frame="0" viewBox="${frame.x} ${frame.y} ${frame.width} ${frame.height}" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path d="${siegeHumanFramePath(frame)}"/></clipPath></defs><image href="${artURL(source.texture)}" x="0" y="0" width="${source.sourceWidth}" height="${source.sourceHeight}" clip-path="url(#${id})"/></svg></span>`;
 }

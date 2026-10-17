@@ -7,7 +7,7 @@ import {learningValue,numberText} from '../src/math';
 import {simulateSecretSiege} from '../tools/simulate-secret-siege';
 import type {ArmyId} from '../src/secret-siege-types';
 
-const balanced={name:'최종 결전',guard:3,striker:6,scout:2,order:'guard-first',rally:true} as const;
+const balanced={name:'최종 결전',guard:4,striker:4,scout:2,order:'guard-first',rally:true,deployGap:1.6} as const;
 function recruit(game:SecretSiege,id:ArmyId,count=1){for(let index=0;index<count;index++){assert.ok(game.requestRecruit(id));assert.ok(game.answer(numberText(game.pendingQuestion!.answer,2)));}}
 function advance(game:SecretSiege,seconds:number){for(let tick=0;tick<Math.round(seconds*100);tick++)game.step(.01);}
 function prepared(){const game=new SecretSiege('standard',10);recruit(game,'guard');recruit(game,'striker');recruit(game,'scout');assert.ok(game.start());assert.ok(game.deploy('guard'));return game;}
@@ -90,11 +90,11 @@ test('성을 0으로 바꾸더라도 살아 있는 보스를 건너뛰어 승리
 
 test('보스의 동시 피격은 체력을 예약하고 네 타워·보스·성이 모두 쓰러져야 승리한다',()=>{
  const game=new SecretSiege('standard',10);for(const id of ['guard','striker','scout'] as const)recruit(game,id,balanced[id]);assert.ok(game.start());
- const order:ArmyId[]=[...Array<ArmyId>(3).fill('guard'),...Array<ArmyId>(6).fill('striker'),...Array<ArmyId>(2).fill('scout')];
- let next=0,lastHeal=-999,total=0;const destroyed:string[]=[];
+ const order:ArmyId[]=[...Array<ArmyId>(4).fill('guard'),...Array<ArmyId>(4).fill('striker'),...Array<ArmyId>(2).fill('scout')];
+ let next=0,lastHeal=-999,total=0,nextDeploy=0;const destroyed:string[]=[];
  for(let tick=0;tick<1800&&game.phase==='playing';tick++){
-  if(next<order.length&&game.deploy(order[next]))next++;
-  if(game.canRally&&game.bossState!.lastSpellAt>lastHeal){assert.ok(game.requestRally());assert.ok(game.answer(numberText(game.pendingQuestion!.answer,2)));lastHeal=game.elapsed;}
+  if(next<order.length&&game.elapsed>=nextDeploy&&game.deploy(order[next])){next++;nextDeploy=game.elapsed+1.6;}
+  if(game.canRally&&game.bossState!.spellCount>=[1,2,4][3-game.ralliesLeft]&&game.bossState!.lastSpellAt>lastHeal&&game.elapsed>=game.bossState!.lastSpellAt+.5){assert.ok(game.requestRally());assert.ok(game.answer(numberText(game.pendingQuestion!.answer,2)));lastHeal=game.elapsed;}
   game.step(.1);
   for(const event of game.events.splice(0)){
    if(event.type==='hit'&&event.friendly){total+=event.damage!;assert.ok([10,200,750].includes(event.damage!));if(event.targetId==='wizard-castle')assert.equal(game.boss!.hp,0);}
@@ -109,15 +109,15 @@ test('보스의 동시 피격은 체력을 예약하고 네 타워·보스·성�
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 기본 무회복은 실패하고 마법 후 회복을 아끼면 실제 9.90 편성으로 클리어한다`,()=>{
  const idle=simulateSecretSiege(difficulty,{...balanced,rally:false},10);assert.equal(idle.phase,'lost');assert.equal(idle.alive,0);
  const tooEarly=simulateSecretSiege(difficulty,balanced,10);assert.equal(tooEarly.phase,'lost');assert.equal(tooEarly.rallies,3);
- for(const plan of [{...balanced,deployGap:1},{...balanced,guard:3,striker:5,scout:4,deployGap:.7}])for(const dt of [.1,.05,1/60]){
-  const timed=simulateSecretSiege(difficulty,{...plan,rallyTiming:'boss-spell',rallyDelay:.5},10,dt);
+ for(const rallyDelay of [0,.5,1])for(const dt of [.1,.05,1/60]){
+  const timed=simulateSecretSiege(difficulty,{...balanced,rallyTiming:'boss-spell',rallySpells:[1,2,4],rallyDelay},10,dt);
   assert.equal(timed.phase,'won',`dt=${dt}`);assert.equal(timed.boss,0);assert.equal(timed.castle,0);assert.equal(timed.rallies,3);assert.equal(timed.towersDestroyed,4);assert.ok(timed.spells>=4);assert.ok(timed.elapsed<150);assert.ok(timed.alive>0);
  }
 });
 
-test('1~9단계 균형 편성은 발사체 20% 가속 후에도 모두 승리하고 결정적 전투 결과를 유지한다',()=>{
- const expected={practice:[[40.8,23,4750,11],[37.6,23,4900,11],[40.9,28,7020,11],[38.1,24,6300,11],[40.6,32,9140,10],[37.9,27,7650,11],[45.1,33,9880,10],[45.6,35,11280,10],[42.1,33,10600,10]],standard:[[40.8,31,6150,11],[37.6,30,6570,11],[40.9,36,8920,10],[38.1,31,8260,11],[40.6,42,11040,10],[37.9,34,9650,10],[45.3,43,12670,10],[45.6,45,14160,10],[42.1,41,14080,10]],challenge:[[40.8,37,7450,11],[37.6,37,7750,11],[40.9,43,10620,10],[38.1,41,10110,10],[40.6,51,13930,10],[37.9,44,12050,10],[52.3,62,19800,9],[51.6,64,20150,9],[42.1,52,16610,8]]};
+test('1~9단계의 합법적인 9명 편성은 모집가 인상 후에도 모두 승리하고 결정적 전투 결과를 유지한다',()=>{
+ const expected={practice:[[38.4,22,4450,9],[44.1,27,5550,9],[38.6,26,6680,9],[39.7,26,6170,9],[38.5,30,8680,9],[41.1,30,9300,8],[43.9,33,9880,8],[47.4,37,12110,8],[45.1,38,12800,8]],standard:[[38.4,29,5750,9],[44.1,34,7060,9],[38.6,34,8520,9],[39.7,32,7770,9],[39.7,41,11040,8],[41.1,42,12000,8],[44.1,42,12670,8],[48.7,51,15750,7],[51.1,53,18660,7]],challenge:[[38.4,35,7050,9],[44.1,43,8650,8],[39.8,42,10620,8],[40.9,43,10470,8],[39.7,50,13930,8],[41.1,52,14650,7],[44.1,52,15600,7],[54.7,71,22380,5],[51.1,66,22930,5]]};
  for(const difficulty of ['practice','standard','challenge'] as const)for(let index=0;index<9;index++){
-  const result=simulateSecretSiege(difficulty,balanced,index+1);assert.equal(result.phase,'won');assert.deepEqual([result.elapsed,result.enemyShots,result.armyDamage,result.alive],expected[difficulty][index]);
+  const result=simulateSecretSiege(difficulty,{...balanced,guard:3,deployGap:.7},index+1);assert.equal(result.phase,'won');assert.deepEqual([result.elapsed,result.enemyShots,result.armyDamage,result.alive],expected[difficulty][index]);
  }
 });

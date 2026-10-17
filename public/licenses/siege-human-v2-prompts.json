@@ -1,0 +1,92 @@
+{
+  "tool": "built-in OpenAI image_gen",
+  "created": "2026-10-17",
+  "transparent_background": true,
+  "preservation": "Original generated PNG pixels and alpha retained unchanged. Each of 48 silhouettes has measured ownership masks and shared feet registration; renderer plays eight distance-based walk frames and eight one-shot attack frames.",
+  "assets": [
+    {
+      "role": "guard",
+      "file": "public/assets/dungeon/siege-human-guard-v2.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-7667588f-ebd0-4f5f-b488-c168e1fde4d5.png",
+      "columns": 4,
+      "rows": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production animation sprite sheet for a Korean medieval fantasy strategy game. Make a SQUARE transparent RGBA raster atlas, EXACTLY 4 equally sized columns by 4 equally sized rows, 16 isolated full-body sprites, read left-to-right then top-to-bottom. One identical HUMAN adult soldier identity in every cell. Hand-painted polished fantasy game art, chunky clear forms, steel/cloth/leather textures, warm highlights, dark crisp outlines, readable at 80px tall, three-quarter elevated camera, facing screen RIGHT slightly toward viewer. Same camera, body proportions, armor, weapons, lighting and body scale across ALL frames. Common fixed body center at 48% of EACH cell width, boots at 88% of EACH cell height. Entire body and every weapon tip fit safely INSIDE each cell with transparent gutters at least 8% on all sides. No neighbor overlap. NO labels, numbers, text, grid lines, cell borders, background scenery, ground, cast shadows, gradient wash, watermark, duplicate limbs or other characters. True transparent background, no painted checkerboard. All 16 poses MUST be visibly different animation poses, NOT repeated portraits. TOP TWO ROWS = 8 sequential WALK cycle frames: left heel contact, left weight down, right foot passing, right foot lifted forward, right heel contact, right weight down, left foot passing, left foot lifted forward. The front/back legs visibly alternate and the last frame loops smoothly into the first. Subtle cloak/arm follow-through, steady head/torso scale, no jumping. BOTTOM TWO ROWS = 8 sequential ATTACK frames, a smooth readable action from ready through anticipation, extension, strike, follow-through, recovery and back to ready. Body weight follows the action and feet remain grounded. Use generous space for full weapon extension. Subject: a sturdy HUMAN KINGDOM SHIELD INFANTRY soldier with a visible determined tan face under an open steel helmet, silver plate armor, dark navy blue tabard and small blue cloak, gold edging, broad angular blue shield in LEFT hand and short steel sword in RIGHT. Guard walking uses short weighted strides with shield held steady and sword lowered. Guard attack: 8 frames show sword draw-back, shoulder windup, forward body weight, decisive diagonal sword slash to the right with shield protecting chest, follow-through, retract, recover, ready. No glowing magic arcs or separate VFX. Keep the same shield in the same left hand, sword in the same right hand throughout. Original human soldier, not a golem or monster."
+    },
+    {
+      "role": "striker",
+      "file": "public/assets/dungeon/siege-human-striker-v2.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-1021f5d3-f26f-495c-854d-4c42fc7bdba8.png",
+      "columns": 4,
+      "rows": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production animation sprite sheet for a Korean medieval fantasy strategy game. Make a SQUARE transparent RGBA raster atlas, EXACTLY 4 equally sized columns by 4 equally sized rows, 16 isolated full-body sprites, read left-to-right then top-to-bottom. One identical HUMAN adult soldier identity in every cell. Hand-painted polished fantasy game art, chunky clear forms, steel/cloth/leather textures, warm highlights, dark crisp outlines, readable at 80px tall, three-quarter elevated camera, facing screen RIGHT slightly toward viewer. Same camera, body proportions, armor, weapons, lighting and body scale across ALL frames. Common fixed body center at 48% of EACH cell width, boots at 88% of EACH cell height. Entire body and every weapon tip fit safely INSIDE each cell with transparent gutters at least 8% on all sides. No neighbor overlap. NO labels, numbers, text, grid lines, cell borders, background scenery, ground, cast shadows, gradient wash, watermark, duplicate limbs or other characters. True transparent background, no painted checkerboard. All 16 poses MUST be visibly different animation poses, NOT repeated portraits. TOP TWO ROWS = 8 sequential WALK cycle frames: left heel contact, left weight down, right foot passing, right foot lifted forward, right heel contact, right weight down, left foot passing, left foot lifted forward. The front/back legs visibly alternate and the last frame loops smoothly into the first. Subtle cloak/arm follow-through, steady head/torso scale, no jumping. BOTTOM TWO ROWS = 8 sequential ATTACK frames, a smooth readable action from ready through anticipation, extension, strike, follow-through, recovery and back to ready. Body weight follows the action and feet remain grounded. Use generous space for full weapon extension. Subject: a HUMAN KINGDOM SPEAR ASSAULT infantry soldier, visible determined face under a simple steel brimmed helmet, blue and cream cloth tunic over chainmail, brown leather belt and boots, carrying a long STEEL SPEAR with BOTH hands. No shield. Walking has clear long alternating strides, spear carried diagonally forward and level, cloth moves gently. Attack: 8 frames show a convincing grounded two-handed spear thrust: ready, draw spear back, bend back knee, thrust forward, full extension to RIGHT, retract, step back, ready. Long spear must be fully visible inside every cell, consistent length and same hands all frames. No extra spears, no magical VFX. Original human soldier, not a golem or monster."
+    },
+    {
+      "role": "scout",
+      "file": "public/assets/dungeon/siege-human-scout-v2.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-053e2288-f693-49be-91ff-2600c0e5704c.png",
+      "columns": 4,
+      "rows": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production animation sprite sheet for a Korean medieval fantasy strategy game. Make a SQUARE transparent RGBA raster atlas, EXACTLY 4 equally sized columns by 4 equally sized rows, 16 isolated full-body sprites, read left-to-right then top-to-bottom. One identical HUMAN adult soldier identity in every cell. Hand-painted polished fantasy game art, chunky clear forms, steel/cloth/leather textures, warm highlights, dark crisp outlines, readable at 80px tall, three-quarter elevated camera, facing screen RIGHT slightly toward viewer. Same camera, body proportions, armor, weapons, lighting and body scale across ALL frames. Common fixed body center at 48% of EACH cell width, boots at 88% of EACH cell height. Entire body and every weapon tip fit safely INSIDE each cell with transparent gutters at least 8% on all sides. No neighbor overlap. NO labels, numbers, text, grid lines, cell borders, background scenery, ground, cast shadows, gradient wash, watermark, duplicate limbs or other characters. True transparent background, no painted checkerboard. All 16 poses MUST be visibly different animation poses, NOT repeated portraits. TOP TWO ROWS = 8 sequential WALK cycle frames: left heel contact, left weight down, right foot passing, right foot lifted forward, right heel contact, right weight down, left foot passing, left foot lifted forward. The front/back legs visibly alternate and the last frame loops smoothly into the first. Subtle cloak/arm follow-through, steady head/torso scale, no jumping. BOTTOM TWO ROWS = 8 sequential ATTACK frames, a smooth readable action from ready through anticipation, extension, strike, follow-through, recovery and back to ready. Body weight follows the action and feet remain grounded. Use generous space for full weapon extension. Subject: a nimble adult HUMAN KINGDOM SCOUT ARCHER, visible focused warm human face, brown hair in a tied short ponytail, teal hood pulled back, teal short cloak, cream sleeves, fitted brown leather armor and boots, short wooden recurved bow in LEFT hand and back quiver. No helmet or shield. Walking is a light alternating stride with bow lowered at the side and a small cloak sway. Attack: 8 frames show nocking an arrow, raising the bow to the RIGHT, pulling the string with RIGHT hand, full draw, controlled release, follow-through, lowering, ready. Same bow length and identity every frame, anatomically coherent arms/hands, no detached or flying arrows outside a cell, no magical VFX. Original human archer, not a golem or monster."
+    }
+  ]
+}

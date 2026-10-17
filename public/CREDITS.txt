@@ -266,3 +266,14 @@ siege-corrupted-citadel-collapse-v1.png. Audited crops and shared frame anchors
 power portraits and battlefield animations; deployed as optimized hashed WebP.
 Exact prompts and reference/source paths: licenses/secret-siege-v1-prompts.json
 (source-only, excluded from deployment).
+
+SECRET SIEGE HUMAN ARMY ANIMATION V2 (2026-10-17)
+Three original human soldier atlases generated with the built-in OpenAI
+image_gen tool: shield infantry, spear infantry and scout archer. Each transparent
+4-by-4 sheet contains eight walking and eight attacking poses, 48 poses total.
+Unchanged PNG sources: assets/dungeon/siege-human-guard-v2.png,
+siege-human-striker-v2.png and siege-human-scout-v2.png. Audited crop masks,
+fixed foot anchors and a common scale preserve weapon reach across frames.
+The game loads optimized hashed WebP atlases, advances walking by distance and
+plays attacks once per actual shot. Exact prompts and original output paths:
+licenses/siege-human-v2-prompts.json (source-only, excluded from deployment).
