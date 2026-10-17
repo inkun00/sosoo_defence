@@ -2,7 +2,7 @@ import {campaignCompletion} from './campaign-score';
 import {FINAL_STAGE} from './levels';
 import {ARMY,SIEGE_DURATION,type ArmyId} from './secret-siege-types';
 import {SIEGE_STAGE_COUNT,siegeStage} from './secret-siege-stages';
-import {INITIAL_COINS,STARTER_BUDGET,SIEGE_COIN_LIMIT,validSiegeCoins,siegeResearched,type SiegeEconomy} from './secret-siege-research';
+import {INITIAL_COINS,STARTER_BUDGET,validSiegeCoins,siegeResearched,type SiegeEconomy} from './secret-siege-research';
 import type {Save} from './save';
 
 export interface SecretSiegeStageProgress{stage:number;stars:number;bestSeconds:number;victories:number;}
@@ -14,6 +14,8 @@ const seconds=(value:unknown):value is number=>typeof value==='number'&&Number.i
 const empty=():SecretSiegeProgress=>({version:3,resumeStage:1,stages:[],cleared:false,endingSeen:false,coins:INITIAL_COINS,researched:[],revision:0});
 const nextStage=(progress:SecretSiegeProgress):number=>Math.min(progress.stages.length+1,SIEGE_STAGE_COUNT);
 const revision=(value:unknown):value is number=>whole(value,0,Number.MAX_SAFE_INTEGER-1);
+const validResearch=(value:unknown):value is readonly ArmyId[]=>Array.isArray(value)&&value.every(id=>ARMY.some(spec=>spec.id===id&&spec.researchCost>0));
+const sameResearch=(a:readonly ArmyId[],b:readonly ArmyId[])=>a.length===b.length&&a.every((id,index)=>id===b[index]);
 
 /** Reaching stage 11, or defeating its wizard before the wave is won, is insufficient. */
 export function secretSiegeUnlocked(save:Eligibility):boolean{
@@ -46,25 +48,36 @@ export function restoreSecretSiegeProgress(raw:unknown,save:Eligibility):SecretS
  progress.endingSeen=progress.cleared&&value.endingSeen===true;
  // Previous versions never saved a wallet or permanent elite research. Keep
  // their victories, but do not invent historical rewards or free unlocks.
- // A damaged persisted economy also gets the starting checkpoint, so a broken
- // local save cannot trap the campaign without enough coins to form an army.
- if(value.version===3&&validSiegeCoins(value.coins)&&value.coins>=STARTER_BUDGET&&revision(value.revision)){
+ // A damaged persisted economy gets a fresh fallback. A valid zero or small
+ // balance remains exactly as saved; defeat and reload never refund training.
+ if(value.version===3&&validSiegeCoins(value.coins)&&revision(value.revision)){
   progress.coins=value.coins;progress.researched=siegeResearched(value.researched);progress.revision=value.revision;
  }
  return progress;
 }
 
-/** A detached expedition checkpoint; training and an unfinished battle cannot spend it. */
+/** A detached snapshot of the actual, persistently shared expedition wallet. */
 export function secretSiegeEconomy(save:ProgressSave):SiegeEconomy&{revision:number}{
  const progress=restoreSecretSiegeProgress(save.secretSiege,save)??empty();
  return {coins:progress.coins,researched:[...progress.researched],revision:progress.revision};
 }
 
+/** Compare and swap each real debit or credit, without resetting spent coins. */
+export function persistSecretSiegeEconomy(save:Save,economy:SiegeEconomy&{revision:number}):boolean{
+ if(!secretSiegeUnlocked(save)||!validSiegeCoins(economy.coins)||!revision(economy.revision)||!validResearch(economy.researched))return false;
+ const progress=restoreSecretSiegeProgress(save.secretSiege,save)??empty(),ids=siegeResearched(economy.researched);
+ if(economy.revision!==progress.revision||progress.researched.some(id=>!ids.includes(id)))return false;
+ if(progress.coins===economy.coins&&sameResearch(progress.researched,ids))return true;
+ if(progress.revision>=Number.MAX_SAFE_INTEGER-1)return false;
+ progress.coins=economy.coins;progress.researched=ids;progress.revision++;
+ save.secretSiege=progress;return true;
+}
+
 /** Research is permanent, paid once, and must leave a viable basic formation budget. */
-export function purchaseSecretSiegeResearch(save:Save,id:ArmyId):boolean{
+export function purchaseSecretSiegeResearch(save:Save,id:ArmyId,reserve=STARTER_BUDGET):boolean{
  if(!secretSiegeUnlocked(save))return false;
  const spec=ARMY.find(army=>army.id===id),progress=restoreSecretSiegeProgress(save.secretSiege,save)??empty();
- if(!spec||!validSiegeCoins(spec.researchCost)||spec.researchCost<=0||progress.researched.includes(id)||progress.coins-spec.researchCost<STARTER_BUDGET||progress.revision>=Number.MAX_SAFE_INTEGER-1)return false;
+ if(!spec||!validSiegeCoins(reserve)||!validSiegeCoins(spec.researchCost)||spec.researchCost<=0||progress.researched.includes(id)||progress.coins-spec.researchCost<reserve||progress.revision>=Number.MAX_SAFE_INTEGER-1)return false;
  progress.coins-=spec.researchCost;progress.researched=siegeResearched([...progress.researched,id]);progress.revision++;
  save.secretSiege=progress;return true;
 }
@@ -85,16 +98,19 @@ export function selectSecretSiegeStage(save:Save,stage:number):boolean{
 }
 
 /** Bonus records stay separate from the eleven-stage campaign score and account XP. */
-export function recordSecretSiegeVictory(save:Save,result:{phase:string;stars:number;elapsed:number;stageId:number;money?:number;economyRevision?:number;earnedCoins?:number}):boolean{
+export function recordSecretSiegeVictory(save:Save,result:{phase:string;stars:number;elapsed:number;stageId:number;money?:number;economyRevision?:number;earnedCoins?:number;researched?:readonly ArmyId[]}):boolean{
  if(result.phase!=='won'||!whole(result.stars,1,3)||!seconds(result.elapsed)||!secretSiegeStageUnlocked(save,result.stageId))return false;
  const progress=restoreSecretSiegeProgress(save.secretSiege,save)??empty(),previous=progress.stages[result.stageId-1];
  // Revision comparison makes a duplicate callback or an older browser tab a
  // no-op, including its record update. No reward is inferred from stage stars.
- const settlesEconomy=result.money!==undefined||result.economyRevision!==undefined||result.earnedCoins!==undefined;
+ const settlesEconomy=result.money!==undefined||result.economyRevision!==undefined||result.earnedCoins!==undefined||result.researched!==undefined;
  if(settlesEconomy){
   const reward=siegeStage(result.stageId).towerRewards.reduce((sum,coins)=>sum+coins,0);
-  if(!validSiegeCoins(result.money)||result.money<STARTER_BUDGET||!revision(result.economyRevision)||result.economyRevision!==progress.revision||result.earnedCoins!==reward||result.money>Math.min(SIEGE_COIN_LIMIT,progress.coins+reward)||progress.revision>=Number.MAX_SAFE_INTEGER-1)return false;
-  progress.coins=result.money;progress.revision++;
+  if(!validSiegeCoins(result.money)||result.money!==progress.coins||!revision(result.economyRevision)||result.economyRevision!==progress.revision||result.earnedCoins!==reward||progress.revision>=Number.MAX_SAFE_INTEGER-1)return false;
+  if(result.researched!==undefined&&(!validResearch(result.researched)||!sameResearch(siegeResearched(result.researched),progress.researched)))return false;
+  // Training and tower rewards have already been persisted when they happened.
+  // Victory records the result once; it never adds or replaces currency again.
+  progress.revision++;
  }
  const record:SecretSiegeStageProgress={stage:result.stageId,stars:Math.max(previous?.stars??0,result.stars),bestSeconds:Math.min(previous?.bestSeconds??Infinity,result.elapsed),victories:Math.min(1000000,(previous?.victories??0)+1)};
  if(previous)progress.stages[result.stageId-1]=record;else progress.stages.push(record);

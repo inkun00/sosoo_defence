@@ -20,18 +20,21 @@ test('research prices are one-time development costs, separately from each soldi
  assert.equal(game.canResearch('knight'),false);assert.equal(game.research('knight'),false);assert.equal(game.money,7480);
  assert.equal(game.canResearch('guard'),false);assert.equal(game.research('guard'),false);
  assert.ok(game.armyUnlocked('knight'));assert.equal(game.recruitCost('knight'),1800);assert.equal(game.reserve.knight,0);assert.equal(game.recruited,0);assert.equal(game.correctAnswers,0);
- assert.deepEqual(game.initialEconomy,{coins:7480,researched:['knight'],revision:2});
+ assert.deepEqual(game.currentEconomy,{coins:7480,researched:['knight'],revision:2});
+ assert.deepEqual(game.initialEconomy,{coins:15480,researched:[],revision:2});
 });
 
-test('research protects the full basic training budget and credits already paid preparation training toward it',()=>{
+test('research protects actual unspent training funds and never counts spent training as refundable money',()=>{
  const fresh=new SecretSiege('standard');assert.equal(fresh.canResearch('knight'),false);assert.equal(fresh.research('knight'),false);assert.equal(fresh.money,9900);
  const below=new SecretSiege('standard',1,{coins:15470,researched:[]});assert.equal(below.canResearch('knight'),false);
- const game=new SecretSiege('standard',1,{coins:15480,researched:[],revision:7});trainBasicArmy(game);assert.equal(game.money,8000);
- assert.equal(game.recruited,8);assert.equal(game.canResearch('knight'),true);assert.ok(game.research('knight'));assert.equal(game.money,0);
- assert.equal(game.armyCount,8);assert.equal(game.recruited,8);assert.ok(game.start(),'a trained army is not charged a second reserve');
- const checkpoint=game.initialEconomy;assert.deepEqual(checkpoint,{coins:STARTER_BUDGET,researched:['knight'],revision:7});
- game.phase='lost';const retry=new SecretSiege('standard',1,checkpoint);assert.equal(retry.money,STARTER_BUDGET);assert.equal(retry.recruited,0);assert.equal(retry.armyCount,0);assert.ok(retry.armyUnlocked('knight'));
- trainBasicArmy(retry);assert.equal(retry.money,0);assert.ok(retry.start(),'rollback buys exactly the same basic eight troops without free coins');
+ const spent=new SecretSiege('standard',1,{coins:15480,researched:[]});trainBasicArmy(spent);assert.equal(spent.money,8000);assert.equal(spent.canResearch('knight'),false);assert.equal(spent.research('knight'),false);
+ const game=new SecretSiege('standard',1,{coins:22960,researched:[],revision:7});trainBasicArmy(game);assert.equal(game.money,15480);
+ assert.equal(game.recruited,8);assert.equal(game.canResearch('knight'),true);assert.ok(game.research('knight'));assert.equal(game.money,7480);
+ assert.equal(game.armyCount,8);assert.equal(game.recruited,8);assert.ok(game.start());
+ const retained=game.currentEconomy;assert.deepEqual(retained,{coins:7480,researched:['knight'],revision:7});
+ assert.deepEqual(game.initialEconomy,{coins:22960,researched:[],revision:7});
+ game.phase='lost';const retry=new SecretSiege('standard',1,retained);assert.equal(retry.money,7480);assert.equal(retry.recruited,0);assert.equal(retry.armyCount,0);assert.ok(retry.armyUnlocked('knight'));
+ trainBasicArmy(retry);assert.equal(retry.money,0);const reload=new SecretSiege('standard',1,retry.currentEconomy);assert.equal(reload.money,0,'zero is retained instead of refunding spent training or research');
 });
 
 test('research requires preparation with no active question, and terminal, battle and paused states never debit coins',()=>{
@@ -39,6 +42,46 @@ test('research requires preparation with no active question, and terminal, battl
  assert.ok(game.requestRecruit('guard'));const q=game.pendingQuestion!;assert.equal(game.canResearch('knight'),false);assert.equal(game.research('knight'),false);assert.equal(game.pendingQuestion,q);assert.equal(game.money,50000);game.cancelQuestion();
  for(const phase of ['playing','paused','won','lost'] as SiegePhase[]){game.phase=phase;assert.equal(game.canResearch('knight'),false);assert.equal(game.research('knight'),false);assert.equal(game.money,50000);assert.deepEqual(game.researched,[]);}
  game.phase='ready';assert.equal(game.canResearch('unknown' as ArmyId),false);assert.equal(game.research('unknown' as ArmyId),false);assert.ok(game.research('knight'));
+});
+
+test('training commits the proposed wallet before changing a troop and storage rejection keeps the question retryable',()=>{
+ const game=new SecretSiege('standard',1,{coins:9900,researched:['knight'],revision:4});assert.ok(game.requestRecruit('guard'));const q=game.pendingQuestion!;
+ const before=JSON.stringify({economy:game.currentEconomy,reserve:game.reserve,recruited:game.recruited,correct:game.correctAnswers,wrong:game.wrongAnswers,events:game.events});
+ let calls=0;
+ assert.equal(game.answer(numberText(q.answer,2),proposed=>{calls++;assert.deepEqual(proposed,{coins:8700,researched:['knight'],revision:4});assert.equal(game.money,9900);assert.equal(game.reserve.guard,0);return false;}),false);
+ assert.equal(calls,1);assert.equal(game.pendingQuestion,q);assert.equal(JSON.stringify({economy:game.currentEconomy,reserve:game.reserve,recruited:game.recruited,correct:game.correctAnswers,wrong:game.wrongAnswers,events:game.events}),before);
+ assert.equal(game.answer(numberText(q.answer,2),()=>{throw Error('disk quota');}),false);assert.equal(game.pendingQuestion,q);assert.equal(game.money,9900);assert.equal(game.economyRevision,4);
+ let saved:Required<SiegeEconomy>|undefined;
+ assert.ok(game.answer(numberText(q.answer,2),proposed=>{saved=proposed;assert.equal(game.pendingQuestion,q);assert.equal(game.recruited,0);return true;}));
+ assert.deepEqual(saved,{coins:8700,researched:['knight'],revision:4});assert.deepEqual(game.currentEconomy,{coins:8700,researched:['knight'],revision:5});assert.equal(game.reserve.guard,1);assert.equal(game.recruited,1);assert.equal(game.correctAnswers,1);
+ assert.equal(game.answer(numberText(q.answer,2),()=>{throw Error('duplicate commit');}),false);assert.equal(game.money,8700);assert.equal(game.economyRevision,5);
+ const retry=new SecretSiege('standard',1,game.currentEconomy);assert.equal(retry.money,8700);assert.ok(retry.armyUnlocked('knight'));assert.equal(retry.armyCount,0);
+});
+
+test('invalid training answers and stale quotes never call the economy commit callback',()=>{
+ const game=new SecretSiege('standard');assert.ok(game.requestRecruit('guard'));const q=game.pendingQuestion!;let calls=0;const commit=()=>{calls++;return true;};
+ assert.equal(game.answer('8.69',commit),false);assert.equal(calls,0);assert.equal(game.wrongAnswers,1);assert.equal(game.money,9900);
+ game.money-=10;assert.equal(game.answer(numberText(q.answer,2),commit),false);assert.equal(calls,0);assert.equal(game.reserve.guard,0);assert.equal(game.recruited,0);
+});
+
+test('research commits one proposed permanent purchase and storage rejection never charges or unlocks it',()=>{
+ const game=new SecretSiege('standard',1,{coins:20000,researched:[],revision:7});let calls=0;
+ const rejected=(proposed:Required<SiegeEconomy>)=>{calls++;assert.deepEqual(proposed,{coins:12000,researched:['knight'],revision:7});assert.equal(game.money,20000);assert.equal(game.armyUnlocked('knight'),false);return false;};
+ assert.equal(game.research('knight',rejected),false);assert.equal(calls,1);assert.equal(game.money,20000);assert.deepEqual(game.researched,[]);assert.equal(game.economyRevision,7);
+ assert.equal(game.research('knight',()=>{throw Error('storage unavailable');}),false);assert.equal(game.money,20000);assert.equal(game.armyUnlocked('knight'),false);
+ assert.ok(game.research('knight',proposed=>{calls++;assert.deepEqual(proposed,{coins:12000,researched:['knight'],revision:7});return true;}));
+ assert.equal(calls,2);assert.deepEqual(game.currentEconomy,{coins:12000,researched:['knight'],revision:8});assert.equal(game.recruited,0);assert.equal(game.reserve.knight,0);
+ assert.equal(game.research('knight',()=>{calls++;return true;}),false);assert.equal(calls,2);assert.equal(game.money,12000);
+ const reload=new SecretSiege('standard',1,game.currentEconomy);assert.equal(reload.money,12000);assert.ok(reload.armyUnlocked('knight'));assert.deepEqual(game.initialEconomy,{coins:20000,researched:[],revision:7});
+});
+
+test('partial tower rewards and paid training remain in the actual wallet on defeat, restart and reload',()=>{
+ const game=new SecretSiege('standard');recruit(game,'guard');recruit(game,'scout');assert.equal(game.money,8240);assert.ok(game.start());assert.ok(game.deploy('scout'));
+ for(const target of game.targets)target.reload=999;const tower=game.targets[0],scout=game.units[0];tower.hp=10;scout.distance=tower.distance-95;
+ for(let tick=0;tick<40;tick++)game.step(.01);assert.equal(tower.hp,0);assert.equal(game.earnedCoins,3000);assert.equal(game.money,11240);
+ game.phase='lost';const retained=game.currentEconomy;
+ for(const stageId of [1,2]){const retry=new SecretSiege('standard',stageId,retained);assert.equal(retry.money,11240);assert.equal(retry.earnedCoins,0);assert.equal(retry.destroyedTowers,0);assert.equal(retry.armyCount,0);assert.notEqual(retry.money,game.initialEconomy.coins);}
+ const ready=new SecretSiege('standard');recruit(ready,'guard');const reload=new SecretSiege('standard',1,ready.currentEconomy);assert.equal(reload.money,8700,'unspent wallet survives a preparation reload without a troop refund');
 });
 
 test('economy snapshots filter and copy permanent research, validate hundredth precision, and never turn corrupt balances into free money',()=>{
@@ -50,8 +93,8 @@ test('economy snapshots filter and copy permanent research, validate hundredth p
  assert.deepEqual(normalizeSiegeEconomy(),{coins:9900,researched:[],revision:0});
  const input:SiegeEconomy={coins:40000,researched:['knight'],revision:4},game=new SecretSiege('standard',5,input);
  (input.researched as ArmyId[]).push('champion');assert.equal(game.armyUnlocked('champion'),false);
- const snapshot=game.initialEconomy;(snapshot.researched as ArmyId[]).push('priest');snapshot.coins=0;assert.equal(game.money,40000);assert.equal(game.armyUnlocked('priest'),false);
- game.economyRevision=5;assert.equal(game.initialEconomy.revision,5);assert.equal(game.initialEconomy.coins,40000);
+ for(const snapshot of [game.initialEconomy,game.currentEconomy]){(snapshot.researched as ArmyId[]).push('priest');snapshot.coins=0;assert.equal(game.money,40000);assert.equal(game.armyUnlocked('priest'),false);}
+ game.economyRevision=5;assert.equal(game.initialEconomy.revision,4);assert.equal(game.currentEconomy.revision,5);assert.equal(game.initialEconomy.coins,40000);
 });
 
 test('late training can spend only funds that preserve the next-stage budget after all remaining real tower rewards',()=>{

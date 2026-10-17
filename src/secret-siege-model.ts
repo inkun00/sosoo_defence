@@ -5,7 +5,7 @@ import {parseMoney} from './towers';
 import {SIEGE_STAGE_COUNT,siegeStage,type SiegeStage} from './secret-siege-stages';
 import {REVIVED_WIZARD,revivedWizard,newSiegeBossState,type SiegeBossState} from './secret-siege-boss';
 import {siegeMonster,SIEGE_MONSTER_ALIVE_LIMIT} from './secret-siege-monsters';
-import {normalizeSiegeEconomy,STARTER_BUDGET,SIEGE_COIN_LIMIT,type SiegeEconomy} from './secret-siege-research';
+import {normalizeSiegeEconomy,STARTER_BUDGET,SIEGE_COIN_LIMIT,type SiegeEconomy,type SiegeEconomyCommit} from './secret-siege-research';
 import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit,type SiegeMonster} from './secret-siege-types';
 
 const EPSILON=1e-7,HEAL=600;
@@ -23,11 +23,11 @@ export class SecretSiege{
  private owners=new Map<number,ShotOwner>();private reservedDamage=new Map<string,number>();
  private quotes=new Map<string,SiegeQuestion>();
  private spawnedMonsters=0;private rewardedTowers=new Set<string>();earnedCoins=0;
- private researchIds=new Set<ArmyId>();private checkpointCoins=9900;private trainingSpent=0;economyRevision=0;
+ private researchIds=new Set<ArmyId>();private readonly startingEconomy:Required<SiegeEconomy>;economyRevision=0;
  readonly stage:SiegeStage;
  readonly bossState?:SiegeBossState;
  constructor(readonly difficulty:Difficulty,readonly stageId=1,economy?:SiegeEconomy){
-  const initial=normalizeSiegeEconomy(economy);this.money=this.checkpointCoins=initial.coins;this.researchIds=new Set(initial.researched);this.economyRevision=initial.revision;
+  const initial=normalizeSiegeEconomy(economy);this.startingEconomy=initial;this.money=initial.coins;this.researchIds=new Set(initial.researched);this.economyRevision=initial.revision;
   this.stage=siegeStage(stageId);const stage=this.stage;
   const cooldowns=enemyCooldowns[difficulty].map(cooldown=>cooldown*stage.cooldownScale);
   this.targets=[
@@ -54,11 +54,17 @@ export class SecretSiege{
  get nextMonsterIn(){return this.phase==='won'||this.phase==='lost'||this.spawnedMonsters>=this.monsterLimit||this.castle<=0?Infinity:Math.max(0,this.stage.monsterSpawnDelay+this.spawnedMonsters*this.stage.monsterSpawnInterval-this.elapsed);}
  get researched():readonly ArmyId[]{return ARMY.filter(army=>this.researchIds.has(army.id)).map(army=>army.id);}
  get remainingTowerRewards(){return this.targets.filter(target=>target.kind==='tower').reduce((sum,target,index)=>sum+(target.hp>0&&!this.rewardedTowers.has(target.id)?this.stage.towerRewards[index]:0),0);}
- /** Research is permanent; preparation training is refunded at the checkpoint. */
- get initialEconomy():Required<SiegeEconomy>{return {coins:this.checkpointCoins,researched:this.researched,revision:this.economyRevision};}
+ /** The constructor snapshot is diagnostic only; persistence uses currentEconomy. */
+ get initialEconomy():Required<SiegeEconomy>{return {...this.startingEconomy,researched:[...this.startingEconomy.researched]};}
+ get currentEconomy():Required<SiegeEconomy>{return {coins:this.money,researched:this.researched,revision:this.economyRevision};}
  armyUnlocked(id:ArmyId){const army=spec(id);return !!army&&(army.researchCost===0||this.researchIds.has(id));}
- canResearch(id:ArmyId){const army=spec(id);return !!army&&army.researchCost>0&&!this.researchIds.has(id)&&this.phase==='ready'&&!this.pendingQuestion&&this.money-army.researchCost>=Math.max(0,STARTER_BUDGET-this.trainingSpent);}
- research(id:ArmyId):boolean{if(!this.canResearch(id))return false;const army=spec(id)!;this.money-=army.researchCost;this.checkpointCoins-=army.researchCost;this.researchIds.add(id);return true;}
+ canResearch(id:ArmyId){const army=spec(id);return !!army&&army.researchCost>0&&!this.researchIds.has(id)&&this.phase==='ready'&&!this.pendingQuestion&&this.money-army.researchCost>=STARTER_BUDGET;}
+ research(id:ArmyId,commit?:SiegeEconomyCommit):boolean{
+  if(!this.canResearch(id))return false;const army=spec(id)!;
+  if(commit&&!this.commitEconomy({...this.currentEconomy,coins:this.money-army.researchCost,researched:[...this.researched,id]},commit))return false;
+  this.money-=army.researchCost;this.researchIds.add(id);if(commit)this.economyRevision++;return true;
+ }
+ private commitEconomy(proposed:Required<SiegeEconomy>,commit:SiegeEconomyCommit){try{return commit(proposed)===true;}catch{return false;}}
  get armyCount(){return this.units.filter(unit=>unit.hp>0).length+Object.values(this.reserve).reduce((sum,count)=>sum+count,0);}
  get canRally(){return this.phase==='playing'&&!this.pendingQuestion&&this.ralliesLeft>0&&this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp);}
  get stars(){return this.phase==='won'?this.elapsed<=105&&this.wrongAnswers===0?3:this.elapsed<=150?2:1:0;}
@@ -95,7 +101,7 @@ export class SecretSiege{
   const question=this.quotes.get(key)??{id:++this.questionSerial,kind:'rally',a:injured.hp,b:healing,operation:'+',answer:injured.hp+healing} as const;
   this.quotes.set(key,question);this.pendingQuestion=question;return true;
  }
- answer(text:string):boolean{
+ answer(text:string,commit?:SiegeEconomyCommit):boolean{
   const question=this.pendingQuestion,value=parseMoney(text);
   if(!question||!this.interactive())return false;
   const valid=value!==null&&Number.isSafeInteger(value)&&value>=0&&value%10===0&&(question.kind==='recruit'||learningValue(value));
@@ -103,7 +109,9 @@ export class SecretSiege{
   if(question.kind==='recruit'){
    const army=question.armyId?spec(question.armyId):undefined;
    if(!army||this.money!==question.a||question.b!==this.recruitCost(army.id)||question.answer!==question.a-question.b||!this.recruitmentAllowed(army.id))return false;
-   this.money-=question.b;this.trainingSpent+=question.b;this.reserve[army.id]++;this.recruited++;
+   if(commit&&!this.commitEconomy({...this.currentEconomy,coins:this.money-question.b},commit))return false;
+   this.money-=question.b;this.reserve[army.id]++;this.recruited++;
+   if(commit)this.economyRevision++;
    this.events.push({type:'recruit',message:`${army.name} 훈련 완료`});
   }else{
    if(this.ralliesLeft<=0||!this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp))return false;

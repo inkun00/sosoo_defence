@@ -1,6 +1,6 @@
 import {loadSave,writeSave} from './save';
-import {secretSiegeUnlocked,recordSecretSiegeVictory,secretSiegeResumeStage,secretSiegeStageUnlocked,secretSiegeStageRecord,selectSecretSiegeStage,markSecretSiegeEndingSeen,secretSiegeEconomy,purchaseSecretSiegeResearch} from './secret-siege-progress';
-import {STARTER_BUDGET} from './secret-siege-research';
+import {secretSiegeUnlocked,recordSecretSiegeVictory,secretSiegeResumeStage,secretSiegeStageUnlocked,secretSiegeStageRecord,selectSecretSiegeStage,markSecretSiegeEndingSeen,secretSiegeEconomy,persistSecretSiegeEconomy} from './secret-siege-progress';
+import {STARTER_BUDGET,type SiegeEconomy} from './secret-siege-research';
 import {SIEGE_STAGE_COUNT,siegeStage} from './secret-siege-stages';
 import {SecretSiege,SIEGE_RECRUIT_INCREMENT} from './secret-siege-model';
 import {SecretSiegeField} from './secret-siege-field';
@@ -24,6 +24,7 @@ if(!secretSiegeUnlocked(save)){
 function mount(){
  let model=new SecretSiege(save.difficulty,secretSiegeResumeStage(save),secretSiegeEconomy(save)),serial=0,disposed=false,held=false,endingActive=false,resultPending=false,frame=0,last=0,viewTime=0;
  let rosterTab:'basic'|'elite'='basic',noticeUntil=0;
+ let savedCoins=model.money,economyBlocked=false,economyConflict=false,economyError='',saveRetryAt=0;
  const session=crypto.randomUUID(),sound=new Sound(),motion=new GameMotion(),listeners=new AbortController();
  const signal=listeners.signal,reduced=matchMedia('(prefers-reduced-motion: reduce)');
  sound.sfx=save.sfx;sound.setMusic(save.music);sound.setTrack('boss-dread');
@@ -48,22 +49,29 @@ function mount(){
  function text(id:string,value:string){const element=$(id);if(element.textContent!==value)element.textContent=value;}
  function enabled(id:string,value:boolean){const element=$(id) as HTMLButtonElement;element.disabled=!value;}
  function notice(message:string,important=false){if(!message||!important&&performance.now()<noticeUntil)return;if(important)noticeUntil=performance.now()+4500;text('siege-notice',message);}
+ function commitEconomy(economy:SiegeEconomy&{revision:number},updateModel=true):boolean{
+  const current=loadSave(),stored=secretSiegeEconomy(current);
+  economyConflict=stored.revision!==economy.revision;
+  economyError=economyConflict?'다른 창에서 원정 기록이 바뀌어 전투를 멈췄어요. 원정 지도에서 현재 단계를 다시 준비해 주세요.':'';
+  if(!economyConflict&&(!persistSecretSiegeEconomy(current,economy)||!writeSave(current)))economyError='코인을 저장하지 못했어요. 저장 공간을 확인한 뒤 다시 시도해 주세요.';
+  if(economyError){if(economyConflict)economyBlocked=true;notice(economyError,true);return false;}
+  save.secretSiege=current.secretSiege;savedCoins=economy.coins;
+  if(updateModel)model.economyRevision=secretSiegeEconomy(current).revision;
+  return true;
+ }
+ function syncEconomy():boolean{
+  if(model.money===savedCoins)return true;
+  economyBlocked=!commitEconomy(model.currentEconomy);return !economyBlocked;
+ }
  function roster(group:'basic'|'elite',focus=false){
   rosterTab=group;root.dataset.rosterTab=group;
   for(const name of ['basic','elite'] as const){const tab=$('siege-'+name+'-tab') as HTMLButtonElement;tab.setAttribute('aria-selected',String(name===group));tab.tabIndex=name===group?0:-1;tab.dataset.preparationSurface=name===group?'active':'button';$('siege-'+name+'-roster').hidden=name!==group;}
   skin.sync();if(focus)$('siege-'+group+'-tab').focus({preventScroll:true});
  }
  function researchArmy(id:ArmyId){
-  const spec=ARMY.find(army=>army.id===id);if(!spec||held||!model.canResearch(id))return;
-  const current=loadSave(),checkpoint=secretSiegeEconomy(current);
-  if(checkpoint.revision!==model.economyRevision){notice('다른 창에서 원정 기록이 바뀌었어요. 원정 지도에서 현재 단계를 다시 준비해 주세요.',true);return;}
-  if(!purchaseSecretSiegeResearch(current,id)){notice(`연구 후에도 다음 원정 준비금 ${numberText(STARTER_BUDGET,2)} 코인을 남겨야 해요.`,true);return;}
-  // Commit the checkpoint before touching this preparation's trained troops or
-  // wallet. A failed browser write must never charge or unlock the live model.
-  if(!writeSave(current)){notice('연구를 저장하지 못했어요. 코인과 연구 상태는 그대로예요. 다시 시도해 주세요.',true);return;}
-  save.secretSiege=current.secretSiege;
-  if(!model.research(id)){beginStage(model.stageId);notice('저장된 연구와 코인으로 편성을 다시 준비했어요.',true);return;}
-  model.economyRevision=secretSiegeEconomy(current).revision;sound.play('correct');
+  const spec=ARMY.find(army=>army.id===id);if(!spec||held||economyBlocked||!model.canResearch(id))return;
+  if(!model.research(id,economy=>commitEconomy(economy,false))){refresh();return;}
+  sound.play('correct');
   notice(`${spec.name} 연구 완료! 병사는 별도 훈련비를 내고 준비하세요. 연구는 다음 원정에도 유지돼요.`,true);refresh();
  }
  function showDialog(kind:string,html:string){
@@ -82,7 +90,7 @@ function mount(){
   if(model.pendingQuestion||held)return;
   infoPaused=model.phase==='playing';if(infoPaused)model.togglePause();
   const boss=model.boss;
-  showDialog('guide',`<p class="siege-eyebrow">10개의 성채를 해방하는 원정</p><h2 id="siege-dialog-title">${boss?'마지막 성채에서 마법사가 부활했어요':'연구한 병과를 훈련해 성채를 공략하세요'}</h2><p>${boss?`부활한 마법사 · 체력 <b>${numberText(boss.maxHp,2)}</b> · 마력탄 공격 <b>${numberText(boss.attack,2)}</b>. 네 타워를 돌파하면 마법사가 직접 해방군을 공격해요. 마법사와 성채를 모두 쓰러뜨려야 마지막 원정이 끝나요.`:'열 개의 성채에서 악의 세력이 버티고 있어요. 인간 해방군과 함께 방어선을 돌파하세요. 성에서 나오는 몬스터도 우리 부대를 막아섭니다.'}</p><ol><li>정예 병과는 <b>출정 전 준비 중에 연구비를 한 번</b> 내고 개발해요. 연구 완료는 영구히 유지되며, 타워를 파괴해도 병과가 자동으로 열리지 않아요.</li><li><b>연구비와 병사 훈련비는 별도예요.</b> 연구만으로 병사가 생기지는 않아요. 원하는 병사를 한 명씩 훈련하고, 출정 후 <b>출격</b>을 누르세요. 훈련할 때마다 다음 가격에 ${numberText(SIEGE_RECRUIT_INCREMENT,2)} 코인이 더해지며 출격할 때 다시 내지 않아요.</li><li>타워를 파괴하면 원정 코인을 얻어요. <b>승리 후 남은 코인</b>은 다음 단계로 그대로 이어져요. 다음 원정의 기본 병력을 훈련할 <b>준비금 ${numberText(STARTER_BUDGET,2)} 코인</b>을 지킬 수 있을 때만 연구·훈련할 수 있어요.</li><li>패배하거나 전투를 다시 시작하고 새로고침하면 <b>훈련 지출과 미정산 전투 보상</b>은 마지막 저장 상태로 돌아가요. 완료한 연구는 유지돼요. 단계를 바꾸어도 시작 코인을 다시 지급하지 않아요.</li><li>성에서 출격한 몬스터와 마주치면 부대가 자동으로 싸워요. 방패대로 후방 병력을 지키고 사제의 자동 회복과 <b>회복 지원 3회</b>를 활용하세요.${boss?' 마법사의 시전과 위험 표시를 살피고 회복 시점을 신중하게 정하세요.':''}</li></ol><p>문제를 푸는 동안 전투 시간은 흐르지 않아요. 저장된 원정 코인은 <b>${numberText(secretSiegeEconomy(save).coins,2)} 코인</b>이에요.</p><button id="siege-guide-done" data-preparation-surface="active">군대 편성으로</button>`);
+  showDialog('guide',`<p class="siege-eyebrow">10개의 성채를 해방하는 원정</p><h2 id="siege-dialog-title">${boss?'마지막 성채에서 마법사가 부활했어요':'연구한 병과를 훈련해 성채를 공략하세요'}</h2><p>${boss?`부활한 마법사 · 체력 <b>${numberText(boss.maxHp,2)}</b> · 마력탄 공격 <b>${numberText(boss.attack,2)}</b>. 네 타워를 돌파하면 마법사가 직접 해방군을 공격해요. 마법사와 성채를 모두 쓰러뜨려야 마지막 원정이 끝나요.`:'열 개의 성채에서 악의 세력이 버티고 있어요. 인간 해방군과 함께 방어선을 돌파하세요. 성에서 나오는 몬스터도 우리 부대를 막아섭니다.'}</p><ol><li>정예 병과는 <b>출정 전 준비 중에 연구비를 한 번</b> 내고 개발해요. 연구 완료는 영구히 유지되며, 타워를 파괴해도 병과가 자동으로 열리지 않아요.</li><li><b>연구비와 병사 훈련비는 별도예요.</b> 연구만으로 병사가 생기지는 않아요. 원하는 병사를 한 명씩 훈련하고, 출정 후 <b>출격</b>을 누르세요. 훈련할 때마다 다음 가격에 ${numberText(SIEGE_RECRUIT_INCREMENT,2)} 코인이 더해지며 출격할 때 다시 내지 않아요.</li><li>타워를 파괴하면 원정 코인을 얻어요. <b>얻은 코인과 지출한 비용은 즉시 저장</b>되며 다음 단계로 그대로 이어져요. 다음 원정의 기본 병력을 훈련할 <b>준비금 ${numberText(STARTER_BUDGET,2)} 코인</b>을 지킬 수 있을 때만 연구·훈련할 수 있어요.</li><li>패배·재시작·새로고침 후에도 <b>훈련에 쓴 비용과 타워에서 얻은 보상을 반영한 현재 코인</b>을 그대로 유지해요. 완료한 연구는 유지되며 병력은 다시 편성해요. 단계를 바꾸어도 시작 코인을 다시 지급하지 않아요.</li><li>성에서 출격한 몬스터와 마주치면 부대가 자동으로 싸워요. 방패대로 후방 병력을 지키고 사제의 자동 회복과 <b>회복 지원 3회</b>를 활용하세요.${boss?' 마법사의 시전과 위험 표시를 살피고 회복 시점을 신중하게 정하세요.':''}</li></ol><p>문제를 푸는 동안 전투 시간은 흐르지 않아요. 저장된 원정 코인은 <b>${numberText(secretSiegeEconomy(save).coins,2)} 코인</b>이에요.</p><button id="siege-guide-done" data-preparation-surface="active">군대 편성으로</button>`);
   $('siege-guide-done').onclick=closeDialog;
  }
  function question(q:SiegeQuestion){
@@ -95,7 +103,9 @@ function mount(){
   $('siege-answer-cancel').onclick=closeDialog;
   $('siege-answer-form').onsubmit=event=>{
    event.preventDefault();if(model.pendingQuestion?.id!==q.id)return;
-   const correct=model.answer(input.value);
+   let stored=true;
+   const correct=model.answer(input.value,economy=>stored=commitEconomy(economy,false));
+   if(!stored){text('siege-answer-message',economyError+' 코인과 병력은 그대로예요.');input.focus();refresh();return;}
    recordLearning({a:q.a,b:q.b,operation:q.operation,digits:2,context:q.kind==='recruit'?'money':'battle'},correct?'correct':'wrong',session+':siege:'+serial+':'+q.id);
    sound.play(correct?'correct':'wrong');
    if(correct){dialog.close();body.replaceChildren();dialogReturn?.focus();refresh();}
@@ -131,16 +141,16 @@ function mount(){
    const recruitLabel=recruit.querySelector(':scope > span:not(.duel-preparation-skin)');if(recruitLabel)recruitLabel.textContent=`훈련 · ${numberText(cost,2)} 코인`;
    const trainingReason=!unlocked?'먼저 병과를 연구하세요.':model.money<cost?'훈련 코인이 부족해요.':model.armyCount>=SIEGE_ARMY_LIMIT?'병력은 대기 병사를 포함해 12명까지예요.':protectedCoins?`다음 원정 준비금 ${numberText(STARTER_BUDGET,2)} 코인을 남겨야 해요.`:'';
    recruit.title=trainingReason;recruit.setAttribute('aria-label',`${spec.name} 병사 훈련 ${numberText(cost,2)} 코인${trainingReason?' · '+trainingReason:''}`);
-   research.hidden=spec.researchCost===0||unlocked;research.disabled=held||!model.canResearch(spec.id);deploy.hidden=!unlocked;
+   research.hidden=spec.researchCost===0||unlocked;research.disabled=held||economyBlocked||!model.canResearch(spec.id);deploy.hidden=!unlocked;
    text('army-unlock-'+spec.id,!unlocked?model.phase!=='ready'?'연구는 출정 전 준비 중에 가능':model.canResearch(spec.id)?'1회 연구 · 병사 훈련비 별도':`연구 후 준비금 ${numberText(STARTER_BUDGET,2)} 코인 유지`:spec.researchCost>0?protectedCoins?`연구 완료 · 준비금 ${numberText(STARTER_BUDGET,2)} 유지`:'영구 연구 완료 · 훈련비 별도':protectedCoins?`다음 원정 준비금 ${numberText(STARTER_BUDGET,2)} 유지`:'');
    research.title=model.phase!=='ready'?'연구는 출정 전 준비 중에만 할 수 있어요.':`연구비 ${numberText(spec.researchCost,2)} 코인을 한 번 내고, 다음 원정 준비금 ${numberText(STARTER_BUDGET,2)} 코인을 남겨요. 병사 훈련비는 별도예요.`;
-   recruit.disabled=held||!model.canRecruit(spec.id);
-   deploy.disabled=!playing||held||!!model.pendingQuestion||!model.reserve[spec.id];
+   recruit.disabled=held||economyBlocked||!model.canRecruit(spec.id);
+   deploy.disabled=!playing||held||economyBlocked||!!model.pendingQuestion||!model.reserve[spec.id];
   }
   enabled('siege-pause',!held&&!finished&&model.phase!=='ready'&&!model.pendingQuestion);
   text('siege-pause',model.phase==='paused'?'계속하기':'일시정지');
-  enabled('siege-rally',!held&&model.canRally);text('siege-rally',`회복 지원 · ${model.ralliesLeft}회`);
-  enabled('siege-start',!held&&(model.phase==='ready'||finished));text('siege-start',finished?'다시 원정':'출정');
+  enabled('siege-rally',!held&&!economyBlocked&&model.canRally);text('siege-rally',`회복 지원 · ${model.ralliesLeft}회`);
+  enabled('siege-start',!held&&!economyBlocked&&(model.phase==='ready'||finished));text('siege-start',finished?'다시 원정':'출정');
   text('siege-heading',`${model.stageId} / ${SIEGE_STAGE_COUNT} · ${model.stage.name}`);
   const record=secretSiegeStageRecord(save,model.stageId);
   text('siege-clear-record',`${save.secretSiege?.stages.length??0} / ${SIEGE_STAGE_COUNT} 해방${record?' · '+'★'.repeat(record.stars):''}`);
@@ -150,21 +160,23 @@ function mount(){
   skin.sync();
  }
  function beginStage(stageId:number){
+  if(!syncEconomy()&&!economyConflict)return;
   const current=loadSave();if(!selectSecretSiegeStage(current,stageId))return;
-  save.secretSiege=current.secretSiege;writeSave(current);
+  if(!writeSave(current)){notice('원정 준비를 저장하지 못했어요. 다시 시도해 주세요.',true);return;}save.secretSiege=current.secretSiege;
   serial++;held=false;resultPending=false;infoPaused=false;motion.clear();if(dialog.open)dialog.close();body.replaceChildren();
-  model=new SecretSiege(save.difficulty,stageId,secretSiegeEconomy(current));field.setModel(model);viewTime=0;last=0;noticeUntil=0;roster('basic');sound.setTrack('boss-dread');notice(`${stageId}단계 · ${model.stage.subtitle} · 저장 코인 ${numberText(model.money,2)}과 연구를 이어가요.`);refresh();
+  model=new SecretSiege(save.difficulty,stageId,secretSiegeEconomy(current));savedCoins=model.money;economyBlocked=economyConflict=false;economyError='';field.setModel(model);viewTime=0;last=0;noticeUntil=0;roster('basic');sound.setTrack('boss-dread');notice(`${stageId}단계 · ${model.stage.subtitle} · 저장 코인 ${numberText(model.money,2)}과 연구를 이어가요.`);refresh();
  }
  function retry(){beginStage(model.stageId);}
  function stageMap(){
   if(model.pendingQuestion||held)return;
+  if(!syncEconomy()&&!economyConflict)return;
   save.secretSiege=loadSave().secretSiege;
   if(dialog.open)closeDialog();infoPaused=model.phase==='playing';if(infoPaused)model.togglePause();
   const liberated=save.secretSiege?.stages.length??0;
   showDialog('map',`<section class="siege-stage-map" data-completed="${liberated===SIEGE_STAGE_COUNT}"><p class="siege-eyebrow">${liberated===SIEGE_STAGE_COUNT?'빛을 되찾은 세상 · 세계를 구하는 원정대':'악의 세력을 몰아내는 열 번의 원정'}</p><h2 id="siege-dialog-title">원정 지도 <small>${liberated} / ${SIEGE_STAGE_COUNT} 해방</small></h2><div class="siege-stage-grid">${Array.from({length:SIEGE_STAGE_COUNT},(_,index)=>{
    const stage=siegeStage(index+1),unlocked=secretSiegeStageUnlocked(save,stage.id),record=secretSiegeStageRecord(save,stage.id);
    return `<button type="button" data-stage="${stage.id}" data-preparation-surface="${stage.id===model.stageId?'active':'panel'}" ${unlocked?'':'disabled'} ${stage.id===model.stageId?'aria-current="step"':''}><b>${String(stage.id).padStart(2,'0')}</b><span>${stage.name}</span><small>${!unlocked?'잠김':record?'★'.repeat(record.stars)+' · '+Math.ceil(record.bestSeconds)+'초':stage.id===SIEGE_STAGE_COUNT?'부활 마법사':stage.id===model.stageId?'편성 중':'새 원정'}</small></button>`;
-  }).join('')}</div><p class="siege-stage-note">${liberated===SIEGE_STAGE_COUNT?'악의 세력을 물리쳤어요. 이제 다른 세상에 평화를 되찾아 줄 차례예요.':'성채를 해방하면 다음 길이 열려요. 다음 단계에서는 적의 체력과 공격이 강해져요.'}<br>단계를 선택해도 저장된 코인과 연구는 유지돼요. 편성만 다시 준비하며, 미정산 훈련 지출과 전투 보상은 되돌아가요.</p><div class="siege-dialog-actions"><button id="siege-map-close">현재 전장으로</button>${liberated===SIEGE_STAGE_COUNT?'<button id="siege-ending-replay" data-preparation-surface="active">엔딩 다시 보기</button>':''}</div></section>`);
+  }).join('')}</div><p class="siege-stage-note">${liberated===SIEGE_STAGE_COUNT?'악의 세력을 물리쳤어요. 이제 다른 세상에 평화를 되찾아 줄 차례예요.':'성채를 해방하면 다음 길이 열려요. 다음 단계에서는 적의 체력과 공격이 강해져요.'}<br>단계를 선택해도 저장된 코인과 연구는 유지돼요. 병력은 다시 편성하며, 훈련에 쓴 비용과 타워에서 얻은 보상은 그대로 남아요.</p><div class="siege-dialog-actions"><button id="siege-map-close">현재 전장으로</button>${liberated===SIEGE_STAGE_COUNT?'<button id="siege-ending-replay" data-preparation-surface="active">엔딩 다시 보기</button>':''}</div></section>`);
   body.querySelectorAll<HTMLButtonElement>('[data-stage]').forEach(button=>button.onclick=()=>beginStage(Number(button.dataset.stage)));
   $('siege-map-close').onclick=closeDialog;
   if(liberated===SIEGE_STAGE_COUNT)$('siege-ending-replay').onclick=()=>void replayEnding();
@@ -187,10 +199,11 @@ function mount(){
  async function result(){
   if(resultPending)return;resultPending=true;held=true;
   const owner=model,token=serial,won=model.phase==='won';let victorySaved=false;
-  if(won){
+  const economySaved=syncEconomy();
+  if(won&&economySaved){
    const current=loadSave();
-   if(recordSecretSiegeVictory(current,model)&&writeSave(current)){save.secretSiege=current.secretSiege;victorySaved=true;}
-   else notice('승리 기록과 코인을 저장하지 못했어요. 새로 준비하면 마지막 저장 상태로 돌아가요.',true);
+   if(recordSecretSiegeVictory(current,model)&&writeSave(current)){save.secretSiege=current.secretSiege;model.economyRevision=secretSiegeEconomy(current).revision;victorySaved=true;}
+   else notice('승리 기록을 저장하지 못했어요. 훈련비와 타워 보상은 이미 코인에 반영됐어요.',true);
   }
   const finale=won&&owner.stageId===SIEGE_STAGE_COUNT&&save.secretSiege?.cleared;
   await new Promise(resolve=>setTimeout(resolve,finale?4500:1000));if(disposed||model!==owner||serial!==token)return;
@@ -200,20 +213,20 @@ function mount(){
   if(finale)await ending();
   if(disposed||model!==owner||serial!==token)return;held=false;
   const next=won&&!finale&&victorySaved,checkpoint=secretSiegeEconomy(save);
-  showDialog('result',`<p class="siege-eyebrow">비밀 원정 ${owner.stageId} / ${SIEGE_STAGE_COUNT}</p><h2 id="siege-dialog-title">${won?finale?'이 세상을 구했어요':`${owner.stageId}단계를 해방했어요`:'이번에는 성을 깨지 못했어요'}</h2>${won?`<p class="siege-stars">${'★'.repeat(model.stars)}</p>`:''}<p>${won?finale?'마지막 악의 세력이 사라졌어요. 인간 해방군은 이제 다른 세상을 구하러 떠나는 원정대가 됩니다.':`${owner.stage.name}에 평화가 돌아왔어요. 다음 성채에서는 더 강한 방어선이 기다리고 있어요.`:'방패대를 먼저 보내고, 정찰대를 뒤에서 보호해 보세요. 덧셈으로 회복을 지원할 수도 있어요.'}</p><p>원정 시간 ${Math.ceil(model.elapsed)}초 · 계산 정답 ${model.correctAnswers}개</p><p class="siege-result-economy">${won&&victorySaved?`다음 원정 코인 <b>${numberText(checkpoint.coins,2)}</b> · 연구 ${checkpoint.researched.length}종 영구 보유`:won?'잔액을 저장하지 못했어요. 다시 준비하면 마지막 저장 상태로 돌아가요.':`저장 코인 <b>${numberText(checkpoint.coins,2)}</b>으로 다시 준비해요. 이번 훈련 지출과 미정산 보상은 되돌리고, 연구는 유지해요.`}</p><div class="siege-dialog-actions">${next?`<button id="siege-result-next" data-preparation-surface="active">${owner.stageId+1}단계로</button>`:'<button id="siege-result-retry" data-preparation-surface="active">다시 원정</button>'}<button id="siege-result-map">원정 지도</button><button id="siege-result-home">시작 화면</button></div>`);
+  showDialog('result',`<p class="siege-eyebrow">비밀 원정 ${owner.stageId} / ${SIEGE_STAGE_COUNT}</p><h2 id="siege-dialog-title">${won?finale?'이 세상을 구했어요':`${owner.stageId}단계를 해방했어요`:'이번에는 성을 깨지 못했어요'}</h2>${won?`<p class="siege-stars">${'★'.repeat(model.stars)}</p>`:''}<p>${won?finale?'마지막 악의 세력이 사라졌어요. 인간 해방군은 이제 다른 세상을 구하러 떠나는 원정대가 됩니다.':`${owner.stage.name}에 평화가 돌아왔어요. 다음 성채에서는 더 강한 방어선이 기다리고 있어요.`:'방패대를 먼저 보내고, 정찰대를 뒤에서 보호해 보세요. 덧셈으로 회복을 지원할 수도 있어요.'}</p><p>원정 시간 ${Math.ceil(model.elapsed)}초 · 계산 정답 ${model.correctAnswers}개</p><p class="siege-result-economy">${won&&victorySaved?`다음 원정 코인 <b>${numberText(checkpoint.coins,2)}</b> · 연구 ${checkpoint.researched.length}종 영구 보유`:won?'승리 기록을 저장하지 못했어요. 현재 코인은 유지돼요.':`현재 코인 <b>${numberText(model.money,2)}</b>을 그대로 이어가요. 훈련에 쓴 비용과 타워 보상을 반영한 잔액이며, 연구도 유지돼요.`}</p><div class="siege-dialog-actions">${next?`<button id="siege-result-next" data-preparation-surface="active">${owner.stageId+1}단계로</button>`:'<button id="siege-result-retry" data-preparation-surface="active">다시 원정</button>'}<button id="siege-result-map">원정 지도</button><button id="siege-result-home">시작 화면</button></div>`);
   if(next)$('siege-result-next').onclick=()=>beginStage(owner.stageId+1);else $('siege-result-retry').onclick=retry;
   $('siege-result-map').onclick=stageMap;$('siege-result-home').onclick=home;refresh();
  }
- function home(){sound.setMusic(false);navigateWithMotion(new URL('/?mode=title',location.href).href);}
+ function home(){if(!syncEconomy()&&!economyConflict)return;sound.setMusic(false);navigateWithMotion(new URL('/?mode=title',location.href).href);}
  root.querySelectorAll<HTMLButtonElement>('[data-roster-tab]').forEach(button=>{
   button.onclick=()=>roster(button.dataset.rosterTab as 'basic'|'elite');
   button.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();roster(event.key==='Home'?'basic':event.key==='End'?'elite':rosterTab==='basic'?'elite':'basic',true);};
  });
  root.querySelectorAll<HTMLButtonElement>('[data-research]').forEach(button=>button.onclick=()=>{sound.resume();researchArmy(button.dataset.research as ArmyId);});
- root.querySelectorAll<HTMLButtonElement>('[data-recruit]').forEach(button=>button.onclick=()=>{sound.resume();if(held)return;if(model.requestRecruit(button.dataset.recruit as ArmyId)){question(model.pendingQuestion!);refresh();}else notice(`병력 정원과 다음 원정 준비금 ${numberText(STARTER_BUDGET,2)} 코인을 확인하세요.`);});
- root.querySelectorAll<HTMLButtonElement>('[data-deploy]').forEach(button=>button.onclick=()=>{sound.resume();if(held)return;if(model.deploy(button.dataset.deploy as ArmyId))refresh();else notice('출격 간격을 잠깐 두고 다시 눌러요.');});
+ root.querySelectorAll<HTMLButtonElement>('[data-recruit]').forEach(button=>button.onclick=()=>{sound.resume();if(held||economyBlocked)return;if(model.requestRecruit(button.dataset.recruit as ArmyId)){question(model.pendingQuestion!);refresh();}else notice(`병력 정원과 다음 원정 준비금 ${numberText(STARTER_BUDGET,2)} 코인을 확인하세요.`);});
+ root.querySelectorAll<HTMLButtonElement>('[data-deploy]').forEach(button=>button.onclick=()=>{sound.resume();if(held||economyBlocked)return;if(model.deploy(button.dataset.deploy as ArmyId))refresh();else notice('출격 간격을 잠깐 두고 다시 눌러요.');});
  $('siege-start').onclick=async()=>{
-  if(held)return;sound.resume();if(model.phase==='won'||model.phase==='lost'){retry();return;}
+  if(held||economyBlocked)return;sound.resume();if(model.phase==='won'||model.phase==='lost'){retry();return;}
   if(!model.start()){notice('정찰병 한 명과 돌격병 또는 방패병 한 명 이상을 훈련하세요.');return;}
   held=true;sound.play('start');const token=serial;
   await motion.play('battle',{title:`${model.stageId}단계 · 해방군 출정`,subtitle:model.stage.name+' · 병종별 출격 버튼으로 진격 순서를 정하세요',key:`siege:${serial}:start`});
@@ -226,22 +239,23 @@ function mount(){
  let uiAt=0;
  function tick(now:number){
   if(disposed)return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;
-  if(!document.hidden&&!held){model.step(dt);if(!model.pendingQuestion&&model.phase!=='paused')viewTime+=dt;}
+  if(economyBlocked&&!economyConflict&&now>=saveRetryAt){saveRetryAt=now+1000;syncEconomy();}
+  if(!document.hidden&&!held&&!economyBlocked){model.step(dt);syncEconomy();if(!model.pendingQuestion&&model.phase!=='paused')viewTime+=dt;}
   else if(held&&(model.phase==='won'||model.phase==='lost'))viewTime+=dt;
   field.draw(viewTime,reduced.matches);
   for(const event of model.events.splice(0)){
    if(event.type==='reward'){
-    notice(`${event.message} · 승리 후 남은 코인이 다음 원정으로 이어져요.`,true);refresh();
+    if(!economyBlocked)notice(`${event.message} · 패배하거나 다시 시작해도 코인은 유지돼요.`,true);refresh();
    }else if(event.type!=='shot'&&event.type!=='hit'&&event.type!=='spell'&&event.type!=='heal')notice(event.message);
    if(event.type==='shot')sound.play('shot',event.friendly?'crystal':'basic');
    else if(event.type==='hit')sound.play('hit');else if(event.type==='destroy')sound.play('boss-shatter');else if(event.type==='deploy')sound.play('portal');else if(event.type==='spell'&&model.bossState?.spell?.phase==='warning')sound.play('boss-charge');
   }
-  sound.setPaused((held&&!endingActive)||document.hidden||(!endingActive&&model.phase==='paused')||!!model.pendingQuestion);
+  sound.setPaused(economyBlocked||(held&&!endingActive)||document.hidden||(!endingActive&&model.phase==='paused')||!!model.pendingQuestion);
   if(now-uiAt>140){refresh();uiAt=now;}
   if(!resultPending&&(model.phase==='won'||model.phase==='lost'))void result();
   frame=requestAnimationFrame(tick);
  }
- window.addEventListener('pagehide',()=>{disposed=true;serial++;cancelAnimationFrame(frame);listeners.abort();field.dispose();skin.dispose();audio.dispose();sound.dispose();motion.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{syncEconomy();disposed=true;serial++;cancelAnimationFrame(frame);listeners.abort();field.dispose();skin.dispose();audio.dispose();sound.dispose();motion.dispose();},{once:true});
  roster('basic');refresh();held=true;
  void field.load().then(()=>{if(disposed)return;held=false;refresh();frame=requestAnimationFrame(tick);guide();}).catch(()=>{held=false;notice('일부 그림을 불러오지 못했어요. 새로고침하면 다시 시도할 수 있어요.');refresh();frame=requestAnimationFrame(tick);});
 }

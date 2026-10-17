@@ -52,7 +52,7 @@ export function simulateSecretSiegeCampaign(difficulty:Difficulty,dt=.1){
   for(const id of ['knight','ranger','priest','champion'] as const)if(preparation.canResearch(id)){preparation.research(id);purchases.push(id);researchSpent+=ARMY.find(army=>army.id===id)!.researchCost;}
   const preferred:readonly ArmyId[]=stageId===10?SIEGE_REINFORCEMENT_ORDER:preparation.armyUnlocked('champion')?['champion','priest']:preparation.armyUnlocked('priest')?['priest','ranger']:preparation.armyUnlocked('ranger')?['knight','ranger']:['knight','knight'];
   const plan={...SIEGE_ADAPTIVE_PLAN,reinforcements:preferred.filter(id=>preparation.armyUnlocked(id))};
-  const result=simulateSecretSiege(difficulty,plan,stageId,dt,preparation.initialEconomy);results.push({...result,bankBeforeResearch:economy.coins,researchSpent,researchPurchases:purchases,dt});
+  const result=simulateSecretSiege(difficulty,plan,stageId,dt,preparation.currentEconomy);results.push({...result,bankBeforeResearch:economy.coins,researchSpent,researchPurchases:purchases,dt});
   if(result.phase!=='won')break;
   economy={coins:result.remainingMoney,researched:result.researched,revision:stageId};
  }
@@ -88,10 +88,11 @@ export function siegeSimulationReport(){
   '|---|---:|---:|---:|---:|---:|---:|---|'];
  for(const army of ARMY)lines.push(`| ${army.name} | ${army.researchCost?numberText(army.researchCost,2):'기본 개방'} | ${numberText(army.cost,2)} | ${numberText(army.hp,2)} | ${numberText(army.attack,2)} | ${army.range} | ${army.cooldown}초 | ${army.description}${army.supportHeal?` · 반경 ${army.supportRange}, ${army.supportCooldown}초마다 아군 1명 +${numberText(army.supportHeal,2)}`:''} |`);
  lines.push('','왕국 사제는 사거리 안에서 결손 체력이 가장 큰 살아 있는 아군 한 명을 회복합니다. 최대 체력을 넘기거나 전사자를 부활시키지 않고 수동 회복 횟수·코인도 쓰지 않습니다.','',
-  '## 실제 잔액 이월과 실패 복구','',
-  '새 캠페인에서만 9.90코인을 지급합니다. 승리하면 현재 실제 잔액을 그대로 다음 단계로 이월하고 시작 예산을 다시 더하지 않습니다. 준비 중 연구 구매는 출정 체크포인트에 즉시 반영합니다. 훈련비는 그 출정에서만 차감하므로 패배·재시작·새로고침 때 출정 전 코인과 영구 연구 상태로 돌아갑니다. 실패한 전투의 타워 수입을 저장하거나 쌓을 수 없습니다.',
+  '## 실제 잔액의 즉시 저장과 이월','',
+  '새 캠페인에서만 9.90코인을 지급합니다. 훈련 지출·연구 지출·실제 타워 보상을 즉시 저장하고 패배·재시작·새로고침에도 그때 남은 실제 코인을 그대로 유지합니다. 이미 쓴 훈련비를 환불하거나 부분 타워 보상을 취소하지 않습니다. 승리 때도 코인 보상을 다시 더하지 않고 저장한 실제 잔액을 다음 단계로 이월합니다. 같은 전투의 같은 타워 보상은 한 번만 지급하며, 새로 재공략해서 파괴한 타워는 다시 보상을 줍니다.',
   '네 타워를 실제 공격으로 파괴할 때 3.00 / 4.00 / 5.00 / 6.00코인을 현재 전투 지갑에 넣습니다. 합계 18.00이며 같은 타워는 한 번만 지급합니다. 연구비와 다음 출정 훈련비를 함께 조달할 수 있도록 기존 합계 9.00에서 조정했습니다. 몬스터·성·보스에는 별도 코인 보상이 없습니다. 지갑 상한 1,000,000코인에 도달하면 추가 입금은 상한에서 멈춥니다.',
-  `연구 후에는 기본 8명 훈련비 ${numberText(STARTER_BUDGET,2)}를 남겨야 합니다. 이미 훈련한 준비 병력에 쓴 돈은 이 예산에 포함하므로 이중으로 예치하지 않습니다. 훈련도 실제 돈이 충분하고, 지출 후 잔액 + 아직 파괴하지 않은 타워의 미수령 보상 합계가 ${numberText(STARTER_BUDGET,2)} 이상일 때만 허용합니다. 네 타워 파괴가 승리의 필수 조건이므로 다음 단계 예산이 보존됩니다. 미래 보상을 실제 지갑에 미리 넣지는 않습니다.`,
+  `연구 후에는 실제 미사용 코인으로 기본 8명 훈련비 ${numberText(STARTER_BUDGET,2)}를 남겨야 합니다. 이미 쓴 훈련비는 환불되지 않으므로 이 예산으로 계산하지 않습니다. 훈련도 실제 돈이 충분하고, 지출 후 잔액 + 아직 파괴하지 않은 타워의 미수령 보상 합계가 ${numberText(STARTER_BUDGET,2)} 이상일 때만 허용합니다. 네 타워 파괴가 승리의 필수 조건이므로 승리 후 다음 단계 예산이 보존됩니다. 미래 보상을 실제 지갑에 미리 넣지는 않습니다.`,
+  '훈련 정답과 연구 구매는 차감할 새 잔액의 저장을 먼저 확인하고 성공할 때만 모델에 적용합니다. 저장 실패 때는 질문·코인·병력·연구가 그대로이며 같은 정답을 다시 제출할 수 있습니다. 저장 리비전으로 오래된 탭의 지갑 덮어쓰기를 막습니다.',
   '코인이 9.99를 넘으면 훈련 문제도 현재 전체 지갑에서 가격을 뺀 실제 잔액을 답해야 합니다. 정수 천분위로 계산하되 최대 소수 두 자리만 사용합니다. 회복 덧셈 문제는 기존 10 미만 학습 범위를 유지합니다. 오래된 잔액·가격 견적은 제출 때 재검증합니다.','',
   '## 코인을 주입하지 않은 연속 10단계 대표 전략','',
   '첫 편성은 방패 3 / 돌격 3 / 정찰 2, 총 8명으로 7.48코인입니다. 방패 → 돌격 → 정찰 순으로 약 0.7초마다 출격합니다. 준비 화면에서 감당할 수 있는 다음 연구를 사고, 1~9단계는 정예 증원을 최대 두 명만 훈련해 다음 연구 예산을 저축합니다. 연구 순서는 기사 → 명사수 → 사제 → 검투사입니다.',

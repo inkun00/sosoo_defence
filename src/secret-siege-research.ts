@@ -3,6 +3,7 @@ import {ARMY,type ArmyId} from './secret-siege-types';
 export const INITIAL_COINS=9900,STARTER_BUDGET=7480,SIEGE_COIN_LIMIT=1000000000;
 export const SIEGE_TRAINING_RESERVE=STARTER_BUDGET;
 export interface SiegeEconomy{coins:number;researched:readonly ArmyId[];revision?:number;}
+export type SiegeEconomyCommit=(proposed:Required<SiegeEconomy>)=>boolean;
 export function validSiegeCoins(value:unknown):value is number{return typeof value==='number'&&Number.isSafeInteger(value)&&value>=0&&value<=SIEGE_COIN_LIMIT&&value%10===0;}
 export function siegeResearched(value:unknown):ArmyId[]{
  const ids=new Set(Array.isArray(value)?value.filter(id=>typeof id==='string'):[]);
