@@ -15,6 +15,7 @@ import {TOWERS,towerType,towerPrice,GRADE_NAMES} from './towers';
 import {stageMap} from './maps';
 import type {GameScreenLayout} from './responsive-game';
 import {screenMotionDuration,SCREEN_MOTION_PHASER_EASING} from './screen-motion';
+import {brickDisplayOrder} from './brick-display-order';
 
 export type Panel='forge'|'map'|'menu'|'difficulty'|'purchase'|'goals'|'result'|null;
 export interface UIState{
@@ -271,7 +272,7 @@ export class GameUI extends Phaser.Scene{
   this.text(this.popup,425,174,'+',34).setOrigin(.5);this.text(this.popup,615,174,'=',34).setOrigin(.5);
   this.button(this.popup,'fuse',938,174,200,slotHeight,m.canPlaceWall?'합성 · 설치':'합성 · 보관',s.slots.every(v=>v!==null),'button_red',25);
   this.text(this.popup,640,236,`벽돌 ${m.bricks.length}개 · 아래 숫자를 골라요`,21,C.muted).setOrigin(.5);
-  m.bricks.slice(s.brickPage*6,s.brickPage*6+6).forEach((brick,i)=>{const tile=this.button(this.popup,`brick:${brick.id}`,190+i*180,303,162,brickHeight,numberText(brick.value),!s.slots.includes(brick.id),'button_brown',29);tile.container.addAt(this.add.image(0,3,'dungeon-props','brick').setDisplaySize(170,87),1);tile.label.setStroke('#14151d',4);});
+  brickDisplayOrder(m.bricks).slice(s.brickPage*6,s.brickPage*6+6).forEach((brick,i)=>{const tile=this.button(this.popup,`brick:${brick.id}`,190+i*180,303,162,brickHeight,numberText(brick.value),!s.slots.includes(brick.id),'button_brown',29);tile.container.addAt(this.add.image(0,3,'dungeon-props','brick').setDisplaySize(170,87),1);tile.label.setStroke('#14151d',4);});
   const pages=Math.ceil(m.bricks.length/6);if(pages>1){this.button(this.popup,'brick-page:prev',400,pagerY,180,pagerHeight,'◀ 이전',s.brickPage>0,'button_brown',23);this.text(this.popup,640,pagerY,`${s.brickPage+1} / ${pages}`,22,C.muted).setOrigin(.5);this.button(this.popup,'brick-page:next',880,pagerY,180,pagerHeight,'다음 ▶',s.brickPage<pages-1,'button_brown',23);}
   if(!m.bricks.length)this.text(this.popup,640,303,'돌 몬스터를 처치하면 숫자 벽돌을 얻어요.',23,C.muted).setOrigin(.5);
   this.fitText(this.text(this.popup,640,pages>1?Math.max(456,pagerY+pagerHeight/2+28):456,s.message||(m.canPlaceWall?'□ + □ = □가 맞으면 바로 길에 놓을 수 있어요.':'전투 중 만든 성벽은 다음 준비 때 설치해요.'),23,'#dfb987').setOrigin(.5),1080,50);
@@ -303,7 +304,7 @@ export class GameUI extends Phaser.Scene{
   this.text(this.popup,445,328,'+',34).setOrigin(.5);this.text(this.popup,635,328,'=',34).setOrigin(.5);
   this.button(this.popup,'fuse',917,330,158,84,m.canPlaceWall?'합성·설치':'합성·보관',s.slots.every(v=>v!==null),'button_red',23);
   this.text(this.popup,243,378,`보관 중인 벽돌 ${m.bricks.length}개  ·  누르면 빈 슬롯에 들어가요`,19);
-  m.bricks.slice(s.brickPage*6,s.brickPage*6+6).forEach((b,i)=>{const tile=this.button(this.popup,`brick:${b.id}`,295+i*137,442,118,64,numberText(b.value),!s.slots.includes(b.id),'button_brown',26);const stone=this.add.image(0,3,'dungeon-props','brick').setDisplaySize(126,77);tile.container.addAt(stone,1);tile.label.setStroke('#14151d',4);});
+  brickDisplayOrder(m.bricks).slice(s.brickPage*6,s.brickPage*6+6).forEach((b,i)=>{const tile=this.button(this.popup,`brick:${b.id}`,295+i*137,442,118,64,numberText(b.value),!s.slots.includes(b.id),'button_brown',26);const stone=this.add.image(0,3,'dungeon-props','brick').setDisplaySize(126,77);tile.container.addAt(stone,1);tile.label.setStroke('#14151d',4);});
   const pages=Math.ceil(m.bricks.length/6);if(pages>1){this.button(this.popup,'brick-page:prev',403,508,134,56,'◀ 이전',s.brickPage>0,'button_brown',18);this.text(this.popup,640,508,`${s.brickPage+1} / ${pages}`,18,C.muted).setOrigin(.5);this.button(this.popup,'brick-page:next',877,508,134,56,'다음 ▶',s.brickPage<pages-1,'button_brown',18);}
   if(!m.bricks.length)this.text(this.popup,640,453,'돌 몬스터를 처치하면 숫자 벽돌을 얻어요.',21,'#bdb7ae').setOrigin(.5);
   this.text(this.popup,247,540,s.message||'□ + □ = □가 맞으면 벽돌 세 개를 소비해요.',19,'#dfb987',500);
