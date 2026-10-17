@@ -1,14 +1,14 @@
 import type {ArmyId} from './secret-siege-types';
 
-export const SIEGE_HUMAN_STRIDES:Readonly<Record<ArmyId,number>>={guard:74,striker:68,scout:60};
-interface MovingHuman{distance:number;attacking:boolean;lastShot?:number;}
+export const SIEGE_HUMAN_STRIDES:Readonly<Record<ArmyId,number>>={guard:74,striker:68,scout:60,knight:82,ranger:64,champion:88,priest:68};
+interface MovingHuman{distance:number;attacking:boolean;lastShot?:number;lastHeal?:number;}
 export interface SiegeHumanMotion{frame:number;action:'walk'|'attack'|'idle';}
 
 /** Read model distance/time only, so pause and question dialogs freeze the pose. */
 export function siegeHumanMotion(unit:MovingHuman,elapsed:number,cooldown:number,stride=68,reducedMotion=false):SiegeHumanMotion{
  if(reducedMotion)return {frame:0,action:'idle'};
- if(unit.attacking){
-  const age=elapsed-(unit.lastShot??-Infinity),duration=Math.min(.95,Math.max(.08,cooldown*.8));
+ const age=elapsed-Math.max(unit.lastShot??-Infinity,unit.lastHeal??-Infinity),duration=Math.min(.95,Math.max(.08,cooldown*.8));
+ if(unit.attacking||unit.lastHeal!==undefined&&elapsed-unit.lastHeal>=0&&elapsed-unit.lastHeal<duration){
   if(age>=0&&age<duration)return {frame:8+Math.min(7,Math.floor(age/duration*8)),action:'attack'};
   // Being in range does not mean an attack fired: exact-damage troops may
   // wait for the correct remainder, and must not endlessly swing their weapon.

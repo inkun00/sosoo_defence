@@ -1,0 +1,129 @@
+{
+  "tool": "built-in OpenAI image_gen",
+  "created": "2026-10-17",
+  "transparent_background": true,
+  "preservation": "Final generated PNGs and alpha copied unchanged. Eight walking and eight attacking/casting frames per class; original identity reference and framing edits retained below.",
+  "reference": "public/assets/dungeon/siege-human-guard-v2.png",
+  "assets": [
+    {
+      "role": "knight",
+      "file": "public/assets/dungeon/siege-human-knight-v1.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-03ebb2cf-4b63-4274-9f13-1c078752c9a4.png",
+      "initialSource": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-f49f9b30-bee1-4f7c-ad95-36075b325a05.png",
+      "rows": 4,
+      "columns": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production transparent sprite atlas for this medieval fantasy tower-defense game's HUMAN liberation army. Use the attached existing shield soldier atlas ONLY as the style/camera/team-colour reference, not as an edit target. Create a NEW distinct human class. Hand-painted detailed steel, navy blue cloth and restrained gold, readable small game sprites, adult human anatomy, no monsters, no animal mounts. EXACTLY sixteen isolated full-body figures in a regular four-column four-row grid. All have exactly the same identity, proportions, equipment, right-facing three-quarter elevated game-camera angle and visual scale. First row plus second row: a seamless eight-pose walking cycle, visibly alternating legs and natural arm/cloth follow-through. Third and fourth rows: eight sequential attack poses: ready, anticipation, windup, strike/release, follow-through, recovery, almost-ready, ready. Fixed boot ground baseline inside every cell, steady torso size. Every cell must have a generous 12 percent transparent gutter on all sides; fit the widest extended weapon/effect fully INSIDE its own cell, never overlap any neighbor or canvas edge. Real transparent alpha background, no floor or baked shadows, no labels, no numbers, no text, no borders or grid lines, no colored backdrop. Never crop any boots, helmet, cape, bow, staff or sword tip. Distinct motion, consistent silhouette. Class: elite royal heavy knight, experienced adult human man, closed steel visor with a small blue plume, ornate broad steel-and-blue pavise shield on left arm, short arming sword in right hand, full plate armor with gold filigree, navy surcoat. More heavily armored than reference infantry. Attack sequence is a forceful single sword thrust/slash while bracing the shield. No huge magical effects.",
+      "framingEdit": "Use case: precise-object-edit. Edit the attached transparent HUMAN soldier sprite atlas for production game use. Preserve EXACTLY this class identity, face, equipment, navy/steel/gold design, sixteen individual poses, the 8 walk poses then 8 attack poses, right-facing 3/4 camera, four columns and four rows. CRITICAL FRAMING FIX: all sixteen figures are currently too large. Rebuild this same 4x4 atlas with each figure AND all weapons and all glow occupying at most 60 PERCENT of its cell's width and 68 PERCENT of its cell's height. Add a very large transparent gutter around EVERY individual figure and around the entire canvas: no nontransparent pixel within the outer 25 pixels, no contact/overlap between cells. Each figure must now look clearly smaller within its grid cell. Keep the same visual scale in all sixteen cells, same feet ground baseline within each row. Especially fully reconstruct any rightmost sword/bow/arrow/staff/glow tip that was clipped at the canvas edge, and any flowing cloak/boots. All complete weapons fit inside each cell with obvious empty space. Background must retain genuine transparent alpha. No shadows, grid lines, labels, frame borders, text or extra figures. Do not change class or replace attack poses with walking."
+    },
+    {
+      "role": "ranger",
+      "file": "public/assets/dungeon/siege-human-ranger-v1.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-23b0b4da-dc6a-4238-83dc-ec353495e796.png",
+      "initialSource": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-9db4fda1-f9c2-427f-8070-618f32bbbb6c.png",
+      "rows": 4,
+      "columns": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production transparent sprite atlas for this medieval fantasy tower-defense game's HUMAN liberation army. Use the attached existing shield soldier atlas ONLY as the style/camera/team-colour reference, not as an edit target. Create a NEW distinct human class. Hand-painted detailed steel, navy blue cloth and restrained gold, readable small game sprites, adult human anatomy, no monsters, no animal mounts. EXACTLY sixteen isolated full-body figures in a regular four-column four-row grid. All have exactly the same identity, proportions, equipment, right-facing three-quarter elevated game-camera angle and visual scale. First row plus second row: a seamless eight-pose walking cycle, visibly alternating legs and natural arm/cloth follow-through. Third and fourth rows: eight sequential attack poses: ready, anticipation, windup, strike/release, follow-through, recovery, almost-ready, ready. Fixed boot ground baseline inside every cell, steady torso size. Every cell must have a generous 12 percent transparent gutter on all sides; fit the widest extended weapon/effect fully INSIDE its own cell, never overlap any neighbor or canvas edge. Real transparent alpha background, no floor or baked shadows, no labels, no numbers, no text, no borders or grid lines, no colored backdrop. Never crop any boots, helmet, cape, bow, staff or sword tip. Distinct motion, consistent silhouette. Class: elite human longbow marksman, adult human woman, face visible under navy hood, fitted leather-and-steel brigandine, blue cloak, long elegant yew bow with gold tips, quiver, brown boots. Clearly archer and human. Walking holds bow low naturally. Attack sequence smoothly raises bow, nocks arrow, draws bowstring to cheek, aims, releases, bow follows through then recovers. The bow and hands remain anatomically coherent, arrow points right, no swords.",
+      "framingEdit": "Use case: precise-object-edit. Edit the attached transparent HUMAN soldier sprite atlas for production game use. Preserve EXACTLY this class identity, face, equipment, navy/steel/gold design, sixteen individual poses, the 8 walk poses then 8 attack poses, right-facing 3/4 camera, four columns and four rows. CRITICAL FRAMING FIX: all sixteen figures are currently too large. Rebuild this same 4x4 atlas with each figure AND all weapons and all glow occupying at most 60 PERCENT of its cell's width and 68 PERCENT of its cell's height. Add a very large transparent gutter around EVERY individual figure and around the entire canvas: no nontransparent pixel within the outer 25 pixels, no contact/overlap between cells. Each figure must now look clearly smaller within its grid cell. Keep the same visual scale in all sixteen cells, same feet ground baseline within each row. Especially fully reconstruct any rightmost sword/bow/arrow/staff/glow tip that was clipped at the canvas edge, and any flowing cloak/boots. All complete weapons fit inside each cell with obvious empty space. Background must retain genuine transparent alpha. No shadows, grid lines, labels, frame borders, text or extra figures. Do not change class or replace attack poses with walking."
+    },
+    {
+      "role": "champion",
+      "file": "public/assets/dungeon/siege-human-champion-v1.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-e0f0a122-1753-43eb-94f8-852e61d17a86.png",
+      "initialSource": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-db5b2990-d85c-4a6a-8cd8-408cd7bb8b63.png",
+      "rows": 4,
+      "columns": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production transparent sprite atlas for this medieval fantasy tower-defense game's HUMAN liberation army. Use the attached existing shield soldier atlas ONLY as the style/camera/team-colour reference, not as an edit target. Create a NEW distinct human class. Hand-painted detailed steel, navy blue cloth and restrained gold, readable small game sprites, adult human anatomy, no monsters, no animal mounts. EXACTLY sixteen isolated full-body figures in a regular four-column four-row grid. All have exactly the same identity, proportions, equipment, right-facing three-quarter elevated game-camera angle and visual scale. First row plus second row: a seamless eight-pose walking cycle, visibly alternating legs and natural arm/cloth follow-through. Third and fourth rows: eight sequential attack poses: ready, anticipation, windup, strike/release, follow-through, recovery, almost-ready, ready. Fixed boot ground baseline inside every cell, steady torso size. Every cell must have a generous 12 percent transparent gutter on all sides; fit the widest extended weapon/effect fully INSIDE its own cell, never overlap any neighbor or canvas edge. Real transparent alpha background, no floor or baked shadows, no labels, no numbers, no text, no borders or grid lines, no colored backdrop. Never crop any boots, helmet, cape, bow, staff or sword tip. Distinct motion, consistent silhouette. Class: elite liberation army champion, adult muscular human man with short brown hair, uncovered face, heavy silver shoulder armor and navy tabard, broad two-handed longsword with gold hilt. Clearly human foot soldier, no shield, no horse. Attack sequence raises the two-handed sword, powerful compact downward/rightward slash, follow-through and recovery. Full sword always within each cell, no enormous sparks or broad sweeping trails.",
+      "framingEdit": "Use case: precise-object-edit. Edit the attached transparent HUMAN soldier sprite atlas for production game use. Preserve EXACTLY this class identity, face, equipment, navy/steel/gold design, sixteen individual poses, the 8 walk poses then 8 attack poses, right-facing 3/4 camera, four columns and four rows. CRITICAL FRAMING FIX: all sixteen figures are currently too large. Rebuild this same 4x4 atlas with each figure AND all weapons and all glow occupying at most 60 PERCENT of its cell's width and 68 PERCENT of its cell's height. Add a very large transparent gutter around EVERY individual figure and around the entire canvas: no nontransparent pixel within the outer 25 pixels, no contact/overlap between cells. Each figure must now look clearly smaller within its grid cell. Keep the same visual scale in all sixteen cells, same feet ground baseline within each row. Especially fully reconstruct any rightmost sword/bow/arrow/staff/glow tip that was clipped at the canvas edge, and any flowing cloak/boots. All complete weapons fit inside each cell with obvious empty space. Background must retain genuine transparent alpha. No shadows, grid lines, labels, frame borders, text or extra figures. Do not change class or replace attack poses with walking."
+    },
+    {
+      "role": "priest",
+      "file": "public/assets/dungeon/siege-human-priest-v1.png",
+      "source": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-b77838ee-7d11-4c4c-9c5c-4bfbc3bd0f2b.png",
+      "initialSource": "C:/Users/user/.codex/generated_images/01a1230f-3f2c-7121-a583-bec935b6287a/exec-56ea2ca6-0d25-484d-8eb9-abbaec8cf2b5.png",
+      "rows": 4,
+      "columns": 4,
+      "walkFrames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "attackFrames": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: production transparent sprite atlas for this medieval fantasy tower-defense game's HUMAN liberation army. Use the attached existing shield soldier atlas ONLY as the style/camera/team-colour reference, not as an edit target. Create a NEW distinct human class. Hand-painted detailed steel, navy blue cloth and restrained gold, readable small game sprites, adult human anatomy, no monsters, no animal mounts. EXACTLY sixteen isolated full-body figures in a regular four-column four-row grid. All have exactly the same identity, proportions, equipment, right-facing three-quarter elevated game-camera angle and visual scale. First row plus second row: a seamless eight-pose walking cycle, visibly alternating legs and natural arm/cloth follow-through. Third and fourth rows: eight sequential attack poses: ready, anticipation, windup, strike/release, follow-through, recovery, almost-ready, ready. Fixed boot ground baseline inside every cell, steady torso size. Every cell must have a generous 12 percent transparent gutter on all sides; fit the widest extended weapon/effect fully INSIDE its own cell, never overlap any neighbor or canvas edge. Real transparent alpha background, no floor or baked shadows, no labels, no numbers, no text, no borders or grid lines, no colored backdrop. Never crop any boots, helmet, cape, bow, staff or sword tip. Distinct motion, consistent silhouette. Class: royal human battle priest and healer, elderly adult human man with short white beard, uncovered kind determined face, white-and-navy layered clerical robes with subtle golden embroidery, practical steel bracers, tall wood-and-gold staff topped with a small warm blue crystal. No religious logos or text. Walking uses natural leg stepping below robes, staff stays in right hand. Attack/heal sequence raises staff, gathers a SMALL contained warm golden-blue glow at staff tip and open left palm, extends palm to right, releases a SMALL light pulse and recovers. The complete staff and its glow fit each cell.",
+      "framingEdit": "Use case: precise-object-edit. Edit the attached transparent HUMAN soldier sprite atlas for production game use. Preserve EXACTLY this class identity, face, equipment, navy/steel/gold design, sixteen individual poses, the 8 walk poses then 8 attack poses, right-facing 3/4 camera, four columns and four rows. CRITICAL FRAMING FIX: all sixteen figures are currently too large. Rebuild this same 4x4 atlas with each figure AND all weapons and all glow occupying at most 60 PERCENT of its cell's width and 68 PERCENT of its cell's height. Add a very large transparent gutter around EVERY individual figure and around the entire canvas: no nontransparent pixel within the outer 25 pixels, no contact/overlap between cells. Each figure must now look clearly smaller within its grid cell. Keep the same visual scale in all sixteen cells, same feet ground baseline within each row. Especially fully reconstruct any rightmost sword/bow/arrow/staff/glow tip that was clipped at the canvas edge, and any flowing cloak/boots. All complete weapons fit inside each cell with obvious empty space. Background must retain genuine transparent alpha. No shadows, grid lines, labels, frame borders, text or extra figures. Do not change class or replace attack poses with walking."
+    }
+  ]
+}

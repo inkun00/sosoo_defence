@@ -4,7 +4,8 @@ import {hit,learningValue,numberText} from './math';
 import {parseMoney} from './towers';
 import {SIEGE_STAGE_COUNT,siegeStage,type SiegeStage} from './secret-siege-stages';
 import {REVIVED_WIZARD,revivedWizard,newSiegeBossState,type SiegeBossState} from './secret-siege-boss';
-import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit} from './secret-siege-types';
+import {siegeMonster,SIEGE_MONSTER_ALIVE_LIMIT} from './secret-siege-monsters';
+import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit,type SiegeMonster} from './secret-siege-types';
 
 const EPSILON=1e-7,HEAL=600;
 export const SIEGE_RECRUIT_INCREMENT=10;
@@ -14,12 +15,13 @@ interface ShotOwner{sourceId:string;}
 
 /** An isolated, exact-decimal attack campaign. Rendering never owns damage. */
 export class SecretSiege{
- phase:SiegePhase='ready';money=9900;reserve:Record<ArmyId,number>={guard:0,striker:0,scout:0};
- units:SiegeUnit[]=[];targets:SiegeTarget[];projectiles:SiegeProjectile[]=[];events:SiegeEvent[]=[];
+ phase:SiegePhase='ready';money=9900;reserve:Record<ArmyId,number>={guard:0,striker:0,scout:0,knight:0,ranger:0,champion:0,priest:0};
+ units:SiegeUnit[]=[];targets:SiegeTarget[];monsters:SiegeMonster[]=[];projectiles:SiegeProjectile[]=[];events:SiegeEvent[]=[];
  pendingQuestion?:SiegeQuestion;elapsed=0;correctAnswers=0;wrongAnswers=0;ralliesLeft=3;recruited=0;deployed=0;
  private unitSerial=0;private shotSerial=0;private questionSerial=0;private nextDeploy=0;
  private owners=new Map<number,ShotOwner>();private reservedDamage=new Map<string,number>();
  private quotes=new Map<string,SiegeQuestion>();
+ private spawnedMonsters=0;private rewardedTowers=new Set<string>();earnedCoins=0;
  readonly stage:SiegeStage;
  readonly bossState?:SiegeBossState;
  constructor(readonly difficulty:Difficulty,readonly stageId=1){
@@ -42,6 +44,12 @@ export class SecretSiege{
  }
  get castle(){return this.targets.find(target=>target.kind==='castle')!.hp;}
  get boss(){return this.targets.find(target=>target.kind==='boss');}
+ get destroyedTowers(){return this.targets.filter(target=>target.kind==='tower'&&target.hp<=0).length;}
+ get monsterSpawned(){return this.spawnedMonsters;}
+ get monsterLimit(){return this.stage.monsterLimit;}
+ get monsterAliveLimit(){return SIEGE_MONSTER_ALIVE_LIMIT;}
+ get nextMonsterIn(){return this.phase==='won'||this.phase==='lost'||this.spawnedMonsters>=this.monsterLimit||this.castle<=0?Infinity:Math.max(0,this.stage.monsterSpawnDelay+this.spawnedMonsters*this.stage.monsterSpawnInterval-this.elapsed);}
+ armyUnlocked(id:ArmyId){const army=spec(id);return !!army&&this.destroyedTowers>=army.requiredTowers;}
  get armyCount(){return this.units.filter(unit=>unit.hp>0).length+Object.values(this.reserve).reduce((sum,count)=>sum+count,0);}
  get canRally(){return this.phase==='playing'&&!this.pendingQuestion&&this.ralliesLeft>0&&this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp);}
  get stars(){return this.phase==='won'?this.elapsed<=105&&this.wrongAnswers===0?3:this.elapsed<=150?2:1:0;}
@@ -50,7 +58,7 @@ export class SecretSiege{
  private recruitmentAllowed(id:ArmyId):boolean{
   const army=spec(id);
   const cost=this.recruitCost(id);
-  if(!army||!this.interactive()||this.money<cost||this.armyCount>=SIEGE_ARMY_LIMIT)return false;
+  if(!army||!this.armyUnlocked(id)||!this.interactive()||this.money<cost||this.armyCount>=SIEGE_ARMY_LIMIT)return false;
   // Keep a legal starting formation affordable. Otherwise spending the last
   // coin or filling every slot with scouts would strand the preparation UI.
   if(this.phase==='ready'){
@@ -78,7 +86,8 @@ export class SecretSiege{
  answer(text:string):boolean{
   const question=this.pendingQuestion,value=parseMoney(text);
   if(!question||!this.interactive())return false;
-  if(value===null||!learningValue(value)||value!==question.answer){this.wrongAnswers++;return false;}
+  const valid=value!==null&&Number.isSafeInteger(value)&&value>=0&&value%10===0&&(question.kind==='recruit'||learningValue(value));
+  if(!valid||value!==question.answer){this.wrongAnswers++;return false;}
   if(question.kind==='recruit'){
    const army=question.armyId?spec(question.armyId):undefined;
    if(!army||this.money!==question.a||question.b!==this.recruitCost(army.id)||question.answer!==question.a-question.b||!this.recruitmentAllowed(army.id))return false;
@@ -100,7 +109,7 @@ export class SecretSiege{
  deploy(id:ArmyId):boolean{
   const army=spec(id);
   if(!army||this.phase!=='playing'||this.pendingQuestion||this.reserve[id]<1||this.elapsed+EPSILON<this.nextDeploy)return false;
-  this.reserve[id]--;this.units.push({id:'army-'+(++this.unitSerial),typeId:id,distance:0,hp:army.hp,maxHp:army.hp,reload:0,lastHit:-999,attacking:false,deployedAt:this.elapsed});
+  this.reserve[id]--;this.units.push({id:'army-'+(++this.unitSerial),typeId:id,distance:0,hp:army.hp,maxHp:army.hp,reload:0,lastHit:-999,attacking:false,deployedAt:this.elapsed,healReload:0,lastHeal:-999});
   this.deployed++;this.nextDeploy=this.elapsed+.65;this.events.push({type:'deploy',message:`${army.name} 출격!`});return true;
  }
  togglePause(){if(this.phase==='playing')this.phase='paused';else if(this.phase==='paused')this.phase='playing';}
@@ -109,18 +118,27 @@ export class SecretSiege{
   dt=Math.min(dt,.1);this.elapsed=Math.min(SIEGE_DURATION,this.elapsed+dt);
   this.advanceProjectiles(dt);
   if(this.phase!=='playing')return;
+  if(this.castle>0&&this.spawnedMonsters<this.monsterLimit&&this.monsters.filter(monster=>monster.hp>0).length<this.monsterAliveLimit&&this.nextMonsterIn<=EPSILON){
+   const monster=siegeMonster(this.stageId,this.spawnedMonsters++,this.difficulty,this.elapsed);this.monsters.push(monster);this.events.push({type:'monster-spawn',message:`${monster.name} 출격!`,targetId:monster.id,friendly:false});
+  }
   this.advanceBoss();
   for(const unit of this.units){
    if(unit.hp<=0)continue;
-   unit.reload=Math.max(0,unit.reload-dt);const army=spec(unit.typeId)!,target=this.targets.find(target=>target.hp>0);
+   unit.reload=Math.max(0,unit.reload-dt);const army=spec(unit.typeId)!;
+   this.support(unit,dt);
+   const structure=this.targets.find(target=>target.hp>0);
+   const monster=this.monsters.filter(enemy=>enemy.hp>0&&enemy.distance>=unit.distance-army.range&&(!structure||enemy.distance<=structure.distance||Math.abs(enemy.distance-unit.distance)<=army.range)).sort((a,b)=>Math.abs(a.distance-unit.distance)-Math.abs(b.distance-unit.distance))[0];
+   const target=monster??structure;unit.targetId=target?.id;unit.attacking=false;
    if(!target)continue;
-   unit.distance=Math.min(target.distance-army.range,unit.distance+army.speed*dt);
-   unit.attacking=target.distance-unit.distance<=army.range+EPSILON;
-   if(!unit.attacking||unit.reload>EPSILON||target.hp-(this.reservedDamage.get(target.id)??0)<army.attack)continue;
+   if(target.distance-unit.distance>army.range)unit.distance=Math.min(target.distance-army.range,unit.distance+army.speed*dt);
+   unit.attacking=Math.abs(target.distance-unit.distance)<=army.range+EPSILON;
+   const remaining=target.hp-(this.reservedDamage.get(target.id)??0);
+   if(!unit.attacking||unit.reload>EPSILON||(target.kind==='monster'?remaining<=0:remaining<army.attack))continue;
    this.shoot('army',unit.id,unit.distance,target.distance,army.attack,target.id,unit.typeId==='scout'?.35:unit.typeId==='guard'?.5:.6);
    unit.lastShot=this.elapsed;
    unit.reload=army.cooldown*((unit.hexUntil??0)>this.elapsed?REVIVED_WIZARD.hexReloadScale:1);
   }
+  this.moveMonsters(dt);
   for(const target of this.targets){
    if(target.hp<=0)continue;
    if(target.kind==='boss'&&this.bossState?.phase==='dormant')continue;
@@ -133,7 +151,25 @@ export class SecretSiege{
    this.shoot('enemy',target.id,target.distance,unit.distance,target.attack,unit.id,.5);target.reload=target.cooldown*(enraged?.8:1);target.lastShot=this.elapsed;
   }
   if(this.elapsed>=SIEGE_DURATION-EPSILON)this.lose('시간이 다 되었어요. 군대의 구성과 출격 순서를 바꿔 다시 도전해요.');
-  else if(!this.units.some(unit=>unit.hp>0)&&Object.values(this.reserve).every(count=>count===0)&&this.money<Math.min(...ARMY.map(army=>this.recruitCost(army.id))))this.lose('출격할 군대와 모집 코인이 모두 소진되었어요.');
+  else if(!this.units.some(unit=>unit.hp>0)&&Object.values(this.reserve).every(count=>count===0)&&!ARMY.some(army=>this.canRecruit(army.id)))this.lose('출격할 군대와 모집 코인이 모두 소진되었어요.');
+ }
+ private support(unit:SiegeUnit,dt:number){
+  const army=spec(unit.typeId)!;if(!army.supportHeal)return;
+  unit.healReload=Math.max(0,(unit.healReload??0)-dt);if(unit.healReload>EPSILON)return;
+  const injured=this.units.filter(friend=>friend.hp>0&&friend.hp<friend.maxHp&&Math.abs(friend.distance-unit.distance)<=army.supportRange!).sort((a,b)=>(b.maxHp-b.hp)-(a.maxHp-a.hp))[0];
+  if(!injured)return;const healed=Math.min(army.supportHeal,injured.maxHp-injured.hp);injured.hp+=healed;unit.lastHeal=this.elapsed;unit.healReload=army.supportCooldown;
+  this.events.push({type:'heal',message:`왕국 사제가 아군을 ${numberText(healed,2)} 회복했어요.`,targetId:injured.id,damage:healed,friendly:true});
+ }
+ private moveMonsters(dt:number){
+  for(const monster of this.monsters){
+   if(monster.hp<=0)continue;monster.reload=Math.max(0,monster.reload-dt);
+   const unit=this.units.filter(friend=>friend.hp>0).sort((a,b)=>Math.abs(monster.distance-a.distance)-Math.abs(monster.distance-b.distance))[0];
+   monster.targetId=unit?.id;monster.attacking=false;
+   if(unit){const gap=unit.distance-monster.distance;if(Math.abs(gap)>monster.range){const movement=Math.min(Math.abs(gap)-monster.range,monster.speed*dt);monster.distance+=Math.sign(gap)*movement;}monster.attacking=Math.abs(unit.distance-monster.distance)<=monster.range+EPSILON;}
+   else monster.distance=Math.max(0,monster.distance-monster.speed*dt);
+   if(!unit||!monster.attacking||monster.reload>EPSILON)continue;
+   this.shoot('enemy',monster.id,monster.distance,unit.distance,monster.attack,unit.id,.3);monster.reload=monster.cooldown;monster.lastShot=this.elapsed;
+  }
  }
  private advanceBoss(){
   const boss=this.boss,state=this.bossState;if(!boss||!state)return;
@@ -172,7 +208,7 @@ export class SecretSiege{
  }
  private sourceAlive(shot:SiegeProjectile){
   const id=this.owners.get(shot.id)?.sourceId;
-  return shot.source==='army'?this.units.some(unit=>unit.id===id&&unit.hp>0):this.targets.some(target=>target.id===id&&target.hp>0);
+  return shot.source==='army'?this.units.some(unit=>unit.id===id&&unit.hp>0):this.targets.some(target=>target.id===id&&target.hp>0)||this.monsters.some(monster=>monster.id===id&&monster.hp>0);
  }
  private removeShot(shot:SiegeProjectile){
   const index=this.projectiles.findIndex(projectile=>projectile.id===shot.id);if(index<0)return;
@@ -186,23 +222,27 @@ export class SecretSiege{
   for(const shot of this.projectiles)shot.age+=dt;
   const arrivals=this.projectiles.slice().sort((a,b)=>(b.age-b.duration)-(a.age-a.duration)||a.id-b.id);
   for(const shot of arrivals){
-   const target=shot.source==='army'?this.targets.find(target=>target.id===shot.targetId):this.units.find(unit=>unit.id===shot.targetId);
+   const target=shot.source==='army'?this.targets.find(target=>target.id===shot.targetId)??this.monsters.find(monster=>monster.id===shot.targetId):this.units.find(unit=>unit.id===shot.targetId);
    if(!target||target.hp<=0||!this.sourceAlive(shot)){this.removeShot(shot);continue;}
    if(shot.source==='army'&&(target as SiegeTarget).kind==='castle'&&this.boss&&this.boss.hp>0){this.removeShot(shot);continue;}
    if(shot.age+EPSILON<shot.duration)continue;
    this.removeShot(shot);
    const before=target.hp;
-   if(shot.source==='army')target.hp=hit(before,shot.damage).hp;
+   if(shot.source==='army'&&'kind'in target&&target.kind!=='monster')target.hp=hit(before,shot.damage).hp;
    else target.hp=Math.max(0,before-shot.damage);
    const actual=before-target.hp;
    if(actual===0)continue;
    target.lastHit=this.elapsed;
    this.events.push({type:'hit',message:`${numberText(before,2)} − ${numberText(actual,2)} = ${numberText(target.hp,2)}`,targetId:target.id,damage:actual,friendly:shot.source==='army'});
    if(target.hp===0){
+    if(shot.source==='army'&&'kind'in target&&target.kind==='tower'&&!this.rewardedTowers.has(target.id)){
+     this.rewardedTowers.add(target.id);const index=this.targets.filter(item=>item.kind==='tower').findIndex(item=>item.id===target.id),coins=this.stage.towerRewards[index];
+     this.money+=coins;this.earnedCoins+=coins;this.events.push({type:'reward',message:`${target.name} 파괴 · ${numberText(coins,2)} 코인 획득!`,targetId:target.id,damage:coins,friendly:true});
+    }
     this.events.push({type:'destroy',message:shot.source==='army'?(target as SiegeTarget).kind==='boss'?'부활한 마법사를 쓰러뜨렸어요!':`${(target as SiegeTarget).name} 파괴!`:'아군이 쓰러졌어요.',targetId:target.id,friendly:shot.source==='army'});
     if(shot.source==='army'&&(target as SiegeTarget).kind==='boss'&&this.bossState){this.bossState.phase='defeated';this.bossState.spell=undefined;}
     if(shot.source==='army'&&this.targets.every(target=>target.hp<=0)){
-     this.phase='won';this.clearShots();this.events.push({type:'won',message:this.stageId===SIEGE_STAGE_COUNT?'마지막 저주 핵을 깨뜨리고 세상에 빛을 되찾았어요!':`${this.stage.name}의 저주를 걷어 냈어요. 다음 원정길이 열렸어요!`});return;
+     this.phase='won';this.clearShots();for(const monster of this.monsters){monster.attacking=false;monster.targetId=undefined;monster.lastShot=-999;}this.events.push({type:'won',message:this.stageId===SIEGE_STAGE_COUNT?'마지막 저주 핵을 깨뜨리고 세상에 빛을 되찾았어요!':`${this.stage.name}의 저주를 걷어 냈어요. 다음 원정길이 열렸어요!`});return;
     }
    }
   }

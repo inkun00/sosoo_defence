@@ -4,6 +4,7 @@ export interface SiegeStage{
  readonly towerHp:readonly [number,number,number,number];readonly castleHp:number;
  readonly towerAttack:readonly [number,number,number,number];readonly castleAttack:number;
  readonly cooldownScale:number;readonly towerRanges:readonly [number,number,number,number];readonly castleRange:number;
+ readonly monsterSpawnDelay:number;readonly monsterSpawnInterval:number;readonly monsterLimit:number;readonly towerRewards:readonly [number,number,number,number];
 }
 export const SIEGE_STAGE_COUNT=10;
 const titles=[
@@ -24,6 +25,7 @@ export const SIEGE_STAGES:readonly SiegeStage[]=Object.freeze(titles.map(([name,
   towerHp:Object.freeze([hp(2400,450),hp(3600,450),hp(4500,450),hp(5400,450)]) as SiegeStage['towerHp'],castleHp:9990,
   towerAttack:Object.freeze([hp(100,10),hp(150,10),hp(200,20),hp(250,20)]) as SiegeStage['towerAttack'],castleAttack:300+index*20,
   cooldownScale:Number((1-index*.018).toFixed(3)),towerRanges:Object.freeze([175+index*4,185+index*4,195+index*4,205+index*4]) as SiegeStage['towerRanges'],castleRange:240+index*4,
+  monsterSpawnDelay:10,monsterSpawnInterval:Number((13.5-index*.6).toFixed(2)),monsterLimit:Math.ceil(170/(13.5-index*.6)),towerRewards:Object.freeze([1500,2000,2500,3000]) as SiegeStage['towerRewards'],
  });
 }));
 export function siegeStage(id:number):SiegeStage{

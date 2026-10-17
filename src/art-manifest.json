@@ -838,6 +838,20 @@
       "width": 768
     }
   },
+  "siege-human-champion-v1": {
+    "url": "/assets/dungeon/siege-human-champion-v1.37d925900ad2.webp",
+    "sourceHash": "0c71e14a8f890655fc7fc237d7ec8ce34f1a68447331ba3c13b3d5e7bf06c469",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 1432022,
+    "bytes": 248068,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
   "siege-human-guard-v2": {
     "url": "/assets/dungeon/siege-human-guard-v2.7e6aca922d85.webp",
     "sourceHash": "4beff7214baf499d74bf3d85d9679dda4bab4a7e89e554dc405e45b7aa290e0e",
@@ -845,6 +859,48 @@
     "height": 1024,
     "sourceBytes": 2082343,
     "bytes": 329868,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
+  "siege-human-knight-v1": {
+    "url": "/assets/dungeon/siege-human-knight-v1.9ea80e554655.webp",
+    "sourceHash": "8349bb4b8f1b0cbc73c314813b1b52b06b851a3d56e779837f8e5181c928150c",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 1344390,
+    "bytes": 232726,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
+  "siege-human-priest-v1": {
+    "url": "/assets/dungeon/siege-human-priest-v1.0b1979563408.webp",
+    "sourceHash": "15a2c0cf3e97551d18222b7ce17dac92c56cd8f3a96c09b407ff83b2fd34011c",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 1589205,
+    "bytes": 291044,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 1024
+    }
+  },
+  "siege-human-ranger-v1": {
+    "url": "/assets/dungeon/siege-human-ranger-v1.020c5d140ce6.webp",
+    "sourceHash": "6e14382a67831413ed251e629968d6334bec3925003889223cf6651f48fbe6e8",
+    "width": 1024,
+    "height": 1024,
+    "sourceBytes": 1330743,
+    "bytes": 247324,
     "encoding": {
       "quality": 84,
       "alphaQuality": 100,

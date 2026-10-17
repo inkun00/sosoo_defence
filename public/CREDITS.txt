@@ -277,3 +277,15 @@ fixed foot anchors and a common scale preserve weapon reach across frames.
 The game loads optimized hashed WebP atlases, advances walking by distance and
 plays attacks once per actual shot. Exact prompts and original output paths:
 licenses/siege-human-v2-prompts.json (source-only, excluded from deployment).
+
+SECRET SIEGE ELITE HUMAN ARMY (2026-10-17)
+Four original transparent 4-by-4 walk/attack atlases generated and framing-edited
+with the built-in OpenAI image_gen tool: royal knight, longbow marksman,
+liberation champion and royal battle priest. Eight walk and eight attack/casting
+poses per class, 64 new poses total. Unchanged final PNGs and alpha are preserved:
+assets/dungeon/siege-human-knight-v1.png, siege-human-ranger-v1.png,
+siege-human-champion-v1.png and siege-human-priest-v1.png. Audited masks and
+common foot anchors prevent clipping and neighbouring-frame leaks. Hashed WebP
+atlases are used in the game. Exact initial prompts, framing edits and source
+paths: licenses/siege-advanced-army-v1-prompts.json (source-only, not deployed).
+Wizard reinforcements reuse the game's existing audited monster sprite atlases.

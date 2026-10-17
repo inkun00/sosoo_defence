@@ -52,3 +52,13 @@ test('facing follows a horizontal road or target and remains consistent on verti
  assert.equal(siegeHumanFacing(1,-1),-1);assert.equal(siegeHumanFacing(-1,1),1);
  assert.equal(siegeHumanFacing(40,-1),1);assert.equal(siegeHumanFacing(-40,1),-1);
 });
+
+test('all seven human roles have physical strides and a priest cast follows an actual heal',()=>{
+ assert.deepEqual(Object.keys(SIEGE_HUMAN_STRIDES),['guard','striker','scout','knight','ranger','champion','priest']);
+ assert.ok(Object.values(SIEGE_HUMAN_STRIDES).every(stride=>Number.isFinite(stride)&&stride>=60));
+ const priest={distance:220,attacking:false,lastHeal:10};
+ assert.deepEqual(siegeHumanMotion(priest,10,3),{frame:8,action:'attack'});
+ assert.deepEqual(siegeHumanMotion(priest,10.4,3),siegeHumanMotion(priest,10.4,3));
+ assert.equal(siegeHumanMotion(priest,11,3).action,'walk');
+ assert.equal(siegeHumanMotion({...priest,lastHeal:12},10,3).action,'walk');
+});

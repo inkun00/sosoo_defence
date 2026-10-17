@@ -29,6 +29,10 @@ export function siegeHumanDrawSize(atlas:SiegeHumanAtlas,visibleHeight:number){
  const first=atlas.frames[0],height=(first.anchorY-first.y)*atlas.scale;
  return visibleHeight*SIEGE_HUMAN_CELL/Math.max(1,height);
 }
+/** Preserve visible body detail when generous source gutters shrink the atlas pose. */
+export function siegeHumanAtlasDensity(atlas:SiegeHumanAtlas,visibleHeight:number){
+ return Math.max(1,Math.min(2,Math.ceil((siegeHumanDrawSize(atlas,visibleHeight)/SIEGE_HUMAN_CELL-.1)*2)/2));
+}
 
 /** Normalize source cells once; fixed feet and scale keep poses from wobbling. */
 export function drawSiegeHumanAtlas(context:CanvasRenderingContext2D,atlas:SiegeHumanAtlas,image:CanvasImageSource){

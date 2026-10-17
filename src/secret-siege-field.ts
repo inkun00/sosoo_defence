@@ -1,14 +1,15 @@
 import {artURL} from './art';
-import {HERO_SPRITE_CELL} from './hero-sprite';
+import {HERO_SPRITE_CELL,drawHeroSpriteAtlas} from './hero-sprite';
 import {drawSiegeSpriteAtlas,siegeHumanAtlas,SIEGE_HUMAN_IDS,SIEGE_FORTIFICATIONS} from './secret-siege-sprites';
-import {drawSiegeHumanAtlas,siegeHumanGround,siegeHumanDrawSize,SIEGE_HUMAN_CELL} from './secret-siege-human-atlas';
+import {drawSiegeHumanAtlas,siegeHumanGround,siegeHumanDrawSize,siegeHumanAtlasDensity,SIEGE_HUMAN_CELL} from './secret-siege-human-atlas';
 import {siegeHumanMotion,siegeHumanFacing,SIEGE_HUMAN_STRIDES} from './secret-siege-human-motion';
+import {siegeMonsterArt,siegeMonsterArtTextures,siegeMonsterMotion} from './secret-siege-monster-art';
 import {drawStationaryAmbientAtlas} from './ambient-animation';
 import ambientAtlas from './ambient-atlas.json';
 import packedCollapseAtlas from './secret-siege-collapse-atlas.json';
 import {decodeSpriteFrames} from './sprite-frame-packing';
 import {numberText} from './math';
-import {ARMY,SIEGE_PATH_LENGTH,type SiegeTarget,type SiegeUnit,type SiegeProjectile} from './secret-siege-types';
+import {ARMY,SIEGE_PATH_LENGTH,type ArmyId,type SiegeTarget,type SiegeUnit,type SiegeProjectile,type SiegeMonster,type SiegeEvent} from './secret-siege-types';
 import type {SecretSiege} from './secret-siege-model';
 import {secretSiegeWorldLight} from './secret-siege-ending-state';
 import {SiegeBossPainter,siegeBossMuzzle} from './secret-siege-boss-field';
@@ -41,7 +42,8 @@ export function siegeTargetPoint(target:SiegeTarget):Point{
 }
 
 function identity(id:string){let value=0;for(const character of id)value=(value*31+character.charCodeAt(0))>>>0;return value;}
-function humanHeight(unit:SiegeUnit){return unit.typeId==='guard'?73:unit.typeId==='striker'?68:64;}
+const HUMAN_HEIGHT:Readonly<Record<ArmyId,number>>={guard:73,striker:68,scout:64,knight:80,ranger:69,champion:85,priest:75};
+function humanHeight(unit:SiegeUnit){return HUMAN_HEIGHT[unit.typeId];}
 function canvas(width:number,height:number){const result=document.createElement('canvas');result.width=width;result.height=height;return result;}
 
 /** Lightweight, same-origin story renderer. Gameplay never depends on image loading. */
@@ -50,7 +52,12 @@ export class SecretSiegeField{
  private images=new Map<string,HTMLImageElement>();
  private sprites=new Map<string,HTMLCanvasElement>();
  private grounds=new Map<string,SpriteGround>();
+ private humanDensities=new Map<string,number>();
  private humanDirections=new Map<string,1|-1>();
+ private monsterDirections=new Map<string,1|-1>();
+ private monsterImageTasks=new Map<string,Promise<void>>();
+ private healEffects:{targetId:string;started:number;amount:number}[]=[];
+ private seenHealEvents=new WeakSet<SiegeEvent>();
  private backdrop?:HTMLCanvasElement;
  private restoredBackdrop?:HTMLCanvasElement;
  private worldLight=0;
@@ -69,7 +76,7 @@ export class SecretSiegeField{
   element.width=WIDTH;element.height=HEIGHT;
   const context=element.getContext('2d');if(!context)throw Error('Canvas 2D is unavailable');this.context=context;
  }
- setModel(model:SecretSiege){this.model=model;this.previousPhase='';this.previousWallTime=undefined;this.animationTime=0;this.backdrop=undefined;this.restoredBackdrop=undefined;this.worldLight=0;this.humanDirections.clear();this.bossPainter.reset();if(model.stageId===10)void this.loadBossImage();}
+ setModel(model:SecretSiege){this.model=model;this.previousPhase='';this.previousWallTime=undefined;this.animationTime=0;this.backdrop=undefined;this.restoredBackdrop=undefined;this.worldLight=0;this.humanDirections.clear();this.monsterDirections.clear();this.healEffects=[];this.seenHealEvents=new WeakSet();this.bossPainter.reset();void this.loadMonsterImages();if(model.stageId===10)void this.loadBossImage();}
  load():Promise<void>{
   return this.loadTask??=this.loadImages();
  }
@@ -86,11 +93,7 @@ export class SecretSiegeField{
    const atlas=canvas(HERO_SPRITE_CELL*4,HERO_SPRITE_CELL*3),context=atlas.getContext('2d');
    if(context){drawSiegeSpriteAtlas(context,sheet,source);this.sprites.set(sheet,atlas);for(let row=0;row<3;row++)this.grounds.set(sheet+':'+row,this.measureGround(context,row));}
   }
-  for(const id of SIEGE_HUMAN_IDS){
-   const spec=siegeHumanAtlas(id),source=this.images.get(spec.texture);if(!source)continue;
-   const atlas=canvas(SIEGE_HUMAN_CELL*4,SIEGE_HUMAN_CELL*4),context=atlas.getContext('2d');
-   if(context){drawSiegeHumanAtlas(context,spec,source);this.sprites.set(spec.texture,atlas);this.grounds.set(spec.texture,siegeHumanGround(spec));}
-  }
+  for(const army of ARMY.filter(army=>army.requiredTowers===0))this.cacheHumanAtlas(army.id);
   const source=this.images.get('flame-loop-v1');
   if(source){
    try{
@@ -109,7 +112,31 @@ export class SecretSiegeField{
    });this.collapse=atlas;
   }
   this.backdrop=this.createBackdrop();
+  await this.loadMonsterImages();
   if(this.model.stageId===10)await this.loadBossImage();
+ }
+ private cacheHumanAtlas(id:ArmyId){
+  const spec=siegeHumanAtlas(id);if(this.sprites.has(spec.texture))return;
+  const source=this.images.get(spec.texture);if(!source)return;
+  const density=siegeHumanAtlasDensity(spec,HUMAN_HEIGHT[id]),atlas=canvas(SIEGE_HUMAN_CELL*4*density,SIEGE_HUMAN_CELL*4*density),context=atlas.getContext('2d');
+  if(context){context.scale(density,density);drawSiegeHumanAtlas(context,spec,source);this.sprites.set(spec.texture,atlas);this.grounds.set(spec.texture,siegeHumanGround(spec));this.humanDensities.set(spec.texture,density);}
+ }
+ private async loadMonsterImages(){
+  await Promise.allSettled(siegeMonsterArtTextures(this.model.stageId).map(name=>{
+   let task=this.monsterImageTasks.get(name);if(task)return task;
+   task=new Promise<void>(resolve=>{
+    const image=new Image();let finished=false;
+    const finish=(success:boolean)=>{
+     if(finished)return;finished=true;clearTimeout(timeout);image.onload=image.onerror=null;
+     if(success&&!this.disposed){
+      this.images.set(name,image);const output=canvas(HERO_SPRITE_CELL*4,HERO_SPRITE_CELL*3),context=output.getContext('2d');
+      if(context){drawHeroSpriteAtlas(context,name,image);this.sprites.set(name,output);for(let row=0;row<3;row++){this.grounds.set(name+':'+row,this.measureGround(context,row));for(let frame=0;frame<4;frame++)this.grounds.set(name+':'+row+':'+frame,this.measureGround(context,row,frame));}}
+     }
+     resolve();
+    };
+    const timeout=setTimeout(()=>finish(false),12000);image.onload=()=>finish(true);image.onerror=()=>finish(false);image.src=artURL(name);
+   });this.monsterImageTasks.set(name,task);return task;
+  }));
  }
  private loadBossImage():Promise<void>{
   return this.bossImageTask??=new Promise(resolve=>{
@@ -118,8 +145,8 @@ export class SecretSiegeField{
    const timeout=setTimeout(()=>finish(false),12000);image.onload=()=>finish(true);image.onerror=()=>finish(false);image.src=artURL(name);
   });
  }
- private measureGround(context:CanvasRenderingContext2D,row:number):SpriteGround{
-  const data=context.getImageData(0,row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL).data;
+ private measureGround(context:CanvasRenderingContext2D,row:number,column=0):SpriteGround{
+  const data=context.getImageData(column*HERO_SPRITE_CELL,row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL).data;
   let left=HERO_SPRITE_CELL,right=-1,top=HERO_SPRITE_CELL,bottom=-1;
   for(let y=0;y<HERO_SPRITE_CELL;y++)for(let x=0;x<HERO_SPRITE_CELL;x++)if(data[(y*HERO_SPRITE_CELL+x)*4+3]>=32){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
   return bottom<0?{x:HERO_SPRITE_CELL/2,y:HERO_SPRITE_CELL,top:0}:{x:(left+right+1)/2,y:bottom+1,top};
@@ -137,10 +164,11 @@ export class SecretSiegeField{
   if(this.worldLight>0){this.restoredBackdrop??=this.createBackdrop(true);context.save();context.globalAlpha=this.worldLight;context.drawImage(this.restoredBackdrop,0,0);context.restore();}
   this.camp(reducedMotion);
   this.bossPainter.warning(context,this.model,siegeFieldPoint,this.animationTime,reducedMotion);
-  const units=[...this.model.units].filter(unit=>unit.hp>0),targets=this.model.targets;
-  const objects=[...targets.map(target=>({y:siegeTargetPoint(target).y,draw:()=>this.target(target,reducedMotion)})),...units.map(unit=>({y:this.unitPoint(unit).y,draw:()=>this.unit(unit,reducedMotion)}))];
+  const units=this.model.units.filter(unit=>unit.hp>0),monsters=this.model.monsters.filter(monster=>monster.hp>0),targets=this.model.targets;
+  const objects=[...targets.map(target=>({y:siegeTargetPoint(target).y,draw:()=>this.target(target,reducedMotion)})),...units.map(unit=>({y:this.unitPoint(unit).y,draw:()=>this.unit(unit,reducedMotion)})),...monsters.map(monster=>({y:this.monsterPoint(monster).y,draw:()=>this.monster(monster,reducedMotion)}))];
   objects.sort((left,right)=>left.y-right.y).forEach(object=>object.draw());
   for(const projectile of this.model.projectiles)this.projectile(projectile,reducedMotion);
+  this.healing(reducedMotion);
   this.embers(reducedMotion);
   context.save();context.strokeStyle='#c1aa7960';context.lineWidth=2;context.strokeRect(10,10,WIDTH-20,HEIGHT-20);context.restore();
  }
@@ -228,26 +256,57 @@ export class SecretSiegeField{
  private unitPoint(unit:SiegeUnit){const point=siegeFieldPoint(unit.distance),seed=identity(unit.id);return{x:point.x-(seed%4)*9,y:point.y+(Math.floor(seed/4)%5-2)*12};}
  private unit(unit:SiegeUnit,reducedMotion:boolean){
   const spec=ARMY.find(value=>value.id===unit.typeId)!;if(!spec)return;const context=this.context,point=this.unitPoint(unit),size=humanHeight(unit);
+  this.cacheHumanAtlas(unit.typeId);
   const source=siegeHumanAtlas(unit.typeId),pose=siegeHumanMotion(unit,this.model.elapsed,spec.cooldown,SIEGE_HUMAN_STRIDES[unit.typeId],reducedMotion||this.model.phase==='won'||this.model.phase==='lost');
   context.save();context.fillStyle='#050b0e80';context.beginPath();context.ellipse(point.x,point.y+5,size*.32,9,0,0,Math.PI*2);context.fill();context.strokeStyle='#70e2ef95';context.lineWidth=2;context.beginPath();context.ellipse(point.x,point.y+3,size*.32,10,0,0,Math.PI*2);context.stroke();
   const atlas=this.sprites.get(source.texture),ground=this.grounds.get(source.texture)??siegeHumanGround(source),drawSize=siegeHumanDrawSize(source,size),scale=drawSize/SIEGE_HUMAN_CELL,top=point.y-size;
-  const target=unit.attacking?this.model.targets.find(value=>value.hp>0):undefined,ahead=siegeFieldPoint(unit.distance+2),behind=siegeFieldPoint(unit.distance-2),delta=target?siegeTargetPoint(target).x-point.x:ahead.x-behind.x;
+  const target=unit.attacking?this.model.targets.find(value=>value.id===unit.targetId)??this.model.monsters.find(value=>value.id===unit.targetId):undefined,ahead=siegeFieldPoint(unit.distance+2),behind=siegeFieldPoint(unit.distance-2),targetPoint=target?target.kind==='monster'?this.monsterPoint(target):siegeTargetPoint(target):undefined,delta=targetPoint?targetPoint.x-point.x:ahead.x-behind.x;
   const facing=siegeHumanFacing(delta,this.humanDirections.get(unit.id)??1);this.humanDirections.set(unit.id,facing);
-  if(atlas){context.save();context.translate(point.x,0);context.scale(facing,1);context.drawImage(atlas,pose.frame%4*SIEGE_HUMAN_CELL,Math.floor(pose.frame/4)*SIEGE_HUMAN_CELL,SIEGE_HUMAN_CELL,SIEGE_HUMAN_CELL,-ground.x*scale,point.y-ground.y*scale,drawSize,drawSize);context.restore();}
+  if(atlas){const cell=SIEGE_HUMAN_CELL*(this.humanDensities.get(source.texture)??1);context.save();context.translate(point.x,0);context.scale(facing,1);context.drawImage(atlas,pose.frame%4*cell,Math.floor(pose.frame/4)*cell,cell,cell,-ground.x*scale,point.y-ground.y*scale,drawSize,drawSize);context.restore();}
   else{context.fillStyle=unit.typeId==='guard'?'#c2c8ca':unit.typeId==='striker'?'#51c7b7':'#89b8ff';context.beginPath();context.arc(point.x,point.y-31,17,0,Math.PI*2);context.fill();context.fillRect(point.x-13,point.y-29,26,28);}
   this.health(point.x,top-12,57,unit.hp,unit.maxHp,true);
   this.bossPainter.unitStatus(context,this.model,unit,point,top);
   if(this.model.units.filter(value=>value.hp>0).length<=4||this.model.elapsed-unit.lastHit<1.5)this.label(point.x,top-27,numberText(unit.hp),BLUE,15);
   this.impact(point.x,point.y-size*.46,unit.lastHit,true,reducedMotion);context.restore();
  }
+ private monsterPoint(monster:SiegeMonster){const point=siegeFieldPoint(monster.distance),seed=identity(monster.id);return{x:point.x+(seed%3)*7,y:point.y+(Math.floor(seed/3)%5-2)*11};}
+ private monster(monster:SiegeMonster,reducedMotion:boolean){
+  const context=this.context,point=this.monsterPoint(monster),art=siegeMonsterArt(monster.typeId),size=art.height,pose=siegeMonsterMotion(monster,this.model.elapsed,art.stride,reducedMotion||['won','lost'].includes(this.model.phase));
+  const departure=this.model.phase==='won'?Math.max(0,this.lastDraw-this.victoryTime):0;if(departure>=1.2)return;
+  const target=this.model.units.find(unit=>unit.id===monster.targetId),destination=target?this.unitPoint(target):siegeFieldPoint(monster.distance-2),behind=siegeFieldPoint(monster.distance+2),delta=target?destination.x-point.x:destination.x-behind.x;
+  const facing=siegeHumanFacing(delta,this.monsterDirections.get(monster.id)??-1);this.monsterDirections.set(monster.id,facing);
+  const atlas=this.sprites.get(art.texture),ground=this.ground(art.texture,art.row),frameGround=this.grounds.get(art.texture+':'+art.row+':'+pose.frame)??ground,scale=size/Math.max(1,ground.y-ground.top),drawSize=HERO_SPRITE_CELL*scale;
+  context.save();context.globalAlpha=Math.max(0,1-departure/1.2);context.fillStyle='#09040c80';context.beginPath();context.ellipse(point.x,point.y+4,size*.4,9,0,0,Math.PI*2);context.fill();context.strokeStyle='#d88bac80';context.lineWidth=1.5;context.stroke();
+  if(atlas){context.save();context.translate(point.x+facing*pose.lunge,point.y);context.scale(facing,1);context.drawImage(atlas,pose.frame*HERO_SPRITE_CELL,art.row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL,-ground.x*scale,-frameGround.y*scale,drawSize,drawSize);context.restore();}
+  else{context.fillStyle='#82546d';context.beginPath();context.ellipse(point.x,point.y-size*.45,size*.3,size*.43,0,0,Math.PI*2);context.fill();context.fillStyle='#edafcf';context.fillRect(point.x-9,point.y-size*.65,5,4);context.fillRect(point.x+4,point.y-size*.65,5,4);}
+  this.health(point.x,point.y-size-13,58,monster.hp,monster.maxHp);this.label(point.x,point.y-size-30,`${numberText(monster.hp)} · ${monster.name}`,ORANGE,12);
+  this.impact(point.x,point.y-size*.45,monster.lastHit,false,reducedMotion);context.restore();
+ }
+ private healing(reducedMotion:boolean){
+  for(const event of this.model.events)if(event.type==='heal'&&event.targetId&&(event.damage??0)>0&&!this.seenHealEvents.has(event)){
+   this.seenHealEvents.add(event);this.healEffects.push({targetId:event.targetId,started:this.model.elapsed,amount:event.damage!});
+  }
+  this.healEffects=this.healEffects.filter(effect=>this.model.elapsed-effect.started<1.1).slice(-24);
+  const context=this.context;
+  for(const effect of this.healEffects){
+   const unit=this.model.units.find(unit=>unit.id===effect.targetId&&unit.hp>0);if(!unit)continue;
+   const point=this.unitPoint(unit),age=Math.max(0,this.model.elapsed-effect.started),rise=reducedMotion?0:age*25,alpha=Math.max(0,1-age/1.1),height=humanHeight(unit);
+   context.save();context.globalAlpha=alpha;context.strokeStyle='#a7f4ab';context.fillStyle='#d2ffcf';context.lineWidth=2;
+   context.beginPath();context.arc(point.x,point.y-height*.45,reducedMotion?23:15+age*19,0,Math.PI*2);context.stroke();
+   for(let i=0;i<3;i++){const x=point.x+(i-1)*15,y=point.y-height*.5-rise-i%2*11;context.fillRect(x-1.5,y-6,3,12);context.fillRect(x-6,y-1.5,12,3);}
+   context.font='700 16px system-ui,sans-serif';context.textAlign='center';context.strokeStyle='#102b1d';context.lineWidth=3;context.strokeText('+'+numberText(effect.amount,2),point.x,point.y-height-49-rise);context.fillText('+'+numberText(effect.amount,2),point.x,point.y-height-49-rise);context.restore();
+  }
+ }
  private impact(x:number,y:number,lastHit:number,friendly:boolean,reducedMotion:boolean){
   const age=this.model.elapsed-lastHit;if(lastHit<=0||age<0||age>.6)return;const context=this.context;context.save();context.strokeStyle=friendly?'#ffbd9a':'#a4f1ff';context.lineWidth=3;context.globalAlpha=(1-age/.6)*.8;context.beginPath();context.arc(x,y,reducedMotion?30:18+age*58,0,Math.PI*2);context.stroke();context.restore();
  }
  private projectile(projectile:SiegeProjectile,reducedMotion:boolean){
-  const context=this.context,from=siegeFieldPoint(projectile.fromDistance),to=siegeFieldPoint(projectile.toDistance),friendly=projectile.source==='army',unit=!friendly?this.model.units.find(value=>value.id===projectile.targetId):undefined,sourceUnit=friendly?this.model.units.find(value=>value.id===projectile.sourceId):undefined,target=friendly?this.model.targets.find(value=>value.id===projectile.targetId):undefined,source=!friendly?this.model.targets.find(value=>value.id===projectile.sourceId)??this.model.targets.find(value=>value.distance===projectile.fromDistance):undefined,venom=source?.towerKind==='venom';
+  const context=this.context,from=siegeFieldPoint(projectile.fromDistance),to=siegeFieldPoint(projectile.toDistance),friendly=projectile.source==='army',unit=!friendly?this.model.units.find(value=>value.id===projectile.targetId):undefined,sourceUnit=friendly?this.model.units.find(value=>value.id===projectile.sourceId):undefined,target=friendly?this.model.targets.find(value=>value.id===projectile.targetId):undefined,targetMonster=friendly?this.model.monsters.find(value=>value.id===projectile.targetId):undefined,sourceMonster=!friendly?this.model.monsters.find(value=>value.id===projectile.sourceId):undefined,source=!friendly&&!sourceMonster?this.model.targets.find(value=>value.id===projectile.sourceId)??(!projectile.sourceId?this.model.targets.find(value=>value.distance===projectile.fromDistance):undefined):undefined,venom=source?.towerKind==='venom';
   from.y-=friendly?32:76;to.y-=friendly?72:32;
   if(unit){const visual=this.unitPoint(unit);to.x=visual.x;to.y=visual.y-humanHeight(unit)*.46;}
   if(sourceUnit){const visual=this.unitPoint(sourceUnit);from.x=visual.x;from.y=visual.y-humanHeight(sourceUnit)*.46;}
+  if(targetMonster){const visual=this.monsterPoint(targetMonster);to.x=visual.x;to.y=visual.y-siegeMonsterArt(targetMonster.typeId).height*.45;}
+  if(sourceMonster){const visual=this.monsterPoint(sourceMonster);from.x=visual.x;from.y=visual.y-siegeMonsterArt(sourceMonster.typeId).height*.45;}
   if(target){const visual=siegeTargetPoint(target);to.x=visual.x;to.y=visual.y-(target.kind==='boss'?82:(target.kind==='castle'?CITADEL_SIZE:142)*.4);}
   if(source){const visual=this.muzzle(source);from.x=visual.x;from.y=visual.y;}
   const ratio=Math.max(0,Math.min(1,projectile.age/projectile.duration)),arc=Math.min(74,Math.abs(to.x-from.x)*.2+28),sample=(progress:number)=>({x:from.x+(to.x-from.x)*progress,y:from.y+(to.y-from.y)*progress-Math.sin(progress*Math.PI)*arc});
@@ -259,5 +318,5 @@ export class SecretSiegeField{
   if(this.worldLight>0){context.globalAlpha=this.worldLight;const dawn=context.createRadialGradient(1050,100,10,1000,140,950);dawn.addColorStop(0,'#ffe4a53b');dawn.addColorStop(1,'#ffe4a500');context.fillStyle=dawn;context.fillRect(0,0,WIDTH,HEIGHT);for(let index=0;index<14;index++){const x=(index*193+this.animationTime*9)%WIDTH,y=80+(index*71)%450+Math.sin(this.animationTime*.5+index)*8;context.fillStyle='#ffe8af88';context.beginPath();context.ellipse(x,y,3.5,1.5,index,0,Math.PI*2);context.fill();}}
   context.restore();
  }
- dispose(){this.disposed=true;this.images.clear();this.sprites.clear();this.grounds.clear();this.humanDirections.clear();this.backdrop=undefined;this.restoredBackdrop=undefined;this.flame=undefined;this.collapse=undefined;}
+ dispose(){this.disposed=true;this.images.clear();this.sprites.clear();this.grounds.clear();this.humanDensities.clear();this.humanDirections.clear();this.monsterDirections.clear();this.monsterImageTasks.clear();this.healEffects=[];this.backdrop=undefined;this.restoredBackdrop=undefined;this.flame=undefined;this.collapse=undefined;}
 }

@@ -22,3 +22,12 @@ test('human v2 atlases retain all sixteen cells and transparent weapon margins',
   assert.equal(profile.alphaQuality,100);assert.equal(profile.trim,undefined);
  }
 });
+
+test('all four advanced roles preserve their sixteen-cell transparent animation atlas',async()=>{
+ const {imageProfile}=await import(profileModuleURL);
+ for(const role of ['knight','ranger','champion','priest']){
+  const profile=imageProfile(`siege-human-${role}-v1`);
+  assert.equal(profile.width,1024);assert.equal(profile.quality,84);
+  assert.equal(profile.alphaQuality,100);assert.equal(profile.trim,undefined);
+ }
+});

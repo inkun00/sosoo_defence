@@ -7,8 +7,12 @@ import type {ArmyId} from './secret-siege-types';
 export const SIEGE_ARMY_WALK='siege-human-army-walk-v1';
 export const SIEGE_ARMY_ATTACK='siege-human-army-attack-v1';
 export const SIEGE_FORTIFICATIONS='siege-corrupted-fortifications-v1';
-export const SIEGE_HUMAN_IDS:readonly ArmyId[]=['guard','striker','scout'];
-export function siegeHumanAtlas(id:ArmyId):SiegeHumanAtlas{return humanAtlases[id] as SiegeHumanAtlas;}
+export const SIEGE_HUMAN_IDS:readonly ArmyId[]=['guard','striker','scout','knight','ranger','champion','priest'];
+export function siegeHumanAtlas(id:ArmyId):SiegeHumanAtlas{
+ const atlas=(humanAtlases as Record<string,SiegeHumanAtlas>)[id];
+ if(!atlas)throw new RangeError('Unknown human army atlas: '+id);
+ return atlas;
+}
 type Frame=ReturnType<typeof heroSpriteSheet>['rows'][number][number];
 const viewports=new Map<string,{scale:number;x:number;y:number}>();
 let portraitSerial=0;

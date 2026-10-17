@@ -2,11 +2,14 @@ import sharp from 'sharp';
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),output=resolve(root,'test-results/siege-human-v2'),metadata={},reports=[];
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..'),output=resolve(root,'test-results/siege-human-v2'),destination=resolve(root,'src/secret-siege-human-atlas.json'),reports=[];
+const allRoles=['guard','striker','scout','knight','ranger','champion','priest'],selection=process.argv.find(value=>value.startsWith('--roles='))?.slice(8).split(','),roles=selection??allRoles;
+if(roles.some(role=>!allRoles.includes(role))||new Set(roles).size!==roles.length)throw Error('Unknown or repeated human sprite role');
+const metadata=selection?JSON.parse(await readFile(destination,'utf8')):{};
 const checkOnly=process.argv.includes('--check');
 await mkdir(output,{recursive:true});
-for(const role of ['guard','striker','scout']){
-const name='siege-human-'+role+'-v2',path=resolve(root,'public/assets/dungeon/'+name+'.png'),threshold=32;
+for(const role of roles){
+const name='siege-human-'+role+(allRoles.indexOf(role)<3?'-v2':'-v1'),path=resolve(root,'public/assets/dungeon/'+name+'.png'),threshold=32;
 const {data,info}=await sharp(path).ensureAlpha().raw().toBuffer({resolveWithObject:true});
 const {width,height}=info;
 function components(data,width,height){
@@ -121,7 +124,7 @@ metadata[role]={texture:name,sourceWidth:width,sourceHeight:height,scale,frames}
 reports.push({role,width,height,frames:16,visible,alphaSum,scale,lost:0,neighborPixels:0,walkBodyHeight:(frames[0].anchorY-frames[0].y)*scale,audit});
 await sharp({create:{width:960,height:960,channels:4,background:'#24272f'}}).composite(images).png().toFile(resolve(output,role+'-contact-sheet.png'));
 }
-const json=JSON.stringify(metadata,null,2)+'\n',destination=resolve(root,'src/secret-siege-human-atlas.json');
+const json=JSON.stringify(metadata,null,2)+'\n';
 if(checkOnly){if(await readFile(destination,'utf8')!==json)throw Error('Human sprite metadata is stale');}else await writeFile(destination,json);
 await writeFile(resolve(output,'audit.json'),JSON.stringify(reports,null,2)+'\n');
 console.log(JSON.stringify(reports.map(({audit,...report})=>report)));

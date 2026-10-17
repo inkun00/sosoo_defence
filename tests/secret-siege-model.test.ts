@@ -138,8 +138,8 @@ test('다수 아군의 동시 발사는 남은 체력을 예약해 초과 피해
   game.step(.1);
   for(const shot of game.projectiles)if(shot.source==='enemy')firingTowers.add(shot.fromDistance);
   for(const event of game.events.splice(0)){
-   if(event.type==='hit'&&event.friendly){totalDamage+=event.damage!;hits++;assert.ok([10,200,750].includes(event.damage!));if(event.targetId==='wizard-castle')assert.ok(game.targets.filter(target=>target.kind==='tower').every(target=>target.hp===0),'the castle can only take damage after all four towers fall');}
-   if(event.type==='destroy'&&event.friendly)destroyed.push(event.targetId!);
+   if(event.type==='hit'&&event.friendly&&game.targets.some(target=>target.id===event.targetId)){totalDamage+=event.damage!;hits++;assert.ok([10,200,750].includes(event.damage!));if(event.targetId==='wizard-castle')assert.ok(game.targets.filter(target=>target.kind==='tower').every(target=>target.hp===0),'the castle can only take damage after all four towers fall');}
+   if(event.type==='destroy'&&event.friendly&&game.targets.some(target=>target.id===event.targetId))destroyed.push(event.targetId!);
   }
   assert.ok(game.targets.every(target=>target.hp>=0&&target.hp%10===0));
  }
@@ -193,7 +193,7 @@ test('난이도는 표시되는 체력과 공격 소수는 유지하면서 적 �
 
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 합법적인 균형 편성과 정확한 계산만으로 성을 파괴할 수 있다`,()=>{
  const result=simulateSecretSiege(difficulty,{name:'검증',guard:3,striker:4,scout:2,order:'guard-first',rally:false});
- assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,1440);assert.equal(result.deployed,9);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
+ assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,10440);assert.equal(result.earnedCoins,9000);assert.equal(result.deployed,9);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
  assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);assert.ok(result.enemyShots>10);assert.ok(result.armyDamage>0);
 });
 
