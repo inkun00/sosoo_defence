@@ -87,8 +87,19 @@ test('일시 정지와 잘못된 dt는 전투 상태를 바꾸지 않는다',()=
 test('피해는 발사 시점이 아니라 보이는 발사체가 도착한 뒤에만 적용된다',()=>{
  const game=prepared();game.deploy('guard');until(game,()=>game.projectiles.some(shot=>shot.source==='enemy'));
  const shot=game.projectiles.find(shot=>shot.source==='enemy')!,target=game.units.find(unit=>unit.id===shot.targetId)!;
- assert.equal(shot.duration,.5);assert.equal(shot.age,0);const before=target.hp;advance(game,.4);assert.equal(target.hp,before);
- game.step(.1);assert.equal(target.hp,before-100);assert.ok(game.events.some(event=>event.type==='hit'&&event.damage===100&&!event.friendly));
+ assert.equal(shot.duration,.5/1.2);assert.equal(shot.age,0);const before=target.hp;advance(game,.4);assert.equal(target.hp,before);
+ game.step(shot.duration-.4);assert.equal(target.hp,before-100);assert.ok(game.events.some(event=>event.type==='hit'&&event.damage===100&&!event.friendly));
+});
+
+test('방패병·돌격병·정찰병의 탄은 각각 기존 비행 시간의 1/1.2로 이동하고 공격 주기는 유지한다',()=>{
+ for(const [id,duration] of [['guard',.5],['striker',.6],['scout',.35]] as const){
+  const game=prepared();assert.ok(game.deploy(id));const unit=game.units[0],tower=game.targets[0],army=ARMY.find(army=>army.id===id)!;
+  unit.distance=tower.distance-army.range;tower.reload=999;game.step(.001);
+  const shot=game.projectiles.find(shot=>shot.sourceId===unit.id)!;
+  assert.ok(shot);assert.equal(shot.duration,duration/1.2);assert.equal(unit.reload,army.cooldown);assert.equal(shot.damage,army.attack);
+  const hp=tower.hp;while(shot.age<shot.duration-.001)game.step(Math.min(.01,shot.duration-.001-shot.age));
+  assert.equal(tower.hp,hp);game.step(.001);assert.equal(tower.hp,hp-army.attack);
+ }
 });
 
 test('마법사의 네 타워는 각자 사거리에 들어온 병사를 조준하고 발사체 도착 후 자기 공격력만큼 피해를 준다',()=>{

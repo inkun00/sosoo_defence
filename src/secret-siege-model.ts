@@ -1,4 +1,5 @@
 import type {Difficulty} from './difficulty';
+import {projectileTravelTime} from './projectile-timing';
 import {hit,learningValue,numberText} from './math';
 import {parseMoney} from './towers';
 import {SIEGE_STAGE_COUNT,siegeStage,type SiegeStage} from './secret-siege-stages';
@@ -155,7 +156,7 @@ export class SecretSiege{
   }
  }
  private shoot(source:SiegeProjectile['source'],sourceId:string,fromDistance:number,toDistance:number,damage:number,targetId:string,duration:number){
-  const shot:SiegeProjectile={id:++this.shotSerial,source,sourceId,fromDistance,toDistance,damage,targetId,duration,age:0};
+  const shot:SiegeProjectile={id:++this.shotSerial,source,sourceId,fromDistance,toDistance,damage,targetId,duration:projectileTravelTime(duration),age:0};
   this.projectiles.push(shot);this.owners.set(shot.id,{sourceId});
   if(source==='army')this.reservedDamage.set(targetId,(this.reservedDamage.get(targetId)??0)+damage);
   this.events.push({type:'shot',message:'',targetId,damage,friendly:source==='army'});

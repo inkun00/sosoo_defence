@@ -5,6 +5,18 @@ import type Phaser from 'phaser';
 import {REDUCED_PROJECTILE_DURATION,PROJECTILE_IDS,PROJECTILE_PROFILES,projectileArcHeight,projectileFlightDuration,projectileLifecycle,projectilePath,projectileProfile,projectileRotation,projectileRoundProgress,projectileVisibilityScale} from '../src/projectile-profiles';
 import {clearTowerProjectiles,playTowerProjectile,towerProjectileEffectCount} from '../src/tower-projectiles';
 import {TOWERS} from '../src/towers';
+import {PROJECTILE_SPEED_MULTIPLIER} from '../src/projectile-timing';
+
+test('all twelve flights move 20% faster without shortening launch gaps or reduced-motion cues',()=>{
+ const previous={basic:620,double:580,needle:450,pebble:550,frost:720,ice:600,catapult:950,lightning:650,crystal:720,sniper:380,siege:820,rune:770};
+ assert.equal(PROJECTILE_SPEED_MULTIPLIER,1.2);
+ for(const id of PROJECTILE_IDS){
+  const profile=projectileProfile(id);assert.ok(Math.abs(previous[id]/profile.duration-1.2)<1e-12,id+' travel speed');
+  assert.ok(Math.abs(projectileRoundProgress(profile,previous[id]/2,0)!-.6)<1e-12,id+' progress on the existing path');
+  assert.equal(projectileFlightDuration(profile,true),220+profile.roundDelay*(profile.rounds-1));
+ }
+ assert.equal(projectileProfile('double').roundDelay,65);
+});
 
 test('all twelve tower names map to a unique flight signature and correct atlas row',()=>{
  assert.deepEqual(PROJECTILE_IDS,[...TOWERS.map(t=>t.id)]);

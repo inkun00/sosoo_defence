@@ -33,9 +33,9 @@ test('네 타워가 남아 있는 동안 마법사는 대기하고 성은 보호
  assert.equal(game.bossState!.phase,'dueling');assert.ok(game.bossState!.nextSpellAt>game.elapsed);
 });
 
-test('기본 마력탄은 출발 후 0.5초 뒤 명중하고 보스가 죽으면 남은 탄도 취소된다',()=>{
+test('기본 마력탄은 기존보다 20% 빠른 0.5/1.2초 뒤 명중하고 보스가 죽으면 남은 탄도 취소된다',()=>{
  const game=duel(),unit=game.units[0],shot=game.projectiles.find(shot=>shot.sourceId===game.boss!.id)!;
- assert.ok(shot);assert.equal(shot.damage,260);const before=unit.hp;advance(game,.49);assert.equal(unit.hp,before);advance(game,.01);assert.equal(unit.hp,before-260);
+ assert.ok(shot);assert.equal(shot.damage,260);assert.equal(shot.duration,.5/1.2);const before=unit.hp;advance(game,.41);assert.equal(unit.hp,before);advance(game,.01);assert.equal(unit.hp,before-260);
  game.boss!.reload=0;game.step(.01);assert.ok(game.projectiles.some(shot=>shot.sourceId===game.boss!.id));
  const current=unit.hp;game.boss!.hp=0;game.targets.find(target=>target.kind==='castle')!.hp=0;advance(game,.6);assert.equal(unit.hp,current);assert.equal(game.bossState!.phase,'defeated');
  assert.equal(game.projectiles.some(shot=>shot.sourceId==='revived-wizard'),false);
@@ -109,14 +109,14 @@ test('보스의 동시 피격은 체력을 예약하고 네 타워·보스·성�
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 기본 무회복은 실패하고 마법 후 회복을 아끼면 실제 9.90 편성으로 클리어한다`,()=>{
  const idle=simulateSecretSiege(difficulty,{...balanced,rally:false},10);assert.equal(idle.phase,'lost');assert.equal(idle.alive,0);
  const tooEarly=simulateSecretSiege(difficulty,balanced,10);assert.equal(tooEarly.phase,'lost');assert.equal(tooEarly.rallies,3);
- for(const dt of [.1,.05,1/60]){
-  const timed=simulateSecretSiege(difficulty,{...balanced,rallyTiming:'boss-spell',rallyDelay:.5,deployGap:1},10,dt);
+ for(const plan of [{...balanced,deployGap:1},{...balanced,guard:3,striker:5,scout:4,deployGap:.7}])for(const dt of [.1,.05,1/60]){
+  const timed=simulateSecretSiege(difficulty,{...plan,rallyTiming:'boss-spell',rallyDelay:.5},10,dt);
   assert.equal(timed.phase,'won',`dt=${dt}`);assert.equal(timed.boss,0);assert.equal(timed.castle,0);assert.equal(timed.rallies,3);assert.equal(timed.towersDestroyed,4);assert.ok(timed.spells>=4);assert.ok(timed.elapsed<150);assert.ok(timed.alive>0);
  }
 });
 
-test('1~9단계의 기존 균형 편성 전투 결과는 보스 추가 전과 동일하다',()=>{
- const expected={practice:[[41.2,23,4750,11],[38,23,5220,11],[41.3,28,7020,11],[38.5,24,6300,11],[41,32,9140,10],[38.3,27,7650,11],[45.6,33,9880,10],[46,35,11280,10],[42.6,33,10600,10]],standard:[[41.2,31,6150,11],[38,30,6570,11],[41.3,36,8920,10],[38.5,32,8260,11],[41,42,11420,10],[38.3,36,9650,10],[45.7,44,12670,10],[46,45,13990,9],[42.6,41,14080,10]],challenge:[[41.2,38,7450,11],[38,38,7750,11],[41.3,44,10960,10],[38.5,42,10110,10],[41,52,13930,10],[38.3,44,12000,10],[52.8,64,19740,8],[52,64,19830,8],[42.6,53,16610,8]]};
+test('1~9단계 균형 편성은 발사체 20% 가속 후에도 모두 승리하고 결정적 전투 결과를 유지한다',()=>{
+ const expected={practice:[[40.8,23,4750,11],[37.6,23,4900,11],[40.9,28,7020,11],[38.1,24,6300,11],[40.6,32,9140,10],[37.9,27,7650,11],[45.1,33,9880,10],[45.6,35,11280,10],[42.1,33,10600,10]],standard:[[40.8,31,6150,11],[37.6,30,6570,11],[40.9,36,8920,10],[38.1,31,8260,11],[40.6,42,11040,10],[37.9,34,9650,10],[45.3,43,12670,10],[45.6,45,14160,10],[42.1,41,14080,10]],challenge:[[40.8,37,7450,11],[37.6,37,7750,11],[40.9,43,10620,10],[38.1,41,10110,10],[40.6,51,13930,10],[37.9,44,12050,10],[52.3,62,19800,9],[51.6,64,20150,9],[42.1,52,16610,8]]};
  for(const difficulty of ['practice','standard','challenge'] as const)for(let index=0;index<9;index++){
   const result=simulateSecretSiege(difficulty,balanced,index+1);assert.equal(result.phase,'won');assert.deepEqual([result.elapsed,result.enemyShots,result.armyDamage,result.alive],expected[difficulty][index]);
  }

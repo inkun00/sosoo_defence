@@ -1,3 +1,5 @@
+import {projectileTravelTime} from './projectile-timing';
+
 export const PROJECTILE_IDS=['basic','double','needle','pebble','frost','ice','catapult','lightning','crystal','sniper','siege','rune'] as const;
 export type ProjectileTypeId=typeof PROJECTILE_IDS[number];
 export const PROJECTILE_SHEETS=Object.freeze([
@@ -17,7 +19,7 @@ export interface TowerProjectileProfile{
 }
 
 const [stone,element,magic]=PROJECTILE_SHEETS.map(sheet=>sheet.key);
-const profile=(p:Omit<TowerProjectileProfile,'core'|'roundDelay'>&{core?:ProjectilePoint;roundDelay?:number}):Readonly<TowerProjectileProfile>=>Object.freeze({core:Object.freeze(p.core??{x:.5,y:.5}),roundDelay:0,...p});
+const profile=(p:Omit<TowerProjectileProfile,'core'|'roundDelay'>&{core?:ProjectilePoint;roundDelay?:number}):Readonly<TowerProjectileProfile>=>Object.freeze({core:Object.freeze(p.core??{x:.5,y:.5}),roundDelay:0,...p,duration:projectileTravelTime(p.duration)});
 
 // Duration, silhouette and path belong to the weapon, independently of damage.
 // A double shot still represents one model event and a lightning beam one target.
@@ -58,7 +60,10 @@ export function projectileVisibilityScale(scale=1,pixelsPerWorld=1):number{
 // rounds share the flight's one completion, after the delayed round arrives.
 export function projectileRoundProgress(profile:TowerProjectileProfile,elapsed:number,round:0|1,reducedMotion=false):number|null{
  const launch=profile.roundDelay*round;
- return elapsed<launch?null:Math.max(0,Math.min(1,(elapsed-launch)/(reducedMotion?REDUCED_PROJECTILE_DURATION:profile.duration)));
+ if(elapsed<launch)return null;
+ const duration=reducedMotion?REDUCED_PROJECTILE_DURATION:profile.duration,age=elapsed-launch;
+ // Fractional millisecond flights can land a few floating-point bits short.
+ return age>=duration-1e-9?1:Math.max(0,age/duration);
 }
 
 export function projectileArcHeight(profile:TowerProjectileProfile,from:ProjectilePoint,to:ProjectilePoint,scale=1):number{
