@@ -6,6 +6,7 @@ import {GameUI,Panel,UIState,Control} from './ui';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {recordStageScore,campaignCompletion,campaignVisibleTotal} from './campaign-score';
+import {secretSiegeUnlocked} from './secret-siege-progress';
 import type {AdventureHallPresentation} from './adventure-hall-ui';
 import {Sound} from './audio';
 import {adventureMusicTrack} from './music';
@@ -231,6 +232,7 @@ function action(key:string){
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{motion.clear();const url=new URL(location.href);url.searchParams.set('mode','duel');navigateWithMotion(url.href);break;}
   case 'hall':void showAdventureHall();break;
+  case 'secret-siege':if(secretSiegeUnlocked(save)){persistInventory();sound.setMusic(false);const url=new URL(location.href);url.search='?mode=siege';navigateWithMotion(url.href);}break;
   case 'tutorial':if(tutorial)restartTutorial();else{motion.clear();persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','tutorial');navigateWithMotion(url.href);}break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
   case 'cancel':field.mode.kind='inspect';break;

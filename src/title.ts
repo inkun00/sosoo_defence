@@ -1,5 +1,6 @@
 import {artURL} from './art';
 import {loadSave,writeSave,hasAdventure,newAdventure} from './save';
+import {secretSiegeUnlocked} from './secret-siege-progress';
 import {DIFFICULTIES,isDifficulty} from './difficulty';
 import {hitEquationsEnabled,setHitEquationsEnabled} from './combat-preferences';
 import {Sound} from './audio';
@@ -14,6 +15,7 @@ document.addEventListener('click',e=>{if(!movie&&(e.target as HTMLElement).close
 app.innerHTML=`<main class="title-screen" aria-label="소수 디펜스 시작 화면"><div class="title-art" aria-hidden="true"></div><div class="title-shade" aria-hidden="true"></div><div class="title-flame-glow" aria-hidden="true"></div><canvas class="title-embers" aria-hidden="true"></canvas><section class="title-copy"><h1 aria-label="소수 디펜스"><img class="title-logo" src="${artURL('title-wordmark-v1')}" alt="" width="1200" height="297" decoding="async" fetchpriority="high"></h1><nav class="title-menu" aria-label="모험 선택"><button class="title-button primary" id="title-new">새게임</button><button class="title-button" id="title-continue">이어하기</button><button class="title-button" id="title-duel">1:1대전</button><button class="title-button" id="title-settings">설정</button><button class="title-button title-worksheet" id="title-worksheet">학습지 출력</button></nav><div class="title-replays"><button id="title-opening">오프닝 다시 보기 ↗</button><button id="title-ending" hidden>엔딩 다시 보기 ↗</button></div></section><footer class="title-footer"><span>초등 4학년 · 소수의 덧셈과 뺄셈</span></footer><p class="title-save-warning" role="alert" hidden></p></main><div id="title-dialog" class="title-dialog hidden" role="dialog" aria-modal="true" aria-label="모험 설정"><div class="title-card"><button class="title-close" id="title-dialog-close" aria-label="닫기">×</button><div id="title-dialog-body"></div></div></div>`;
 const $=(id:string)=>document.getElementById(id)!;const dialog=$('title-dialog'),body=$('title-dialog-body');let previous:HTMLElement|null=null;
 const tutorialButton=document.createElement('button');tutorialButton.id='title-tutorial';tutorialButton.className='title-button';tutorialButton.textContent='튜토리얼';tutorialButton.onclick=()=>navigate('tutorial');document.querySelector('.title-menu')!.insertBefore(tutorialButton,$('title-duel'));
+const siegeButton=document.createElement('button');siegeButton.id='title-siege';siegeButton.className='title-button title-secret';siegeButton.textContent='비밀 원정';siegeButton.hidden=true;siegeButton.onclick=()=>{if(secretSiegeUnlocked(save))navigate('siege');};document.querySelector('.title-menu')!.insertBefore(siegeButton,$('title-settings'));
 const hallButton=document.createElement('button');hallButton.id='title-hall';hallButton.className='title-button title-hall';hallButton.textContent='명예의 전당';document.querySelector('.title-menu')!.insertBefore(hallButton,$('title-worksheet'));let hallLoading=false;
 hallButton.onclick=async()=>{
  if(movie||hallLoading)return;hallLoading=true;hallButton.disabled=true;
@@ -28,11 +30,12 @@ let settingsAudioControls:ReturnType<typeof mountGameAudioControls>|undefined;
 function refresh(){
  const progress=hasAdventure(save);($('title-continue') as HTMLButtonElement).disabled=!progress;
  $('title-ending').hidden=!save.campaignCompleted;
+ siegeButton.hidden=!secretSiegeUnlocked(save);
 }
 function persist(){const saved=writeSave(save),warning=document.querySelector<HTMLElement>('.title-save-warning')!;warning.hidden=saved;warning.textContent=saved?'':'이 브라우저에서는 진행 저장이 제한되어 있어요.';refresh();}
 function open(html:string){settingsAudioControls?.dispose();settingsAudioControls=undefined;previous=document.activeElement as HTMLElement;body.innerHTML=html;dialog.classList.remove('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=true;motion.reveal(dialog.querySelector<HTMLElement>('.title-card')!);$('title-dialog-close').focus();}
 function close(){settingsAudioControls?.dispose();settingsAudioControls=undefined;dialog.classList.add('hidden');document.querySelector<HTMLElement>('.title-screen')!.inert=false;previous?.focus();}
-function navigate(mode:'adventure'|'duel'|'tutorial'){sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode',mode);url.searchParams.delete('preview');url.searchParams.delete('ui');navigateWithMotion(url.href);}
+function navigate(mode:'adventure'|'duel'|'tutorial'|'siege'){sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode',mode);url.searchParams.delete('preview');url.searchParams.delete('ui');navigateWithMotion(url.href);}
 async function cinematic(kind:'opening'|'ending',next:()=>void){if(movie)return;movie=true;sound.setPaused(true);try{const {playCinematic}=await import('./cinematic');await playCinematic(kind,save,()=>{movie=false;sound.setPaused(false);next();});}catch{movie=false;sound.setPaused(false);if(save.music)sound.setMusic(true);open('<h2>이야기를 불러오지 못했어요</h2><p>연결 상태를 확인한 뒤 다시 눌러 주세요.</p>');}}
 function begin(){save=newAdventure(save);persist();close();void cinematic('opening',()=>navigate('adventure'));}
 function newGame(){sound.resume();if(hasAdventure(save)){open(`<p class="title-eyebrow">새로운 수호자의 여정</p><h2>처음부터 시작할까요?</h2><p>현재 ${save.resumeStage}단계까지의 모험을 새로 시작합니다.<br>모험 레벨·별·벽돌·성벽 재고가 초기화됩니다.<br>소리와 난이도 설정, 1:1 계정 기록은 유지됩니다.</p><div class="title-card-actions"><button class="title-button" id="title-cancel">돌아가기</button><button class="title-button primary" id="title-confirm">새 모험 시작</button></div>`);$('title-cancel').onclick=close;$('title-confirm').onclick=begin;}else begin();}

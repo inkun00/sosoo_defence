@@ -31,3 +31,6 @@
 /* Seven actions use four compact rows on landscape phones. */
 .title-menu .title-hall{color:#ffe3a3}
 @media(orientation:landscape) and (max-height:500px){.title-logo{max-height:18dvh}.title-copy h1{margin-bottom:8px}.title-menu .title-button{height:44px;min-height:44px}.title-replays{margin-top:3px}}
+
+.title-menu .title-secret{color:#e3c4ff;filter:drop-shadow(0 0 8px #ab75dd66)}
+@media(max-height:600px){.title-menu:has(.title-secret:not([hidden])) .title-worksheet{grid-column:auto}}

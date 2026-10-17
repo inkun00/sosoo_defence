@@ -3,7 +3,8 @@ import {Difficulty,isDifficulty} from './difficulty';
 import {learningValue} from './math';
 import {FINAL_STAGE} from './levels';
 import {newCampaignScore,restoreCampaignScore,type CampaignScore} from './campaign-score';
-export interface Save{version:1;level:number;resumeStage:number;stars:number[];sfx:boolean;music:boolean;inventory:Inventory;difficulty:Difficulty;started:boolean;campaignCompleted:boolean;narration:boolean;scoreProgress?:CampaignScore;}
+import {restoreSecretSiegeProgress,type SecretSiegeProgress} from './secret-siege-progress';
+export interface Save{version:1;level:number;resumeStage:number;stars:number[];sfx:boolean;music:boolean;inventory:Inventory;difficulty:Difficulty;started:boolean;campaignCompleted:boolean;narration:boolean;scoreProgress?:CampaignScore;secretSiege?:SecretSiegeProgress;}
 const KEY='decimal-castle-v1';
 export function loadSave():Save{
  const base:Save={version:1,level:1,resumeStage:1,stars:Array(FINAL_STAGE).fill(0),sfx:true,music:true,inventory:{bricks:[],walls:0},difficulty:'standard',started:false,campaignCompleted:false,narration:true,scoreProgress:newCampaignScore()};
@@ -18,9 +19,11 @@ export function loadSave():Save{
   const walls=Number.isSafeInteger(s.inventory?.walls)&&s.inventory.walls>=0?s.inventory.walls:0;
   const durability=Array.isArray(s.inventory?.wallDurabilities)?Array.from({length:walls},(_,i)=>{const hp=s.inventory.wallDurabilities[i];return hp===1||hp===2?hp:3;}):[];
   const scoreProgress=restoreCampaignScore(s.scoreProgress);
-  return {...base,level,resumeStage:legacyClear?FINAL_STAGE:Math.max(1,Math.min(level,Math.floor(Number(s.resumeStage??s.level)||1))),stars:base.stars.map((_,i)=>Math.max(0,Math.min(3,Math.floor(Number(s.stars?.[i])||0)))),sfx:base.sfx&&(typeof s.sfx==='boolean'?s.sfx:true),music:typeof s.music==='boolean'?s.music:true,narration:s.narration!==false,started:!!s.started,campaignCompleted:!!s.campaignCompleted&&!legacyClear,difficulty:isDifficulty(s.difficulty)?s.difficulty:'standard',inventory:{bricks:Array.isArray(s.inventory?.bricks)?s.inventory.bricks.filter((n:unknown)=>typeof n==='number'&&learningValue(n)&&n>0&&n%10===0):[],walls,...(durability.some(h=>h<3)?{wallDurabilities:durability}:{})},...(scoreProgress?{scoreProgress}:{})};
+  const restored:Save={...base,level,resumeStage:legacyClear?FINAL_STAGE:Math.max(1,Math.min(level,Math.floor(Number(s.resumeStage??s.level)||1))),stars:base.stars.map((_,i)=>Math.max(0,Math.min(3,Math.floor(Number(s.stars?.[i])||0)))),sfx:base.sfx&&(typeof s.sfx==='boolean'?s.sfx:true),music:typeof s.music==='boolean'?s.music:true,narration:s.narration!==false,started:!!s.started,campaignCompleted:!!s.campaignCompleted&&!legacyClear,difficulty:isDifficulty(s.difficulty)?s.difficulty:'standard',inventory:{bricks:Array.isArray(s.inventory?.bricks)?s.inventory.bricks.filter((n:unknown)=>typeof n==='number'&&learningValue(n)&&n>0&&n%10===0):[],walls,...(durability.some(h=>h<3)?{wallDurabilities:durability}:{})},...(scoreProgress?{scoreProgress}:{})};
+  const secretSiege=restoreSecretSiegeProgress(s.secretSiege,restored);if(secretSiege)restored.secretSiege=secretSiege;
+  return restored;
  }catch{return base;}
 }
 export function writeSave(s:Save){try{localStorage.setItem(KEY,JSON.stringify(s));}catch{return false;}try{localStorage.removeItem?.('decimal-duel-sfx');}catch{}return true;}
 export function hasAdventure(s:Save){return s.started||s.level>1||s.stars.some(n=>n>0)||s.inventory.bricks.length>0||s.inventory.walls>0;}
-export function newAdventure(s:Save):Save{return {...s,level:1,resumeStage:1,stars:Array(FINAL_STAGE).fill(0),inventory:{bricks:[],walls:0},started:true,campaignCompleted:false,scoreProgress:newCampaignScore()};}
+export function newAdventure(s:Save):Save{const fresh:Save={...s,level:1,resumeStage:1,stars:Array(FINAL_STAGE).fill(0),inventory:{bricks:[],walls:0},started:true,campaignCompleted:false,scoreProgress:newCampaignScore()};delete fresh.secretSiege;return fresh;}

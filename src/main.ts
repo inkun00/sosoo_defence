@@ -9,7 +9,7 @@ document.addEventListener('click',event=>{
  const link=(event.target as Element)?.closest<HTMLAnchorElement>('a[href]');
  if(!link||link.target==='_blank'||link.hasAttribute('download'))return;
  const url=new URL(link.href),mode=url.searchParams.get('mode');
- if(url.origin===location.origin&&url.pathname===location.pathname&&['title','adventure','tutorial','duel','worksheet'].includes(mode??'')){
+ if(url.origin===location.origin&&url.pathname===location.pathname&&['title','adventure','tutorial','duel','worksheet','siege'].includes(mode??'')){
   event.preventDefault();navigateWithMotion(url.href);
  }
 });
@@ -24,6 +24,7 @@ const pages=new Map<string,()=>Promise<unknown>>([
  ['duel',()=>withWorkbook(()=>import('./multiplayer/controller'))],
  ['adventure',()=>import('./controller')],
  ['tutorial',()=>import('./controller')],
+ ['siege',()=>import('./secret-siege-controller')],
  ['worksheet',()=>withWorkbook(()=>import('./worksheet-controller'))],
  ['title',()=>import('./title')],
 ]);

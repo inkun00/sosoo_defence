@@ -5,6 +5,7 @@ import {Effect,EFFECTS,LEVELS,FINAL_STAGE} from './levels';
 import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {Save} from './save';
 import {campaignVisibleTotal,campaignTotal} from './campaign-score';
+import {secretSiegeUnlocked} from './secret-siege-progress';
 import {Mode} from './scene';
 import {FIELD_X,FIELD_Y,GAME_WIDTH,GAME_HEIGHT} from './layout';
 import {MONSTERS,monsterKind} from './monsters';
@@ -97,7 +98,7 @@ export class GameUI extends Phaser.Scene{
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
   const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.walls.map(w=>`${w.id}:${w.durability}`),m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,m.monstersAppeared,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
-  const popupSig=[s.panel,m.canPlaceWall,s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level+':'+m.score+':'+campaignTotal(s.save):'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
+  const popupSig=[s.panel,m.canPlaceWall,secretSiegeUnlocked(s.save),s.panel==='forge'?m.bricks.map(b=>b.id)+s.slots.join(',')+s.fusionOperation+s.brickPage+m.wallStock+s.message:'',s.panel==='result'?m.phase+s.save.level+':'+m.score+':'+campaignTotal(s.save):'',s.panel==='map'?s.save.level:'',s.panel==='difficulty'?m.difficulty+String(m.canChangeDifficulty):'',s.panel==='purchase'?s.purchaseInput+s.purchaseMessage+s.purchaseHelp+JSON.stringify(m.pendingPurchase):''].join('|');
   if(force||popupSig!==this.signatures[2]){this.signatures[2]=popupSig;this.drawPopup();}
   this.onControls(this.controls);
  }
@@ -328,6 +329,7 @@ export class GameUI extends Phaser.Scene{
    [0,1,2].forEach(j=>{const star=this.add.image(p.x+(j-1)*25,p.y+114,'dungeon-icons','star').setDisplaySize(26,26).setAlpha(j<s.save.stars[i]?1:.17);this.popup.add(star);});
    if(!open)b.container.setAlpha(.7);
   });
+  if(secretSiegeUnlocked(s.save))this.button(this.popup,'secret-siege',640,675,430,60,'비밀 원정 · 마법사의 성 ▶',true,'button_red',23);
  }
  private drawResult(){
   const s=this.getState(),m=s.model,won=m.phase==='won',review=m.phase==='review';this.modalFrame(won?'소수의 성을 지켰어요!':review?'성은 지켰어요! 학습 목표를 연습해요':'성 체력 5개가 모두 소진됐어요',940,650);
@@ -336,9 +338,14 @@ export class GameUI extends Phaser.Scene{
   this.text(this.popup,640,307,`이번 단계 ${m.score.toLocaleString('ko-KR')}점 · 누적 ${campaignTotal(s.save).toLocaleString('ko-KR')}점`,21,'#ffdf9b').setName('adventure-result-score').setOrigin(.5);
   m.goals.forEach((g,i)=>this.text(this.popup,265,333+i*42,`${g.done?'✓':'○'}  ${g.label}`,22,g.done?'#8bd3a0':'#dfb28e',740));
   this.text(this.popup,640,523,`벽돌 ${m.bricks.length}개 · 남은 성벽 ${m.inventory.walls}개 보관! 내구도도 유지돼요.`,20,'#f0c583').setOrigin(.5);
-  this.text(this.popup,640,568,won?'방어와 학습 목표를 모두 달성했어요.':review?'패배가 아니에요. ○ 표시된 목표를 연습하면 다음 단계가 열려요.':'타워의 위치와 발사 순서를 바꾸어 같은 웨이브에 다시 도전해요.',21,'#bdb5a9').setOrigin(.5);
-  const final=won&&m.level.id===FINAL_STAGE;
-  if(final){
+  const final=won&&m.level.id===FINAL_STAGE,secret=final&&secretSiegeUnlocked(s.save);
+  this.text(this.popup,640,568,secret?'마법사의 성으로 가는 숨겨진 길이 열렸어요.':won?'방어와 학습 목표를 모두 달성했어요.':review?'패배가 아니에요. ○ 표시된 목표를 연습하면 다음 단계가 열려요.':'타워의 위치와 발사 순서를 바꾸어 같은 웨이브에 다시 도전해요.',21,secret?'#dcc2ff':'#bdb5a9').setOrigin(.5);
+  if(secret){
+   this.button(this.popup,'retry',310,641,200,68,'다시 도전',true,'button_brown',23);
+   this.button(this.popup,'hall',530,641,200,68,'명예의 전당',true,'button_red',23);
+   this.button(this.popup,'secret-siege',750,641,200,68,'비밀 원정',true,'button_red',23);
+   this.button(this.popup,'home',970,641,200,68,'시작 화면',true,'button_brown',23);
+  }else if(final){
    this.button(this.popup,'retry',350,641,254,68,'다시 도전',true,'button_brown',24);
    this.button(this.popup,'hall',640,641,254,68,'명예의 전당',true,'button_red',24);
    this.button(this.popup,'home',930,641,254,68,'시작 화면',true,'button_brown',24);
