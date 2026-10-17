@@ -94,7 +94,7 @@ export class GameUI extends Phaser.Scene{
   this.castleText?.setText(`${m.castle}/5`);
   this.fitText(this.waveText.setText(`방어 ${m.kills}/${m.enemyCount} · ${s.save.started?'누적':'연습'} ${campaignVisibleTotal(s.save,m).toLocaleString('ko-KR')}점`).setName('adventure-score').setScale(1),218,22);
   this.pauseIcon.setFrame(m.phase==='paused'?'play':'pause');this.centerLabel(this.fitText(this.goalsText.setText(`목표 ${m.goals.filter(g=>g.done).length}/${m.goals.length} ▸`),90,32));
-  const shopSig=[s.towerTypeId,s.shopPage,s.selected,s.selectedWall?.x,s.selectedWall?.y,s.mode.kind,m.money,m.level.id,m.phase,m.monstersAppeared,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length,m.walls.map(w=>`${w.id}:${w.durability}`)].join('|');
+  const shopSig=[s.towerTypeId,s.shopPage,s.selected,s.selectedWall?.x,s.selectedWall?.y,s.mode.kind,m.money,m.level.id,m.phase,m.monstersAppeared,m.difficulty,m.purchaseVariation.round,m.towers.length,m.towers.filter(t=>t.unit===10).length,m.walls.map(w=>`${w.id}:${w.durability}`),TOWERS.filter(t=>m.isTowerDeveloped(t.id)).map(t=>t.id)].join('|');
   if(force||shopSig!==this.signatures[0]){this.signatures[0]=shopSig;this.drawShop();}
   const dockSig=[s.selected,s.selectedWall?.x,s.selectedWall?.y,m.walls.map(w=>`${w.id}:${w.durability}`),m.towers.map(t=>`${t.id}:${t.enabled}`),s.mode.kind,JSON.stringify(m.pendingWall),s.equation,s.hint,m.wallStock,m.bricks.length,m.phase,m.monstersAppeared,s.speed].join('|');
   if(force||dockSig!==this.signatures[1]){this.signatures[1]=dockSig;this.drawDock();}
@@ -137,13 +137,13 @@ export class GameUI extends Phaser.Scene{
   this.text(this.shop,1135,109,'타워 제작소',24).setOrigin(.5);
   this.text(this.shop,1135,139,`타워 ${m.towers.length}/${m.balance.towerLimit} · 바늘 ${m.towers.filter(t=>t.unit===10).length}/${m.balance.precisionLimit}`,15,'#b8b0a4').setOrigin(.5);
   TOWERS.slice(s.shopPage*6,s.shopPage*6+6).forEach((t,i)=>{
-   const unlocked=t.unlock<=m.level.id,cost=towerPrice(t,m.money,m.level.id,m.purchaseVariation),active=s.mode.kind==='tower'&&s.towerTypeId===t.id;
-   const b=this.button(this.shop,'type:'+t.id,1135,196+i*72,218,68,'',unlocked&&m.money>=cost&&m.towerAvailable(t.unit)&&m.canBuild,active?'button_red':'button_brown');
+   const developed=m.isTowerDeveloped(t.id),unlocked=m.canUseTower(t.id),cost=towerPrice(t,m.money,m.level.id,m.purchaseVariation),active=s.mode.kind==='tower'&&s.towerTypeId===t.id,action=(developed?'type:':'research-type:')+t.id;
+   const b=this.button(this.shop,action,1135,196+i*72,218,68,'',m.canBuild&&(!developed||unlocked&&m.money>=cost&&m.towerAvailable(t.unit)),active?'button_red':'button_brown');
    this.towerIcon(b.container,-76,0,t.id,54);
    this.fitText(this.text(b.container,-43,-20,t.name+' · '+GRADE_NAMES[t.grade],16,C.cream).setOrigin(0,.5),142);
    this.text(b.container,-43,0,`공격 ${numberText(t.unit)} · ${t.effect==='slow'?'감속':t.effect==='stun'?'기절':t.effect==='range'?'장거리':'기본'}`,13,'#b8b0a4').setOrigin(0,.5);
-   this.text(b.container,-43,20,unlocked?numberText(cost)+' 코인':`${t.unlock}단계 해금`,17,'#f0c583').setOrigin(0,.5);
-   this.controls.get('type:'+t.id)!.label=`${t.name}, ${GRADE_NAMES[t.grade]}, 공격력 ${numberText(t.unit)}, ${numberText(cost)} 코인`;
+   this.fitText(this.text(b.container,-43,20,!developed?'개발 상점에서 개발':unlocked?numberText(cost)+' 코인':'소수 두 자리부터 사용',17,'#f0c583').setOrigin(0,.5),142);
+   this.controls.get(action)!.label=`${t.name}, ${GRADE_NAMES[t.grade]}, 공격력 ${numberText(t.unit)}, ${!developed?'개발 상점에서 개발':unlocked?numberText(cost)+' 코인':'소수 두 자리부터 사용'}`;
   });
   this.text(this.shop,1135,600,m.canBuild?'준비 중에만 설치 · 빈 칸에 자유 배치':'전투 중 설치 불가 · 발사 조절 가능',12,'#b8b0a4').setOrigin(.5);
   this.button(this.shop,'shop-page:prev',1055,633,64,56,'◀',s.shopPage>0,'button_brown',22);
@@ -179,13 +179,13 @@ export class GameUI extends Phaser.Scene{
   }
   const page=Math.min(s.shopPage,this.shopPageCount-1);
   TOWERS.slice(page*count,page*count+count).forEach((tower,i)=>{
-   const unlocked=tower.unlock<=m.level.id,cost=towerPrice(tower,m.money,m.level.id,m.purchaseVariation),active=s.mode.kind==='tower'&&s.towerTypeId===tower.id;
-   const b=this.button(this.shop,'type:'+tower.id,1135,top+rowHeight/2+i*pitch,218,rowHeight,'',unlocked&&m.money>=cost&&m.towerAvailable(tower.unit)&&m.canBuild,active?'button_red':'button_brown');
+   const developed=m.isTowerDeveloped(tower.id),unlocked=m.canUseTower(tower.id),cost=towerPrice(tower,m.money,m.level.id,m.purchaseVariation),active=s.mode.kind==='tower'&&s.towerTypeId===tower.id,action=(developed?'type:':'research-type:')+tower.id;
+   const b=this.button(this.shop,action,1135,top+rowHeight/2+i*pitch,218,rowHeight,'',m.canBuild&&(!developed||unlocked&&m.money>=cost&&m.towerAvailable(tower.unit)),active?'button_red':'button_brown');
    this.towerIcon(b.container,-76,0,tower.id,54);
    this.fitText(this.text(b.container,-43,-20,tower.name+' · '+GRADE_NAMES[tower.grade],17,C.cream).setOrigin(0,.5),142);
    this.text(b.container,-43,0,'공격 '+numberText(tower.unit),15,C.muted).setOrigin(0,.5);
-   this.text(b.container,-43,20,unlocked?numberText(cost)+' 코인':`${tower.unlock}단계 해금`,18,'#f0c583').setOrigin(0,.5);
-   this.controls.get('type:'+tower.id)!.label=`${tower.name}, ${GRADE_NAMES[tower.grade]}, 공격력 ${numberText(tower.unit)}, ${numberText(cost)} 코인`;
+   this.fitText(this.text(b.container,-43,20,!developed?'개발 상점에서 개발':unlocked?numberText(cost)+' 코인':'소수 두 자리부터 사용',18,'#f0c583').setOrigin(0,.5),142);
+   this.controls.get(action)!.label=`${tower.name}, ${GRADE_NAMES[tower.grade]}, 공격력 ${numberText(tower.unit)}, ${!developed?'개발 상점에서 개발':unlocked?numberText(cost)+' 코인':'소수 두 자리부터 사용'}`;
   });
   if(this.cycleShopPages){
    const placing=s.mode.kind==='tower';this.text(this.shop,1135,pageY-rowHeight/2-26,`${page+1} / ${this.shopPageCount}`,22,C.muted).setOrigin(.5);
@@ -319,7 +319,7 @@ export class GameUI extends Phaser.Scene{
   this.popup.add(shade);
   this.text(this.popup,640,125,`소수의 성으로 가는 ${FINAL_STAGE}개의 모험`,32).setOrigin(.5).setStroke('#0a0c12',4);
   this.button(this.popup,'close',1158,129,58,58,'×',true,'button_red',30);
-  this.text(this.popup,640,164,`나의 레벨 ${s.save.level}  ·  배치와 돈은 단계마다 새로 시작해요`,19,'#dfd9ce').setOrigin(.5).setStroke('#0a0c12',3);
+  this.text(this.popup,640,164,`나의 레벨 ${s.save.level}  ·  설치 코인과 배치는 단계마다 새로 준비해요`,19,'#dfd9ce').setOrigin(.5).setStroke('#0a0c12',3);
   const positions=LEVELS.map((_,i)=>({x:i<6?190+i*180:1000-(i-6)*180,y:i<6?280+(i%2)*24:500-((i-6)%2)*24}));
   const road=this.add.graphics().lineStyle(20,0x302a23,.8).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();road.lineStyle(10,0xd5ab6a,.9).beginPath();positions.forEach((p,i)=>i?road.lineTo(p.x,p.y):road.moveTo(p.x,p.y));road.strokePath();this.popup.add(road);
   LEVELS.forEach((l,i)=>{const p=positions[i],open=l.id<=s.save.level;const b=this.button(this.popup,`stage:${l.id}`,p.x,p.y,86,82,open?String(l.id):'잠김',open,l.id===s.model.level.id?'button_red':'button_brown',open?34:22);
@@ -329,7 +329,9 @@ export class GameUI extends Phaser.Scene{
    [0,1,2].forEach(j=>{const star=this.add.image(p.x+(j-1)*25,p.y+114,'dungeon-icons','star').setDisplaySize(26,26).setAlpha(j<s.save.stars[i]?1:.17);this.popup.add(star);});
    if(!open)b.container.setAlpha(.7);
   });
-  if(secretSiegeUnlocked(s.save))this.button(this.popup,'secret-siege',640,675,430,60,'비밀 원정 · 10개의 성채 ▶',true,'button_red',23);
+  const secret=secretSiegeUnlocked(s.save);
+  this.button(this.popup,'research-shop',secret?400:640,675,secret?390:430,60,'타워 개발 상점',s.model.phase!=='playing'&&s.model.phase!=='paused','button_red',23);
+  if(secret)this.button(this.popup,'secret-siege',880,675,390,60,'비밀 원정 · 10개의 성채 ▶',true,'button_red',23);
  }
  private drawResult(){
   const s=this.getState(),m=s.model,won=m.phase==='won',review=m.phase==='review';this.modalFrame(won?'소수의 성을 지켰어요!':review?'성은 지켰어요! 학습 목표를 연습해요':'성 체력 5개가 모두 소진됐어요',940,650);
@@ -341,17 +343,20 @@ export class GameUI extends Phaser.Scene{
   const final=won&&m.level.id===FINAL_STAGE,secret=final&&secretSiegeUnlocked(s.save);
   this.text(this.popup,640,568,secret?'마법사의 성으로 가는 숨겨진 길이 열렸어요.':won?'방어와 학습 목표를 모두 달성했어요.':review?'패배가 아니에요. ○ 표시된 목표를 연습하면 다음 단계가 열려요.':'타워의 위치와 발사 순서를 바꾸어 같은 웨이브에 다시 도전해요.',21,secret?'#dcc2ff':'#bdb5a9').setOrigin(.5);
   if(secret){
-   this.button(this.popup,'retry',310,641,200,68,'다시 도전',true,'button_brown',23);
-   this.button(this.popup,'hall',530,641,200,68,'명예의 전당',true,'button_red',23);
-   this.button(this.popup,'secret-siege',750,641,200,68,'비밀 원정',true,'button_red',23);
-   this.button(this.popup,'home',970,641,200,68,'시작 화면',true,'button_brown',23);
+   this.button(this.popup,'retry',270,641,168,68,'다시 도전',true,'button_brown',19);
+   this.button(this.popup,'hall',455,641,168,68,'명예의 전당',true,'button_red',19);
+   this.button(this.popup,'research-shop',640,641,168,68,'타워 개발',true,'button_red',19);
+   this.button(this.popup,'secret-siege',825,641,168,68,'비밀 원정',true,'button_red',19);
+   this.button(this.popup,'home',1010,641,168,68,'시작 화면',true,'button_brown',19);
   }else if(final){
-   this.button(this.popup,'retry',350,641,254,68,'다시 도전',true,'button_brown',24);
-   this.button(this.popup,'hall',640,641,254,68,'명예의 전당',true,'button_red',24);
-   this.button(this.popup,'home',930,641,254,68,'시작 화면',true,'button_brown',24);
+   this.button(this.popup,'retry',300,641,204,68,'다시 도전',true,'button_brown',22);
+   this.button(this.popup,'hall',526,641,204,68,'명예의 전당',true,'button_red',22);
+   this.button(this.popup,'research-shop',752,641,204,68,'타워 개발',true,'button_red',22);
+   this.button(this.popup,'home',978,641,204,68,'시작 화면',true,'button_brown',22);
   }else{
-   this.button(this.popup,'retry',450,641,284,68,'같은 단계 다시',true,'button_brown',25);
-   this.button(this.popup,won?'next':'levels',815,641,284,68,won?'다음 단계 ▶':'단계 지도',true,'button_red',25);
+   this.button(this.popup,'retry',330,641,250,68,'같은 단계 다시',true,'button_brown',23);
+   this.button(this.popup,'research-shop',640,641,250,68,'타워 개발 상점',true,'button_red',23);
+   this.button(this.popup,won?'next':'levels',950,641,250,68,won?'다음 단계 ▶':'단계 지도',true,'button_red',23);
   }
  }
  private drawMenu(){

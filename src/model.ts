@@ -26,7 +26,7 @@ export const STAGE_DURATION=120,FIRST_SPAWN_DELAY=8;
 export const BOSS_AURA_RADIUS=3*TILE,BOSS_AURA_SPEED=1.25,BOSS_AURA_SLOW=.8,BOSS_AURA_STUN=2;
 export {DEFAULT_SPAWN_INTERVAL as SPAWN_INTERVAL} from './difficulty';
 export class Defense{
- level:Level;money:number;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
+ level:Level;money:number;earnedCoins=0;castle=CASTLE_HEALTH;phase:Phase='ready';elapsed=0;duration=STAGE_DURATION;spawned=0;kills=0;leaks=0;successfulHits=0;invalidHits=0;fusions=0;purchases=0;switches=0;borrowTenths=0;borrowHundredths=0;usedUnits=new Set<number>();
  towers:Tower[]=[];enemies:Enemy[]=[];bricks:Brick[]=[];walls:Wall[]=[];blocks:Set<string>;readonly map:StageMap;events:Event[]=[];
  private nextId=1;private randomState=17;private droppedRecipe=0;private brickRecipe:WallRecipe|null=null;
  private carriedWalls=0;
@@ -35,11 +35,12 @@ export class Defense{
  readonly killHits:number[]=[];readonly purchaseWrongAttempts:number[]=[];readonly fusionWrongAttempts:number[]=[];
  private pendingPurchaseMistakes=0;private pendingFusionMistakes=0;
  private storedWallHealth:number[]=[];wallPlacements=0;
+ private developedTowerIds?:ReadonlySet<string>;
  bossDefeated=false;bossSpawned=false;
  pendingPurchase:Purchase|null=null;purchaseAnswers=0;
  pendingWall:WallPreview|null=null;
  purchaseVariation:PurchaseVariation={round:0};
- constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard'){this.level=level;this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.storedWallHealth=Array.from({length:inventory.walls},(_,i)=>{const hp=inventory.wallDurabilities?.[i];return hp===1||hp===2?hp:WALL_DURABILITY;});this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
+ constructor(level:Level,inventory:Inventory={bricks:[],walls:0},public difficulty:Difficulty='standard',researchIds?:readonly string[]){this.level=level;this.developedTowerIds=researchIds===undefined?undefined:new Set(researchIds.filter(id=>!!towerType(id)));this.map=stageMap(level.id);this.blocks=naturalBlocks(level.id);this.money=level.budget;this.randomState=level.id*131+17;this.carriedWalls=inventory.walls;this.storedWallHealth=Array.from({length:inventory.walls},(_,i)=>{const hp=inventory.wallDurabilities?.[i];return hp===1||hp===2?hp:WALL_DURABILITY;});this.bricks=inventory.bricks.filter(value=>learningValue(value)&&value>0&&value%10===0).map(value=>({id:this.nextId++,value}));}
  path(blocks=this.blocks,start=this.map.start){return route(blocks,start,this.map.end);}
  get balance(){return balanceFor(this.level.id,this.difficulty);}
  get score(){return this.combatScore+this.questionScore;}
@@ -63,6 +64,9 @@ export class Defense{
   this.difficulty=difficulty;this.emit({type:'notice',message:`${DIFFICULTIES[difficulty].name} 난이도 · 타워 ${this.balance.towerLimit}개까지 설치할 수 있어요.`});return true;
  }
  towerAvailable(unit:number){return this.towers.length<this.balance.towerLimit&&(unit!==10||this.towers.filter(t=>t.unit===10).length<this.balance.precisionLimit);}
+ isTowerDeveloped(id:string){const type=towerType(id);return !!type&&(this.developedTowerIds?this.developedTowerIds.has(id):type.unlock<=this.level.id);}
+ canUseTower(id:string){const type=towerType(id);return !!type&&this.isTowerDeveloped(id)&&(this.level.digits!==1||type.unit%100===0);}
+ setDevelopedTowers(ids:readonly string[]):void{if(this.phase==='playing'||this.phase==='paused')return;this.developedTowerIds=new Set(ids.filter(id=>!!towerType(id)));}
  get inventory():Inventory{const health=[...this.storedWallHealth,...this.walls.map(w=>w.durability)];return {bricks:this.bricks.map(b=>b.value),walls:health.length,...(health.some(h=>h<WALL_DURABILITY)?{wallDurabilities:health}:{})};}
  emit(e:Event){this.events.push(e);if(this.events.length>80)this.events.shift();}
  notice(message:string){this.emit({type:'notice',message});return false;}
@@ -88,7 +92,8 @@ export class Defense{
  }
  private canPurchase(c:Cell,type:TowerType):boolean{
   if(!this.canBuild)return this.notice('타워는 방어 시작 전에만 설치할 수 있어요. 전투 중에는 자동으로 공격해요.');
-  if(type.unlock>this.level.id)return this.notice('아직 해금되지 않은 타워예요.');
+  if(!this.isTowerDeveloped(type.id))return this.notice(this.developedTowerIds?'타워 개발 상점에서 먼저 개발해 주세요.':'아직 해금되지 않은 타워예요.');
+  if(!this.canUseTower(type.id))return this.notice('이 단계에서는 소수 한 자리 타워만 사용할 수 있어요. 소수 두 자리 타워는 다음 단계부터 사용해요.');
   if(this.towers.length>=this.balance.towerLimit)return this.notice(`타워는 ${this.balance.towerLimit}개까지 설치할 수 있어요. 타워를 회수해 위치나 종류를 바꿔 보세요.`);
   if(type.unit===10&&this.towers.filter(t=>t.unit===10).length>=this.balance.precisionLimit)return this.notice(`바늘탑은 ${this.balance.precisionLimit}개까지 설치해요. 다른 타워로 먼저 체력을 줄여요.`);
   if(!this.candidate(c))return this.notice('길 옆의 빈 바닥을 골라 주세요. 타워는 길 위에 설치할 수 없어요.');
@@ -202,7 +207,7 @@ export class Defense{
   // Each three-drop group has a new, correct addition recipe.
   const brickDrop=this.level.id>=2&&(this.kills<=3||this.kills>=7&&this.kills<=9);
   if(brickDrop){const slot=this.droppedRecipe%3;if(slot===0)this.brickRecipe=drawWallRecipe(this.level.id,Math.floor(this.droppedRecipe/3));const value=this.brickRecipe![slot];this.droppedRecipe++;this.bricks.push({id:this.nextId++,value});this.emit({type:'brick',message:`${MONSTERS[e.kind].name}이 ${decimal(value,this.level.digits)} 벽돌을 남겼어요!`,x:e.x,y:e.y});}
-  else {const beforeMoney=this.money;this.money+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.digits),x:e.x,y:e.y});}
+  else {const beforeMoney=this.money;this.money+=earn;this.earnedCoins+=earn;this.emit({type:'money',message:creditMessage(beforeMoney,earn,`${e.hits}번 타격 보상`,this.level.digits),x:e.x,y:e.y});}
   this.emit({type:'kill',message:`정확히 0! ${e.hits}번 타격`,x:e.x,y:e.y,data:{hits:e.hits,best:minimumHits(e.max,this.level.units),brick:brickDrop}});
  }
  private collideWall(e:Enemy,w:Wall,dx:number,dy:number,speed:number){

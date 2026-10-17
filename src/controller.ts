@@ -7,6 +7,8 @@ import {decimal,numberText,FusionOperation,purchaseBalanceText} from './math';
 import {loadSave,writeSave} from './save';
 import {recordStageScore,campaignCompletion,campaignVisibleTotal} from './campaign-score';
 import {secretSiegeUnlocked} from './secret-siege-progress';
+import {researchProgress,recordTowerResearchReward,developTower,dismissTowerResearchShop} from './tower-research';
+import type {openTowerDevelopmentShop} from './tower-development-shop';
 import type {AdventureHallPresentation} from './adventure-hall-ui';
 import {Sound} from './audio';
 import {adventureMusicTrack} from './music';
@@ -55,7 +57,10 @@ const gameAudioControls=mountGameAudioControls($('game-shell'),{
  change:changeAudio,
 });
 if(!tutorial)save.started=true;
-let model:Defense=tutorial?.model??new Defense(LEVELS[save.resumeStage-1],save.inventory,save.difficulty),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
+const initialResearchShop=tutorial?undefined:researchProgress(save).pendingShop;
+let researchResumePending=!!initialResearchShop,researchBattleId=crypto.randomUUID();
+let researchView:ReturnType<typeof openTowerDevelopmentShop>|undefined,researchOpening=false,researchToken=0;
+let model:Defense=tutorial?.model??new Defense(LEVELS[(initialResearchShop?.stage??save.resumeStage)-1],save.inventory,save.difficulty,researchProgress(save).developed),unit=model.level.units[0],effect:Effect='basic',selected=0,speed=1;
 let selectedWall:Cell|null=null,brickPage=0,inventorySignature='';
 let towerTypeId='basic',shopPage=0,purchaseInput='',purchaseMessage='',purchaseHelp=false;
 let slots:(number|null)[]=[null,null,null],panel:Panel=null,equation='',hint='',message='',lastHit:BattleEvent|undefined,resultShown=false;
@@ -64,7 +69,7 @@ let resumeAfterPanel=false,resumeAfterHTML=false,resumeAfterWall=false,controlsS
 const field=new Field(model);const learningSession=crypto.randomUUID();let learningQuestion=0;
 let bossFinale=new BossFinaleFlow();
 const bossIntroFlow=new BossIntroFlow();
-let bossIntroPresentation:BossIntroPresentation|undefined,bossIntroToken=bossIntroFlow.enter(model.level.id,!!tutorial);
+let bossIntroPresentation:BossIntroPresentation|undefined,bossIntroToken=bossIntroFlow.enter(model.level.id,!!tutorial||!!initialResearchShop);
 let hallPresentation:AdventureHallPresentation|undefined,hallOpening=false,hallToken=0;
 if(bossIntroFlow.held){movie=true;field.presentationHeld=true;}
 function purchaseLearning(outcome:'wrong'|'help'|'correct',q=model.pendingPurchase){if(q&&!tutorial)recordLearning({a:q.before,b:q.cost,operation:'-',digits:q.digits,context:'money'},outcome,learningSession+':purchase:'+learningQuestion);}
@@ -91,15 +96,18 @@ function update(){
  persistInventory();brickPage=Math.max(0,Math.min(brickPage,Math.ceil(model.bricks.length/6)-1));
  if(!tutorial&&!finaleHeld&&!(model.phase==='lost'&&field.castleDestructionPlaying)&&['won','review','lost'].includes(model.phase)&&!resultShown){
   resultShown=true;resumeAfterPanel=false;ui.clearNotification();
-  if(model.phase==='won'){recordStageScore(save,model);save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;if(!writeSave(save))notify('이 브라우저에서는 진행 저장이 제한되어 있어요.');}
+  if(model.phase==='won'){recordStageScore(save,model);save.stars[model.level.id-1]=Math.max(save.stars[model.level.id-1],model.stars);save.level=Math.max(save.level,Math.min(FINAL_STAGE,model.level.id+1));save.resumeStage=Math.min(FINAL_STAGE,model.level.id+1);if(model.level.id===FINAL_STAGE&&model.bossDefeated)save.campaignCompleted=true;}
+  recordTowerResearchReward(save,researchBattleId,model);
+  if(!writeSave(save))notify('이 브라우저에서는 진행과 개발 코인 저장이 제한되어 있어요.');
   panel='result';field.input.enabled=false;
-  if(!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated))void motion.play(model.phase==='won'?'victory':model.phase==='review'?'review':'defeat',{title:model.phase==='won'?'단계 승리':model.phase==='review'?'성을 지켰어요':'다시 도전해요',subtitle:`${model.level.id}단계 · ${model.score.toLocaleString('ko-KR')}점`,key:`${stageSerial}:result`});
+  if(!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated)){const owner=model,serial=stageSerial;void motion.play(model.phase==='won'?'victory':model.phase==='review'?'review':'defeat',{title:model.phase==='won'?'단계 승리':model.phase==='review'?'성을 지켰어요':'다시 도전해요',subtitle:`${model.level.id}단계 · ${model.score.toLocaleString('ko-KR')}점`,key:`${serial}:result`}).then(()=>{if(owner===model&&serial===stageSerial)void openResearchShop();});}
   if(model.phase!=='review'&&!(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated))sound.play(model.phase==='won'?'victory':'defeat');
-  if(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated){movie=true;sound.setPaused(true);const owner=model;void playCinematic('ending',save,()=>{movie=false;ui.refresh(true);update();if(owner===model)void showAdventureHall();});}
+  if(model.phase==='won'&&model.level.id===FINAL_STAGE&&model.bossDefeated){movie=true;sound.setPaused(true);const owner=model;void playCinematic('ending',save,()=>{if(owner!==model)return;movie=false;ui.refresh(true);update();void openResearchShop();});}
  }
  slots=slots.map(id=>model.bricks.some(b=>b.id===id)?id:null);ui.refresh();
  $('accessible-state').textContent=`레벨 ${save.level}, ${model.level.id}단계 ${model.level.name}, 맵 ${model.map.name}, ${DIFFICULTIES[model.difficulty].name} 난이도, 누적 점수 ${campaignVisibleTotal(save,model)}점, 이번 단계 ${model.score}점, 돈 ${numberText(model.money,model.level.digits)}, 성 체력 ${model.castle}, 방어 ${model.kills}/${model.enemyCount}, 타워 ${model.towers.length}/${model.balance.towerLimit}, 성벽 배치 ${model.walls.length}/${model.balance.wallLimit}. ${equation||model.level.hint}${model.pendingWall?` 성벽 미리보기 ${model.pendingWall.x+1}열 ${model.pendingWall.y+1}행: ${model.pendingWall.message}`:''}`;
  updateTutorialGuide();
+ if(researchResumePending&&ui.ready&&!movie){researchResumePending=false;void openResearchShop();}
 }
 function finalBossImpact(x:number,y:number){
  if(!bossFinale.begin())return;
@@ -140,6 +148,41 @@ async function showAdventureHall(){
  }catch{restore();notify('명예의 전당을 열지 못했어요. 연결을 확인하고 다시 눌러 주세요.');}
 }
 function cancelAdventureHall(){hallToken++;hallOpening=false;const view=hallPresentation;hallPresentation=undefined;view?.close();}
+async function openResearchShop(){
+ if(tutorial||movie||researchOpening||researchView||['playing','paused'].includes(model.phase))return;
+ // A purchase question reserves a location and its price; cancel it before
+ // allowing a new design to update the available tower list.
+ if(model.pendingPurchase){model.cancelPurchase();panel=null;resumeAfterPanel=false;}
+ const owner=model,token=++researchToken,pending=researchProgress(save).pendingShop;
+ const terminal=model.phase==='won'||model.phase==='review'||model.phase==='lost'?model.phase:'ready';
+ researchOpening=true;movie=true;field.presentationHeld=true;field.input.enabled=false;update();
+ const restore=()=>{if(token!==researchToken||owner!==model)return;researchView=undefined;researchOpening=false;movie=false;field.presentationHeld=false;field.input.enabled=!panel&&$('modal').classList.contains('hidden');ui.refresh(true);update();};
+ try{
+  const {openTowerDevelopmentShop}=await import('./tower-development-shop');
+  if(token!==researchToken||owner!==model)return;
+  researchOpening=false;
+  researchView=openTowerDevelopmentShop({getProgress:()=>researchProgress(save),stage:pending?.stage??model.level.id,outcome:pending?.outcome??terminal,earned:pending?.earned??0,nextStage:pending?.nextStage,
+   onDevelop:id=>{
+    if(token!==researchToken||owner!==model)return false;
+    const candidate={...save,towerResearch:researchProgress(save)};
+    if(!developTower(candidate,id))return {ok:false,message:'이미 개발했거나 개발 코인이 부족해요.'};
+    if(!writeSave(candidate))return {ok:false,message:'개발을 저장하지 못했어요. 코인은 차감하지 않았어요.'};
+    save.towerResearch=candidate.towerResearch;model.setDevelopedTowers(researchProgress(save).developed);ui.refresh(true);update();return true;
+   },
+   onClose:restore,
+   onContinue:()=>{
+    if(token!==researchToken||owner!==model)return;
+    const next=researchProgress(save).pendingShop;
+    if(next){const candidate={...save,towerResearch:researchProgress(save)};dismissTowerResearchShop(candidate);if(writeSave(candidate))save.towerResearch=candidate.towerResearch;else{restore();notify('진행을 저장하지 못했어요. 개발 상점에서 다시 이어가 주세요.');return;}}
+    restore();
+    if(!next)return;
+    if(next.outcome==='won'&&next.stage===FINAL_STAGE){if(model.phase==='ready')setPanel('map');void showAdventureHall();}
+    else stage(next.nextStage);
+   },
+  });
+ }catch{restore();notify('개발 상점을 열지 못했어요. 단계 지도나 결과 화면에서 다시 눌러 주세요.');}
+}
+function cancelResearchShop(){researchToken++;researchResumePending=false;researchOpening=false;const view=researchView;researchView=undefined;view?.close();}
 function nextWallCell(){return model.path()?.find(c=>model.previewWall(c).valid);}
 function beginWallPlacement(){
  if(!model.canPlaceWall){notify(model.wallPlacementMessage);return;}
@@ -177,13 +220,14 @@ function closeHTML(){
 function stage(n:number){
  if(tutorial){restartTutorial();return;}
  cancelAdventureHall();
+ cancelResearchShop();
  motion.clear();stageSerial++;
  settingsAudioControls?.dispose();settingsAudioControls=undefined;
  if(n<1||n>FINAL_STAGE)return;ui.clearNotification();resumeAfterHTML=false;resumeAfterPanel=false;resumeAfterWall=false;model.cancelWall();field.clearWallPreview();$('modal').classList.add('hidden');
  bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroFlow.cancel();movie=false;
  persistInventory();fusionOperation='+';selectedWall=null;brickPage=0;towerTypeId='basic';shopPage=0;purchaseInput='';purchaseMessage='';purchaseHelp=false;
- save.resumeStage=n;save.started=true;writeSave(save);
- bossFinale=new BossFinaleFlow();model=new Defense(LEVELS[n-1],save.inventory,save.difficulty);field.setModel(model);bossIntroToken=bossIntroFlow.enter(n);movie=bossIntroFlow.held;field.presentationHeld=movie;if(field.input)field.input.enabled=!movie;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();startBossIntro();
+ dismissTowerResearchShop(save);save.resumeStage=n;save.started=true;writeSave(save);
+ researchBattleId=crypto.randomUUID();bossFinale=new BossFinaleFlow();model=new Defense(LEVELS[n-1],save.inventory,save.difficulty,researchProgress(save).developed);field.setModel(model);bossIntroToken=bossIntroFlow.enter(n);movie=bossIntroFlow.held;field.presentationHeld=movie;if(field.input)field.input.enabled=!movie;unit=model.level.units[0];effect='basic';field.mode={kind:'inspect',unit,effect};selected=0;slots=[null,null,null];panel=null;equation='';hint='';message='';lastHit=undefined;resultShown=false;speed=1;ui.refresh(true);update();startBossIntro();
  if(!movie)void motion.play('stage',{title:`${n}단계 · ${model.level.name}`,subtitle:model.map.name,key:`${stageSerial}:entry`});
 }
 function event(ev:BattleEvent){
@@ -198,7 +242,7 @@ function event(ev:BattleEvent){
  else if(['notice','invalid','wall','wall-break','brick','leak'].includes(ev.type))notify(ev.message);
  update();
 }
-function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 간격 제한 없이 이웃한 빈 칸에도 설치할 수 있어요. 단계가 올라갈 때마다 모든 타워의 가격 범위가 조금씩 올라가며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 혼자 모험에서는 방어 시작 전에만 설치할 수 있어요. 전투 중 회수한 타워도 다시 설치할 수 없으니 시작 전에 배치를 확인해요. 오답·취소에는 돈을 쓰지 않아요. 후반에는 길이 짧아져 입구의 큰 공격, 중간의 감속, 출구의 작은 공격을 조합해야 유리해요. 1:1 대전은 3분 동안 타워 구입 문제와 영웅 소환석 문제를 선택해 풀고, 이어지는 3분 동안 비축한 타워를 배치하고 소환석을 나눠 영웅을 원하는 타이밍에 소환해요.</li><li><b>자동 공격</b> 타워는 전투 중 자동으로 공격해요. 설치한 타워를 누르면 공격력과 사거리를 확인하거나 회수할 수 있어요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 0.1 포탄 타워가 남은 체력을 마무리해요. 큰 공격과 작은 공격 타워를 길 전체에 나누어 배치해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 벽돌 세 개를 □ + □ = □에 넣어 덧셈으로 만들어요. 단계가 높아지면 두 자리 소수와 받아올림이 있는 식을 연습해요. 식이 맞으면 제작창이 닫히고 길에 바로 설치할 수 있어요. 성벽은 몬스터가 없는 길 위에만 설치할 수 있어요. 입구와 불꽃에는 놓을 수 없어요. 새 성벽의 내구도는 3이고, 몬스터가 부딪힐 때마다 1씩 줄어요. 몬스터는 뒤로 튕기고 성벽에는 균열이 생겨요. 세 번째 충돌에 성벽이 부서져 길이 열려요. 성벽 충돌은 몬스터의 소수 체력을 깎지 않아요. 초록색 길을 한 번 누르면 바로 설치돼요. 재고가 남으면 계속 놓을 수 있고, ‘완료 · 남은 성벽 보관’이나 Esc로 배치를 끝내요. 잘못된 칸은 성벽을 쓰지 않아요. 설치할 칸을 고르는 동안 전투가 멈춰요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 회수해도 남은 내구도는 그대로예요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 체력·공격력·돈·타워 가격·벽돌은 모두 소수 두 자리까지만 사용해요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 부서지지 않은 성벽만 재고에 보관해요.</li><li><b>진급과 저장</b> 성 체력은 5개이며 몬스터가 통과할 때 1개씩 줄고, 5개가 모두 소진돼야 패배해요. 2분이 지나도 남은 몬스터는 추가로 방어해요. 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 성을 지켜도 목표가 남으면 패배 대신 학습 목표 연습을 안내해요. 레벨·해금·별점은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 돈·타워 배치는 단계마다 새로 시작하고 부서지지 않은 성벽은 남은 내구도 그대로 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
+function help(){openHTML(`<p class="eyebrow">모험 안내서</p><h2>소수점을 맞추고 성을 지켜요</h2><ol class="help-list"><li><b>타워 설치</b> 오른쪽에서 타워를 선택하고 길 옆의 빈 바닥을 누르세요. 간격 제한 없이 이웃한 빈 칸에도 설치할 수 있어요. 단계가 올라갈 때마다 모든 타워의 가격 범위가 조금씩 올라가며 높은 등급일수록 비싸요. 보유 코인에서 가격을 빼는 문제를 맞혀야 설치돼요. 혼자 모험에서는 방어 시작 전에만 설치할 수 있어요. 전투 중 회수한 타워도 다시 설치할 수 없으니 시작 전에 배치를 확인해요. 오답·취소에는 돈을 쓰지 않아요. 후반에는 길이 짧아져 입구의 큰 공격, 중간의 감속, 출구의 작은 공격을 조합해야 유리해요. 1:1 대전은 3분 동안 타워 구입 문제와 영웅 소환석 문제를 선택해 풀고, 이어지는 3분 동안 비축한 타워를 배치하고 소환석을 나눠 영웅을 원하는 타이밍에 소환해요.</li><li><b>타워 개발</b> 단계를 마치면 개발 상점이 열려요. 몬스터 처치로 받은 코인이 개발 지갑에 쌓이고, 이 코인으로 새 타워 설계를 개발해요. 개발한 설계는 다음 단계와 재접속 후에도 계속 사용할 수 있어요. 시작 설치 코인과 타워 회수금은 개발 코인이 되지 않아요. 준비 중에는 잠긴 타워나 모험 지도의 개발 상점에서 다시 열 수 있어요.</li><li><b>자동 공격</b> 타워는 전투 중 자동으로 공격해요. 설치한 타워를 누르면 공격력과 사거리를 확인하거나 회수할 수 있어요. 체력보다 큰 공격은 피해를 주지 못해요.</li><li><b>정확히 0 만들기</b> 체력 1.3에 1 포탄을 쏘면 0.3이 남아요. 0.1 포탄 타워가 남은 체력을 마무리해요. 큰 공격과 작은 공격 타워를 길 전체에 나누어 배치해요.</li><li><b>성벽 제작</b> 획득한 벽돌과 성벽은 다음 단계에도 보관돼요. 방어 시작 전에 ‘성벽 제작’에서 준비하세요. 전투 중 열면 전투가 멈춰요. 벽돌 세 개를 □ + □ = □에 넣어 덧셈으로 만들어요. 단계가 높아지면 두 자리 소수와 받아올림이 있는 식을 연습해요. 식이 맞으면 제작창이 닫히고 길에 바로 설치할 수 있어요. 성벽은 몬스터가 없는 길 위에만 설치할 수 있어요. 입구와 불꽃에는 놓을 수 없어요. 새 성벽의 내구도는 3이고, 몬스터가 부딪힐 때마다 1씩 줄어요. 몬스터는 뒤로 튕기고 성벽에는 균열이 생겨요. 세 번째 충돌에 성벽이 부서져 길이 열려요. 성벽 충돌은 몬스터의 소수 체력을 깎지 않아요. 초록색 길을 한 번 누르면 바로 설치돼요. 재고가 남으면 계속 놓을 수 있고, ‘완료 · 남은 성벽 보관’이나 Esc로 배치를 끝내요. 잘못된 칸은 성벽을 쓰지 않아요. 설치할 칸을 고르는 동안 전투가 멈춰요. 설치한 성벽을 누르고 ‘성벽 회수 · 다시 배치’로 옮길 수 있어요. 회수해도 남은 내구도는 그대로예요.</li><li><b>공격과 돈의 단위</b> 12종 타워는 각각 공격력이 고정돼요. 기본 포탑 0.1, 서리탑 0.15, 투석기 1.2, 룬 쇠뇌 2.35처럼 달라요. 0.01 바늘탑으로 작은 나머지를 마무리해요. 체력·공격력·돈·타워 가격·벽돌은 모두 소수 두 자리까지만 사용해요. 기본 등급은 간단한 계산, 상위 등급은 받아내림이 필요한 가격을 우선 제공해요. 한 마리 돈 보상은 최대 9이고, 실제 피해를 준 타격이 적을수록 보상이 커져요.</li><li><b>난이도 선택</b> 메뉴에서 난이도 선택을 열어 연습·표준·도전을 고르세요. 방어 시작 전에 타워와 성벽을 모두 회수한 상태에서 바꿀 수 있어요. 선택은 저장돼요. 타워 제작소에서 전체 타워와 바늘탑의 설치 수를 확인하세요. 성벽은 연습 6개·표준 4개·도전 3개까지 동시에 놓을 수 있어요. 부서지지 않은 성벽만 재고에 보관해요.</li><li><b>진급과 저장</b> 성 체력은 5개이며 몬스터가 통과할 때 1개씩 줄고, 5개가 모두 소진돼야 패배해요. 2분이 지나도 남은 몬스터는 추가로 방어해요. 방어와 학습 목표를 모두 달성하면 다음 레벨이 열려요. 성을 지켜도 목표가 남으면 패배 대신 학습 목표 연습을 안내해요. 레벨·별점·개발한 타워·개발 코인은 같은 브라우저에 저장하고, 벽돌·성벽도 저장돼요. 설치 코인·타워 배치는 단계마다 새로 시작하고 부서지지 않은 성벽은 남은 내구도 그대로 재고로 돌아와요.</li></ol><p>키보드: 방향키로 맵 칸 선택, Enter로 설치·선택, Space로 일시정지, F로 성벽 제작, Esc로 닫기.</p>`);}
 function calculation(){
  const learned=lastHit?.data as {before:number;damage:number}|undefined;if(learned&&!tutorial)recordLearning({a:learned.before,b:learned.damage,operation:'-',digits:model.level.digits,context:'battle'},'help',learningSession+':hit:'+lastHit!.message);
  const d=lastHit?.data as {before:number;damage:number;after:number;hint:string}|undefined;
@@ -217,7 +261,8 @@ function action(key:string){
  sound.resume();sound.play('ui');
  if(field.mode.kind==='wall'&&!['wall-cancel','wall','forge','pause'].includes(key))leaveWallPlacement();
  if(key.startsWith('type:')||key==='wall'){selectedWall=null;field.selectedWall=undefined;}
- if(key.startsWith('type:')){const type=towerType(key.slice(5));if(!type||type.unlock>model.level.id)return;if(!model.canBuild){notify('타워는 방어 시작 전에만 설치해요.');return;}if(tutorial&&!tutorial.selectTower(type.id))return;towerTypeId=type.id;unit=type.unit;effect=type.effect;field.mode={kind:'tower',typeId:type.id,unit,effect};selected=0;field.selected=undefined;field.hover({x:1,y:3});notify(`${type.name} · 공격력 ${numberText(unit)} · 빈 칸에 설치해요.`);}
+ if(key.startsWith('research-type:')){void openResearchShop();return;}
+ if(key.startsWith('type:')){const type=towerType(key.slice(5));if(!type||!model.canUseTower(type.id))return;if(!model.canBuild){notify('타워는 방어 시작 전에만 설치해요.');return;}if(tutorial&&!tutorial.selectTower(type.id))return;towerTypeId=type.id;unit=type.unit;effect=type.effect;field.mode={kind:'tower',typeId:type.id,unit,effect};selected=0;field.selected=undefined;field.hover({x:1,y:3});notify(`${type.name} · 공격력 ${numberText(unit)} · 빈 칸에 설치해요.`);}
  else if(key.startsWith('shop-page:'))shopPage=key.endsWith('next')&&ui.cycleShopPages?(shopPage+1)%ui.shopPageCount:Math.max(0,Math.min(ui.shopPageCount-1,shopPage+(key.endsWith('next')?1:-1)));
  else if(key.startsWith('purchase-key:')){if(panel!=='purchase')return;const char=key.slice(13);if(char==='backspace')purchaseInput=purchaseInput.slice(0,-1);else if(char==='dot'){if(!purchaseInput.includes('.'))purchaseInput=(purchaseInput||'0')+'.';}else if(/^\d$/.test(char)&&purchaseInput.length<12&&(!purchaseInput.includes('.')||purchaseInput.split('.')[1].length<2))purchaseInput+=char;purchaseMessage='';}
  else if(key.startsWith('difficulty:')){const chosen=key.split(':')[1];if(isDifficulty(chosen)&&model.setDifficulty(chosen)){save.difficulty=chosen;if(!writeSave(save))notify('이 브라우저에서는 난이도 저장이 제한되어 있어요.');}}
@@ -232,6 +277,7 @@ function action(key:string){
   case 'speed':speed=speed===1?2:1;break;
   case 'online':{motion.clear();const url=new URL(location.href);url.searchParams.set('mode','duel');navigateWithMotion(url.href);break;}
   case 'hall':void showAdventureHall();break;
+  case 'research-shop':void openResearchShop();break;
   case 'secret-siege':if(secretSiegeUnlocked(save)){persistInventory();sound.setMusic(false);const url=new URL(location.href);url.search='?mode=siege';navigateWithMotion(url.href);}break;
   case 'tutorial':if(tutorial)restartTutorial();else{motion.clear();persistInventory();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','tutorial');navigateWithMotion(url.href);}break;
   case 'sell':model.sellTower(selected);selected=0;field.selected=undefined;break;
@@ -256,7 +302,7 @@ function action(key:string){
   case 'settings':settings();break;
   case 'credits':credits();break;
   case 'retry':stage(model.level.id);break;
-  case 'next':if(model.phase==='won'&&model.level.id<FINAL_STAGE)stage(model.level.id+1);break;
+  case 'next':if(researchProgress(save).pendingShop)void openResearchShop();else if(model.phase==='won'&&model.level.id<FINAL_STAGE)stage(model.level.id+1);break;
  }
  field.flush();update();
 }
@@ -328,7 +374,7 @@ function updateTutorialGuide(){
  tutorialGuide.highlight(rect);
 }
 ui.onControls=(controls:Map<string,Control>)=>{
- const popupKey=(id:string)=>['close','fuse','wall','levels','help','tutorial','settings','credits','retry','next','difficulty','online','home','popup-calculation'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
+ const popupKey=(id:string)=>['close','fuse','wall','levels','help','tutorial','settings','credits','retry','next','difficulty','online','home','popup-calculation','research-shop'].includes(id)||/^(slot:|brick:|brick-page:|stage:|fusion:|difficulty:|purchase-)/.test(id);
  const active=[...controls].filter(([id])=>!movie&&$('modal').classList.contains('hidden')&&(!panel||popupKey(id))&&(!tutorial||tutorialActionAllowed(id)));
  const signature=active.map(([id,c])=>`${id}:${c.label}:${c.enabled}`).join('|');if(signature===controlsSignature)return;controlsSignature=signature;
  const focus=(document.activeElement as HTMLElement)?.dataset.action;
@@ -356,7 +402,7 @@ const game=new Phaser.Game({type:Phaser.AUTO,parent:'field',width:GAME_WIDTH,hei
 startBossIntro();
 if(tutorial){tutorialGuide=mountTutorialGuide(app,{next:tutorialNext,restart:restartTutorial,exit:()=>action('home'),adventure:()=>{motion.clear();sound.setMusic(false);const url=new URL(location.href);url.searchParams.set('mode','adventure');navigateWithMotion(url.href);}});updateTutorialGuide();}
 observeGameScreen(game,$('field'),layout=>{field.setScreenLayout(layout);ui.setScreenLayout(layout);shopPage=Math.min(shopPage,ui.shopPageCount-1);ui.refresh(true);updateTutorialGuide();});
-game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');if(!movie&&!tutorial)void motion.play('entry',{title:'모험 시작',subtitle:`${model.level.id}단계 · ${model.level.name}`,key:`${stageSerial}:entry`});});
+game.events.once('ready',()=>{game.canvas.setAttribute('aria-label','소수의 성: 타워와 성벽을 배치하는 게임 화면');game.canvas.setAttribute('tabindex','0');if(!movie&&!tutorial&&!researchResumePending)void motion.play('entry',{title:'모험 시작',subtitle:`${model.level.id}단계 · ${model.level.name}`,key:`${stageSerial}:entry`});update();});
 $('modal-close').onclick=closeHTML;$('modal').onclick=e=>{if(e.target===$('modal'))closeHTML();};
 document.addEventListener('keydown',e=>{
  if(movie)return;
@@ -369,10 +415,11 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&!movie&&mo
 window.addEventListener('pagehide',()=>{
  motion.dispose();
  cancelAdventureHall();
+ const researchHeld=researchOpening||!!researchView;cancelResearchShop();
  const introHeld=bossIntroFlow.held;
  bossIntroPresentation?.cancel();bossIntroPresentation=undefined;bossIntroToken=null;bossIntroFlow.cancel();
  // A page restored from the browser cache must not retain an invisible input lock.
- if(introHeld){movie=false;field.presentationHeld=false;if(field.input)field.input.enabled=!panel&&$('modal').classList.contains('hidden');if(ui.ready)ui.refresh(true);}
+ if(introHeld||researchHeld){movie=false;field.presentationHeld=false;if(field.input)field.input.enabled=!panel&&$('modal').classList.contains('hidden');if(ui.ready)ui.refresh(true);}
  tutorialGuide?.dispose();tutorial?.dispose();settingsAudioControls?.dispose();gameAudioControls.dispose();sound.dispose();
 });
 if(import.meta.env.DEV)Object.assign(window,{__gameTest:{get model(){return model;},scene:field,ui,stage,get state(){return state();},get presentation(){return{movie,held:field.presentationHeld,introPhase:bossIntroFlow.phase};}}});
