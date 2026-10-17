@@ -193,7 +193,7 @@ test('난이도는 표시되는 체력과 공격 소수는 유지하면서 적 �
 
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 합법적인 균형 편성과 정확한 계산만으로 성을 파괴할 수 있다`,()=>{
  const result=simulateSecretSiege(difficulty,{name:'검증',guard:3,striker:4,scout:2,order:'guard-first',rally:false});
- assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,10440);assert.equal(result.earnedCoins,9000);assert.equal(result.deployed,9);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
+ assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,19440);assert.equal(result.earnedCoins,18000);assert.equal(result.deployed,9);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
  assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);assert.ok(result.enemyShots>10);assert.ok(result.armyDamage>0);
 });
 

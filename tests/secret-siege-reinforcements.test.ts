@@ -4,7 +4,7 @@ import {SecretSiege} from '../src/secret-siege-model';
 import {ARMY,type ArmyId} from '../src/secret-siege-types';
 import {siegeMonster,SIEGE_MONSTERS} from '../src/secret-siege-monsters';
 import {numberText} from '../src/math';
-import {simulateSecretSiege} from '../tools/simulate-secret-siege';
+import {simulateSecretSiege,simulateSecretSiegeCampaign} from '../tools/simulate-secret-siege';
 
 function recruit(game:SecretSiege,id:ArmyId){assert.ok(game.requestRecruit(id));assert.ok(game.answer(numberText(game.pendingQuestion!.answer,2)));}
 function advance(game:SecretSiege,seconds:number){for(let tick=0;tick<Math.ceil(seconds*100);tick++)game.step(.01);}
@@ -12,12 +12,12 @@ function prepared(stage=1){const game=new SecretSiege('standard',stage);recruit(
 function scoutFixture(){const game=prepared();assert.ok(game.deploy('scout'));for(const target of game.targets)target.reload=999;return game;}
 const adaptive={name:'보상 재투자',guard:3,striker:3,scout:2,order:'guard-first',rally:true,rallyTiming:'boss-spell',deployGap:.7,reinforcements:['knight','priest','ranger','champion','knight','champion','priest','ranger']} as const;
 
-test('seven human roles unlock only after the required number of actual destroyed towers',()=>{
+test('seven human roles require permanent research and never unlock automatically from tower destruction',()=>{
  const game=new SecretSiege('standard');assert.equal(ARMY.length,7);assert.equal(new Set(ARMY.map(army=>army.id)).size,7);
  assert.deepEqual(ARMY.map(army=>army.row),[0,1,2,3,4,5,6]);
- for(const army of ARMY){assert.equal(game.armyUnlocked(army.id),army.requiredTowers===0);if(army.requiredTowers)assert.equal(game.requestRecruit(army.id),false);}
+ for(const army of ARMY){assert.equal(game.armyUnlocked(army.id),army.researchCost===0);if(army.researchCost)assert.equal(game.requestRecruit(army.id),false);}
  const towers=game.targets.filter(target=>target.kind==='tower');
- for(let index=0;index<4;index++){towers[index].hp=0;assert.equal(game.destroyedTowers,index+1);for(const army of ARMY)assert.equal(game.armyUnlocked(army.id),army.requiredTowers<=index+1);}
+ for(let index=0;index<4;index++){towers[index].hp=0;assert.equal(game.destroyedTowers,index+1);for(const army of ARMY)assert.equal(game.armyUnlocked(army.id),army.researchCost===0);}
  assert.equal(game.earnedCoins,0,'a displayed unlock count does not manufacture a reward without a real hit');
 });
 
@@ -27,10 +27,10 @@ test('tower destruction pays each tower exactly once and later rewards increase 
   const tower=game.targets[index];tower.hp=10;scout.distance=tower.distance-95;scout.reload=0;advance(game,.4);
   assert.equal(tower.hp,0);assert.equal(game.earnedCoins,game.stage.towerRewards.slice(0,index+1).reduce((sum,coins)=>sum+coins,0));
  }
- assert.equal(game.earnedCoins,9000);assert.equal(game.money,before+9000);assert.equal(game.events.filter(event=>event.type==='reward').length,4);
+ assert.equal(game.earnedCoins,18000);assert.equal(game.money,before+18000);assert.equal(game.events.filter(event=>event.type==='reward').length,4);
  const first=game.targets[0];first.hp=10;scout.distance=first.distance-95;scout.reload=0;advance(game,.4);
- assert.equal(first.hp,0);assert.equal(game.money,before+9000);assert.equal(game.events.filter(event=>event.type==='reward').length,4);
- assert.ok(game.money>9990);assert.ok(game.requestRecruit('champion'));const question=game.pendingQuestion!;
+ assert.equal(first.hp,0);assert.equal(game.money,before+18000);assert.equal(game.events.filter(event=>event.type==='reward').length,4);
+ assert.ok(game.money>9990);assert.equal(game.requestRecruit('champion'),false,'tower income cannot bypass permanent research');assert.ok(game.requestRecruit('striker'));const question=game.pendingQuestion!;
  assert.equal(question.a,game.money);assert.equal(question.answer,question.a-question.b);assert.ok(question.answer>=10000);
  assert.equal(game.answer(numberText(question.answer-10000,2)),false);assert.ok(game.answer(numberText(question.answer,2)));assert.equal(game.money,question.answer);
  const retry=new SecretSiege(game.difficulty);assert.equal(retry.money,9900);assert.equal(retry.earnedCoins,0);assert.equal(retry.destroyedTowers,0);assert.equal(retry.armyUnlocked('knight'),false);
@@ -76,7 +76,7 @@ test('troops may overkill monsters while exact subtraction still prevents oversi
 });
 
 test('priests automatically heal one nearby injured living ally, respect health caps and cooldown, and pause with questions',()=>{
- const game=new SecretSiege('standard');recruit(game,'guard');recruit(game,'scout');game.targets[0].hp=game.targets[1].hp=0;recruit(game,'priest');assert.ok(game.start());
+ const game=new SecretSiege('standard',1,{coins:9900,researched:['priest']});recruit(game,'guard');recruit(game,'scout');recruit(game,'priest');for(const target of game.targets)target.reload=999;assert.ok(game.start());
  for(const id of ['guard','scout','priest'] as const){assert.ok(game.deploy(id));advance(game,.7);}for(const target of game.targets)target.reload=999;
  const guard=game.units[0],priest=game.units[2];guard.hp=guard.maxHp-100;const money=game.money,rallies=game.ralliesLeft;game.step(.01);
  assert.equal(guard.hp,guard.maxHp);assert.equal(priest.lastHeal,game.elapsed);assert.equal(game.money,money);assert.equal(game.ralliesLeft,rallies);
@@ -85,10 +85,10 @@ test('priests automatically heal one nearby injured living ally, respect health 
  advance(game,2.1);assert.ok(guard.hp>guard.maxHp-600);guard.hp=0;advance(game,3.1);assert.equal(guard.hp,0,'automatic healing cannot resurrect a dead ally');
 });
 
-for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: all ten stages can reinvest real tower rewards in elite troops and defeat defending monsters`,()=>{
- for(let stage=1;stage<=10;stage++)for(const dt of [.1,.05,1/60]){
-  const result=simulateSecretSiege(difficulty,adaptive,stage,dt);assert.equal(result.phase,'won',`stage=${stage}, dt=${dt}`);assert.equal(result.castle,0);assert.equal(result.boss,0);
-  assert.equal(result.earnedCoins,9000);assert.equal(result.towersDestroyed,4);assert.ok(result.reinforcementsRecruited>=3);assert.ok(result.monstersDefeated>0);assert.ok(result.elapsed<180);assert.ok(result.remainingMoney>=0);
+for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: a fresh continuous campaign researches elites using carried tower rewards and defeats defending monsters`,()=>{
+ for(const dt of [.1,.05,1/60])for(const result of simulateSecretSiegeCampaign(difficulty,dt).results){
+  assert.equal(result.phase,'won',`stage=${result.stageId}, dt=${dt}`);assert.equal(result.castle,0);assert.equal(result.boss,0);
+  assert.equal(result.earnedCoins,18000);assert.equal(result.towersDestroyed,4);assert.ok(result.monstersDefeated>0);assert.ok(result.elapsed<180);assert.ok(result.remainingMoney>=7480);
  }
 });
 
@@ -101,6 +101,6 @@ for(const difficulty of ['practice','standard','challenge'] as const)test(`${dif
   {...adaptive,reinforcements:Array<ArmyId>(8).fill('priest')},
   {...adaptive,rally:false,reinforcements:Array<ArmyId>(8).fill('priest')},
  ]){
-  const result=simulateSecretSiege(difficulty,plan,10);assert.equal(result.phase,'lost');assert.ok(result.castle>0||result.boss>0);assert.ok(result.peakArmyCount<=12);assert.equal(result.remainingMoney,9900+result.earnedCoins-result.spent);
+  const final=simulateSecretSiegeCampaign(difficulty).results[9],result=simulateSecretSiege(difficulty,plan,10,.1,{coins:final.startingCoins,researched:final.researched});assert.equal(result.phase,'lost');assert.ok(result.castle>0||result.boss>0);assert.ok(result.peakArmyCount<=12);assert.equal(result.remainingMoney,result.startingCoins+result.earnedCoins-result.spent);
  }
 });

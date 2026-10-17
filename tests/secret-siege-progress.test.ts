@@ -10,7 +10,7 @@ import {pageRequest,openAuthorizedPage,requiresAccount} from '../src/page-access
 
 const legacy={version:1,cleared:true,bestStars:2,bestSeconds:120,victories:3};
 const stageRecord=(stage:number):SecretSiegeStageProgress=>({stage,stars:2,bestSeconds:120,victories:3});
-function progress(count=0):SecretSiegeProgress{return {version:2,resumeStage:Math.min(count+1,SIEGE_STAGE_COUNT),stages:Array.from({length:count},(_,i)=>stageRecord(i+1)),cleared:count===SIEGE_STAGE_COUNT,endingSeen:false};}
+function progress(count=0):SecretSiegeProgress{return {version:3,resumeStage:Math.min(count+1,SIEGE_STAGE_COUNT),stages:Array.from({length:count},(_,i)=>stageRecord(i+1)),cleared:count===SIEGE_STAGE_COUNT,endingSeen:false,coins:9900,researched:[],revision:0};}
 const won=(stageId:number,stars=2,elapsed=120)=>({phase:'won',stageId,stars,elapsed});
 function withStorage(run:(data:Map<string,string>)=>void){
  const previous=Object.getOwnPropertyDescriptor(globalThis,'localStorage'),data=new Map<string,string>();
@@ -48,11 +48,11 @@ test('legacy eleven-stage wins unlock without score evidence; old main ten-stage
 
 test('an existing single siege victory migrates to stage one without skipping the new expedition',()=>withStorage(data=>{
  const save=completed(),restored=restoreSecretSiegeProgress(legacy,save)!;
- assert.deepEqual(restored,{version:2,resumeStage:2,stages:[stageRecord(1)],cleared:false,endingSeen:false});
+ assert.deepEqual(restored,{...progress(1),stages:[stageRecord(1)]});
  restored.stages[0].victories++;assert.equal(legacy.victories,3);
  data.set('decimal-castle-v1',JSON.stringify({...save,secretSiege:legacy}));
  const loaded=loadSave();assert.deepEqual(loaded.secretSiege,progress(1));assert.equal(secretSiegeStageUnlocked(loaded,2),true);assert.equal(secretSiegeStageUnlocked(loaded,3),false);
- assert.ok(writeSave(loaded));assert.equal(JSON.parse(data.get('decimal-castle-v1')!).secretSiege.version,2);
+ assert.ok(writeSave(loaded));assert.equal(JSON.parse(data.get('decimal-castle-v1')!).secretSiege.version,3);
 }));
 
 test('malformed old siege records never unlock additional stages',()=>withStorage(()=>{

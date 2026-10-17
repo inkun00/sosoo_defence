@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {SecretSiege} from '../src/secret-siege-model';
 import {SIEGE_STAGE_COUNT,SIEGE_STAGES,siegeStage} from '../src/secret-siege-stages';
 import {learningValue} from '../src/math';
-import {simulateSecretSiege} from '../tools/simulate-secret-siege';
+import {simulateSecretSiege,simulateSecretSiegeCampaign} from '../tools/simulate-secret-siege';
 
 const balanced={name:'균형 편성',guard:3,striker:3,scout:2,order:'guard-first',rally:true,deployGap:.7,reinforcements:['knight','priest','ranger','champion','knight','champion','priest','ranger']} as const;
 
@@ -41,17 +41,17 @@ for(const difficulty of ['practice','standard','challenge'] as const)test(`${dif
  }
 });
 
-for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 10단계 모두 실제 계산·합법적 9.90 편성·실제 회복으로 클리어할 수 있다`,()=>{
- const results=SIEGE_STAGES.map(stage=>simulateSecretSiege(difficulty,stage.id===10?{...balanced,rallyTiming:'boss-spell',rallyDelay:.5}:balanced,stage.id));
+for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 최초 9.90에서 잔액과 유료 연구를 이월하는 연속 원정 10단계를 클리어할 수 있다`,()=>{
+ const results=simulateSecretSiegeCampaign(difficulty).results;assert.equal(results.length,10);
  for(const result of results){
-  assert.equal(result.phase,'won',`stage ${result.stageId}`);assert.equal(result.castle,0);assert.ok(result.remainingMoney>=0);assert.equal(result.earnedCoins,9000);
-  assert.ok(result.recruited>=11);assert.equal(result.deployed,result.recruited);assert.ok(result.reinforcementsRecruited>=3);assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);
+  assert.equal(result.phase,'won',`stage ${result.stageId}`);assert.equal(result.castle,0);assert.ok(result.remainingMoney>=7480);assert.equal(result.earnedCoins,18000);
+  assert.ok(result.recruited>=8);assert.equal(result.deployed,result.recruited);assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);
   assert.ok(result.elapsed<180);assert.equal(result.rallies,3);assert.ok(result.enemyShots>0);assert.ok(result.armyDamage>0);
  }
  const first=results[0],last=results[9];
  assert.ok(last.enemyShots>first.enemyShots,'최종 수비진은 실제 발사 횟수도 더 많다');
  assert.ok(last.armyDamage>first.armyDamage*2,'최종 수비진은 실제 받은 피해도 두 배 이상이다');
- assert.ok(last.alive<first.alive,'최종 수비진에서 더 많은 병사가 쓰러진다');
+ assert.ok(last.recruited-last.alive>first.recruited-first.alive,'추가 훈련이 가능해도 최종 수비진에서 실제 사상자가 더 많다');
 });
 
 test('최종 단계도 정찰 편중과 소규모 군대로 자동 돌파할 수 없다',()=>{

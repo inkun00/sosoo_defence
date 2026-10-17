@@ -5,6 +5,7 @@ import {parseMoney} from './towers';
 import {SIEGE_STAGE_COUNT,siegeStage,type SiegeStage} from './secret-siege-stages';
 import {REVIVED_WIZARD,revivedWizard,newSiegeBossState,type SiegeBossState} from './secret-siege-boss';
 import {siegeMonster,SIEGE_MONSTER_ALIVE_LIMIT} from './secret-siege-monsters';
+import {normalizeSiegeEconomy,STARTER_BUDGET,SIEGE_COIN_LIMIT,type SiegeEconomy} from './secret-siege-research';
 import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit,type SiegeMonster} from './secret-siege-types';
 
 const EPSILON=1e-7,HEAL=600;
@@ -22,9 +23,11 @@ export class SecretSiege{
  private owners=new Map<number,ShotOwner>();private reservedDamage=new Map<string,number>();
  private quotes=new Map<string,SiegeQuestion>();
  private spawnedMonsters=0;private rewardedTowers=new Set<string>();earnedCoins=0;
+ private researchIds=new Set<ArmyId>();private checkpointCoins=9900;private trainingSpent=0;economyRevision=0;
  readonly stage:SiegeStage;
  readonly bossState?:SiegeBossState;
- constructor(readonly difficulty:Difficulty,readonly stageId=1){
+ constructor(readonly difficulty:Difficulty,readonly stageId=1,economy?:SiegeEconomy){
+  const initial=normalizeSiegeEconomy(economy);this.money=this.checkpointCoins=initial.coins;this.researchIds=new Set(initial.researched);this.economyRevision=initial.revision;
   this.stage=siegeStage(stageId);const stage=this.stage;
   const cooldowns=enemyCooldowns[difficulty].map(cooldown=>cooldown*stage.cooldownScale);
   this.targets=[
@@ -49,7 +52,13 @@ export class SecretSiege{
  get monsterLimit(){return this.stage.monsterLimit;}
  get monsterAliveLimit(){return SIEGE_MONSTER_ALIVE_LIMIT;}
  get nextMonsterIn(){return this.phase==='won'||this.phase==='lost'||this.spawnedMonsters>=this.monsterLimit||this.castle<=0?Infinity:Math.max(0,this.stage.monsterSpawnDelay+this.spawnedMonsters*this.stage.monsterSpawnInterval-this.elapsed);}
- armyUnlocked(id:ArmyId){const army=spec(id);return !!army&&this.destroyedTowers>=army.requiredTowers;}
+ get researched():readonly ArmyId[]{return ARMY.filter(army=>this.researchIds.has(army.id)).map(army=>army.id);}
+ get remainingTowerRewards(){return this.targets.filter(target=>target.kind==='tower').reduce((sum,target,index)=>sum+(target.hp>0&&!this.rewardedTowers.has(target.id)?this.stage.towerRewards[index]:0),0);}
+ /** Research is permanent; preparation training is refunded at the checkpoint. */
+ get initialEconomy():Required<SiegeEconomy>{return {coins:this.checkpointCoins,researched:this.researched,revision:this.economyRevision};}
+ armyUnlocked(id:ArmyId){const army=spec(id);return !!army&&(army.researchCost===0||this.researchIds.has(id));}
+ canResearch(id:ArmyId){const army=spec(id);return !!army&&army.researchCost>0&&!this.researchIds.has(id)&&this.phase==='ready'&&!this.pendingQuestion&&this.money-army.researchCost>=Math.max(0,STARTER_BUDGET-this.trainingSpent);}
+ research(id:ArmyId):boolean{if(!this.canResearch(id))return false;const army=spec(id)!;this.money-=army.researchCost;this.checkpointCoins-=army.researchCost;this.researchIds.add(id);return true;}
  get armyCount(){return this.units.filter(unit=>unit.hp>0).length+Object.values(this.reserve).reduce((sum,count)=>sum+count,0);}
  get canRally(){return this.phase==='playing'&&!this.pendingQuestion&&this.ralliesLeft>0&&this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp);}
  get stars(){return this.phase==='won'?this.elapsed<=105&&this.wrongAnswers===0?3:this.elapsed<=150?2:1:0;}
@@ -59,6 +68,9 @@ export class SecretSiege{
   const army=spec(id);
   const cost=this.recruitCost(id);
   if(!army||!this.armyUnlocked(id)||!this.interactive()||this.money<cost||this.armyCount>=SIEGE_ARMY_LIMIT)return false;
+  // All four towers must fall to win. Reserve their real, unclaimed proceeds
+  // for the next stage's basic training without advancing any money now.
+  if(this.money-cost+this.remainingTowerRewards<STARTER_BUDGET)return false;
   // Keep a legal starting formation affordable. Otherwise spending the last
   // coin or filling every slot with scouts would strand the preparation UI.
   if(this.phase==='ready'){
@@ -91,8 +103,8 @@ export class SecretSiege{
   if(question.kind==='recruit'){
    const army=question.armyId?spec(question.armyId):undefined;
    if(!army||this.money!==question.a||question.b!==this.recruitCost(army.id)||question.answer!==question.a-question.b||!this.recruitmentAllowed(army.id))return false;
-   this.money-=question.b;this.reserve[army.id]++;this.recruited++;
-   this.events.push({type:'recruit',message:`${army.name} 모집 완료`});
+   this.money-=question.b;this.trainingSpent+=question.b;this.reserve[army.id]++;this.recruited++;
+   this.events.push({type:'recruit',message:`${army.name} 훈련 완료`});
   }else{
    if(this.ralliesLeft<=0||!this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp))return false;
    this.ralliesLeft--;
@@ -237,7 +249,7 @@ export class SecretSiege{
    if(target.hp===0){
     if(shot.source==='army'&&'kind'in target&&target.kind==='tower'&&!this.rewardedTowers.has(target.id)){
      this.rewardedTowers.add(target.id);const index=this.targets.filter(item=>item.kind==='tower').findIndex(item=>item.id===target.id),coins=this.stage.towerRewards[index];
-     this.money+=coins;this.earnedCoins+=coins;this.events.push({type:'reward',message:`${target.name} 파괴 · ${numberText(coins,2)} 코인 획득!`,targetId:target.id,damage:coins,friendly:true});
+     this.money=Math.min(SIEGE_COIN_LIMIT,this.money+coins);this.earnedCoins+=coins;this.events.push({type:'reward',message:`${target.name} 파괴 · ${numberText(coins,2)} 코인 획득!`,targetId:target.id,damage:coins,friendly:true});
     }
     this.events.push({type:'destroy',message:shot.source==='army'?(target as SiegeTarget).kind==='boss'?'부활한 마법사를 쓰러뜨렸어요!':`${(target as SiegeTarget).name} 파괴!`:'아군이 쓰러졌어요.',targetId:target.id,friendly:shot.source==='army'});
     if(shot.source==='army'&&(target as SiegeTarget).kind==='boss'&&this.bossState){this.bossState.phase='defeated';this.bossState.spell=undefined;}

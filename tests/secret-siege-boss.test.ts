@@ -4,11 +4,13 @@ import {SecretSiege} from '../src/secret-siege-model';
 import {REVIVED_WIZARD} from '../src/secret-siege-boss';
 import {LEVELS} from '../src/levels';
 import {learningValue,numberText} from '../src/math';
-import {simulateSecretSiege} from '../tools/simulate-secret-siege';
+import {simulateSecretSiege,simulateSecretSiegeCampaign} from '../tools/simulate-secret-siege';
+import type {Difficulty} from '../src/difficulty';
 import type {ArmyId} from '../src/secret-siege-types';
 import {ARMY} from '../src/secret-siege-types';
 
 const balanced={name:'최종 결전',guard:3,striker:3,scout:2,order:'guard-first',rally:true,deployGap:.7,reinforcements:['knight','priest','ranger','champion','knight','champion','priest','ranger']} as const;
+function finalEconomy(difficulty:Difficulty){const final=simulateSecretSiegeCampaign(difficulty).results[9];return {coins:final.startingCoins,researched:final.researched};}
 function recruit(game:SecretSiege,id:ArmyId,count=1){for(let index=0;index<count;index++){assert.ok(game.requestRecruit(id));assert.ok(game.answer(numberText(game.pendingQuestion!.answer,2)));}}
 function advance(game:SecretSiege,seconds:number){for(let tick=0;tick<Math.round(seconds*100);tick++)game.step(.01);}
 function prepared(){const game=new SecretSiege('standard',10);recruit(game,'guard');recruit(game,'striker');recruit(game,'scout');assert.ok(game.start());assert.ok(game.deploy('guard'));return game;}
@@ -90,7 +92,7 @@ test('성을 0으로 바꾸더라도 살아 있는 보스를 건너뛰어 승리
 });
 
 test('보스의 동시 피격은 체력을 예약하고 네 타워·보스·성이 모두 쓰러져야 승리한다',()=>{
- const game=new SecretSiege('standard',10);for(const id of ['guard','striker','scout'] as const)recruit(game,id,balanced[id]);assert.ok(game.start());
+ const game=new SecretSiege('standard',10,finalEconomy('standard'));for(const id of ['guard','striker','scout'] as const)recruit(game,id,balanced[id]);assert.ok(game.start());
  const order:ArmyId[]=[...Array<ArmyId>(3).fill('guard'),...Array<ArmyId>(3).fill('striker'),...Array<ArmyId>(2).fill('scout')];
  let next=0,lastHeal=-999,total=0,nextDeploy=0,reinforcement=0;const destroyed:string[]=[];
  for(let tick=0;tick<1800&&game.phase==='playing';tick++){
@@ -108,21 +110,23 @@ test('보스의 동시 피격은 체력을 예약하고 네 타워·보스·성�
  assert.equal(total,game.targets.reduce((sum,target)=>sum+target.maxHp,0));assert.deepEqual(destroyed,game.targets.map(target=>target.id));
 });
 
-for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 기본 무회복은 실패하고 마법 후 회복을 아끼면 실제 9.90 편성으로 클리어한다`,()=>{
- const idle=simulateSecretSiege(difficulty,{...balanced,rally:false},10);assert.equal(idle.phase,'lost');assert.equal(idle.alive,0);
- const tooEarly=simulateSecretSiege(difficulty,balanced,10);assert.equal(tooEarly.phase,'lost');assert.equal(tooEarly.rallies,3);
+for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 앞선 아홉 원정의 실제 잔액과 연구를 이월해도 보스 마법에 맞춰 회복해야 한다`,()=>{
+ const economy=finalEconomy(difficulty);
+ const idle=simulateSecretSiege(difficulty,{...balanced,rally:false},10,.1,economy);assert.equal(idle.phase,'lost');assert.ok(idle.castle>0);
+ const tooEarly=simulateSecretSiege(difficulty,balanced,10,.1,economy);assert.equal(tooEarly.phase,'lost');assert.equal(tooEarly.rallies,3);
  for(const rallyDelay of [0,.5,1])for(const dt of [.1,.05,1/60]){
-  const timed=simulateSecretSiege(difficulty,{...balanced,rallyTiming:'boss-spell',rallyDelay},10,dt);
-  assert.equal(timed.phase,'won',`dt=${dt}`);assert.equal(timed.boss,0);assert.equal(timed.castle,0);assert.equal(timed.rallies,3);assert.equal(timed.towersDestroyed,4);assert.ok(timed.spells>=4);assert.ok(timed.elapsed<150);assert.ok(timed.alive>0);
+  const timed=simulateSecretSiege(difficulty,{...balanced,rallyTiming:'boss-spell',rallyDelay},10,dt,economy);
+  assert.equal(timed.phase,'won',`dt=${dt}`);assert.equal(timed.boss,0);assert.equal(timed.castle,0);assert.equal(timed.rallies,3);assert.equal(timed.towersDestroyed,4);assert.ok(timed.spells>=3);assert.ok(timed.elapsed<150);assert.ok(timed.alive>0);
  }
 });
 
-test('1~9단계의 보상 재투자 편성은 몬스터와 싸우고 정확한 수입·지출 및 결정적인 전투 결과를 유지한다',()=>{
- for(const difficulty of ['practice','standard','challenge'] as const)for(let index=0;index<9;index++){
-  const result=simulateSecretSiege(difficulty,balanced,index+1);assert.equal(result.phase,'won');
-  const baseCost=7200+balanced.reinforcements.slice(0,result.reinforcementsRecruited).reduce((sum,id)=>sum+ARMY.find(army=>army.id===id)!.cost,0);
+test('1~9단계의 보상 재투자 편성은 실제 연속 원정에서 몬스터와 싸우고 수입·지출과 결정적인 전투 결과를 유지한다',()=>{
+ for(const difficulty of ['practice','standard','challenge'] as const)for(const result of simulateSecretSiegeCampaign(difficulty).results.slice(0,9)){
+  assert.equal(result.phase,'won');
+  const baseCost=7200+result.reinforcements.slice(0,result.reinforcementsRecruited).reduce((sum,id)=>sum+ARMY.find(army=>army.id===id)!.cost,0);
   const spent=baseCost+10*result.recruited*(result.recruited-1)/2;
-  assert.equal(result.remainingMoney,9900+result.earnedCoins-spent);assert.ok(result.monsterSpawned>0&&result.monstersDefeated>0);
-  assert.deepEqual(simulateSecretSiege(difficulty,balanced,index+1),result);
+  assert.equal(result.remainingMoney,result.startingCoins+result.earnedCoins-spent);assert.ok(result.monsterSpawned>0&&result.monstersDefeated>0);
+  const replay=simulateSecretSiege(difficulty,result,result.stageId,.1,{coins:result.startingCoins,researched:result.researched});
+  assert.deepEqual([replay.phase,replay.elapsed,replay.castle,replay.remainingMoney],[result.phase,result.elapsed,result.castle,result.remainingMoney]);
  }
 });

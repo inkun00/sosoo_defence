@@ -93,7 +93,7 @@ export class SecretSiegeField{
    const atlas=canvas(HERO_SPRITE_CELL*4,HERO_SPRITE_CELL*3),context=atlas.getContext('2d');
    if(context){drawSiegeSpriteAtlas(context,sheet,source);this.sprites.set(sheet,atlas);for(let row=0;row<3;row++)this.grounds.set(sheet+':'+row,this.measureGround(context,row));}
   }
-  for(const army of ARMY.filter(army=>army.requiredTowers===0))this.cacheHumanAtlas(army.id);
+  for(const army of ARMY.filter(army=>army.researchCost===0))this.cacheHumanAtlas(army.id);
   const source=this.images.get('flame-loop-v1');
   if(source){
    try{
