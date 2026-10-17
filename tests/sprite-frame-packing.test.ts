@@ -18,9 +18,10 @@ test('packed masks preserve signed deltas, large coordinates and every point', (
 
 test('all checked-in masks exactly match the original audited coordinates', () => {
   // Digests of the complete, decoded metadata before packing, including order.
-  // They detect any shifted, removed or rounded point across all 18,111 points.
+  // Preserve the original 18,111 points while allowing separately audited siege art.
+  const originalHeroFrames=Object.fromEntries(Object.entries(heroFrames).filter(([name])=>!name.startsWith('siege-')));
   const originals = [
-    [heroFrames,'8a05ca1463fd23cb8ac98e3ae6b9e22f0d9abdc6079bc3d8d9be431f5babfb5d'],
+    [originalHeroFrames,'8a05ca1463fd23cb8ac98e3ae6b9e22f0d9abdc6079bc3d8d9be431f5babfb5d'],
     [computerFrames,'1600696495b6003a815ddda61407b739ad13ad152aa1bfb08b1997f3f574e1d6'],
   ] as const;
   for (const [packed, expected] of originals) {
@@ -29,4 +30,5 @@ test('all checked-in masks exactly match the original audited coordinates', () =
     assert.equal(digest, expected);
     assert.deepEqual(packSpriteFrames(restored), packed);
   }
+  assert.deepEqual(packSpriteFrames(decodeSpriteFrames(heroFrames)),heroFrames);
 });

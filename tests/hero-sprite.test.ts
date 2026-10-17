@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import {artURL} from '../src/art';
 import {HERO_SPRITE_CELL,heroSpriteSheet,heroSpriteViewport,heroSpriteHTML,drawHeroSpriteAtlas} from '../src/hero-sprite';
 
-const sheets=[...Array.from({length:10},(_,i)=>`heroes-level-${i+1}-v1`),'worksheet-heroes-v1'];
+const sheets=[...Array.from({length:10},(_,i)=>`heroes-level-${i+1}-v1`),'worksheet-heroes-v1','siege-human-army-walk-v1','siege-human-army-attack-v1','siege-corrupted-fortifications-v1'];
 const epsilon=1e-8;
 
-test('all eleven hero sheets describe twelve complete, bounded frame masks',()=>{
+test('all hero and siege sheets describe twelve complete, bounded frame masks',()=>{
  let count=0;
  for(const name of sheets){
   const sheet=heroSpriteSheet(name);
-  assert.equal(sheet.width,768);assert.equal(sheet.height,512);assert.equal(sheet.rows.length,3);
+  assert.equal(sheet.width,768);assert.ok(sheet.height>0);if(!name.startsWith('siege-'))assert.equal(sheet.height,512);assert.equal(sheet.rows.length,3);
   for(const row of sheet.rows){
    assert.equal(row.length,4);
    for(const frame of row){
@@ -29,7 +29,7 @@ test('all eleven hero sheets describe twelve complete, bounded frame masks',()=>
    }
   }
  }
- assert.equal(count,132);
+ assert.equal(count,sheets.length*12);
  assert.throws(()=>heroSpriteSheet('missing-sheet'),/Unknown hero sprite sheet/);
  assert.throws(()=>heroSpriteViewport(sheets[0],3),/Unknown hero sprite row/);
 });
@@ -108,7 +108,7 @@ test('the cached canvas atlas draws every masked pose inside its own square and 
   draws.forEach((draw,index)=>{
    const [a,b,c,d,tx,ty]=draw.matrix,[x,y,width,height]=draw.rect,column=index%4,row=Math.floor(index/4);
    assert.equal(a,d);assert.equal(b,0);assert.equal(c,0);
-   assert.deepEqual(draw.args,[image,0,0,768,512]);
+   const sheet=heroSpriteSheet(name);assert.deepEqual(draw.args,[image,0,0,sheet.width,sheet.height]);
    assert.ok(x*a+tx>=column*HERO_SPRITE_CELL-epsilon&&y*d+ty>=row*HERO_SPRITE_CELL-epsilon);
    assert.ok((x+width)*a+tx<=(column+1)*HERO_SPRITE_CELL+epsilon&&(y+height)*d+ty<=(row+1)*HERO_SPRITE_CELL+epsilon);
   });

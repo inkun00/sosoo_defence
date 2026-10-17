@@ -7,7 +7,7 @@ import {packSpriteFrames} from './encode-sprite-frames.mjs';
 // The sheets are illustrations, not an evenly spaced sprite grid. Keep their
 // source files unchanged and describe the space belonging to each silhouette.
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const names=[...Array.from({length:10},(_,i)=>`heroes-level-${i+1}-v1`),'worksheet-heroes-v1'];
+const names=[...Array.from({length:10},(_,i)=>`heroes-level-${i+1}-v1`),'worksheet-heroes-v1','siege-human-army-walk-v1','siege-human-army-attack-v1','siege-corrupted-fortifications-v1'];
 const threshold=32;
 const output=resolve(root,'test-results/hero-crop-audit');
 const manifest=JSON.parse(await readFile(resolve(root,'src/art-manifest.json'),'utf8'));

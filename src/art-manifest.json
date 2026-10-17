@@ -782,6 +782,62 @@
       "width": 768
     }
   },
+  "siege-corrupted-citadel-collapse-v1": {
+    "url": "/assets/dungeon/siege-corrupted-citadel-collapse-v1.b3477bc5d63b.webp",
+    "sourceHash": "4d9a38fe798d786ad42f7ae9e73d2869d7470642a182cacbda1e23d299911f98",
+    "width": 768,
+    "height": 768,
+    "sourceBytes": 2677875,
+    "bytes": 268410,
+    "encoding": {
+      "quality": 84,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "siege-corrupted-fortifications-v1": {
+    "url": "/assets/dungeon/siege-corrupted-fortifications-v1.db509991f1c4.webp",
+    "sourceHash": "0fa034ad508c04071e194a39334a820884e9513916ef4505162804f1dbda3296",
+    "width": 768,
+    "height": 512,
+    "sourceBytes": 2648320,
+    "bytes": 129426,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "siege-human-army-attack-v1": {
+    "url": "/assets/dungeon/siege-human-army-attack-v1.cf8470ca6b29.webp",
+    "sourceHash": "e17a9650d2f52b9540ba631c871c5dba17444e3b96befefd52ec1785ec69f006",
+    "width": 768,
+    "height": 512,
+    "sourceBytes": 2627052,
+    "bytes": 137798,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
+  "siege-human-army-walk-v1": {
+    "url": "/assets/dungeon/siege-human-army-walk-v1.c13e54b4434d.webp",
+    "sourceHash": "d905d9efab6698ec40288cfd61e2d5f6088e1772fd730e45640987b922e58b80",
+    "width": 768,
+    "height": 512,
+    "sourceBytes": 2554405,
+    "bytes": 128302,
+    "encoding": {
+      "quality": 80,
+      "alphaQuality": 100,
+      "effort": 6,
+      "width": 768
+    }
+  },
   "slime": {
     "url": "/assets/dungeon/slime.4f87fcca6e41.webp",
     "sourceHash": "797f09e959e83cac1b73cd8595af064028d11c10fd8534cad37ba9d18c9cec48",

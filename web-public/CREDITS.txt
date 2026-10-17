@@ -254,3 +254,15 @@ Framing repairs for complete wings and crown tips also use image_gen.
 The game uses trimmed 192-pixel WebP icons; level labels are rendered in code.
 Exact generation and framing prompts: licenses/account-badges-v1-prompts.json
 (source-only, excluded from deployment).
+
+SECRET SIEGE HUMAN ARMY AND CORRUPTED CITADEL (2026-10-17)
+Original human shield infantry, spearman and scout archer in dedicated 3-row,
+4-column walk and attack atlases, plus corrupted wizard watchtower, ward tower,
+citadel hit poses and a matching 16-frame citadel destruction sequence.
+Generated with the built-in OpenAI image_gen tool in the existing game's style.
+Unchanged transparent source PNGs: assets/dungeon/siege-human-army-walk-v1.png,
+siege-human-army-attack-v1.png, siege-corrupted-fortifications-v1.png and
+siege-corrupted-citadel-collapse-v1.png. Audited crops and shared frame anchors
+power portraits and battlefield animations; deployed as optimized hashed WebP.
+Exact prompts and reference/source paths: licenses/secret-siege-v1-prompts.json
+(source-only, excluded from deployment).
