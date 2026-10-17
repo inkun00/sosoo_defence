@@ -16,7 +16,7 @@ const titles=[
  ['검은 첨탑','끊이지 않는 마력탄에 맞서 병력을 지키세요.'],
  ['저주받은 내성','어둠의 중심에 들어서는 마지막 길을 여세요.'],
  ['황혼의 왕좌','강력한 수비탑을 넘어 저주의 근원에 다가가세요.'],
- ['어둠의 심장','마지막 저주 핵을 깨뜨리고 세상에 빛을 되찾으세요.'],
+ ['어둠의 심장','부활한 저주 마법사를 쓰러뜨리고 마지막 성을 무너뜨리세요.'],
 ] as const;
 export const SIEGE_STAGES:readonly SiegeStage[]=Object.freeze(titles.map(([name,subtitle],index)=>{
  const hp=(base:number,step:number)=>base+step*index;

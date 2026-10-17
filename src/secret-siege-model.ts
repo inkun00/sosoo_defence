@@ -2,6 +2,7 @@ import type {Difficulty} from './difficulty';
 import {hit,learningValue,numberText} from './math';
 import {parseMoney} from './towers';
 import {SIEGE_STAGE_COUNT,siegeStage,type SiegeStage} from './secret-siege-stages';
+import {REVIVED_WIZARD,revivedWizard,newSiegeBossState,type SiegeBossState} from './secret-siege-boss';
 import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type SiegePhase,type SiegeProjectile,type SiegeQuestion,type SiegeTarget,type SiegeUnit} from './secret-siege-types';
 
 const EPSILON=1e-7,HEAL=600;
@@ -18,6 +19,7 @@ export class SecretSiege{
  private owners=new Map<number,ShotOwner>();private reservedDamage=new Map<string,number>();
  private quotes=new Map<string,SiegeQuestion>();
  readonly stage:SiegeStage;
+ readonly bossState?:SiegeBossState;
  constructor(readonly difficulty:Difficulty,readonly stageId=1){
   this.stage=siegeStage(stageId);const stage=this.stage;
   const cooldowns=enemyCooldowns[difficulty].map(cooldown=>cooldown*stage.cooldownScale);
@@ -34,8 +36,10 @@ export class SecretSiege{
    target.attack=tower?stage.towerAttack[index]:stage.castleAttack;
    target.range=tower?stage.towerRanges[index]:stage.castleRange;
   }
+  if(stageId===SIEGE_STAGE_COUNT){this.targets.splice(4,0,revivedWizard(difficulty));this.bossState=newSiegeBossState();}
  }
  get castle(){return this.targets.find(target=>target.kind==='castle')!.hp;}
+ get boss(){return this.targets.find(target=>target.kind==='boss');}
  get armyCount(){return this.units.filter(unit=>unit.hp>0).length+Object.values(this.reserve).reduce((sum,count)=>sum+count,0);}
  get canRally(){return this.phase==='playing'&&!this.pendingQuestion&&this.ralliesLeft>0&&this.units.some(unit=>unit.hp>0&&unit.hp<unit.maxHp);}
  get stars(){return this.phase==='won'?this.elapsed<=105&&this.wrongAnswers===0?3:this.elapsed<=150?2:1:0;}
@@ -95,6 +99,7 @@ export class SecretSiege{
   dt=Math.min(dt,.1);this.elapsed=Math.min(SIEGE_DURATION,this.elapsed+dt);
   this.advanceProjectiles(dt);
   if(this.phase!=='playing')return;
+  this.advanceBoss();
   for(const unit of this.units){
    if(unit.hp<=0)continue;
    unit.reload=Math.max(0,unit.reload-dt);const army=spec(unit.typeId)!,target=this.targets.find(target=>target.hp>0);
@@ -103,17 +108,51 @@ export class SecretSiege{
    unit.attacking=target.distance-unit.distance<=army.range+EPSILON;
    if(!unit.attacking||unit.reload>EPSILON||target.hp-(this.reservedDamage.get(target.id)??0)<army.attack)continue;
    this.shoot('army',unit.id,unit.distance,target.distance,army.attack,target.id,unit.typeId==='scout'?.35:unit.typeId==='guard'?.5:.6);
-   unit.reload=army.cooldown;
+   unit.lastShot=this.elapsed;
+   unit.reload=army.cooldown*((unit.hexUntil??0)>this.elapsed?REVIVED_WIZARD.hexReloadScale:1);
   }
   for(const target of this.targets){
    if(target.hp<=0)continue;
+   if(target.kind==='boss'&&this.bossState?.phase==='dormant')continue;
+   if(target.kind==='boss'&&this.bossState?.spell)continue;
+   if(target.kind==='castle'&&this.boss&&this.boss.hp>0)continue;
    target.reload=Math.max(0,target.reload-dt);
    const unit=this.units.filter(unit=>unit.hp>0&&Math.abs(target.distance-unit.distance)<=target.range+EPSILON).sort((a,b)=>b.distance-a.distance||a.deployedAt-b.deployedAt)[0];
    if(!unit||target.reload>EPSILON)continue;
-   this.shoot('enemy',target.id,target.distance,unit.distance,target.attack,unit.id,.5);target.reload=target.cooldown;target.lastShot=this.elapsed;
+   const enraged=target.kind==='boss'&&this.bossState?.phase==='enraged';
+   this.shoot('enemy',target.id,target.distance,unit.distance,target.attack,unit.id,.5);target.reload=target.cooldown*(enraged?.8:1);target.lastShot=this.elapsed;
   }
   if(this.elapsed>=SIEGE_DURATION-EPSILON)this.lose('시간이 다 되었어요. 군대의 구성과 출격 순서를 바꿔 다시 도전해요.');
   else if(!this.units.some(unit=>unit.hp>0)&&Object.values(this.reserve).every(count=>count===0)&&this.money<Math.min(...ARMY.map(army=>army.cost)))this.lose('출격할 군대와 모집 코인이 모두 소진되었어요.');
+ }
+ private advanceBoss(){
+  const boss=this.boss,state=this.bossState;if(!boss||!state)return;
+  if(boss.hp<=0){state.phase='defeated';state.spell=undefined;return;}
+  if(state.phase==='dormant'){
+   if(this.targets.some(target=>target.kind==='tower'&&target.hp>0))return;
+   state.phase='dueling';state.nextSpellAt=this.elapsed+4;
+   this.events.push({type:'spell',message:'부활한 마법사가 성문을 막아섰어요!',targetId:boss.id});
+  }
+  if(state.phase!=='enraged'&&boss.hp<=boss.maxHp*REVIVED_WIZARD.enrageRatio){state.phase='enraged';state.enragedAt=this.elapsed;boss.attack=REVIVED_WIZARD.enragedAttack;}
+  const spell=state.spell;
+  if(spell?.phase==='warning'&&this.elapsed+EPSILON>=spell.resolvesAt){
+   spell.phase='active';state.lastSpellAt=this.elapsed;state.lastSpellKind=spell.kind;state.spellCount++;
+   for(const unit of this.units)if(unit.hp>0&&Math.abs(unit.distance-spell.centerDistance)<=spell.radius+EPSILON){
+    const before=unit.hp,damage=spell.kind==='shadow-wave'?REVIVED_WIZARD.waveDamage:REVIVED_WIZARD.chainDamage;
+    unit.hp=Math.max(0,before-damage);unit.lastHit=this.elapsed;
+    if(spell.kind==='soul-chain')unit.hexUntil=this.elapsed+REVIVED_WIZARD.hexDuration;
+    this.events.push({type:'hit',message:'',targetId:unit.id,damage:before-unit.hp,friendly:false});
+    if(unit.hp===0)this.events.push({type:'destroy',message:'아군이 쓰러졌어요.',targetId:unit.id,friendly:false});
+   }
+  }
+  if(spell&&this.elapsed+EPSILON>=spell.endsAt){state.spell=undefined;state.nextSpellAt=this.elapsed+(state.phase==='enraged'?3.8:5.2);}
+  if(!state.spell&&this.elapsed+EPSILON>=state.nextSpellAt){
+   const front=this.units.filter(unit=>unit.hp>0&&Math.abs(boss.distance-unit.distance)<=boss.range).sort((a,b)=>b.distance-a.distance)[0];
+   if(!front)return;
+   const kind=state.spellCount%2===0?'shadow-wave':'soul-chain',duration=kind==='shadow-wave'?1.4:REVIVED_WIZARD.hexDuration;
+   state.spell={kind,phase:'warning',startedAt:this.elapsed,resolvesAt:this.elapsed+REVIVED_WIZARD.warning,endsAt:this.elapsed+REVIVED_WIZARD.warning+duration,centerDistance:front.distance-25,radius:80};
+   this.events.push({type:'spell',message:kind==='shadow-wave'?'암흑 파동이 다가와요! 부상한 병력을 회복하세요.':'영혼의 속박을 준비해요! 추가 병력을 출격시키세요.',targetId:boss.id});
+  }
  }
  private shoot(source:SiegeProjectile['source'],sourceId:string,fromDistance:number,toDistance:number,damage:number,targetId:string,duration:number){
   const shot:SiegeProjectile={id:++this.shotSerial,source,sourceId,fromDistance,toDistance,damage,targetId,duration,age:0};
@@ -139,6 +178,7 @@ export class SecretSiege{
   for(const shot of arrivals){
    const target=shot.source==='army'?this.targets.find(target=>target.id===shot.targetId):this.units.find(unit=>unit.id===shot.targetId);
    if(!target||target.hp<=0||!this.sourceAlive(shot)){this.removeShot(shot);continue;}
+   if(shot.source==='army'&&(target as SiegeTarget).kind==='castle'&&this.boss&&this.boss.hp>0){this.removeShot(shot);continue;}
    if(shot.age+EPSILON<shot.duration)continue;
    this.removeShot(shot);
    const before=target.hp;
@@ -149,8 +189,9 @@ export class SecretSiege{
    target.lastHit=this.elapsed;
    this.events.push({type:'hit',message:`${numberText(before,2)} − ${numberText(actual,2)} = ${numberText(target.hp,2)}`,targetId:target.id,damage:actual,friendly:shot.source==='army'});
    if(target.hp===0){
-    this.events.push({type:'destroy',message:shot.source==='army'?`${(target as SiegeTarget).name} 파괴!`:'아군이 쓰러졌어요.',targetId:target.id,friendly:shot.source==='army'});
-    if(shot.source==='army'&&(target as SiegeTarget).kind==='castle'){
+    this.events.push({type:'destroy',message:shot.source==='army'?(target as SiegeTarget).kind==='boss'?'부활한 마법사를 쓰러뜨렸어요!':`${(target as SiegeTarget).name} 파괴!`:'아군이 쓰러졌어요.',targetId:target.id,friendly:shot.source==='army'});
+    if(shot.source==='army'&&(target as SiegeTarget).kind==='boss'&&this.bossState){this.bossState.phase='defeated';this.bossState.spell=undefined;}
+    if(shot.source==='army'&&this.targets.every(target=>target.hp<=0)){
      this.phase='won';this.clearShots();this.events.push({type:'won',message:this.stageId===SIEGE_STAGE_COUNT?'마지막 저주 핵을 깨뜨리고 세상에 빛을 되찾았어요!':`${this.stage.name}의 저주를 걷어 냈어요. 다음 원정길이 열렸어요!`});return;
     }
    }

@@ -27,7 +27,7 @@ function mount(){
  sound.sfx=save.sfx;sound.setMusic(save.music);sound.setTrack('boss-dread');
  app.innerHTML=`<main id="siege-shell" class="siege-shell duel-preparation-panel" aria-label="비밀 원정 · 저주의 성 공략">
   <header class="siege-header" data-preparation-surface="panel"><div><p class="siege-eyebrow">비밀 원정 · 10개의 성채 · ${DIFFICULTIES[save.difficulty].name}</p><h1 id="siege-heading"></h1></div><nav aria-label="원정 메뉴"><button id="siege-stage-map">원정 지도</button><button id="siege-help">작전 안내</button><button id="siege-pause" disabled>일시정지</button><button id="siege-home">나가기</button></nav></header>
-  <section class="siege-resources" aria-label="원정 현황"><span>원정 코인 <b id="siege-money">9.90</b></span><span>병력 <b id="siege-count">0 / 12</b></span><span>마법사 타워 <b id="siege-tower-count">4 / 4</b></span><span>저주 핵 <b id="siege-castle">9.99</b></span><strong id="siege-clock">출정 준비</strong></section>
+  <section class="siege-resources" aria-label="원정 현황"><span>원정 코인 <b id="siege-money">9.90</b></span><span>병력 <b id="siege-count">0 / 12</b></span><span>마법사 타워 <b id="siege-tower-count">4 / 4</b></span><span id="siege-boss-resource" hidden>부활 마법사 <b id="siege-boss-health"></b><small id="siege-boss-phase"></small></span><span>저주 핵 <b id="siege-castle">9.99</b></span><strong id="siege-clock">출정 준비</strong></section>
   <div class="siege-layout"><section class="siege-map" data-preparation-surface="panel" aria-label="공략 전장"><canvas id="siege-canvas" width="1200" height="620" aria-label="아군이 왼쪽에서 출발해 마법사의 공격 타워 네 기와 성채를 공략하는 전장"></canvas><p id="siege-notice" role="status" aria-live="polite">마법사의 공격 타워 4기를 돌파하세요. 방패병이 앞장서고 정찰병이 작은 나머지를 마무리해요.</p></section>
   <aside class="siege-command" aria-label="군대 편성 및 출격"><div class="siege-command-title"><h2>해방군 편성</h2><span id="siege-clear-record"></span></div><div class="siege-roster">${ARMY.map(spec=>`<article class="siege-unit-card" data-preparation-surface="panel" data-army="${spec.id}">${siegeArmySpriteHTML(spec.row,'siege-portrait')}<div class="siege-unit-copy"><h3>${spec.name}</h3><p>${spec.description}</p><small>체력 ${numberText(spec.hp)} · 대기 <b id="reserve-${spec.id}">0</b>명</small></div><div class="siege-unit-actions"><button data-recruit="${spec.id}"><span>모집 · ${numberText(spec.cost)} 코인</span></button><button data-deploy="${spec.id}" disabled><span>출격</span></button></div></article>`).join('')}</div>
    <div class="siege-command-actions"><button id="siege-rally" disabled><span>회복 지원 · 3회</span></button><button id="siege-start" data-preparation-surface="active"><span>출정</span></button></div><p class="siege-hint" id="siege-plan-hint">돌격대 또는 방패대와 정찰대를 함께 편성하세요.</p></aside></div>
@@ -61,7 +61,8 @@ function mount(){
  function guide(){
   if(model.pendingQuestion||held)return;
   infoPaused=model.phase==='playing';if(infoPaused)model.togglePause();
-  showDialog('guide','<p class="siege-eyebrow">10개의 성채를 해방하는 원정</p><h2 id="siege-dialog-title">이번에는 우리가 진격할 차례예요</h2><p>마법사는 쓰러졌지만, 열 개의 성채에는 악의 세력이 남아 있어요. 인간 해방군과 함께 하나씩 돌파하세요. 다음 성채일수록 방어 타워가 강해져요.</p><ol><li>코인에서 모집 비용을 빼고 군대를 편성해요.</li><li>출정한 뒤 병종별 <b>출격</b>을 눌러 진격 순서를 정해요. 방패대로 작은 정찰대를 보호해요.</li><li>큰 공격으로 성의 힘을 줄이고, <b>0.01 정찰대</b>로 정확히 0을 만들어요.</li></ol><p>덧셈을 맞히면 아군을 회복할 수 있어요. 문제를 푸는 동안 전투 시간은 흐르지 않아요. 단계별 기록은 원정 지도에서 확인해요.</p><button id="siege-guide-done" data-preparation-surface="active">군대 편성으로</button>');
+  const boss=model.boss;
+  showDialog('guide',`<p class="siege-eyebrow">10개의 성채를 해방하는 원정</p><h2 id="siege-dialog-title">${boss?'마지막 성채에서 마법사가 부활했어요':'이번에는 우리가 진격할 차례예요'}</h2><p>${boss?`부활한 마법사 · 체력 <b>${numberText(boss.maxHp,2)}</b> · 마력탄 공격 <b>${numberText(boss.attack,2)}</b>. 네 타워를 돌파하면 마법사가 직접 해방군을 공격해요. 마법사와 성채를 모두 쓰러뜨려야 마지막 원정이 끝나요.`:'마법사는 쓰러졌지만, 열 개의 성채에는 악의 세력이 남아 있어요. 인간 해방군과 함께 하나씩 돌파하세요. 마지막 성채에는 부활한 마법사가 기다리고 있어요.'}</p><ol><li>코인에서 모집 비용을 빼고 군대를 편성해요.</li><li>출정한 뒤 병종별 <b>출격</b>을 눌러 진격 순서를 정해요. 방패대로 작은 정찰대를 보호해요.</li><li>${boss?'마법사의 시전과 바닥의 위험 표시를 살피세요. 회복 지원과 후속 부대 출격 시점을 신중하게 정하세요.':'큰 공격으로 성의 힘을 줄이고, <b>0.01 정찰대</b>로 정확히 0을 만들어요.'}</li></ol><p>${boss?'체력이 줄어들면 마법사가 격노해요. 공격 부대와 회복을 끝까지 남겨 두세요. ':''}문제를 푸는 동안 전투 시간은 흐르지 않아요. 단계별 기록은 원정 지도에서 확인해요.</p><button id="siege-guide-done" data-preparation-surface="active">군대 편성으로</button>`);
   $('siege-guide-done').onclick=closeDialog;
  }
  function question(q:SiegeQuestion){
@@ -85,6 +86,15 @@ function mount(){
   const playing=model.phase==='playing',finished=model.phase==='won'||model.phase==='lost',active=model.units.filter(unit=>unit.hp>0);
   text('siege-money',numberText(model.money,2));text('siege-count',`${model.armyCount} / ${SIEGE_ARMY_LIMIT}`);text('siege-castle',numberText(model.castle,2));
   const towers=model.targets.filter(target=>target.kind==='tower');text('siege-tower-count',`${towers.filter(target=>target.hp>0).length} / ${towers.length}`);
+  const boss=model.boss,bossState=model.bossState;$('siege-boss-resource').hidden=!boss;
+  if(boss){
+   text('siege-boss-health',numberText(boss.hp,2));
+   text('siege-boss-phase',bossState?.phase==='dormant'?'대기':bossState?.phase==='enraged'?'격노':boss.hp===0?'격파':'교전');
+   $('siege-boss-resource').dataset.phase=bossState?.phase??'dormant';
+   $('siege-boss-resource').dataset.spellPhase=bossState?.spell?.phase??'none';
+   $('siege-boss-resource').dataset.spellCount=String(bossState?.spellCount??0);
+   canvas.setAttribute('aria-label','인간 해방군이 네 타워를 돌파한 뒤 부활한 마법사와 성채를 공략하는 최종 전장');
+  }else canvas.setAttribute('aria-label','아군이 왼쪽에서 출발해 마법사의 공격 타워 네 기와 성채를 공략하는 전장');
   const left=Math.max(0,Math.ceil(SIEGE_DURATION-model.elapsed));
   text('siege-clock',model.phase==='ready'?'출정 준비':`${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')}`);
   for(const spec of ARMY){
@@ -101,8 +111,8 @@ function mount(){
   const record=secretSiegeStageRecord(save,model.stageId);
   text('siege-clear-record',`${save.secretSiege?.stages.length??0} / ${SIEGE_STAGE_COUNT} 해방${record?' · '+'★'.repeat(record.stars):''}`);
   enabled('siege-stage-map',!held&&!model.pendingQuestion);
-  text('siege-plan-hint',model.phase==='ready'?'돌격대 또는 방패대와 정찰대를 함께 편성하세요.':model.phase==='paused'?'전투를 멈췄어요. 계속하기를 누르면 진격해요.':finished?'원정을 다시 시작하면 코인과 군대를 새로 준비해요.':active.length?'방패대가 앞장서고 정찰대가 마무리해요.':'대기 중인 병력의 출격 버튼을 눌러요.');
-  text('siege-accessible',`비밀 원정 ${model.stageId}단계 ${model.stage.name}, ${model.phase}, 원정 코인 ${numberText(model.money)}, 출격 병력 ${active.length}명, 대기 병력 ${Object.values(model.reserve).reduce((a,b)=>a+b,0)}명, 마법사 타워 ${towers.filter(target=>target.hp>0).length}기, 저주 핵 체력 ${numberText(model.castle)}, 정답 ${model.correctAnswers}개.`);
+  text('siege-plan-hint',model.phase==='ready'?boss?'최종 결전: 부활 마법사와 성채를 모두 쓰러뜨리세요.':'돌격대 또는 방패대와 정찰대를 함께 편성하세요.':model.phase==='paused'?'전투를 멈췄어요. 계속하기를 누르면 진격해요.':finished?'원정을 다시 시작하면 코인과 군대를 새로 준비해요.':active.length?boss&&boss.hp>0?'시전 예고를 살피고 회복과 후속 병력을 아껴 두세요.':'방패대가 앞장서고 정찰대가 마무리해요.':'대기 중인 병력의 출격 버튼을 눌러요.');
+  text('siege-accessible',`비밀 원정 ${model.stageId}단계 ${model.stage.name}, ${model.phase}, 원정 코인 ${numberText(model.money)}, 출격 병력 ${active.length}명, 대기 병력 ${Object.values(model.reserve).reduce((a,b)=>a+b,0)}명, 마법사 타워 ${towers.filter(target=>target.hp>0).length}기, ${boss?`부활한 마법사 체력 ${numberText(boss.hp)}, 공격력 ${numberText(boss.attack)}, 상태 ${bossState?.phase}, `:''}저주 핵 체력 ${numberText(model.castle)}, 정답 ${model.correctAnswers}개.`);
   skin.sync();
  }
  function beginStage(stageId:number){
@@ -119,7 +129,7 @@ function mount(){
   const liberated=save.secretSiege?.stages.length??0;
   showDialog('map',`<section class="siege-stage-map" data-completed="${liberated===SIEGE_STAGE_COUNT}"><p class="siege-eyebrow">${liberated===SIEGE_STAGE_COUNT?'빛을 되찾은 세상 · 세계를 구하는 원정대':'악의 세력을 몰아내는 열 번의 원정'}</p><h2 id="siege-dialog-title">원정 지도 <small>${liberated} / ${SIEGE_STAGE_COUNT} 해방</small></h2><div class="siege-stage-grid">${Array.from({length:SIEGE_STAGE_COUNT},(_,index)=>{
    const stage=siegeStage(index+1),unlocked=secretSiegeStageUnlocked(save,stage.id),record=secretSiegeStageRecord(save,stage.id);
-   return `<button type="button" data-stage="${stage.id}" data-preparation-surface="${stage.id===model.stageId?'active':'panel'}" ${unlocked?'':'disabled'} ${stage.id===model.stageId?'aria-current="step"':''}><b>${String(stage.id).padStart(2,'0')}</b><span>${stage.name}</span><small>${!unlocked?'잠김':record?'★'.repeat(record.stars)+' · '+Math.ceil(record.bestSeconds)+'초':stage.id===model.stageId?'편성 중':'새 원정'}</small></button>`;
+   return `<button type="button" data-stage="${stage.id}" data-preparation-surface="${stage.id===model.stageId?'active':'panel'}" ${unlocked?'':'disabled'} ${stage.id===model.stageId?'aria-current="step"':''}><b>${String(stage.id).padStart(2,'0')}</b><span>${stage.name}</span><small>${!unlocked?'잠김':record?'★'.repeat(record.stars)+' · '+Math.ceil(record.bestSeconds)+'초':stage.id===SIEGE_STAGE_COUNT?'부활 마법사':stage.id===model.stageId?'편성 중':'새 원정'}</small></button>`;
   }).join('')}</div><p class="siege-stage-note">${liberated===SIEGE_STAGE_COUNT?'악의 세력을 물리쳤어요. 이제 다른 세상에 평화를 되찾아 줄 차례예요.':'성채를 해방하면 다음 길이 열려요. 다음 단계에서는 적의 체력과 공격이 강해져요.'}<br>단계를 선택하면 코인과 군대를 새로 준비해요.</p><div class="siege-dialog-actions"><button id="siege-map-close">현재 전장으로</button>${liberated===SIEGE_STAGE_COUNT?'<button id="siege-ending-replay" data-preparation-surface="active">엔딩 다시 보기</button>':''}</div></section>`);
   body.querySelectorAll<HTMLButtonElement>('[data-stage]').forEach(button=>button.onclick=()=>beginStage(Number(button.dataset.stage)));
   $('siege-map-close').onclick=closeDialog;
@@ -166,7 +176,7 @@ function mount(){
   if(!model.start()){notice('정찰대 한 명과 돌격대 또는 방패대 한 명 이상을 모집하세요.');return;}
   held=true;sound.play('start');const token=serial;
   await motion.play('battle',{title:`${model.stageId}단계 · 해방군 출정`,subtitle:model.stage.name+' · 병종별 출격 버튼으로 진격 순서를 정하세요',key:`siege:${serial}:start`});
-  if(!disposed&&token===serial){held=false;notice('방패대가 먼저! 병력의 출격 버튼을 눌러 성을 향해 보내세요.');refresh();}
+  if(!disposed&&token===serial){held=false;notice(model.boss?'성채를 지키는 부활 마법사가 기다려요. 회복 지원과 후속 병력을 신중하게 사용하세요.':'방패대가 먼저! 병력의 출격 버튼을 눌러 성을 향해 보내세요.');refresh();}
  };
  $('siege-rally').onclick=()=>{if(held)return;sound.resume();if(model.requestRally()){question(model.pendingQuestion!);refresh();}};
  $('siege-pause').onclick=()=>{if(held)return;model.togglePause();refresh();};$('siege-help').onclick=guide;$('siege-home').onclick=home;$('siege-stage-map').onclick=stageMap;
@@ -179,9 +189,9 @@ function mount(){
   else if(held&&(model.phase==='won'||model.phase==='lost'))viewTime+=dt;
   field.draw(viewTime,reduced.matches);
   for(const event of model.events.splice(0)){
-   if(event.type!=='shot'&&event.type!=='hit')notice(event.message);
+   if(event.type!=='shot'&&event.type!=='hit'&&event.type!=='spell')notice(event.message);
    if(event.type==='shot')sound.play('shot',event.friendly?'crystal':'basic');
-   else if(event.type==='hit')sound.play('hit');else if(event.type==='destroy')sound.play('boss-shatter');else if(event.type==='deploy')sound.play('portal');
+   else if(event.type==='hit')sound.play('hit');else if(event.type==='destroy')sound.play('boss-shatter');else if(event.type==='deploy')sound.play('portal');else if(event.type==='spell'&&model.bossState?.spell?.phase==='warning')sound.play('boss-charge');
   }
   sound.setPaused((held&&!endingActive)||document.hidden||(!endingActive&&model.phase==='paused')||!!model.pendingQuestion);
   if(now-uiAt>140){refresh();uiAt=now;}

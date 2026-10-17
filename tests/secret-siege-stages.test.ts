@@ -20,10 +20,10 @@ test('비밀 원정은 이름이 다른 정확히 10단계이며 유효한 정�
 test('모든 단계의 성과 네 타워 체력·공격력은 자연수 부분 한 자리인 정확한 소수 두 자리 범위다',()=>{
  for(const stage of SIEGE_STAGES){
   const game=new SecretSiege('standard',stage.id);
-  assert.equal(game.stageId,stage.id);assert.equal(game.stage,stage);assert.equal(game.targets.length,5);
+  assert.equal(game.stageId,stage.id);assert.equal(game.stage,stage);assert.equal(game.targets.length,stage.id===10?6:5);
   assert.deepEqual(game.targets.slice(0,4).map(target=>target.hp),stage.towerHp);assert.equal(game.castle,stage.castleHp);
-  assert.deepEqual(game.targets.slice(0,4).map(target=>target.attack),stage.towerAttack);assert.equal(game.targets[4].attack,stage.castleAttack);
-  for(const target of game.targets){assert.ok(learningValue(target.hp)&&target.hp>0);assert.ok(learningValue(target.attack)&&target.attack>0);assert.equal(target.hp,target.maxHp);}
+  assert.deepEqual(game.targets.slice(0,4).map(target=>target.attack),stage.towerAttack);assert.equal(game.targets.find(target=>target.kind==='castle')!.attack,stage.castleAttack);
+  for(const target of game.targets.filter(target=>target.kind!=='boss')){assert.ok(learningValue(target.hp)&&target.hp>0);assert.ok(learningValue(target.attack)&&target.attack>0);assert.equal(target.hp,target.maxHp);}
   assert.equal(game.money,9900);assert.equal(game.ralliesLeft,3);assert.equal(game.elapsed,0);
  }
 });
@@ -33,7 +33,7 @@ for(const difficulty of ['practice','standard','challenge'] as const)test(`${dif
   const before=new SecretSiege(difficulty,id-1),after=new SecretSiege(difficulty,id);
   assert.ok(after.stage.darkness>before.stage.darkness);
   for(let index=0;index<5;index++){
-   const a=before.targets[index],b=after.targets[index];
+   const a=before.targets.filter(target=>target.kind!=='boss')[index],b=after.targets.filter(target=>target.kind!=='boss')[index];
    assert.equal(a.id,b.id);assert.equal(a.distance,b.distance);assert.equal(a.kind,b.kind);
    assert.ok(b.hp>=a.hp);if(b.kind==='tower')assert.ok(b.hp>a.hp);
    assert.ok(b.attack>a.attack);assert.ok(b.range>a.range);assert.ok(b.cooldown<a.cooldown);
@@ -42,7 +42,7 @@ for(const difficulty of ['practice','standard','challenge'] as const)test(`${dif
 });
 
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 10단계 모두 실제 계산·합법적 9.90 편성·실제 회복으로 클리어할 수 있다`,()=>{
- const results=SIEGE_STAGES.map(stage=>simulateSecretSiege(difficulty,balanced,stage.id));
+ const results=SIEGE_STAGES.map(stage=>simulateSecretSiege(difficulty,stage.id===10?{...balanced,rallyTiming:'boss-spell'}:balanced,stage.id));
  for(const result of results){
   assert.equal(result.phase,'won',`stage ${result.stageId}`);assert.equal(result.castle,0);assert.equal(result.remainingMoney,0);
   assert.equal(result.recruited,11);assert.equal(result.deployed,11);assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);
@@ -69,8 +69,8 @@ test('마지막 단계의 승리는 앞선 원정과 다른 최종 구원 문구
   const game=new SecretSiege('practice',stageId);
   for(const id of ['guard','striker','scout'] as const){assert.ok(game.requestRecruit(id));assert.ok(game.answer(String(game.pendingQuestion!.answer/1000)));}
   assert.ok(game.start());assert.ok(game.deploy('scout'));
-  for(const target of game.targets)target.hp=target.kind==='tower'?0:10;
-  game.units[0].distance=game.targets[4].distance-95;
+  for(const target of game.targets)target.hp=target.kind==='castle'?10:0;
+  game.units[0].distance=game.targets.find(target=>target.kind==='castle')!.distance-95;
   for(let tick=0;tick<10&&game.phase==='playing';tick++)game.step(.1);
   assert.equal(game.phase,'won');const message=game.events.find(event=>event.type==='won')!.message;
   assert.match(message,stageId===10?/세상에 빛/:/다음 원정길/);
