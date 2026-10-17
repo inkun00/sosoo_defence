@@ -31,6 +31,11 @@ export function siegeFieldPoint(distance:number):Point{
  return ROAD[ROAD.length-1];
 }
 
+/** Logical stops stay on the road; towers occupy their own firing platforms. */
+export function siegeTargetPoint(target:SiegeTarget):Point{
+ const point=siegeFieldPoint(target.distance);return{x:point.x+(target.placement?.x??0),y:point.y+(target.placement?.y??0)};
+}
+
 function identity(id:string){let value=0;for(const character of id)value=(value*31+character.charCodeAt(0))>>>0;return value;}
 function canvas(width:number,height:number){const result=document.createElement('canvas');result.width=width;result.height=height;return result;}
 
@@ -107,7 +112,7 @@ export class SecretSiegeField{
   this.backdrop??=this.createBackdrop();context.drawImage(this.backdrop,0,0);
   this.camp(reducedMotion);
   const units=[...this.model.units].filter(unit=>unit.hp>0),targets=this.model.targets;
-  const objects=[...targets.map(target=>({y:siegeFieldPoint(target.distance).y,draw:()=>this.target(target,reducedMotion)})),...units.map(unit=>({y:this.unitPoint(unit).y,draw:()=>this.unit(unit,reducedMotion)}))];
+  const objects=[...targets.map(target=>({y:siegeTargetPoint(target).y,draw:()=>this.target(target,reducedMotion)})),...units.map(unit=>({y:this.unitPoint(unit).y,draw:()=>this.unit(unit,reducedMotion)}))];
   objects.sort((left,right)=>left.y-right.y).forEach(object=>object.draw());
   for(const projectile of this.model.projectiles)this.projectile(projectile,reducedMotion);
   this.embers(reducedMotion);
@@ -156,7 +161,7 @@ export class SecretSiegeField{
   const context=this.context,point=siegeFieldPoint(0);context.save();const glow=context.createRadialGradient(point.x,point.y-20,5,point.x,point.y-20,100);glow.addColorStop(0,'#68cde237');glow.addColorStop(1,'#68cde200');context.fillStyle=glow;context.fillRect(point.x-100,point.y-120,200,200);this.flameImage(point.x,point.y+4,116,122,reducedMotion);context.restore();this.label(point.x,point.y+31,'원정대',BLUE,18);
  }
  private target(target:SiegeTarget,reducedMotion:boolean){
-  const point=siegeFieldPoint(target.distance),context=this.context,castle=target.kind==='castle';
+  const point=siegeTargetPoint(target),context=this.context,castle=target.kind==='castle',venom=target.towerKind==='venom',color=venom?'#a7ea61':'#dca1ff';
   context.save();
   if(target.hp<=0){
    if(castle){
@@ -167,15 +172,26 @@ export class SecretSiegeField{
    }else{this.rubble(point.x,point.y,76);this.label(point.x,point.y+31,'돌파',BLUE,17);}
    context.restore();return;
   }
-  const size=castle?CITADEL_SIZE:154,row=castle?2:target.distance<400?0:1,age=this.model.elapsed-target.lastHit,pose=!reducedMotion&&age>=0&&age<.48?Math.min(3,1+Math.floor(age/.16)):0;
+  const size=castle?CITADEL_SIZE:142,row=castle?2:venom?1:0,age=this.model.elapsed-target.lastHit,pose=castle&&!reducedMotion&&age>=0&&age<.48?Math.min(3,1+Math.floor(age/.16)):0;
   context.fillStyle='#08051280';context.beginPath();context.ellipse(point.x,point.y+5,size*.38,size*.11,0,0,Math.PI*2);context.fill();
+  if(!castle){context.strokeStyle=venom?'#a7ea6159':'#dca1ff59';context.lineWidth=2;context.beginPath();context.ellipse(point.x,point.y+4,size*.42,17,0,0,Math.PI*2);context.stroke();}
   const aura=reducedMotion?1:1+Math.sin(this.animationTime*1.3)*.08,glow=context.createRadialGradient(point.x,point.y-size*.42,3,point.x,point.y-size*.42,size*.68);
   glow.addColorStop(0,`rgba(158,60,227,${.16*aura})`);glow.addColorStop(1,'#ad54e700');context.fillStyle=glow;context.fillRect(point.x-size*.7,point.y-size*1.12,size*1.4,size*1.4);
   const atlas=this.sprites.get(SIEGE_FORTIFICATIONS),ground=this.ground(SIEGE_FORTIFICATIONS,row),reference=collapseAtlas.reference,groundX=castle?reference.groundX:ground.x,groundY=castle?reference.groundY:ground.y,scale=size/HERO_SPRITE_CELL;
   if(atlas)context.drawImage(atlas,pose*HERO_SPRITE_CELL,row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL,point.x-groundX*scale,point.y-groundY*scale,size,size);
   else{context.fillStyle='#43364b';context.fillRect(point.x-size*.29,point.y-size*.62,size*.58,size*.62);context.fillStyle='#b16bef';context.beginPath();context.arc(point.x,point.y-size*.7,size*.12,0,Math.PI*2);context.fill();}
-  const top=point.y-(groundY-ground.top)*scale-18;this.health(point.x,top,castle?158:116,target.hp,target.maxHp);this.label(point.x,top-18,`${numberText(target.hp)} / ${numberText(target.maxHp)}`,ORANGE,castle?20:17);this.label(point.x,point.y+36,target.name,ORANGE,castle?21:18);this.impact(point.x,point.y-size*.4,target.lastHit,false,reducedMotion);
+  this.magicCore(target,size,reducedMotion);
+  const top=point.y-(groundY-ground.top)*scale-18;this.health(point.x,top,castle?158:116,target.hp,target.maxHp);this.label(point.x,top-18,`${numberText(target.hp)} / ${numberText(target.maxHp)}`,ORANGE,castle?20:17);this.label(point.x,point.y+30,target.name,ORANGE,castle?21:17);
+  if(!castle)this.label(point.x,point.y+60,`마력탄 ${numberText(target.attack)}`,color,16);
+  this.impact(point.x,point.y-size*.4,target.lastHit,false,reducedMotion);
   context.restore();
+ }
+ private muzzle(target:SiegeTarget){const point=siegeTargetPoint(target),castle=target.kind==='castle',size=castle?CITADEL_SIZE:142,row=castle?2:target.towerKind==='venom'?1:0,ground=this.ground(SIEGE_FORTIFICATIONS,row),height=((castle?collapseAtlas.reference.groundY:ground.y)-ground.top)*size/HERO_SPRITE_CELL;return{x:point.x,y:point.y-height*(castle?.56:.76)};}
+ private magicCore(target:SiegeTarget,size:number,reducedMotion:boolean){
+  const context=this.context,point=this.muzzle(target),venom=target.towerKind==='venom',color=venom?'#a6ff60':'#d282ff',active=this.model.phase==='playing',charge=active?Math.max(0,Math.min(1,1-target.reload/target.cooldown)):0,ambient=reducedMotion?0:Math.sin(this.animationTime*1.6+target.distance)*.05,radius=size*(.1+charge*.035),glow=context.createRadialGradient(point.x,point.y,1,point.x,point.y,radius*2.4);
+  glow.addColorStop(0,venom?`rgba(170,255,85,${.24+charge*.18+ambient})`:`rgba(205,125,255,${.24+charge*.18+ambient})`);glow.addColorStop(1,venom?'#a6ff6000':'#d282ff00');context.fillStyle=glow;context.fillRect(point.x-radius*2.4,point.y-radius*2.4,radius*4.8,radius*4.8);
+  const shotAge=this.model.elapsed-(target.lastShot??-Infinity);
+  if(shotAge>=0&&shotAge<.36){context.save();context.globalAlpha=(1-shotAge/.36)*.9;context.strokeStyle=color;context.lineWidth=3;context.beginPath();context.arc(point.x,point.y,reducedMotion?15:9+shotAge*48,0,Math.PI*2);context.stroke();context.fillStyle='#fff5d5';context.beginPath();context.arc(point.x,point.y,5,0,Math.PI*2);context.fill();context.restore();}
  }
  private rubble(x:number,y:number,size:number){const image=this.images.get('props');if(image)this.cell(this.context,image,3,3,8,x-size/2,y-size*.5,size,size*.7);else{this.context.fillStyle='#635967';this.context.beginPath();this.context.ellipse(x,y,size/2,size/5,0,0,Math.PI*2);this.context.fill();}}
  private unitPoint(unit:SiegeUnit){const point=siegeFieldPoint(unit.distance),seed=identity(unit.id);return{x:point.x-(seed%4)*9,y:point.y+(Math.floor(seed/4)%5-2)*12};}
@@ -184,7 +200,7 @@ export class SecretSiegeField{
   const cycle=this.animationTime*2.6+seed%11,attackAge=spec.cooldown-unit.reload,attacking=unit.attacking&&unit.reload>0&&attackAge<Math.min(.7,spec.cooldown),sheet=attacking?SIEGE_ARMY_ATTACK:SIEGE_ARMY_WALK,pose=reducedMotion?0:attacking?Math.min(3,Math.floor(attackAge/Math.min(.175,spec.cooldown/4))):moving?Math.floor(cycle)%4:0,bob=moving?Math.sin(cycle*Math.PI*.5)*.7:0;
   context.save();context.fillStyle='#050b0e80';context.beginPath();context.ellipse(point.x,point.y+5,size*.32,9,0,0,Math.PI*2);context.fill();context.strokeStyle='#70e2ef95';context.lineWidth=2;context.beginPath();context.ellipse(point.x,point.y+3,size*.32,10,0,0,Math.PI*2);context.stroke();
   const atlas=this.sprites.get(sheet),ground=this.ground(SIEGE_ARMY_WALK,spec.row),scale=size/HERO_SPRITE_CELL,top=point.y-(ground.y-ground.top)*scale;
-  if(atlas)context.drawImage(atlas,pose*HERO_SPRITE_CELL,spec.row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL,point.x-ground.x*scale,point.y-ground.y*scale+bob,size,size);
+  if(atlas){const target=this.model.targets.find(value=>value.hp>0),left=unit.attacking&&target&&siegeTargetPoint(target).x<point.x;context.save();context.translate(point.x,0);if(left)context.scale(-1,1);context.drawImage(atlas,pose*HERO_SPRITE_CELL,spec.row*HERO_SPRITE_CELL,HERO_SPRITE_CELL,HERO_SPRITE_CELL,-ground.x*scale,point.y-ground.y*scale+bob,size,size);context.restore();}
   else{context.fillStyle=unit.typeId==='guard'?'#c2c8ca':unit.typeId==='striker'?'#51c7b7':'#89b8ff';context.beginPath();context.arc(point.x,point.y-31,17,0,Math.PI*2);context.fill();context.fillRect(point.x-13,point.y-29,26,28);}
   this.health(point.x,top-12,57,unit.hp,unit.maxHp,true);
   if(this.model.units.filter(value=>value.hp>0).length<=4||this.model.elapsed-unit.lastHit<1.5)this.label(point.x,top-27,numberText(unit.hp),BLUE,15);
@@ -194,11 +210,14 @@ export class SecretSiegeField{
   const age=this.model.elapsed-lastHit;if(lastHit<=0||age<0||age>.6)return;const context=this.context;context.save();context.strokeStyle=friendly?'#ffbd9a':'#a4f1ff';context.lineWidth=3;context.globalAlpha=(1-age/.6)*.8;context.beginPath();context.arc(x,y,reducedMotion?30:18+age*58,0,Math.PI*2);context.stroke();context.restore();
  }
  private projectile(projectile:SiegeProjectile,reducedMotion:boolean){
-  const context=this.context,from=siegeFieldPoint(projectile.fromDistance),to=siegeFieldPoint(projectile.toDistance),friendly=projectile.source==='army',unit=!friendly?this.model.units.find(value=>value.id===projectile.targetId):undefined;
-  if(unit){const visual=this.unitPoint(unit);to.x=visual.x;to.y=visual.y;}
+  const context=this.context,from=siegeFieldPoint(projectile.fromDistance),to=siegeFieldPoint(projectile.toDistance),friendly=projectile.source==='army',unit=!friendly?this.model.units.find(value=>value.id===projectile.targetId):undefined,sourceUnit=friendly?this.model.units.find(value=>value.id===projectile.sourceId):undefined,target=friendly?this.model.targets.find(value=>value.id===projectile.targetId):undefined,source=!friendly?this.model.targets.find(value=>value.id===projectile.sourceId)??this.model.targets.find(value=>value.distance===projectile.fromDistance):undefined,venom=source?.towerKind==='venom';
   from.y-=friendly?32:76;to.y-=friendly?72:32;
+  if(unit){const visual=this.unitPoint(unit);to.x=visual.x;to.y=visual.y-32;}
+  if(sourceUnit){const visual=this.unitPoint(sourceUnit);from.x=visual.x;from.y=visual.y-32;}
+  if(target){const visual=siegeTargetPoint(target);to.x=visual.x;to.y=visual.y-(target.kind==='castle'?CITADEL_SIZE:142)*.4;}
+  if(source){const visual=this.muzzle(source);from.x=visual.x;from.y=visual.y;}
   const ratio=Math.max(0,Math.min(1,projectile.age/projectile.duration)),arc=Math.min(74,Math.abs(to.x-from.x)*.2+28),sample=(progress:number)=>({x:from.x+(to.x-from.x)*progress,y:from.y+(to.y-from.y)*progress-Math.sin(progress*Math.PI)*arc});
-  const point=sample(ratio),tail=sample(Math.max(0,ratio-.19));context.save();context.lineCap='round';context.strokeStyle=friendly?'#9ef7e4':'#eea1ff';context.shadowColor=friendly?'#37e7e6':'#d669ff';context.shadowBlur=reducedMotion?0:15;context.lineWidth=5;context.beginPath();context.moveTo(tail.x,tail.y);context.lineTo(point.x,point.y);context.stroke();context.fillStyle='#fff8de';context.beginPath();context.arc(point.x,point.y,friendly?6:7,0,Math.PI*2);context.fill();context.strokeStyle=friendly?'#53dce5':'#be66e8';context.lineWidth=2;context.stroke();context.restore();
+  const point=sample(ratio),tail=sample(Math.max(0,ratio-.19));context.save();context.lineCap='round';context.strokeStyle=friendly?'#9ef7e4':venom?'#b5f46f':'#eea1ff';context.shadowColor=friendly?'#37e7e6':venom?'#9be241':'#d669ff';context.shadowBlur=reducedMotion?0:15;context.lineWidth=friendly?5:7;context.beginPath();context.moveTo(tail.x,tail.y);context.lineTo(point.x,point.y);context.stroke();context.fillStyle='#fff8de';context.beginPath();context.arc(point.x,point.y,friendly?6:8,0,Math.PI*2);context.fill();context.strokeStyle=friendly?'#53dce5':venom?'#80c943':'#be66e8';context.lineWidth=2;context.stroke();context.restore();
  }
  private embers(reducedMotion:boolean){
   if(reducedMotion)return;const context=this.context;context.save();

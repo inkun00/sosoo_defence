@@ -17,10 +17,13 @@ function until(game:SecretSiege,predicate:()=>boolean,seconds=180){for(let tick=
 function deploySequence(game:SecretSiege,ids:ArmyId[]){for(const id of ids){assert.ok(game.deploy(id));advance(game,.7);}}
 function combatSnapshot(game:SecretSiege){return JSON.stringify({elapsed:game.elapsed,units:game.units,targets:game.targets,projectiles:game.projectiles,money:game.money,reserve:game.reserve});}
 
-test('비밀 공격전은 기존 게임과 분리된 9.90 코인·180초·두 타워와 성으로 시작한다',()=>{
+test('비밀 공격전은 기존 게임과 분리된 9.90 코인·180초·네 공격 타워와 성으로 시작한다',()=>{
  const game=new SecretSiege('standard');assert.equal(game.phase,'ready');assert.equal(game.money,9900);assert.equal(game.castle,9990);
  assert.equal(game.armyCount,0);assert.equal(game.stars,0);assert.equal(SIEGE_DURATION,180);assert.equal(game.ralliesLeft,3);
- assert.deepEqual(game.targets.map(target=>[target.kind,target.hp,target.attack]),[['tower',3600,100],['tower',5400,200],['castle',9990,300]]);
+ assert.deepEqual(game.targets.map(target=>[target.kind,target.hp,target.attack]),[['tower',2400,100],['tower',3600,150],['tower',4500,200],['tower',5400,250],['castle',9990,300]]);
+ assert.deepEqual(game.targets.map(target=>target.distance),[240,430,620,800,950]);
+ assert.deepEqual(game.targets.filter(target=>target.kind==='tower').map(target=>target.towerKind),['arcane','venom','arcane','venom']);
+ assert.ok(game.targets.filter(target=>target.kind==='tower').every(target=>target.placement&&Math.abs(target.placement.y)>0&&target.lastShot===-999));
  assert.ok([...ARMY.flatMap(army=>[army.cost,army.hp,army.attack]),...game.targets.flatMap(target=>[target.hp,target.attack])].every(learningValue));
 });
 
@@ -88,17 +91,49 @@ test('피해는 발사 시점이 아니라 보이는 발사체가 도착한 뒤�
  game.step(.1);assert.equal(target.hp,before-100);assert.ok(game.events.some(event=>event.type==='hit'&&event.damage===100&&!event.friendly));
 });
 
+test('마법사의 네 타워는 각자 사거리에 들어온 병사를 조준하고 발사체 도착 후 자기 공격력만큼 피해를 준다',()=>{
+ for(let index=0;index<4;index++){
+  const game=prepared();assert.ok(game.deploy('guard'));const tower=game.targets[index],unit=game.units[0];
+  for(const other of game.targets)if(other!==tower)other.hp=0;
+  unit.distance=tower.distance-tower.range-.1;game.step(.001);
+  assert.equal(game.projectiles.length,0,`${tower.name} must not fire outside its range`);assert.equal(tower.lastShot,-999);
+  unit.distance=tower.distance-tower.range;game.step(.001);
+  const shot=game.projectiles.find(shot=>shot.source==='enemy')!;
+  assert.ok(shot,`${tower.name} must independently fire`);assert.equal(shot.sourceId,tower.id);assert.equal(shot.fromDistance,tower.distance);assert.equal(shot.targetId,unit.id);assert.equal(tower.lastShot,game.elapsed);
+  assert.equal(shot.damage,tower.attack);assert.equal(shot.age,0);const before=unit.hp;
+  advance(game,.4);assert.equal(unit.hp,before);advance(game,.1);assert.equal(unit.hp,before-tower.attack);
+ }
+});
+
+test('네 타워 각각의 비행 중인 공격은 문제와 일시 정지에 멈추며 파괴되면 취소된다',()=>{
+ for(let index=0;index<4;index++){
+  const game=prepared();game.deploy('guard');const tower=game.targets[index],unit=game.units[0];
+  for(const other of game.targets)if(other!==tower)other.hp=0;
+  unit.distance=tower.distance-tower.range;game.step(.001);assert.equal(game.projectiles.length,1);
+  assert.ok(game.requestRecruit('scout'));const question=combatSnapshot(game);advance(game,2);assert.equal(combatSnapshot(game),question);game.cancelQuestion();
+  game.togglePause();const paused=combatSnapshot(game);advance(game,2);assert.equal(combatSnapshot(game),paused);game.togglePause();
+  const before=unit.hp;tower.hp=0;advance(game,.6);assert.equal(unit.hp,before);assert.equal(game.projectiles.length,0);
+  advance(game,2);assert.equal(game.projectiles.length,0,`${tower.name} must not fire after destruction`);
+ }
+});
+
 test('다수 아군의 동시 발사는 남은 체력을 예약해 초과 피해 경쟁 없이 정확히 처리한다',()=>{
  const game=new SecretSiege('standard');recruit(game,'guard',3);recruit(game,'striker',6);recruit(game,'scout',2);assert.ok(game.start());
  const order:ArmyId[]=[...Array<ArmyId>(3).fill('guard'),...Array<ArmyId>(6).fill('striker'),...Array<ArmyId>(2).fill('scout')];let next=0,totalDamage=0,hits=0;
+ const firingTowers=new Set<number>(),destroyed:string[]=[];
  for(let tick=0;tick<1800&&game.phase==='playing';tick++){
   if(next<order.length&&game.deploy(order[next]))next++;
   game.step(.1);
-  for(const event of game.events.splice(0))if(event.type==='hit'&&event.friendly){totalDamage+=event.damage!;hits++;assert.ok([10,200,750].includes(event.damage!));}
+  for(const shot of game.projectiles)if(shot.source==='enemy')firingTowers.add(shot.fromDistance);
+  for(const event of game.events.splice(0)){
+   if(event.type==='hit'&&event.friendly){totalDamage+=event.damage!;hits++;assert.ok([10,200,750].includes(event.damage!));if(event.targetId==='wizard-castle')assert.ok(game.targets.filter(target=>target.kind==='tower').every(target=>target.hp===0),'the castle can only take damage after all four towers fall');}
+   if(event.type==='destroy'&&event.friendly)destroyed.push(event.targetId!);
+  }
   assert.ok(game.targets.every(target=>target.hp>=0&&target.hp%10===0));
  }
- assert.equal(game.phase,'won');assert.equal(totalDamage,3600+5400+9990);assert.ok(hits>30);
+ assert.equal(game.phase,'won');assert.equal(totalDamage,2400+3600+4500+5400+9990);assert.ok(hits>30);
  assert.equal(game.castle,0);assert.equal(game.projectiles.length,0);assert.ok(game.targets.every(target=>target.hp===0));
+ assert.deepEqual(destroyed,game.targets.map(target=>target.id));for(const tower of game.targets.filter(target=>target.kind==='tower'))assert.ok(firingTowers.has(tower.distance),`${tower.name} fires during a legal complete battle`);
 });
 
 test('파괴된 타워가 이미 발사한 공격도 뒤늦게 아군 체력을 깎지 않는다',()=>{
@@ -108,7 +143,7 @@ test('파괴된 타워가 이미 발사한 공격도 뒤늦게 아군 체력을 
  assert.equal(game.targets[0].hp,0);assert.ok(game.units.every(unit=>unit.distance<300));
  const total=game.units.reduce((sum,unit)=>sum+unit.hp,0);game.events.length=0;advance(game,.6);
  assert.equal(game.units.reduce((sum,unit)=>sum+unit.hp,0),total);
- assert.equal(game.projectiles.some(shot=>shot.source==='enemy'&&shot.fromDistance===280),false);
+ assert.equal(game.projectiles.some(shot=>shot.source==='enemy'&&shot.fromDistance===240),false);
  assert.equal(game.events.some(event=>event.type==='hit'&&!event.friendly),false);
 });
 
@@ -138,7 +173,7 @@ test('출격하지 않아도 180초가 지나면 패배하고 종료 이벤트�
 
 test('난이도는 표시되는 체력과 공격 소수는 유지하면서 적 사격 간격만 바꾼다',()=>{
  const easy=new SecretSiege('practice'),standard=new SecretSiege('standard'),hard=new SecretSiege('challenge');
- for(let index=0;index<3;index++){
+ for(let index=0;index<standard.targets.length;index++){
   assert.equal(easy.targets[index].hp,hard.targets[index].hp);assert.equal(standard.targets[index].attack,hard.targets[index].attack);
   assert.ok(easy.targets[index].cooldown>standard.targets[index].cooldown&&standard.targets[index].cooldown>hard.targets[index].cooldown);
  }
@@ -147,6 +182,7 @@ test('난이도는 표시되는 체력과 공격 소수는 유지하면서 적 �
 for(const difficulty of ['practice','standard','challenge'] as const)test(`${difficulty}: 합법적인 균형 편성과 정확한 계산만으로 성을 파괴할 수 있다`,()=>{
  const result=simulateSecretSiege(difficulty,{name:'검증',guard:3,striker:6,scout:2,order:'guard-first',rally:false});
  assert.equal(result.phase,'won');assert.equal(result.castle,0);assert.equal(result.remainingMoney,0);assert.equal(result.deployed,11);assert.equal(result.stars,3);assert.ok(result.elapsed<180);
+ assert.equal(result.towersDestroyed,4);assert.equal(result.firingTowers,4);assert.ok(result.enemyShots>10);assert.ok(result.armyDamage>0);
 });
 
 test('공격력 0.01 정찰병에 치우친 군대는 도전에서 실패해 병력 역할을 조합해야 한다',()=>{

@@ -5,7 +5,7 @@ import {ARMY,SIEGE_ARMY_LIMIT,SIEGE_DURATION,type ArmyId,type SiegeEvent,type Si
 
 const EPSILON=1e-7,HEAL=600;
 const spec=(id:ArmyId)=>ARMY.find(army=>army.id===id);
-const enemyCooldowns:Record<Difficulty,readonly number[]>={practice:[2.1,1.75,1.65],standard:[1.6,1.35,1.2],challenge:[1.25,1.05,.95]};
+const enemyCooldowns:Record<Difficulty,readonly number[]>={practice:[2.1,2,1.9,1.8,1.65],standard:[1.6,1.55,1.5,1.4,1.2],challenge:[1.25,1.2,1.15,1.1,.95]};
 interface ShotOwner{sourceId:string;}
 
 /** An isolated, exact-decimal attack campaign. Rendering never owns damage. */
@@ -19,9 +19,11 @@ export class SecretSiege{
  constructor(readonly difficulty:Difficulty){
   const cooldowns=enemyCooldowns[difficulty];
   this.targets=[
-   {id:'gate-tower',kind:'tower',name:'성문 감시탑',distance:280,hp:3600,maxHp:3600,attack:100,cooldown:cooldowns[0],range:210,reload:0,lastHit:-999},
-   {id:'inner-tower',kind:'tower',name:'마법 경비탑',distance:580,hp:5400,maxHp:5400,attack:200,cooldown:cooldowns[1],range:240,reload:0,lastHit:-999},
-   {id:'wizard-castle',kind:'castle',name:'마법사의 성',distance:950,hp:9990,maxHp:9990,attack:300,cooldown:cooldowns[2],range:270,reload:0,lastHit:-999},
+   {id:'gate-tower',kind:'tower',towerKind:'arcane',name:'성문 마력탑',distance:240,placement:{x:-30,y:-76},hp:2400,maxHp:2400,attack:100,cooldown:cooldowns[0],range:175,reload:0,lastHit:-999,lastShot:-999},
+   {id:'venom-tower',kind:'tower',towerKind:'venom',name:'맹독 수호탑',distance:430,placement:{x:-92,y:23},hp:3600,maxHp:3600,attack:150,cooldown:cooldowns[1],range:185,reload:0,lastHit:-999,lastShot:-999},
+   {id:'inner-tower',kind:'tower',towerKind:'arcane',name:'내성 마력탑',distance:620,placement:{x:11,y:122},hp:4500,maxHp:4500,attack:200,cooldown:cooldowns[2],range:195,reload:0,lastHit:-999,lastShot:-999},
+   {id:'citadel-tower',kind:'tower',towerKind:'venom',name:'성채 수호탑',distance:800,placement:{x:32,y:-76},hp:5400,maxHp:5400,attack:250,cooldown:cooldowns[3],range:205,reload:0,lastHit:-999,lastShot:-999},
+   {id:'wizard-castle',kind:'castle',name:'마법사의 성',distance:950,hp:9990,maxHp:9990,attack:300,cooldown:cooldowns[4],range:240,reload:0,lastHit:-999,lastShot:-999},
   ];
  }
  get castle(){return this.targets.find(target=>target.kind==='castle')!.hp;}
@@ -97,15 +99,15 @@ export class SecretSiege{
   for(const target of this.targets){
    if(target.hp<=0)continue;
    target.reload=Math.max(0,target.reload-dt);
-   const unit=this.units.filter(unit=>unit.hp>0&&target.distance-unit.distance<=target.range+EPSILON).sort((a,b)=>b.distance-a.distance||a.deployedAt-b.deployedAt)[0];
+   const unit=this.units.filter(unit=>unit.hp>0&&Math.abs(target.distance-unit.distance)<=target.range+EPSILON).sort((a,b)=>b.distance-a.distance||a.deployedAt-b.deployedAt)[0];
    if(!unit||target.reload>EPSILON)continue;
-   this.shoot('enemy',target.id,target.distance,unit.distance,target.attack,unit.id,.5);target.reload=target.cooldown;
+   this.shoot('enemy',target.id,target.distance,unit.distance,target.attack,unit.id,.5);target.reload=target.cooldown;target.lastShot=this.elapsed;
   }
   if(this.elapsed>=SIEGE_DURATION-EPSILON)this.lose('시간이 다 되었어요. 군대의 구성과 출격 순서를 바꿔 다시 도전해요.');
   else if(!this.units.some(unit=>unit.hp>0)&&Object.values(this.reserve).every(count=>count===0)&&this.money<Math.min(...ARMY.map(army=>army.cost)))this.lose('출격할 군대와 모집 코인이 모두 소진되었어요.');
  }
  private shoot(source:SiegeProjectile['source'],sourceId:string,fromDistance:number,toDistance:number,damage:number,targetId:string,duration:number){
-  const shot:SiegeProjectile={id:++this.shotSerial,source,fromDistance,toDistance,damage,targetId,duration,age:0};
+  const shot:SiegeProjectile={id:++this.shotSerial,source,sourceId,fromDistance,toDistance,damage,targetId,duration,age:0};
   this.projectiles.push(shot);this.owners.set(shot.id,{sourceId});
   if(source==='army')this.reservedDamage.set(targetId,(this.reservedDamage.get(targetId)??0)+damage);
   this.events.push({type:'shot',message:'',targetId,damage,friendly:source==='army'});

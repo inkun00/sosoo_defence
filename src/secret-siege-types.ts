@@ -8,7 +8,7 @@ export const ARMY:readonly ArmySpec[]=[
 ];
 export const SIEGE_PATH_LENGTH=1000,SIEGE_DURATION=180,SIEGE_ARMY_LIMIT=12;
 export interface SiegeUnit{id:string;typeId:ArmyId;distance:number;hp:number;maxHp:number;reload:number;lastHit:number;attacking:boolean;deployedAt:number;}
-export interface SiegeTarget{id:string;kind:'tower'|'castle';name:string;distance:number;hp:number;maxHp:number;attack:number;cooldown:number;range:number;reload:number;lastHit:number;}
-export interface SiegeProjectile{id:number;source:'army'|'enemy';fromDistance:number;toDistance:number;age:number;duration:number;damage:number;targetId:string;}
+export interface SiegeTarget{id:string;kind:'tower'|'castle';name:string;distance:number;hp:number;maxHp:number;attack:number;cooldown:number;range:number;reload:number;lastHit:number;towerKind?:'arcane'|'venom';placement?:{x:number;y:number};lastShot?:number;}
+export interface SiegeProjectile{id:number;source:'army'|'enemy';fromDistance:number;toDistance:number;age:number;duration:number;damage:number;targetId:string;sourceId?:string;}
 export interface SiegeQuestion{id:number;kind:'recruit'|'rally';armyId?:ArmyId;a:number;b:number;operation:'+'|'-';answer:number;}
 export interface SiegeEvent{type:'recruit'|'deploy'|'shot'|'hit'|'destroy'|'rally'|'won'|'lost';message:string;targetId?:string;damage?:number;friendly?:boolean;}
